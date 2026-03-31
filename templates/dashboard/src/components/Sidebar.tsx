@@ -1,7 +1,8 @@
 import { Session, DocNode } from '@/lib/project'
 import SidebarLink from './SidebarLink'
 import ExportButton from './ExportButton'
-import { LayoutDashboard, FolderOpen, FileText } from 'lucide-react'
+import DocTreeClient from './DocTreeClient'
+import { LayoutDashboard } from 'lucide-react'
 
 const GATE_LABELS: Record<string, string> = {
   gate1: 'Gate 1 — 요구사항',
@@ -10,33 +11,6 @@ const GATE_LABELS: Record<string, string> = {
   gate4: 'Gate 4 — QA 검토',
   gate5: 'Gate 5 — 최종 승인',
   completed: '완료',
-}
-
-function DocTree({ nodes, depth = 0 }: { nodes: DocNode[]; depth?: number }) {
-  return (
-    <ul className="space-y-0.5">
-      {nodes.map(node => (
-        <li key={node.slug.join('/')} style={{ paddingLeft: depth * 10 }}>
-          {node.type === 'dir' ? (
-            <div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                <FolderOpen className="w-3 h-3" />
-                {node.name}
-              </div>
-              {node.children && <DocTree nodes={node.children} depth={depth + 1} />}
-            </div>
-          ) : (
-            <SidebarLink href={`/docs/${node.slug.join('/')}`}>
-              <span className="flex items-center gap-1.5">
-                <FileText className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{node.name}</span>
-              </span>
-            </SidebarLink>
-          )}
-        </li>
-      ))}
-    </ul>
-  )
 }
 
 interface Props {
@@ -74,7 +48,7 @@ export default function Sidebar({ session, docs }: Props) {
             <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
               문서
             </div>
-            <DocTree nodes={docs} />
+            <DocTreeClient nodes={docs} />
           </div>
         )}
       </nav>
