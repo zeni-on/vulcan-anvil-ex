@@ -1,7 +1,9 @@
 import { readDoc } from '@/lib/project'
 import DocViewer from '@/components/DocViewer'
+import MermaidRenderer from '@/components/MermaidRenderer'
 import { notFound } from 'next/navigation'
 import ExportButton from '@/components/ExportButton'
+import { marked } from 'marked'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +16,8 @@ export default async function DocPage({ params }: Props) {
   const content = readDoc(slug)
   if (!content) notFound()
 
+  // marked는 서버(Server Component)에서만 실행 → hydration 불일치 없음
+  const html = marked(content, { gfm: true }) as string
   const title = slug[slug.length - 1].replace('.md', '')
 
   return (
@@ -22,7 +26,8 @@ export default async function DocPage({ params }: Props) {
         <h1 className="text-lg font-semibold text-gray-300">{title}</h1>
         <ExportButton />
       </div>
-      <DocViewer content={content} />
+      <DocViewer html={html} />
+      <MermaidRenderer />
     </main>
   )
 }

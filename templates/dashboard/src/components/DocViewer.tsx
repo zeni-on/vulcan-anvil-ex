@@ -1,13 +1,5 @@
-'use client'
-
-import { marked } from 'marked'
-import { useMemo } from 'react'
-
-marked.setOptions({ gfm: true })
-
-export default function DocViewer({ content }: { content: string }) {
-  const html = useMemo(() => marked(content) as string, [content])
-
+// Server Component — marked는 서버에서만 실행 (hydration 불일치 방지)
+export default function DocViewer({ html }: { html: string }) {
   return (
     <article
       className="prose prose-invert prose-sm max-w-none

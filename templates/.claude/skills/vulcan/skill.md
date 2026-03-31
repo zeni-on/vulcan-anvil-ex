@@ -132,8 +132,12 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 
 1. 에이전트 작업 완료 후, 사용자에게 산출물을 보고한다
 2. 사용자의 승인을 기다린다
-3. 승인 시 `python vulcan.py check-trace` 실행을 안내한다
-4. check-trace 통과 시 `python vulcan.py session --gate gateN --status done` 안내
+3. 승인 확인 즉시 `python vulcan.py check-trace` 를 **직접 실행**한다
+4. check-trace 이슈 0건 확인 시 `python vulcan.py session --gate gateN --status done --feature "기능명"` 을 **직접 실행**한다
+5. session 명령 실행 완료 후 다음 Gate로 진행한다
+
+> **핵심**: 에이전트가 명령어를 사용자에게 안내하는 것이 아니라 직접 실행한다.
+> 사용자가 별도로 터미널 명령을 입력할 필요가 없다.
 
 ## Gate별 실행 모드
 
