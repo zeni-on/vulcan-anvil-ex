@@ -25,7 +25,7 @@ description: "시스템 아키텍트. 요구사항을 기반으로 시스템 아
 
 ## 산출물 포맷
 
-REQ 그룹별로 `docs/design/req-nnn-design.md` 파일을 작성한다:
+REQ 그룹별로 `docs/02-design/req-nnn-design.md` 파일을 작성한다:
 
     # REQ-NNN 설계 문서
 

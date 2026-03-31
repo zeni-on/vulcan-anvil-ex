@@ -118,7 +118,7 @@ def git_commit(message, project_dir="."):
 
 def parse_requirements(project_dir="."):
     """REQUIREMENTS.md에서 REQ-ID 및 AC 정보를 파싱합니다."""
-    path = os.path.join(project_dir, "docs", "requirements", "REQUIREMENTS.md")
+    path = os.path.join(project_dir, "docs", "01-requirements", "REQUIREMENTS.md")
     if not os.path.exists(path):
         return set(), set(), set()
 
@@ -135,7 +135,7 @@ def parse_requirements(project_dir="."):
 
 def parse_test_plan(project_dir="."):
     """TEST_PLAN.md에서 TST-ID → REQ-ID 매핑을 파싱합니다."""
-    path = os.path.join(project_dir, "docs", "test-plan", "TEST_PLAN.md")
+    path = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
     if not os.path.exists(path):
         return set()
 
@@ -169,14 +169,14 @@ def check_trace(project_dir="."):
     # ── Gate 2: REQ 그룹별 설계 파일 존재 여부
     if current_gate == "gate2":
         print("  Gate 2 검사: REQ 그룹별 설계 파일 존재 여부")
-        design_dir = os.path.join(project_dir, "docs", "design")
+        design_dir = os.path.join(project_dir, "docs", "02-design")
         for group in sorted(group_reqs):
             filename = f"{group.lower()}-design.md"
             filepath = os.path.join(design_dir, filename)
             if os.path.exists(filepath):
                 print(f"  O {group} - {filename} 확인")
             else:
-                issues.append(f"  X {group} - docs/design/{filename} 없음")
+                issues.append(f"  X {group} - docs/02-design/{filename} 없음")
 
     # ── Gate 3: 모든 REQ-NNN-NN에 TST-ID 매핑 여부
     if current_gate == "gate3":
@@ -191,14 +191,14 @@ def check_trace(project_dir="."):
     # ── Gate 4: REQ 그룹별 리뷰 파일 존재 여부
     if current_gate == "gate4":
         print("  Gate 4 검사: REQ 그룹별 리뷰 파일 존재 여부")
-        review_dir = os.path.join(project_dir, "docs", "review")
+        review_dir = os.path.join(project_dir, "docs", "04-review")
         for group in sorted(group_reqs):
             filename = f"{group.lower()}-review.md"
             filepath = os.path.join(review_dir, filename)
             if os.path.exists(filepath):
                 print(f"  O {group} - {filename} 확인")
             else:
-                issues.append(f"  X {group} - docs/review/{filename} 없음")
+                issues.append(f"  X {group} - docs/04-review/{filename} 없음")
 
     print()
     if issues:
@@ -273,24 +273,24 @@ def git_log_timeline(project_dir="."):
 def collect_documents(project_dir="."):
     docs = {"requirements": None, "design": [], "test_plan": None, "review": []}
 
-    req = os.path.join(project_dir, "docs", "requirements", "REQUIREMENTS.md")
+    req = os.path.join(project_dir, "docs", "01-requirements", "REQUIREMENTS.md")
     if os.path.exists(req):
-        docs["requirements"] = "docs/requirements/REQUIREMENTS.md"
+        docs["requirements"] = "docs/01-requirements/REQUIREMENTS.md"
 
-    design_dir = os.path.join(project_dir, "docs", "design")
+    design_dir = os.path.join(project_dir, "docs", "02-design")
     if os.path.isdir(design_dir):
         docs["design"] = sorted([
-            f"docs/design/{f}" for f in os.listdir(design_dir) if f.endswith(".md")
+            f"docs/02-design/{f}" for f in os.listdir(design_dir) if f.endswith(".md")
         ])
 
-    tp = os.path.join(project_dir, "docs", "test-plan", "TEST_PLAN.md")
+    tp = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
     if os.path.exists(tp):
-        docs["test_plan"] = "docs/test-plan/TEST_PLAN.md"
+        docs["test_plan"] = "docs/03-test-plan/TEST_PLAN.md"
 
-    review_dir = os.path.join(project_dir, "docs", "review")
+    review_dir = os.path.join(project_dir, "docs", "04-review")
     if os.path.isdir(review_dir):
         docs["review"] = sorted([
-            f"docs/review/{f}" for f in os.listdir(review_dir) if f.endswith(".md")
+            f"docs/04-review/{f}" for f in os.listdir(review_dir) if f.endswith(".md")
         ])
 
     return docs
@@ -337,7 +337,7 @@ FRAMEWORK_FILES = [
     ".claude/skills/security-baseline/skill.md",
     "commenting-standards.md",
     "GATE_GUIDE.md",
-    "docs/security/baseline.md",
+    "docs/05-security/baseline.md",
 ]
 
 
@@ -502,19 +502,19 @@ def init(target_dir, project_name, agent_name):
     copy_file(target_dir, "GATE_GUIDE.md")
 
     # docs/
-    content = render(read_template("docs/requirements/REQUIREMENTS.md"), variables)
-    write_file(target_dir, "docs/requirements/REQUIREMENTS.md", content)
+    content = render(read_template("docs/01-requirements/REQUIREMENTS.md"), variables)
+    write_file(target_dir, "docs/01-requirements/REQUIREMENTS.md", content)
 
-    write_file(target_dir, "docs/design/.gitkeep", "")
+    write_file(target_dir, "docs/02-design/.gitkeep", "")
 
-    content = render(read_template("docs/test-plan/TEST_PLAN.md"), variables)
-    write_file(target_dir, "docs/test-plan/TEST_PLAN.md", content)
+    content = render(read_template("docs/03-test-plan/TEST_PLAN.md"), variables)
+    write_file(target_dir, "docs/03-test-plan/TEST_PLAN.md", content)
 
-    write_file(target_dir, "docs/review/.gitkeep", "")
+    write_file(target_dir, "docs/04-review/.gitkeep", "")
 
     # security
-    copy_file(target_dir, "docs/security/baseline.md", "docs/security/baseline.md")
-    write_file(target_dir, "docs/security/compliance/.gitkeep", "")
+    copy_file(target_dir, "docs/05-security/baseline.md", "docs/05-security/baseline.md")
+    write_file(target_dir, "docs/05-security/compliance/.gitkeep", "")
 
     # session.json
     create_session_json(target_dir, project_name)
@@ -523,12 +523,28 @@ def init(target_dir, project_name, agent_name):
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
     print(f"  생성: vulcan.py")
 
+    # .gitignore
+    gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\n"
+    write_file(target_dir, ".gitignore", gitignore)
+
     # dashboard/ 복사 (Anvil 대시보드)
     src_dashboard = os.path.join(TEMPLATES_DIR, "dashboard")
     if os.path.isdir(src_dashboard):
         dst_dashboard = os.path.join(target_dir, "dashboard")
         copy_tree(src_dashboard, dst_dashboard)
         print(f"  생성: dashboard/ (Anvil 대시보드 — Next.js)")
+
+    # git init + 초기 커밋
+    try:
+        subprocess.run(["git", "init"], cwd=target_dir, check=True, capture_output=True)
+        subprocess.run(["git", "add", "-A"], cwd=target_dir, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", f"init: {project_name} 프로젝트 초기화"],
+            cwd=target_dir, check=True, capture_output=True
+        )
+        print(f"  생성: git 저장소 초기화 + 초기 커밋")
+    except Exception as e:
+        print(f"  경고: git 초기화 실패 - {e}")
 
     print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
     print(f"\n다음 단계:")

@@ -75,13 +75,13 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 
 | Gate | 작업 | 담당 | 의존 | 산출물 |
 |------|------|------|------|--------|
-| Gate 1 | 요구사항 정의 | pm | 없음 | `docs/requirements/REQUIREMENTS.md` |
-| Gate 2a | 시스템 설계 | architect | Gate 1 | `docs/design/req-nnn-design.md` |
-| Gate 2b | 데이터 설계 | dba | Gate 1 | `docs/design/req-nnn-data-design.md` |
-| Gate 3 | 테스트 계획 | qa | Gate 2 | `docs/test-plan/TEST_PLAN.md` |
+| Gate 1 | 요구사항 정의 | pm | 없음 | `docs/01-requirements/REQUIREMENTS.md` |
+| Gate 2a | 시스템 설계 | architect | Gate 1 | `docs/02-design/req-nnn-design.md` |
+| Gate 2b | 데이터 설계 | dba | Gate 1 | `docs/02-design/req-nnn-data-design.md` |
+| Gate 3 | 테스트 계획 | qa | Gate 2 | `docs/03-test-plan/TEST_PLAN.md` |
 | 구현 | 프론트엔드 구현 | frontend-dev | Gate 3 | 프론트엔드 소스 코드 + 단위 테스트 |
 | 구현 | 백엔드 구현 | backend-dev | Gate 3 | 백엔드 소스 코드 + 단위 테스트 |
-| Gate 4 | QA 리뷰 | qa | 구현 | `docs/review/req-nnn-review.md` |
+| Gate 4 | QA 리뷰 | qa | 구현 | `docs/04-review/req-nnn-review.md` |
 | Gate 5 | 최종 승인 | 사용자 | Gate 4 | (사용자 확인) |
 
 **Gate 2a와 2b는 병렬 실행** — architect와 dba가 동시에 작업한다.

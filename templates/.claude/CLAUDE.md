@@ -45,11 +45,11 @@ Gate 1        Gate 2        Gate 3          구현            Gate 4       Gate 
 
 | Gate | 산출물 | 경로 |
 |------|--------|------|
-| Gate 1 | 요구사항 정의서 | `docs/requirements/REQUIREMENTS.md` |
-| Gate 2 | 설계 문서 | `docs/design/req-nnn-design.md` |
-| Gate 2 | 데이터 설계 | `docs/design/req-nnn-data-design.md` |
-| Gate 3 | 테스트 계획서 | `docs/test-plan/TEST_PLAN.md` |
-| Gate 4 | QA 리뷰 보고서 | `docs/review/req-nnn-review.md` |
+| Gate 1 | 요구사항 정의서 | `docs/01-requirements/REQUIREMENTS.md` |
+| Gate 2 | 설계 문서 | `docs/02-design/req-nnn-design.md` |
+| Gate 2 | 데이터 설계 | `docs/02-design/req-nnn-data-design.md` |
+| Gate 3 | 테스트 계획서 | `docs/03-test-plan/TEST_PLAN.md` |
+| Gate 4 | QA 리뷰 보고서 | `docs/04-review/req-nnn-review.md` |
 
 ## 참조 파일
 
@@ -57,4 +57,4 @@ Gate 1        Gate 2        Gate 3          구현            Gate 4       Gate 
 - `ENVIRONMENT.md` — 빌드/실행/테스트 명령어
 - `commenting-standards.md` — 코드 주석 규칙
 - `GATE_GUIDE.md` — Gate 프로세스 상세 가이드
-- `docs/security/baseline.md` — 보안 기준선
+- `docs/05-security/baseline.md` — 보안 기준선

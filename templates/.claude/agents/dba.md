@@ -29,7 +29,7 @@ description: "데이터 아키텍트. 데이터 모델링, ERD 설계, 스키마
 
 ## 산출물 포맷
 
-`docs/design/req-nnn-data-design.md` 파일을 작성한다:
+`docs/02-design/req-nnn-data-design.md` 파일을 작성한다:
 
     # REQ-NNN 데이터 설계
 

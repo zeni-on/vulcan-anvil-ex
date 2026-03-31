@@ -65,7 +65,7 @@ python vulcan.py session --gate gateN --status done --feature "기능명"
 ## check-trace 검증 상세
 
 ### Gate 1 검증
-- `docs/requirements/REQUIREMENTS.md` 파싱
+- `docs/01-requirements/REQUIREMENTS.md` 파싱
 - 정규식 `\bREQ-\d{3}-\d{2}\b` 로 상세 REQ-ID 추출
 - 정규식 `###\s+AC-(\d{3}-\d{2})` 로 AC 정의 추출
 - 각 REQ-NNN-NN에 대응하는 AC-NNN-NN 존재 여부 확인
@@ -73,17 +73,17 @@ python vulcan.py session --gate gateN --status done --feature "기능명"
 
 ### Gate 2 검증
 - REQ 그룹 ID(REQ-NNN) 추출
-- `docs/design/` 디렉토리에서 `req-nnn-design.md` 파일 존재 확인
-- **누락 시**: "REQ-001 — docs/design/req-001-design.md 없음" 이슈 보고
+- `docs/02-design/` 디렉토리에서 `req-nnn-design.md` 파일 존재 확인
+- **누락 시**: "REQ-001 — docs/02-design/req-001-design.md 없음" 이슈 보고
 
 ### Gate 3 검증
-- `docs/test-plan/TEST_PLAN.md` 에서 REQ-NNN-NN 참조 추출
+- `docs/03-test-plan/TEST_PLAN.md` 에서 REQ-NNN-NN 참조 추출
 - REQUIREMENTS.md의 모든 REQ-NNN-NN이 TEST_PLAN.md에 존재하는지 확인
 - **누락 시**: "REQ-001-01 — TEST_PLAN.md에 TST 매핑 없음" 이슈 보고
 
 ### Gate 4 검증
-- `docs/review/` 디렉토리에서 `req-nnn-review.md` 파일 존재 확인
-- **누락 시**: "REQ-001 — docs/review/req-001-review.md 없음" 이슈 보고
+- `docs/04-review/` 디렉토리에서 `req-nnn-review.md` 파일 존재 확인
+- **누락 시**: "REQ-001 — docs/04-review/req-001-review.md 없음" 이슈 보고
 
 ## 긴급 절차 (Hotfix)
 

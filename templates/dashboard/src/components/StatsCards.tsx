@@ -51,7 +51,7 @@ export default function StatsCards({ reqStats, testStats }: Props) {
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
           요구사항 현황
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatCard
             icon={<Layers className="w-5 h-5" />}
             label="REQ 그룹"
@@ -64,6 +64,13 @@ export default function StatsCards({ reqStats, testStats }: Props) {
             label="상세 요구사항"
             value={reqStats.total}
             sub="REQ-NNN-NN"
+          />
+          <StatCard
+            icon={<CheckCircle className="w-5 h-5" />}
+            label="구현완료"
+            value={reqStats.implemented}
+            sub={`/ ${reqStats.total}건`}
+            color={reqStats.implemented === reqStats.total && reqStats.total > 0 ? 'green' : 'yellow'}
           />
           <StatCard
             icon={<CheckCircle className="w-5 h-5" />}

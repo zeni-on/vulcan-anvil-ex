@@ -82,8 +82,9 @@ export function readDoc(slug: string[]): string | null {
 export interface RequirementsStats {
   groups: number        // REQ-NNN 그룹 수
   total: number         // REQ-NNN-NN 상세 요구사항 수
-  acDefined: number     // AC-NNN-NN 정의된 수
-  missing: string[]     // AC 미정의 REQ-ID 목록
+  acDefined: number     // AC 참조가 있는 REQ 수
+  missing: string[]     // AC 참조 없는 REQ-ID 목록 (- 제외)
+  implemented: number   // 상태=구현완료 수
 }
 
 export interface TestStats {
@@ -95,27 +96,56 @@ export interface TestStats {
 
 export function parseRequirementsStats(): RequirementsStats {
   const p = path.join(PROJECT_ROOT, 'docs', 'requirements', 'REQUIREMENTS.md')
-  if (!fs.existsSync(p)) return { groups: 0, total: 0, acDefined: 0, missing: [] }
+  if (!fs.existsSync(p)) return { groups: 0, total: 0, acDefined: 0, missing: [], implemented: 0 }
 
   const content = fs.readFileSync(p, 'utf-8')
 
-  const detailReqs = [...new Set(content.match(/\bREQ-\d{3}-\d{2}\b/g) ?? [])]
-  const allReqs    = [...new Set(content.match(/\bREQ-\d{3}\b/g) ?? [])]
-  const groups     = allReqs.filter(r => !/REQ-\d{3}-\d{2}/.test(r))
-  const acDefined  = [...new Set(content.match(/\bAC-\d{3}-\d{2}\b/g) ?? [])]
+  // REQ-NNN 그룹 수 (헤딩 또는 테이블에서 REQ-NNN만 추출)
+  const allReqIds = [...new Set(content.match(/\bREQ-\d{3}\b/g) ?? [])]
+  const groups    = allReqIds.filter(r => !/\bREQ-\d{3}-\d{2}\b/.test(r)).length
 
-  // AC가 없는 REQ-NNN-NN 찾기
-  const missing = detailReqs.filter(req => {
-    const acId = req.replace('REQ-', 'AC-')
-    return !acDefined.includes(acId)
-  })
+  // 구형 문서 호환: AC-NNN-NN 목록 (AC 참조 컬럼 없는 경우 폴백용)
+  const legacyAcIds = new Set(content.match(/\bAC-\d{3}-\d{2}\b/g) ?? [])
 
-  return {
-    groups: groups.length,
-    total: detailReqs.length,
-    acDefined: acDefined.length,
-    missing,
+  let total = 0
+  let acDefined = 0
+  let implemented = 0
+  const missing: string[] = []
+
+  for (const line of content.split('\n')) {
+    if (!/\|\s*REQ-\d{3}-\d{2}\s*\|/.test(line)) continue
+
+    // | REQ-001-01 | 요구사항 | 우선순위 | 상태 | AC 참조 |
+    const cols = line.split('|').map(c => c.trim())
+    // cols[0]='' cols[1]=REQ-ID cols[2]=요구사항 cols[3]=우선순위 cols[4]=상태 cols[5]=AC참조
+    const reqId = cols[1]
+    if (!reqId || !/^REQ-\d{3}-\d{2}$/.test(reqId)) continue
+
+    total++
+
+    if (cols[4] === '구현완료') implemented++
+
+    const acRef = cols[5] ?? ''
+    if (/^AC-\d{3}-\d{2}/.test(acRef)) {
+      // AC-NNN-NN 패턴으로 시작 → 커버됨
+      acDefined++
+    } else if (acRef.startsWith('없음:')) {
+      // 의도적으로 AC 없음 + 이유 명시 → missing 아님
+    } else if (acRef === '') {
+      // 구형 폴백: AC-NNN-NN이 문서 어딘가에 존재하는지 확인
+      const expectedAc = reqId.replace('REQ-', 'AC-')
+      if (legacyAcIds.has(expectedAc)) {
+        acDefined++
+      } else {
+        missing.push(reqId)
+      }
+    } else {
+      // AC 참조 컬럼이 있지만 형식 불일치 → 미정의로 처리
+      missing.push(reqId)
+    }
   }
+
+  return { groups, total, acDefined, missing, implemented }
 }
 
 export function parseTestStats(): TestStats {

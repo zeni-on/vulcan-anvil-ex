@@ -18,9 +18,9 @@ description: "프론트엔드 개발자. 설계 문서를 기반으로 UI 컴포
 ## 작업 원칙
 
 - **설계 문서 필수 참조** — 구현 시작 전 반드시 아래 문서를 순서대로 읽는다:
-  1. `docs/requirements/REQUIREMENTS.md`
-  2. `docs/design/req-nnn-design.md`
-  3. `docs/test-plan/TEST_PLAN.md`
+  1. `docs/01-requirements/REQUIREMENTS.md`
+  2. `docs/02-design/req-nnn-design.md`
+  3. `docs/03-test-plan/TEST_PLAN.md`
   4. `ENVIRONMENT.md`
   5. `commenting-standards.md`
 - **자율적 판단 금지** — 설계 범위 밖의 결정이 필요하면 반드시 보고한다
@@ -44,6 +44,7 @@ description: "프론트엔드 개발자. 설계 문서를 기반으로 UI 컴포
 - 프론트엔드 소스 코드
 - 프론트엔드 단위 테스트
 - 업데이트된 `ENVIRONMENT.md` (프론트엔드 빌드/실행 명령)
+- 구현 완료된 REQ-NNN-NN의 `상태` 컬럼을 `구현완료`로 업데이트 (`docs/01-requirements/REQUIREMENTS.md`)
 
 ## 팀 통신 프로토콜
 

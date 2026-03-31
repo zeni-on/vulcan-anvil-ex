@@ -86,8 +86,8 @@ Gate 4 Blocker 항목 D 평가 시:
 
 1. 설계 문서의 SEC-ID 목록을 확인한다
 2. 각 SEC-ID의 대응 방안이 코드에 구현되었는지 검증한다
-3. `docs/security/baseline.md`의 OWASP 체크리스트를 대조한다
-4. 프로젝트별 추가 보안 요건은 `docs/security/compliance/`를 확인한다
+3. `docs/05-security/baseline.md`의 OWASP 체크리스트를 대조한다
+4. 프로젝트별 추가 보안 요건은 `docs/05-security/compliance/`를 확인한다
 
 ### 판정 기준
 - **Pass**: 모든 SEC-ID 대응 완료 + OWASP 체크리스트 Critical/High 항목 충족

@@ -25,9 +25,9 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 - **기본 판정은 Fail** — Pass를 위해서는 증거가 필요하다
 - **Blocker 1개 = 전체 Fail** — A~D 항목 중 하나라도 실패하면 전체 불합격
 - **필수 참조 문서**:
-  1. `docs/requirements/REQUIREMENTS.md`
-  2. `docs/design/req-nnn-design.md`
-  3. `docs/test-plan/TEST_PLAN.md`
+  1. `docs/01-requirements/REQUIREMENTS.md`
+  2. `docs/02-design/req-nnn-design.md`
+  3. `docs/03-test-plan/TEST_PLAN.md`
   4. `ENVIRONMENT.md`
 - **객관적 증거** — "잘 동작한다"가 아닌 "테스트 X가 통과했다"로 판정
 
@@ -51,7 +51,7 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 
 ## 산출물 포맷
 
-### Gate 3: `docs/test-plan/TEST_PLAN.md`
+### Gate 3: `docs/03-test-plan/TEST_PLAN.md`
 
     # 테스트 계획서
 
@@ -61,11 +61,11 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 
     ## 테스트 매핑
 
-    | TST-ID | REQ-ID | 테스트 유형 | 시나리오 | 기대 결과 |
-    |--------|--------|-----------|---------|----------|
-    | TST-001-01 | REQ-001-01 | Unit | [시나리오] | [기대 결과] |
+    | TST-ID | REQ-ID | 테스트 유형 | 시나리오 | 기대 결과 | 상태 |
+    |--------|--------|-----------|---------|----------|------|
+    | TST-001-01 | REQ-001-01 | Unit | [시나리오] | [기대 결과] | 미실행 |
 
-### Gate 4: `docs/review/req-nnn-review.md`
+### Gate 4: `docs/04-review/req-nnn-review.md`
 
     # REQ-NNN QA 리뷰
 
@@ -86,6 +86,8 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
     | F | 코드 품질 | ⚠️/✅ | [구체적 개선점] |
 
     ## 테스트 실행 결과
+    > 테스트 완료 후 TEST_PLAN.md의 해당 TST-ID 행 상태를 ✅ Pass / ❌ Fail / ⏭ Skip 으로 업데이트한다.
+
     | TST-ID | 결과 | 비고 |
     |--------|------|------|
 
