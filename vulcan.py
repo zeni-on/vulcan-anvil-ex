@@ -523,11 +523,21 @@ def init(target_dir, project_name, agent_name):
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
     print(f"  생성: vulcan.py")
 
+    # dashboard/ 복사 (Anvil 대시보드)
+    src_dashboard = os.path.join(TEMPLATES_DIR, "dashboard")
+    if os.path.isdir(src_dashboard):
+        dst_dashboard = os.path.join(target_dir, "dashboard")
+        copy_tree(src_dashboard, dst_dashboard)
+        print(f"  생성: dashboard/ (Anvil 대시보드 — Next.js)")
+
     print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
     print(f"\n다음 단계:")
     print(f"  1. cd {target_dir}")
     print(f"  2. Claude Code 실행")
     print(f"  3. /vulcan 또는 'Gate 1 시작해줘'로 프로세스 시작")
+    print(f"\n대시보드 실행:")
+    print(f"  cd dashboard && npm install && npm run dev")
+    print(f"  브라우저: http://localhost:3001")
     print(f"\nGate 완료 시:")
     print(f"  python vulcan.py check-trace")
     print(f"  python vulcan.py session --gate gate1 --status done --feature '기능명'")
