@@ -1,0 +1,602 @@
+#!/usr/bin/env python3
+"""
+Vulcan-Claude - 5-Gate AI 협업 개발 프레임워크 (Claude Code 네이티브 하네스)
+
+대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
+Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude/) 구조로 재구현.
+
+명령어:
+  init         새 프로젝트 초기화
+  session      Gate 상태 업데이트 + git commit 자동 생성
+  check-trace  Gate별 정합성 검사
+  export       snapshot.json 생성 (대시보드용)
+  upgrade      프레임워크 파일을 최신 버전으로 업데이트
+  version      현재 프레임워크 버전 확인
+
+사용법:
+  # 초기화 (Vulcan-Claude 디렉토리에서 실행)
+  python vulcan.py init <target-dir> <project-name> [--agent-name NAME]
+
+  # 이하 명령은 프로젝트 디렉토리에서 실행
+  python vulcan.py check-trace
+  python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
+  python vulcan.py export [--output snapshot.json]
+  python vulcan.py upgrade
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import date
+
+VULCAN_VERSION = "1.0.0"
+
+VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
+
+GATE_LABELS = {
+    "gate1": "Gate 1 요구사항",
+    "gate2": "Gate 2 설계",
+    "gate3": "Gate 3 테스트 플랜",
+    "gate4": "Gate 4 QA 검토",
+    "gate5": "Gate 5 최종 승인",
+}
+
+
+# ── 공통 유틸 ──────────────────────────────────────────────────────────────
+
+def render(text, variables):
+    for key, value in variables.items():
+        text = text.replace("{{" + key + "}}", value)
+    return text
+
+
+def read_template(rel_path):
+    path = os.path.join(TEMPLATES_DIR, rel_path)
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def write_file(target_dir, rel_path, content):
+    full_path = os.path.join(target_dir, rel_path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    with open(full_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"  생성: {rel_path}")
+
+
+def copy_file(target_dir, rel_path, src_rel_path=None):
+    import shutil
+    src = os.path.join(TEMPLATES_DIR, src_rel_path or rel_path)
+    dst = os.path.join(target_dir, rel_path)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copy2(src, dst)
+    print(f"  생성: {rel_path}")
+
+
+def copy_tree(src_dir, dst_dir):
+    """디렉토리 트리를 재귀적으로 복사합니다."""
+    import shutil
+    for root, dirs, files in os.walk(src_dir):
+        rel_root = os.path.relpath(root, src_dir)
+        for f in files:
+            src = os.path.join(root, f)
+            rel_path = os.path.join(rel_root, f) if rel_root != "." else f
+            dst = os.path.join(dst_dir, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+
+
+def load_session(project_dir="."):
+    path = os.path.join(project_dir, "session.json")
+    if not os.path.exists(path):
+        print("오류: session.json을 찾을 수 없습니다. 프로젝트 디렉토리에서 실행하세요.")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_session(session, project_dir="."):
+    path = os.path.join(project_dir, "session.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(session, f, ensure_ascii=False, indent=2)
+
+
+def git_commit(message, project_dir="."):
+    try:
+        subprocess.run(["git", "add", "session.json"], cwd=project_dir, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", message], cwd=project_dir, check=True, capture_output=True)
+        print(f"  커밋 완료: {message}")
+    except subprocess.CalledProcessError as e:
+        print(f"  경고: git commit 실패 - {e.stderr.decode().strip()}")
+
+
+# ── check-trace ────────────────────────────────────────────────────────────
+
+def parse_requirements(project_dir="."):
+    """REQUIREMENTS.md에서 REQ-ID 및 AC 정보를 파싱합니다."""
+    path = os.path.join(project_dir, "docs", "requirements", "REQUIREMENTS.md")
+    if not os.path.exists(path):
+        return set(), set(), set()
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    detail_reqs = set(re.findall(r'\bREQ-\d{3}-\d{2}\b', content))
+    all_reqs = set(re.findall(r'\bREQ-\d{3}\b', content))
+    group_reqs = {r for r in all_reqs if not re.match(r'REQ-\d{3}-\d{2}', r)}
+    defined_acs = set(re.findall(r'###\s+AC-(\d{3}-\d{2})', content))
+
+    return group_reqs, detail_reqs, defined_acs
+
+
+def parse_test_plan(project_dir="."):
+    """TEST_PLAN.md에서 TST-ID → REQ-ID 매핑을 파싱합니다."""
+    path = os.path.join(project_dir, "docs", "test-plan", "TEST_PLAN.md")
+    if not os.path.exists(path):
+        return set()
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    return set(re.findall(r'\bREQ-\d{3}-\d{2}\b', content))
+
+
+def check_trace(project_dir="."):
+    session = load_session(project_dir)
+    current_gate = session.get("current_gate", "gate1")
+    issues = []
+
+    print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
+
+    group_reqs, detail_reqs, defined_acs = parse_requirements(project_dir)
+
+    # ── Gate 1: REQ-ID별 AC 존재 여부
+    if current_gate == "gate1":
+        print("  Gate 1 검사: 인수 기준(AC) 정의 여부")
+        if not detail_reqs:
+            issues.append("REQUIREMENTS.md에 REQ-NNN-NN 형식의 요구사항이 없습니다.")
+        for req in sorted(detail_reqs):
+            ac_id = req.replace("REQ-", "")
+            if ac_id not in defined_acs:
+                issues.append(f"  X {req} - AC 미정의")
+            else:
+                print(f"  O {req} - AC 확인")
+
+    # ── Gate 2: REQ 그룹별 설계 파일 존재 여부
+    if current_gate == "gate2":
+        print("  Gate 2 검사: REQ 그룹별 설계 파일 존재 여부")
+        design_dir = os.path.join(project_dir, "docs", "design")
+        for group in sorted(group_reqs):
+            filename = f"{group.lower()}-design.md"
+            filepath = os.path.join(design_dir, filename)
+            if os.path.exists(filepath):
+                print(f"  O {group} - {filename} 확인")
+            else:
+                issues.append(f"  X {group} - docs/design/{filename} 없음")
+
+    # ── Gate 3: 모든 REQ-NNN-NN에 TST-ID 매핑 여부
+    if current_gate == "gate3":
+        print("  Gate 3 검사: REQ-ID별 TST-ID 커버리지")
+        covered = parse_test_plan(project_dir)
+        for req in sorted(detail_reqs):
+            if req in covered:
+                print(f"  O {req} - TST 매핑 확인")
+            else:
+                issues.append(f"  X {req} - TEST_PLAN.md에 TST 매핑 없음")
+
+    # ── Gate 4: REQ 그룹별 리뷰 파일 존재 여부
+    if current_gate == "gate4":
+        print("  Gate 4 검사: REQ 그룹별 리뷰 파일 존재 여부")
+        review_dir = os.path.join(project_dir, "docs", "review")
+        for group in sorted(group_reqs):
+            filename = f"{group.lower()}-review.md"
+            filepath = os.path.join(review_dir, filename)
+            if os.path.exists(filepath):
+                print(f"  O {group} - {filename} 확인")
+            else:
+                issues.append(f"  X {group} - docs/review/{filename} 없음")
+
+    print()
+    if issues:
+        print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
+        for issue in issues:
+            print(f"  {issue}")
+        sys.exit(1)
+    else:
+        print("이슈 0건 - Gate 완료 가능합니다.")
+
+
+# ── session ────────────────────────────────────────────────────────────────
+
+def cmd_session(gate, status, feature, project_dir="."):
+    session = load_session(project_dir)
+
+    if gate not in GATE_LABELS:
+        print(f"오류: 유효하지 않은 gate - {gate}")
+        print(f"  사용 가능: {', '.join(GATE_LABELS.keys())}")
+        sys.exit(1)
+
+    if feature:
+        session["feature"] = feature
+
+    session["gate_status"][gate] = status
+
+    gate_order = ["gate1", "gate2", "gate3", "gate4", "gate5"]
+    if status == "done":
+        current_idx = gate_order.index(gate)
+        if current_idx + 1 < len(gate_order):
+            session["current_gate"] = gate_order[current_idx + 1]
+        else:
+            session["current_gate"] = "completed"
+
+        entry = f"{GATE_LABELS[gate]} - {session.get('feature', '')}"
+        if entry not in session.get("completed", []):
+            session.setdefault("completed", []).append(entry)
+
+    save_session(session, project_dir)
+    print(f"  session.json 업데이트: {gate} → {status}")
+
+    feature_label = session.get("feature", "")
+    commit_msg = f"session: {gate} done - {GATE_LABELS[gate]}"
+    if feature_label:
+        commit_msg += f" ({feature_label})"
+    git_commit(commit_msg, project_dir)
+
+
+# ── export ────────────────────────────────────────────────────────────────
+
+def git_log_timeline(project_dir="."):
+    try:
+        result = subprocess.run(
+            ["git", "log", "--grep=^session:", "--date=short",
+             "--pretty=format:%H|%ad|%s", "--", "session.json"],
+            cwd=project_dir, capture_output=True, text=True, check=True
+        )
+        timeline = []
+        for line in result.stdout.strip().splitlines():
+            if not line:
+                continue
+            parts = line.split("|", 2)
+            if len(parts) < 3:
+                continue
+            commit, date_str, message = parts
+            timeline.append({"commit": commit[:7], "date": date_str, "message": message})
+        return list(reversed(timeline))
+    except subprocess.CalledProcessError:
+        return []
+
+
+def collect_documents(project_dir="."):
+    docs = {"requirements": None, "design": [], "test_plan": None, "review": []}
+
+    req = os.path.join(project_dir, "docs", "requirements", "REQUIREMENTS.md")
+    if os.path.exists(req):
+        docs["requirements"] = "docs/requirements/REQUIREMENTS.md"
+
+    design_dir = os.path.join(project_dir, "docs", "design")
+    if os.path.isdir(design_dir):
+        docs["design"] = sorted([
+            f"docs/design/{f}" for f in os.listdir(design_dir) if f.endswith(".md")
+        ])
+
+    tp = os.path.join(project_dir, "docs", "test-plan", "TEST_PLAN.md")
+    if os.path.exists(tp):
+        docs["test_plan"] = "docs/test-plan/TEST_PLAN.md"
+
+    review_dir = os.path.join(project_dir, "docs", "review")
+    if os.path.isdir(review_dir):
+        docs["review"] = sorted([
+            f"docs/review/{f}" for f in os.listdir(review_dir) if f.endswith(".md")
+        ])
+
+    return docs
+
+
+def cmd_export(output="snapshot.json", project_dir="."):
+    from datetime import datetime
+    session = load_session(project_dir)
+
+    snapshot = {
+        "schema_version": "1.0",
+        "framework": "vulcan-claude",
+        "project": session.get("project", ""),
+        "exported_at": datetime.now().isoformat(timespec="seconds"),
+        "current_gate": session.get("current_gate", "gate1"),
+        "gate_status": session.get("gate_status", {}),
+        "feature": session.get("feature", ""),
+        "started": session.get("started", ""),
+        "completed": session.get("completed", []),
+        "blocked": session.get("blocked", []),
+        "timeline": git_log_timeline(project_dir),
+        "documents": collect_documents(project_dir),
+    }
+
+    out_path = os.path.join(project_dir, output)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+    print(f"  snapshot 생성: {output}")
+    print(f"  프로젝트: {snapshot['project']} | Gate: {snapshot['current_gate']}")
+
+
+# ── upgrade ────────────────────────────────────────────────────────────────
+
+FRAMEWORK_FILES = [
+    ".claude/CLAUDE.md",
+    ".claude/agents/pm.md",
+    ".claude/agents/architect.md",
+    ".claude/agents/dba.md",
+    ".claude/agents/frontend-dev.md",
+    ".claude/agents/backend-dev.md",
+    ".claude/agents/qa.md",
+    ".claude/skills/vulcan/skill.md",
+    ".claude/skills/gate-transition/skill.md",
+    ".claude/skills/security-baseline/skill.md",
+    "commenting-standards.md",
+    "GATE_GUIDE.md",
+    "docs/security/baseline.md",
+]
+
+
+def read_version_from_vulcan(vulcan_py_path):
+    try:
+        with open(vulcan_py_path, encoding="utf-8") as f:
+            content = f.read()
+        match = re.search(r'^VULCAN_VERSION\s*=\s*["\'](.+?)["\']', content, re.MULTILINE)
+        return match.group(1) if match else "unknown"
+    except OSError:
+        return "unknown"
+
+
+def extract_variables(project_dir="."):
+    """CLAUDE.md에서 프로젝트 변수 추출."""
+    claude_path = os.path.join(project_dir, ".claude", "CLAUDE.md")
+    if not os.path.exists(claude_path):
+        print("오류: .claude/CLAUDE.md를 찾을 수 없습니다.")
+        sys.exit(1)
+
+    with open(claude_path, encoding="utf-8") as f:
+        content = f.read()
+
+    project = re.search(r'^# (.+?)(?:\s+-|\s+Harness)', content, re.MULTILINE)
+    generated = re.search(r'생성일: (.+)', content)
+
+    session = load_session(project_dir)
+
+    return {
+        "PROJECT_NAME": project.group(1).strip() if project else session.get("project", "Unknown"),
+        "GENERATED_DATE": generated.group(1).strip() if generated else str(date.today()),
+    }
+
+
+def cmd_upgrade(project_dir="."):
+    import shutil
+
+    session = load_session(project_dir)
+    vulcan_src = session.get("vulcan_src", "")
+    src_templates = os.path.join(vulcan_src, "templates") if vulcan_src else ""
+
+    if not vulcan_src or not os.path.isdir(src_templates):
+        print("오류: Vulcan-Claude 원본 경로를 찾을 수 없습니다.")
+        print("  session.json의 'vulcan_src' 경로를 확인하세요.")
+        sys.exit(1)
+
+    current_ver = session.get("vulcan_version", "unknown")
+    src_vulcan = os.path.join(vulcan_src, "vulcan.py")
+    new_ver = read_version_from_vulcan(src_vulcan)
+
+    variables = extract_variables(project_dir)
+    print(f"\nVulcan-Claude upgrade")
+    print(f"  프로젝트: {variables['PROJECT_NAME']}")
+    print(f"  버전: {current_ver} → {new_ver}")
+    print(f"  소스: {vulcan_src}\n")
+
+    for rel_path in FRAMEWORK_FILES:
+        tpl_path = os.path.join(src_templates, rel_path)
+        if not os.path.exists(tpl_path):
+            print(f"  건너뜀 (템플릿 없음): {rel_path}")
+            continue
+        with open(tpl_path, encoding="utf-8") as f:
+            content = render(f.read(), variables)
+        dst = os.path.join(project_dir, rel_path)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"  업데이트: {rel_path}")
+
+    if os.path.exists(src_vulcan):
+        shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
+        print(f"  업데이트: vulcan.py")
+
+    session["vulcan_version"] = new_ver
+    save_session(session, project_dir)
+
+    print(f"\n완료! v{current_ver} → v{new_ver}")
+    print(f"보존된 파일: ENVIRONMENT.md, session.json, docs/")
+
+
+# ── version ───────────────────────────────────────────────────────────────
+
+def cmd_version(project_dir="."):
+    print(f"Vulcan-Claude v{VULCAN_VERSION}")
+    session_path = os.path.join(project_dir, "session.json")
+    if os.path.exists(session_path):
+        session = load_session(project_dir)
+        project_ver = session.get("vulcan_version", "unknown")
+        print(f"  프로젝트: {session.get('project', '-')} (설치 버전: {project_ver})")
+
+
+# ── init ───────────────────────────────────────────────────────────────────
+
+def create_session_json(target_dir, project_name):
+    session = {
+        "project": project_name,
+        "vulcan_src": VULCAN_DIR,
+        "vulcan_version": VULCAN_VERSION,
+        "current_gate": "gate1",
+        "gate_status": {
+            "gate1": "pending",
+            "gate2": "pending",
+            "gate3": "pending",
+            "gate4": "pending",
+            "gate5": "pending"
+        },
+        "feature": "",
+        "started": str(date.today()),
+        "completed": [],
+        "pending": [],
+        "blocked": []
+    }
+    write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
+
+
+def init(target_dir, project_name, agent_name):
+    import shutil
+    print(f"\nVulcan-Claude 초기화")
+    print(f"  프로젝트: {project_name}")
+    print(f"  대상 폴더: {target_dir}\n")
+
+    if os.path.exists(target_dir):
+        files = os.listdir(target_dir)
+        if files:
+            print(f"경고: {target_dir} 폴더가 비어있지 않습니다.")
+            answer = input("계속 진행할까요? (y/N): ").strip().lower()
+            if answer != "y":
+                print("취소됨.")
+                sys.exit(0)
+    else:
+        os.makedirs(target_dir)
+
+    variables = {
+        "PROJECT_NAME": project_name,
+        "GENERATED_DATE": str(date.today()),
+    }
+
+    # .claude/ 디렉토리 전체 복사 후 변수 치환
+    src_claude = os.path.join(TEMPLATES_DIR, ".claude")
+    dst_claude = os.path.join(target_dir, ".claude")
+    copy_tree(src_claude, dst_claude)
+    print(f"  생성: .claude/ (agents 5, skills 3)")
+
+    # .claude/ 내 모든 .md 파일에 변수 치환 적용
+    for root, dirs, files in os.walk(dst_claude):
+        for f in files:
+            if f.endswith(".md"):
+                fpath = os.path.join(root, f)
+                with open(fpath, encoding="utf-8") as fp:
+                    content = render(fp.read(), variables)
+                with open(fpath, "w", encoding="utf-8") as fp:
+                    fp.write(content)
+
+    # ENVIRONMENT.md
+    content = render(read_template("ENVIRONMENT.md"), variables)
+    write_file(target_dir, "ENVIRONMENT.md", content)
+
+    # commenting-standards.md
+    copy_file(target_dir, "commenting-standards.md")
+
+    # GATE_GUIDE.md
+    copy_file(target_dir, "GATE_GUIDE.md")
+
+    # docs/
+    content = render(read_template("docs/requirements/REQUIREMENTS.md"), variables)
+    write_file(target_dir, "docs/requirements/REQUIREMENTS.md", content)
+
+    write_file(target_dir, "docs/design/.gitkeep", "")
+
+    content = render(read_template("docs/test-plan/TEST_PLAN.md"), variables)
+    write_file(target_dir, "docs/test-plan/TEST_PLAN.md", content)
+
+    write_file(target_dir, "docs/review/.gitkeep", "")
+
+    # security
+    copy_file(target_dir, "docs/security/baseline.md", "docs/security/baseline.md")
+    write_file(target_dir, "docs/security/compliance/.gitkeep", "")
+
+    # session.json
+    create_session_json(target_dir, project_name)
+
+    # vulcan.py 자신을 프로젝트에 복사
+    shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
+    print(f"  생성: vulcan.py")
+
+    print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
+    print(f"\n다음 단계:")
+    print(f"  1. cd {target_dir}")
+    print(f"  2. Claude Code 실행")
+    print(f"  3. /vulcan 또는 'Gate 1 시작해줘'로 프로세스 시작")
+    print(f"\nGate 완료 시:")
+    print(f"  python vulcan.py check-trace")
+    print(f"  python vulcan.py session --gate gate1 --status done --feature '기능명'")
+
+
+# ── main ───────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Vulcan-Claude - 5-Gate AI 협업 개발 프레임워크",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+명령어:
+  init         새 프로젝트 초기화 (Vulcan-Claude 디렉토리에서 실행)
+  check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
+  session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
+  export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
+  upgrade      프레임워크 파일 최신화 (프로젝트 디렉토리에서 실행)
+  version      현재 프레임워크 버전 확인
+
+예시:
+  python vulcan.py init ../my-app "MyApp"
+  python vulcan.py check-trace
+  python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
+  python vulcan.py export
+  python vulcan.py upgrade
+        """
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    p_init = subparsers.add_parser("init", help="새 프로젝트 초기화")
+    p_init.add_argument("target_dir", help="초기화할 프로젝트 폴더 경로")
+    p_init.add_argument("project_name", help="프로젝트 이름")
+    p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
+
+    subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+
+    p_session = subparsers.add_parser("session", help="Gate 상태 업데이트 + git commit")
+    p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_session.add_argument("--status", required=True, choices=["done", "pending"], help="상태")
+    p_session.add_argument("--feature", default="", help="작업 기능명")
+
+    p_export = subparsers.add_parser("export", help="snapshot.json 생성")
+    p_export.add_argument("--output", default="snapshot.json", help="출력 파일명")
+
+    subparsers.add_parser("upgrade", help="프레임워크 파일 최신화")
+    subparsers.add_parser("version", help="현재 프레임워크 버전 확인")
+
+    args = parser.parse_args()
+
+    if args.command == "init":
+        init(
+            target_dir=os.path.abspath(args.target_dir),
+            project_name=args.project_name,
+            agent_name=args.agent_name,
+        )
+    elif args.command == "check-trace":
+        check_trace()
+    elif args.command == "session":
+        cmd_session(gate=args.gate, status=args.status, feature=args.feature)
+    elif args.command == "export":
+        cmd_export(output=args.output)
+    elif args.command == "upgrade":
+        cmd_upgrade()
+    elif args.command == "version":
+        cmd_version()
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
