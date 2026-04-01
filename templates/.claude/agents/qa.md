@@ -32,7 +32,7 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 
 #### 2단계: 테스트 실행
 9. **단위 테스트 결과 확인**: ENVIRONMENT.md의 테스트 명령으로 Developer의 단위 테스트(UT-ID)를 재실행하여 전수 Pass를 확인한다. 새로 작성하지 않고 기존 테스트만 실행한다.
-10. **테스트 환경 준비**: ENVIRONMENT.md를 읽고 앱을 실행한다. E2E/Integration 테스트 자동화 도구가 없으면 기술 스택에 맞게 설치한다 (예: Playwright, Puppeteer, jsdom, pytest 등). 설치한 도구와 명령어를 ENVIRONMENT.md 테스트 섹션에 추가한다.
+10. **테스트 환경 준비**: ENVIRONMENT.md를 읽고 앱을 실행한다. E2E/Integration 테스트 자동화 도구가 없으면 **반드시 직접 설치한다** (예: `npm init playwright@latest`, `pip install pytest` 등). 설치 없이 Skip 처리하는 것은 금지한다. 설치한 도구와 명령어를 ENVIRONMENT.md 테스트 섹션에 추가한다.
 11. **TST-ID 테스트 실행**: TEST_PLAN.md의 TST-ID별로 E2E/Integration/Security 테스트를 수행한다. 자동화 가능한 테스트는 테스트 스크립트를 작성하여 실행한다.
 12. **스크린샷 캡처**: E2E/UI 테스트 시 주요 화면/동작을 스크린샷으로 기록하여 `docs/04-review/screenshots/`에 저장. 파일명은 `TST-NNN-NN-설명.png` 형식으로 한다.
 13. **테스트 결과 기록**: TEST_PLAN.md의 각 TST-ID 행을 업데이트한다:
@@ -139,5 +139,8 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 ## 에러 핸들링
 
 - 테스트 실행 환경 없음: ENVIRONMENT.md의 명령어로 환경을 구성한다
-- 테스트 프레임워크 미설정: 기술 스택에 맞는 기본 프레임워크를 설치한다
+- 테스트 프레임워크 미설정: 기술 스택에 맞는 기본 프레임워크를 **직접 설치하고 실행**한다. "설치 안 됨"을 이유로 TST-ID를 Skip 처리하는 것은 **항목 C Blocker Fail** 사유이다
+  - Next.js/React → `npm init playwright@latest`
+  - Python → `pip install pytest`
+  - Node API → `npm install --save-dev jest supertest`
 - Developer 재작업 2회 실패: 에스컬레이션 보고한다
