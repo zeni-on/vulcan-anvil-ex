@@ -25,12 +25,18 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 """
 
 import argparse
+import io
 import json
 import os
 import re
 import subprocess
 import sys
 from datetime import date
+
+# Windows 콘솔 UTF-8 출력 보장
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 VULCAN_VERSION = "1.0.0"
 
