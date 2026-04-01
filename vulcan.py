@@ -169,6 +169,47 @@ def parse_test_plan(project_dir="."):
     return set(re.findall(r'\bREQ-\d{3}-\d{2}\b', content))
 
 
+def parse_test_plan_status(project_dir="."):
+    """TEST_PLAN.md에서 TST-ID별 실행 상태를 파싱합니다.
+    마크다운 테이블 행에서 '| TST-NNN-NN |' 패턴만 파싱합니다.
+    템플릿 행(TST-ID, TST-NNN-NN 등)과 본문 참조는 무시합니다.
+    Returns: list of (tst_id, status) tuples
+    """
+    path = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
+    if not os.path.exists(path):
+        return []
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    results = []
+    for line in content.splitlines():
+        # 마크다운 테이블 행만 대상 (|로 시작)
+        if not line.strip().startswith('|'):
+            continue
+        # 구체적인 TST-ID만 매칭 (TST-NNN-NN 또는 TST-SEC-NN 형식)
+        # TST-ID, TST-NNN-NN 같은 템플릿/플레이스홀더는 제외
+        tst_match = re.search(r'\|\s*(TST-(?:\d{3}-\d{2}|SEC-\d{2}))\s*\|', line)
+        if not tst_match:
+            continue
+        tst_id = tst_match.group(1)
+
+        # 상태 판별: Pass/Fail/Skip/미실행
+        line_lower = line.lower()
+        if re.search(r'\bpass\b', line_lower):
+            status = 'pass'
+        elif re.search(r'\bfail\b', line_lower):
+            status = 'fail'
+        elif re.search(r'\bskip\b', line_lower):
+            status = 'skip'
+        else:
+            status = 'not_executed'
+
+        results.append((tst_id, status))
+
+    return results
+
+
 def check_trace(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "gate1")
@@ -214,9 +255,9 @@ def check_trace(project_dir="."):
             else:
                 issues.append(f"  X {req} - TEST_PLAN.md에 TST 매핑 없음")
 
-    # ── Gate 4: REQ 그룹별 리뷰 파일 존재 여부
+    # ── Gate 4: REQ 그룹별 리뷰 파일 + TST-ID 실행 상태
     if current_gate == "gate4":
-        print("  Gate 4 검사: REQ 그룹별 리뷰 파일 존재 여부")
+        print("  Gate 4 검사 (1): REQ 그룹별 리뷰 파일 존재 여부")
         review_dir = os.path.join(project_dir, "docs", "04-review")
         for group in sorted(group_reqs):
             filename = f"{group.lower()}-review.md"
@@ -225,6 +266,29 @@ def check_trace(project_dir="."):
                 print(f"  O {group} - {filename} 확인")
             else:
                 issues.append(f"  X {group} - docs/04-review/{filename} 없음")
+
+        print("\n  Gate 4 검사 (2): TST-ID 실행 상태")
+        tst_results = parse_test_plan_status(project_dir)
+        if not tst_results:
+            issues.append("TEST_PLAN.md에 TST-ID가 없거나 파일이 존재하지 않습니다.")
+        else:
+            not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
+            failed = [(tid, s) for tid, s in tst_results if s == 'fail']
+            passed = [(tid, s) for tid, s in tst_results if s == 'pass']
+            skipped = [(tid, s) for tid, s in tst_results if s == 'skip']
+
+            print(f"  총 {len(tst_results)}건: Pass {len(passed)}, Fail {len(failed)}, Skip {len(skipped)}, 미실행 {len(not_executed)}")
+
+            for tid, _ in passed:
+                print(f"  O {tid} - Pass")
+            for tid, _ in skipped:
+                print(f"  - {tid} - Skip")
+            for tid, _ in failed:
+                issues.append(f"  X {tid} - Fail")
+                print(f"  X {tid} - Fail")
+            for tid, _ in not_executed:
+                issues.append(f"  X {tid} - 미실행")
+                print(f"  X {tid} - 미실행")
 
     print()
     if issues:
