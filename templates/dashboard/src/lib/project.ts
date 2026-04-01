@@ -72,7 +72,10 @@ export function buildDocTree(dir: string, slugPrefix: string[] = []): DocNode[] 
 }
 
 export function readDoc(slug: string[]): string | null {
-  const p = path.join(PROJECT_ROOT, 'docs', ...slug)
+  // slug가 ['_root', 'FILE.md'] 형태면 프로젝트 루트에서 읽기
+  const base = slug[0] === '_root' ? PROJECT_ROOT : path.join(PROJECT_ROOT, 'docs')
+  const parts = slug[0] === '_root' ? slug.slice(1) : slug
+  const p = path.join(base, ...parts)
   if (!fs.existsSync(p)) return null
   return fs.readFileSync(p, 'utf-8')
 }
@@ -95,7 +98,7 @@ export interface TestStats {
 }
 
 export function parseRequirementsStats(): RequirementsStats {
-  const p = path.join(PROJECT_ROOT, 'docs', 'requirements', 'REQUIREMENTS.md')
+  const p = path.join(PROJECT_ROOT, 'docs', '01-requirements', 'REQUIREMENTS.md')
   if (!fs.existsSync(p)) return { groups: 0, total: 0, acDefined: 0, missing: [], implemented: 0 }
 
   const content = fs.readFileSync(p, 'utf-8')
@@ -149,7 +152,7 @@ export function parseRequirementsStats(): RequirementsStats {
 }
 
 export function parseTestStats(): TestStats {
-  const p = path.join(PROJECT_ROOT, 'docs', 'test-plan', 'TEST_PLAN.md')
+  const p = path.join(PROJECT_ROOT, 'docs', '03-test-plan', 'TEST_PLAN.md')
   if (!fs.existsSync(p)) return { total: 0, passed: 0, failed: 0, skipped: 0 }
 
   const content = fs.readFileSync(p, 'utf-8')

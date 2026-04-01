@@ -41,6 +41,7 @@ GATE_LABELS = {
     "gate1": "Gate 1 요구사항",
     "gate2": "Gate 2 설계",
     "gate3": "Gate 3 테스트 플랜",
+    "impl":  "구현",
     "gate4": "Gate 4 QA 검토",
     "gate5": "Gate 5 최종 승인",
 }
@@ -105,9 +106,13 @@ def save_session(session, project_dir="."):
         json.dump(session, f, ensure_ascii=False, indent=2)
 
 
-def git_commit(message, project_dir="."):
+def git_commit(message, project_dir=".", include_source=False):
     try:
         subprocess.run(["git", "add", "session.json"], cwd=project_dir, check=True, capture_output=True)
+        subprocess.run(["git", "add", "docs/"], cwd=project_dir, check=True, capture_output=True)
+        if include_source:
+            # 구현/QA 이후: .gitignore가 관리하는 범위 내에서 모든 변경 포함
+            subprocess.run(["git", "add", "-A"], cwd=project_dir, check=True, capture_output=True)
         subprocess.run(["git", "commit", "-m", message], cwd=project_dir, check=True, capture_output=True)
         print(f"  커밋 완료: {message}")
     except subprocess.CalledProcessError as e:
@@ -130,7 +135,20 @@ def parse_requirements(project_dir="."):
     group_reqs = {r for r in all_reqs if not re.match(r'REQ-\d{3}-\d{2}', r)}
     defined_acs = set(re.findall(r'###\s+AC-(\d{3}-\d{2})', content))
 
-    return group_reqs, detail_reqs, defined_acs
+    # AC 위임 관계 파싱: REQ-XXX-XX 행에 자기 AC는 없지만 다른 AC-ID가 참조되면 위임
+    ac_delegates = {}
+    for line in content.splitlines():
+        m_req = re.search(r'\bREQ-(\d{3}-\d{2})\b', line)
+        if m_req:
+            req_id = m_req.group(1)
+            if req_id not in defined_acs:
+                refs = re.findall(r'\bAC-(\d{3}-\d{2})\b', line)
+                for ref in refs:
+                    if ref != req_id:
+                        ac_delegates[req_id] = ref
+                        break
+
+    return group_reqs, detail_reqs, defined_acs, ac_delegates
 
 
 def parse_test_plan(project_dir="."):
@@ -152,7 +170,7 @@ def check_trace(project_dir="."):
 
     print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
 
-    group_reqs, detail_reqs, defined_acs = parse_requirements(project_dir)
+    group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
 
     # ── Gate 1: REQ-ID별 AC 존재 여부
     if current_gate == "gate1":
@@ -161,10 +179,12 @@ def check_trace(project_dir="."):
             issues.append("REQUIREMENTS.md에 REQ-NNN-NN 형식의 요구사항이 없습니다.")
         for req in sorted(detail_reqs):
             ac_id = req.replace("REQ-", "")
-            if ac_id not in defined_acs:
-                issues.append(f"  X {req} - AC 미정의")
-            else:
+            if ac_id in defined_acs:
                 print(f"  O {req} - AC 확인")
+            elif ac_id in ac_delegates and ac_delegates[ac_id] in defined_acs:
+                print(f"  O {req} - AC-{ac_delegates[ac_id]} 위임 확인")
+            else:
+                issues.append(f"  X {req} - AC 미정의")
 
     # ── Gate 2: REQ 그룹별 설계 파일 존재 여부
     if current_gate == "gate2":
@@ -225,7 +245,7 @@ def cmd_session(gate, status, feature, project_dir="."):
 
     session["gate_status"][gate] = status
 
-    gate_order = ["gate1", "gate2", "gate3", "gate4", "gate5"]
+    gate_order = ["gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
     if status == "done":
         current_idx = gate_order.index(gate)
         if current_idx + 1 < len(gate_order):
@@ -244,7 +264,9 @@ def cmd_session(gate, status, feature, project_dir="."):
     commit_msg = f"session: {gate} done - {GATE_LABELS[gate]}"
     if feature_label:
         commit_msg += f" ({feature_label})"
-    git_commit(commit_msg, project_dir)
+    # 구현(impl), Gate 4(QA리뷰), Gate 5(최종승인): 소스코드 포함 커밋
+    include_source = gate in ("impl", "gate4", "gate5")
+    git_commit(commit_msg, project_dir, include_source=include_source)
 
 
 # ── export ────────────────────────────────────────────────────────────────
@@ -441,6 +463,7 @@ def create_session_json(target_dir, project_name):
             "gate1": "pending",
             "gate2": "pending",
             "gate3": "pending",
+            "impl":  "pending",
             "gate4": "pending",
             "gate5": "pending"
         },

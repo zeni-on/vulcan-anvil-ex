@@ -1,4 +1,8 @@
-# Vulcan-Claude
+<p align="center">
+  <img src="docs/assets/anvil.svg" width="64" height="64" alt="Anvil">
+</p>
+
+# Vulcan-Claude-Anvil
 
 > 대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
 
@@ -6,7 +10,7 @@
 
 ## Agent-Forge와 무엇이 다른가
 
-| 관점 | Agent-Forge | Vulcan-Claude |
+| 관점 | Agent-Forge | Vulcan-Claude-Anvil |
 |------|-------------|---------------|
 | 에이전트 구조 | AGENTS.md 단일 파일 (프롬프트 트릭) | `.claude/agents/*.md` 네이티브 에이전트 |
 | 에이전트 실행 | 한 세션에서 역할 전환 | **Subagents 또는 Agent Teams로 병렬 실행** |
@@ -22,7 +26,7 @@
 ### 1. 프로젝트 초기화
 
 ```bash
-# Vulcan-Claude 디렉토리에서 실행
+# Vulcan-Claude-Anvil 디렉토리에서 실행
 python vulcan.py init ../my-project "MyProject"
 ```
 
@@ -114,7 +118,7 @@ python vulcan.py version
 
 ## 실행 모드
 
-Vulcan-Claude는 두 가지 실행 모드를 지원합니다. 에이전트 정의 파일은 동일하게 사용됩니다.
+Vulcan-Claude-Anvil는 두 가지 실행 모드를 지원합니다. 에이전트 정의 파일은 동일하게 사용됩니다.
 
 | 모드 | 상태 | 통신 방식 | 특징 |
 |------|------|----------|------|

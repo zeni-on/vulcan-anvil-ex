@@ -45,8 +45,9 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 
 | 에이전트 | 파일 | 역할 | 타입 |
 |---------|------|------|------|
+| concierge | `.claude/agents/concierge.md` | 온보딩, 프로젝트 개요 파악 | general-purpose |
 | pm | `.claude/agents/pm.md` | 요구사항 수집, REQ-ID 체계화, AC 작성 | general-purpose |
-| architect | `.claude/agents/architect.md` | 시스템 설계, API, 모듈 구조, TST-ID 할당 | general-purpose |
+| architect | `.claude/agents/architect.md` | 시스템 설계, API, 모듈 구조, UT-ID 할당 | general-purpose |
 | dba | `.claude/agents/dba.md` | 데이터 모델링, ERD, 마이그레이션 | general-purpose |
 | frontend-dev | `.claude/agents/frontend-dev.md` | 프론트엔드 구현, UI 컴포넌트, API 연동 | general-purpose |
 | backend-dev | `.claude/agents/backend-dev.md` | 백엔드 구현, API, DB 연동, 인증 | general-purpose |
@@ -66,10 +67,20 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 
 1. `session.json`을 읽어 현재 Gate를 확인한다
 2. 사용자 요청에서 작업 범위를 파악한다:
-   - 특정 Gate 시작 요청 → 해당 Gate 에이전트 투입
-   - "프로젝트 시작" → Gate 1부터 순차 진행
+   - 특정 Gate 시작 요청 ("Gate 1 시작", "설계 시작" 등) → 해당 Gate 에이전트 투입
+   - "프로젝트 시작", 자연어 요청 ("todo 앱 만들어줘" 등) → **Concierge 온보딩 후** Gate 1 진행
    - "상태 확인" → 현재 Gate 상태 보고
-3. 현재 Gate에 맞는 에이전트를 구성한다
+3. 온보딩 필요 여부 판단:
+   - gate1이 pending + 사용자가 구체적 Gate를 지정하지 않음 → `Agent(concierge)` 투입
+   - 명시적 Gate 지정 또는 이미 진행 중인 프로젝트 → concierge 스킵, 해당 Gate 에이전트 직접 투입
+
+### Phase 1.5: 온보딩 (Concierge → PM 연계)
+
+"프로젝트 시작" 또는 자연어 요청 시:
+1. `Agent(concierge)` 투입 — 사용자와 대화로 프로젝트 개요 수집
+2. Concierge가 **프로젝트 온보딩 요약**을 반환
+3. 오케스트레이터가 온보딩 요약을 컨텍스트에 포함하여 `Agent(pm)` 투입
+4. PM은 온보딩 요약을 기반으로 비전 질문을 효율적으로 진행 (이미 파악된 정보는 재질문하지 않음)
 
 ### Phase 2: Gate별 팀 구성 및 실행
 
@@ -128,13 +139,20 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 - 모든 구현 인스턴스 완료 → qa에게 구현 완료 알림 + 변경 파일 목록
 - qa 리뷰 중 🔴 발견 → 해당 developer 인스턴스에게 수정 요청 → 재작업 → 재검증 (최대 2회)
 
-### Phase 3: Gate 전환
+### Phase 3: 산출물 검증 및 Gate 전환
 
-1. 에이전트 작업 완료 후, 사용자에게 산출물을 보고한다
-2. 사용자의 승인을 기다린다
-3. 승인 확인 즉시 `python vulcan.py check-trace` 를 **직접 실행**한다
-4. check-trace 이슈 0건 확인 시 `python vulcan.py session --gate gateN --status done --feature "기능명"` 을 **직접 실행**한다
-5. session 명령 실행 완료 후 다음 Gate로 진행한다
+1. 에이전트 작업 완료 보고를 받으면, **산출물 파일이 실제로 존재하고 내용이 템플릿이 아닌지 검증**한다
+   - Gate 1: `docs/01-requirements/REQUIREMENTS.md`에 REQ-NNN-NN이 1개 이상 존재하는지 확인
+   - Gate 2: `docs/02-design/req-nnn-design.md`가 존재하고 비어있지 않은지 확인
+   - Gate 3: `docs/03-test-plan/TEST_PLAN.md`에 TST-NNN-NN이 1개 이상 존재하는지 확인
+   - 구현(impl): `ENVIRONMENT.md`가 템플릿이 아닌 실제 빌드/실행 명령으로 업데이트되었는지 확인
+   - Gate 4: `docs/04-review/req-nnn-review.md`가 존재하고 판정 결과가 포함되어 있는지 확인
+   - **산출물 누락 또는 빈 파일 발견 시**: 해당 에이전트를 재투입하여 작성을 완료시킨다
+2. 산출물 검증 통과 후, 사용자에게 산출물을 보고한다
+3. 사용자의 승인을 기다린다
+4. 승인 확인 즉시 `python vulcan.py check-trace` 를 **직접 실행**한다
+5. check-trace 이슈 0건 확인 시 `python vulcan.py session --gate gateN --status done --feature "기능명"` 을 **직접 실행**한다
+6. session 명령 실행 완료 후 다음 Gate로 진행한다
 
 > **핵심**: 에이전트가 명령어를 사용자에게 안내하는 것이 아니라 직접 실행한다.
 > 사용자가 별도로 터미널 명령을 입력할 필요가 없다.
@@ -143,6 +161,7 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 
 | 사용자 요청 | 실행 모드 | 투입 에이전트 |
 |-----------|----------|-------------|
+| "프로젝트 시작", 자연어 요청 | 온보딩 → Gate 1 | concierge → pm |
 | "Gate 1 시작", "요구사항 정의" | Gate 1 모드 | pm |
 | "Gate 2 시작", "설계 시작" | Gate 2 모드 | architect + dba (병렬) |
 | "Gate 3 시작", "테스트 계획" | Gate 3 모드 | qa |
@@ -158,6 +177,7 @@ Teams 모드 활성화 시 (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), 오케스
 
 | Gate | Subagents 모드 | Teams 모드 |
 |------|---------------|------------|
+| 온보딩 | Agent(concierge) 투입 | concierge 팀원 spawn |
 | Gate 1 | Agent(pm) 투입 | pm 팀원 spawn |
 | Gate 2 | Agent(architect) + Agent(dba) 병렬 | architect + dba 팀원 spawn, 직접 소통 |
 | Gate 3 | Agent(qa) 투입 | qa 팀원 spawn |
@@ -230,10 +250,19 @@ Teams 모드 활성화 시 (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), 오케스
 
 ## 테스트 시나리오
 
-### 정상 흐름
+### 온보딩 흐름
+**프롬프트**: "todo 앱 만들어줘"
+**기대 결과**:
+- concierge 에이전트 투입, 프로젝트 개요 대화 시작
+- 3~5개 질문으로 목표, 규모, 기술 스택, 제약사항 수집
+- 프로젝트 온보딩 요약 반환
+- 오케스트레이터가 요약을 PM에게 전달, Gate 1 자동 시작
+
+### 온보딩 스킵 흐름
 **프롬프트**: "Gate 1 시작해줘. 할 일 관리 웹앱을 만들려고 해."
 **기대 결과**:
-- pm 에이전트 투입, 비전 질문 시작
+- concierge 스킵, pm 에이전트 직접 투입
+- PM이 비전 질문 시작
 - REQUIREMENTS.md 작성 (REQ-001 ~ REQ-NNN)
 - 각 REQ-NNN-NN에 AC-NNN-NN 매핑
 - 사용자 확인 요청 → check-trace 안내

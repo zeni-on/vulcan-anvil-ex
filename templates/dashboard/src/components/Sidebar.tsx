@@ -3,6 +3,7 @@ import SidebarLink from './SidebarLink'
 import ExportButton from './ExportButton'
 import DocTreeClient from './DocTreeClient'
 import { LayoutDashboard } from 'lucide-react'
+import AnvilIcon from './AnvilIcon'
 
 const GATE_LABELS: Record<string, string> = {
   gate1: 'Gate 1 — 요구사항',
@@ -16,16 +17,20 @@ const GATE_LABELS: Record<string, string> = {
 interface Props {
   session: Session
   docs: DocNode[]
+  rootDocs?: DocNode[]
 }
 
-export default function Sidebar({ session, docs }: Props) {
+export default function Sidebar({ session, docs, rootDocs = [] }: Props) {
   const currentLabel = GATE_LABELS[session.current_gate] ?? session.current_gate
 
   return (
     <aside className="w-60 bg-gray-900 border-r border-gray-800 flex flex-col h-full overflow-hidden flex-shrink-0">
       {/* 헤더 */}
       <div className="p-4 border-b border-gray-800">
-        <div className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Vulcan Anvil</div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 font-semibold uppercase tracking-widest">
+          <AnvilIcon className="w-4 h-4 text-amber-500" />
+          Vulcan Anvil
+        </div>
         <div className="text-sm font-bold text-white mt-1 truncate">{session.project}</div>
         <div className="text-xs text-blue-400 mt-0.5 truncate">{currentLabel}</div>
       </div>
@@ -49,6 +54,16 @@ export default function Sidebar({ session, docs }: Props) {
               문서
             </div>
             <DocTreeClient nodes={docs} />
+          </div>
+        )}
+
+        {/* 프로젝트 참조 문서 */}
+        {rootDocs.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+              참조
+            </div>
+            <DocTreeClient nodes={rootDocs} />
           </div>
         )}
       </nav>

@@ -9,8 +9,9 @@
 ```
 .claude/
 ├── agents/
+│   ├── concierge.md       — 온보딩, 프로젝트 개요 파악 (프로젝트 시작 시)
 │   ├── pm.md              — 요구사항 수집, REQ-ID 체계화, AC 작성 (Gate 1)
-│   ├── architect.md        — 시스템 설계, API, TST-ID 사전 할당 (Gate 2)
+│   ├── architect.md        — 시스템 설계, API, UT-ID 사전 할당 (Gate 2)
 │   ├── dba.md              — 데이터 모델링, ERD, 마이그레이션 (Gate 2)
 │   ├── frontend-dev.md     — 프론트엔드 구현, UI, 라우팅 (구현)
 │   ├── backend-dev.md      — 백엔드 구현, API, DB 연동 (구현)

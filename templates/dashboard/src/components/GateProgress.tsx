@@ -30,10 +30,10 @@ export default function GateProgress({ session }: { session: Session }) {
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Gate 진행 현황</h2>
         <div className="flex items-start">
           {GATES.map((gate, i) => {
-            const status = gate.key !== 'impl' ? session.gate_status[gate.key] : undefined
+            const isImpl = gate.key === 'impl'
+            const status = session.gate_status[gate.key]
             const isDone = status === 'done'
             const isCurrent = session.current_gate === gate.key
-            const isImpl = gate.key === 'impl'
 
             return (
               <div key={gate.key} className="flex items-start">
