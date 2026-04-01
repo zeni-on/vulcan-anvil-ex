@@ -48,9 +48,11 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 | concierge | `.claude/agents/concierge.md` | 온보딩, 프로젝트 개요 파악 | general-purpose |
 | pm | `.claude/agents/pm.md` | 요구사항 수집, REQ-ID 체계화, AC 작성 | general-purpose |
 | architect | `.claude/agents/architect.md` | 시스템 설계, API, 모듈 구조, UT-ID 할당 | general-purpose |
+| ui-designer | `.claude/agents/ui-designer.md` | UI 설계, 와이어프레임, 디자인 토큰, 컴포넌트 명세 | general-purpose |
 | dba | `.claude/agents/dba.md` | 데이터 모델링, ERD, 마이그레이션 | general-purpose |
 | frontend-dev | `.claude/agents/frontend-dev.md` | 프론트엔드 구현, UI 컴포넌트, API 연동 | general-purpose |
 | backend-dev | `.claude/agents/backend-dev.md` | 백엔드 구현, API, DB 연동, 인증 | general-purpose |
+| ux-reviewer | `.claude/agents/ux-reviewer.md` | UI 검수, 스크린샷 분석, 접근성, 디자인 준수 검증 | general-purpose |
 | qa | `.claude/agents/qa.md` | 테스트 계획, 코드 리뷰, 판정 | general-purpose |
 
 ## 핵심 원칙
@@ -89,13 +91,16 @@ description: "5-Gate 개발 프로세스 오케스트레이터. 요구사항(Gat
 | Gate 1 | 요구사항 정의 | pm | 없음 | `docs/01-requirements/REQUIREMENTS.md` |
 | Gate 2a | 시스템 설계 | architect | Gate 1 | `docs/02-design/req-nnn-design.md` |
 | Gate 2b | 데이터 설계 | dba | Gate 1 | `docs/02-design/req-nnn-data-design.md` |
+| Gate 2c | UI 설계 | ui-designer | Gate 2a | `docs/02-design/ui-design.md` + 프로토타입 |
 | Gate 3 | 테스트 계획 | qa | Gate 2 | `docs/03-test-plan/TEST_PLAN.md` |
 | 구현 | 프론트엔드 구현 | frontend-dev | Gate 3 | 프론트엔드 소스 코드 + 단위 테스트 |
 | 구현 | 백엔드 구현 | backend-dev | Gate 3 | 백엔드 소스 코드 + 단위 테스트 |
-| Gate 4 | QA 리뷰 | qa | 구현 | `docs/04-review/req-nnn-review.md` |
+| UI 검수 | UX 리뷰 | ux-reviewer | 구현 | `docs/04-review/ux-review.md` + 스크린샷 |
+| Gate 4 | QA 리뷰 | qa | UI 검수 | `docs/04-review/req-nnn-review.md` |
 | Gate 5 | 최종 승인 | 사용자 | Gate 4 | (사용자 확인) |
 
 **Gate 2a와 2b는 병렬 실행** — architect와 dba가 동시에 작업한다.
+**Gate 2c는 2a 완료 후** — ui-designer는 architect의 시스템 설계(라우팅, API)를 참고하여 UI를 설계한다.
 
 **구현은 다단계 병렬 실행:**
 - **1차 병렬**: frontend-dev와 backend-dev가 동시에 작업한다
@@ -227,9 +232,13 @@ Gate 4는 작업 성격이 다른 3단계로 구성된다. 오케스트레이터
 **팀원 간 소통 흐름:**
 - pm 완료 → architect에게 요구사항 전달, dba에게 데이터 요구사항 전달, qa에게 AC 전달
 - architect ↔ dba: 엔티티/관계 정보 실시간 소통
-- architect + dba 완료 → frontend-dev에게 UI/라우팅 설계 전달, backend-dev에게 API/DB 설계 전달
+- architect 완료 → **ui-designer에게** 시스템 설계(라우팅, API)를 전달하여 UI 설계 시작
+- ui-designer 완료 → frontend-dev에게 **디자인 토큰, 컴포넌트 명세, 와이어프레임** 전달
+- architect + dba 완료 → backend-dev에게 API/DB 설계 전달
 - frontend-dev ↔ backend-dev: API 스펙, 응답 형식 실시간 소통 (같은 REQ 그룹 내)
-- 모든 구현 인스턴스 완료 → qa에게 구현 완료 알림 + 변경 파일 목록
+- 모든 구현 인스턴스 완료 → **ux-reviewer 투입** (스크린샷 기반 UI 검수)
+- ux-reviewer 🔴 발견 → frontend-dev에게 수정 요청 → 재작업 → 재검수 (최대 2회)
+- ux-reviewer 통과 → qa에게 구현 완료 알림 + UX 리뷰 결과 + 변경 파일 목록
 - qa 리뷰 중 🔴 발견 → 해당 developer 인스턴스에게 수정 요청 → 재작업 → 재검증 (최대 2회)
 
 ### Phase 3: 산출물 검증 및 Gate 보고
@@ -267,9 +276,10 @@ Gate 4는 작업 성격이 다른 3단계로 구성된다. 오케스트레이터
 |-----------|----------|-------------|
 | "프로젝트 시작", 자연어 요청 | 온보딩 → Gate 1 | concierge → pm |
 | "Gate 1 시작", "요구사항 정의" | Gate 1 모드 | pm |
-| "Gate 2 시작", "설계 시작" | Gate 2 모드 | architect + dba (병렬) |
+| "Gate 2 시작", "설계 시작" | Gate 2 모드 | architect + dba (병렬) → ui-designer |
 | "Gate 3 시작", "테스트 계획" | Gate 3 모드 | qa |
 | "구현 시작", "코딩 시작" | 구현 모드 | frontend-dev + backend-dev (REQ 그룹별 다단계 병렬) |
+| "UI 검수", "UX 리뷰" | UI 검수 모드 | ux-reviewer → frontend-dev (수정 시) |
 | "Gate 4 시작", "리뷰 시작" | Gate 4 모드 | qa |
 | "상태 확인", "어디까지 했어" | 상태 확인 | (오케스트레이터 직접) |
 
@@ -283,9 +293,10 @@ Teams 모드 활성화 시 (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`), 오케스
 |------|---------------|------------|
 | 온보딩 | Agent(concierge) 투입 | concierge 팀원 spawn |
 | Gate 1 | Agent(pm) 투입 | pm 팀원 spawn |
-| Gate 2 | Agent(architect) + Agent(dba) 병렬 | architect + dba 팀원 spawn, 직접 소통 |
+| Gate 2 | Agent(architect) + Agent(dba) 병렬 → Agent(ui-designer) | architect + dba + ui-designer 팀원 spawn |
 | Gate 3 | Agent(qa) 투입 | qa 팀원 spawn |
 | 구현 | Agent(frontend-dev) + Agent(backend-dev) 다단계 병렬 | REQ 그룹별 frontend-dev + backend-dev 팀원 spawn, 자율 협업 |
+| UI 검수 | Agent(ux-reviewer) 투입 | ux-reviewer 팀원 spawn |
 | Gate 4 | Agent(qa) 투입 | qa 팀원 spawn |
 
 ### Teams 모드 구현 예시
