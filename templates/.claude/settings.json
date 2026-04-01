@@ -4,7 +4,13 @@
       "Write",
       "Edit",
       "Bash(python *)",
-      "Bash(mkdir *)"
+      "Bash(mkdir *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(cd *)"
     ]
   }
 }

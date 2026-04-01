@@ -10,13 +10,17 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 ## 핵심 역할
 
 ### Gate 3: 테스트 계획 수립
-1. **테스트 전략**: 테스트 유형(Unit, Integration, E2E) 결정
-   - **Unit**: 순수 함수/모듈을 격리하여 입력→출력을 검증 (DOM, 네트워크, DB 등 외부 의존 없음)
+
+> **역할 분리 원칙**: 단위 테스트(UT-ID)는 Developer가 구현 단계에서 작성·실행·완결한다. QA의 TEST_PLAN은 **E2E, Integration, Security 테스트만** 다룬다. Unit 테스트를 TST-ID로 중복 정의하지 않는다.
+
+1. **테스트 전략**: QA가 담당하는 테스트 유형 결정
    - **Integration**: 2개 이상 모듈 간 연동을 검증 (예: API ↔ DB, 컴포넌트 ↔ 스토어)
    - **E2E**: 사용자 관점에서 브라우저/UI를 통해 전체 흐름을 검증 (클릭, 입력, 화면 확인)
-2. **TST-ID 매핑**: 설계 문서의 사전 할당 TST-ID와 REQ-ID 매핑 확인
-3. **테스트 케이스**: 각 TST-ID에 대한 구체적 테스트 시나리오 작성
-4. **커버리지 목표**: 테스트 커버리지 기준 설정
+   - **Security**: SEC-ID 기반 보안 위협 대응 검증
+   - ~~Unit~~: QA는 단위 테스트를 작성하지 않음 — Developer(UT-ID)의 영역
+2. **TST-ID 작성**: E2E/Integration/Security 테스트 케이스에 TST-ID를 부여하고 REQ-ID와 매핑
+3. **UT-ID 참조**: 설계 문서의 UT-ID 목록을 확인하여, Developer가 구현 시 작성할 단위 테스트 범위를 TEST_PLAN에 참조로 기록 (QA가 직접 실행하지 않음)
+4. **커버리지 목표**: E2E/Integration 테스트 커버리지 기준 설정
 
 ### Gate 4: QA 리뷰 (2단계 순차 수행)
 
@@ -27,13 +31,14 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 8. **코드 리뷰 통과 확인**: Blocker 항목(A~D) 중 코드 관련(A, B, D) 모두 Pass 확인 후 2단계 진행
 
 #### 2단계: 테스트 실행
-9. **테스트 환경 준비**: ENVIRONMENT.md를 읽고 앱을 실행한다. E2E/Integration 테스트 자동화 도구가 없으면 기술 스택에 맞게 설치한다 (예: Playwright, Puppeteer, jsdom, pytest 등). 설치한 도구와 명령어를 ENVIRONMENT.md 테스트 섹션에 추가한다.
-10. **테스트 실행**: TEST_PLAN.md의 TST-ID별로 실제 테스트를 수행한다. 자동화 가능한 테스트는 테스트 스크립트를 작성하여 실행한다.
-11. **스크린샷 캡처**: E2E/UI 테스트 시 주요 화면/동작을 스크린샷으로 기록하여 `docs/04-review/screenshots/`에 저장. 파일명은 `TST-NNN-NN-설명.png` 형식으로 한다.
-12. **테스트 결과 기록**: TEST_PLAN.md의 각 TST-ID 행을 업데이트한다:
+9. **단위 테스트 결과 확인**: ENVIRONMENT.md의 테스트 명령으로 Developer의 단위 테스트(UT-ID)를 재실행하여 전수 Pass를 확인한다. 새로 작성하지 않고 기존 테스트만 실행한다.
+10. **테스트 환경 준비**: ENVIRONMENT.md를 읽고 앱을 실행한다. E2E/Integration 테스트 자동화 도구가 없으면 기술 스택에 맞게 설치한다 (예: Playwright, Puppeteer, jsdom, pytest 등). 설치한 도구와 명령어를 ENVIRONMENT.md 테스트 섹션에 추가한다.
+11. **TST-ID 테스트 실행**: TEST_PLAN.md의 TST-ID별로 E2E/Integration/Security 테스트를 수행한다. 자동화 가능한 테스트는 테스트 스크립트를 작성하여 실행한다.
+12. **스크린샷 캡처**: E2E/UI 테스트 시 주요 화면/동작을 스크린샷으로 기록하여 `docs/04-review/screenshots/`에 저장. 파일명은 `TST-NNN-NN-설명.png` 형식으로 한다.
+13. **테스트 결과 기록**: TEST_PLAN.md의 각 TST-ID 행을 업데이트한다:
     - **상태**: Pass/Fail/Skip
     - **증빙**: 스크린샷 경로, 테스트 로그, 콘솔 출력 등 판정 근거를 기록한다 (예: `[스크린샷](../04-review/screenshots/TST-001-01-메인화면.png)`)
-13. **최종 판정**: Pass/Fail 최종 판정 — 코드 리뷰 + 테스트 실행 결과를 종합
+14. **최종 판정**: Pass/Fail 최종 판정 — 코드 리뷰 + UT 결과 확인 + TST 테스트 실행 결과를 종합
 
 ## 작업 원칙
 
@@ -54,7 +59,7 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 |----|------|------|
 | A | 요구사항 충족 | 모든 REQ-NNN-NN이 구현되었는가 |
 | B | 설계 준수 | 설계 문서의 아키텍처/API를 따르는가 |
-| C | 테스트 결과 | TEST_PLAN.md의 모든 TST-ID가 통과하는가 |
+| C | 테스트 결과 | TEST_PLAN.md의 모든 TST-ID가 통과하고, Developer의 UT-ID가 전수 Pass인가 |
 | D | 보안 점검 | SEC-ID에 정의된 대응 방안이 구현되었는가 |
 
 ### Improvement 항목 (개선 권고)
@@ -71,10 +76,18 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
     # 테스트 계획서
 
     ## 테스트 전략
-    - **단위 테스트**: [프레임워크, 커버리지 목표]
     - **E2E 테스트**: [도구, 시나리오 수]
+    - **Integration 테스트**: [대상, 시나리오 수]
+    - **Security 테스트**: [SEC-ID 수]
 
-    ## 테스트 매핑
+    ## 단위 테스트 참조 (Developer 담당)
+    > 아래 UT-ID는 설계 문서에서 사전 할당된 단위 테스트이다. Developer가 구현 단계에서 작성·실행하며, QA는 Gate 4에서 결과만 확인한다.
+
+    | UT-ID | REQ-ID | 대상 | Developer 실행 결과 |
+    |-------|--------|------|-------------------|
+    | UT-001-01 | REQ-001-01 | [대상] | (구현 후 업데이트) |
+
+    ## QA 테스트 매핑 (E2E / Integration / Security)
 
     | TST-ID | REQ-ID | 테스트 유형 | 시나리오 | 기대 결과 | 상태 | 증빙 |
     |--------|--------|-----------|---------|----------|------|------|
