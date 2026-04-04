@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── shadcn/ui CSS 변수 — 다크 테마 기준 (ui-design.md §1) ─────────────────── */
+:root {
+  --background:    3 7% 4%;          /* #030712 */
+  --foreground:    210 40% 98%;      /* #F9FAFB */
+  --card:          222 47% 11%;      /* #111827 */
+  --card-foreground: 210 40% 98%;
+  --popover:       222 47% 13%;
+  --popover-foreground: 210 40% 98%;
+  --primary:       217 91% 60%;      /* #3B82F6 */
+  --primary-foreground: 0 0% 100%;
+  --secondary:     215 28% 17%;      /* #1F2937 */
+  --secondary-foreground: 210 40% 98%;
+  --muted:         215 28% 17%;
+  --muted-foreground: 215 16% 47%;   /* #6B7280 */
+  --accent:        215 28% 17%;
+  --accent-foreground: 210 40% 98%;
+  --destructive:   0 85% 60%;        /* #EF4444 */
+  --border:        215 28% 22%;      /* #374151 */
+  --input:         215 28% 22%;
+  --ring:          217 91% 60%;
+  --radius: 0.5rem;
+}
+
+/* ── Gate 상태별 색상 토큰 ─────────────────────────────────────────────────── */
+:root {
+  /* done: 초록 */
+  --gate-done: #10B981;
+  --gate-done-bg: rgba(16, 185, 129, 0.1);
+  --gate-done-border: rgba(16, 185, 129, 0.3);
+
+  /* in-progress: 파랑 */
+  --gate-in-progress: #3B82F6;
+  --gate-in-progress-bg: rgba(59, 130, 246, 0.1);
+  --gate-in-progress-border: rgba(59, 130, 246, 0.4);
+  --gate-in-progress-ring: rgba(59, 130, 246, 0.5);
+
+  /* pending: 회색 */
+  --gate-pending: #374151;
+  --gate-pending-text: #6B7280;
+
+  /* blocked: 빨강 */
+  --gate-blocked: #EF4444;
+  --gate-blocked-bg: rgba(239, 68, 68, 0.1);
+  --gate-blocked-border: rgba(239, 68, 68, 0.3);
+
+  /* 소스 타입 배지 색상 */
+  --source-github: #8B5CF6;
+  --source-github-bg: rgba(139, 92, 246, 0.1);
+  --source-local: #F59E0B;
+  --source-local-bg: rgba(245, 158, 11, 0.1);
+}
+
+@media print {
+  aside { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .no-print { display: none !important; }
+}

@@ -122,16 +122,141 @@ def git_commit(message, project_dir=".", include_source=False):
         subprocess.run(["git", "commit", "-m", message], cwd=project_dir, check=True, capture_output=True)
         print(f"  커밋 완료: {message}")
     except subprocess.CalledProcessError as e:
+        # git commit 실패는 경고만 출력하고 계속 진행 (git_push와 다른 동작)
         print(f"  경고: git commit 실패 - {e.stderr.decode().strip()}")
 
 
+def git_push(project_dir="."):
+    """현재 프로젝트 디렉토리에서 git push를 실행합니다.
+
+    git commit과 달리 push 실패는 프로세스를 즉시 중단합니다 (REQ-006-02).
+
+    Args:
+        project_dir: git push를 실행할 프로젝트 디렉토리 경로.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "push"],
+            cwd=project_dir,
+            check=True,
+            capture_output=True,
+        )
+        print(f"  푸시 완료")
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr.decode(errors="replace").strip()
+        print(f"git push 실패: {stderr}")
+        sys.exit(1)
+
+
 # ── check-trace ────────────────────────────────────────────────────────────
+
+def count_docs(project_dir="."):
+    """docs/ 하위 4개 디렉토리의 .md 파일 수를 카운트한다.
+
+    서브디렉토리 내 .md 파일도 포함한다. 디렉토리가 없거나 권한 오류 시
+    해당 카테고리를 0으로 처리하고 계속 진행한다 (graceful).
+
+    Args:
+        project_dir: 프로젝트 루트 디렉토리 경로.
+
+    Returns:
+        requirements, design, test_plan, review 카테고리별 .md 파일 수와
+        total 합계를 담은 dict.
+    """
+    categories = {
+        "requirements": os.path.join(project_dir, "docs", "01-requirements"),
+        "design":       os.path.join(project_dir, "docs", "02-design"),
+        "test_plan":    os.path.join(project_dir, "docs", "03-test-plan"),
+        "review":       os.path.join(project_dir, "docs", "04-review"),
+    }
+    counts = {}
+    for key, dir_path in categories.items():
+        count = 0
+        try:
+            for root, _dirs, files in os.walk(dir_path):
+                count += sum(1 for f in files if f.endswith(".md"))
+        except OSError:
+            # 디렉토리 미존재 또는 권한 오류 — 0으로 처리하고 계속 진행
+            count = 0
+        counts[key] = count
+    counts["total"] = sum(counts.values())
+    return counts
+
+
+def compute_stats(project_dir="."):
+    """check-trace에서 수집한 파싱 결과를 조합하여 stats 딕셔너리를 조립한다.
+
+    parse_requirements, parse_test_plan_status, count_docs, parse_traceability를
+    호출하여 요구사항/테스트/문서 통계를 단일 dict로 반환한다. 파싱 실패 시
+    해당 섹션을 0 기본값으로 채우고 예외를 전파하지 않는다.
+
+    Args:
+        project_dir: 프로젝트 루트 디렉토리 경로.
+
+    Returns:
+        requirements, tests, docs 섹션과 updated_at을 포함한 stats dict.
+    """
+    # requirements 섹션
+    try:
+        group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
+        traceability = parse_traceability(project_dir)
+        implemented = sum(
+            1 for info in traceability.values()
+            if info.get("status") in ("구현완료", "완료")
+        )
+        total_reqs = len(detail_reqs)
+        # ac가 있는 REQ: defined_acs에 해당 AC-ID가 있거나 ac_delegates에 위임 참조가 있는 경우
+        ac_covered = sum(
+            1 for req in detail_reqs
+            if req.replace("REQ-", "") in defined_acs
+            or req.replace("REQ-", "") in ac_delegates
+        )
+        requirements_stats = {
+            "groups":      len(group_reqs),
+            "total":       total_reqs,
+            "implemented": implemented,
+            "pending":     total_reqs - implemented,
+            "ac_defined":  ac_covered,
+            "ac_missing":  total_reqs - ac_covered,
+        }
+    except Exception:
+        requirements_stats = {
+            "groups": 0, "total": 0, "implemented": 0,
+            "pending": 0, "ac_defined": 0, "ac_missing": 0,
+        }
+
+    # tests 섹션
+    try:
+        tst_results = parse_test_plan_status(project_dir)
+        tests_stats = {
+            "total":   len(tst_results),
+            "passed":  sum(1 for _, s in tst_results if s == "pass"),
+            "failed":  sum(1 for _, s in tst_results if s == "fail"),
+            "skipped": sum(1 for _, s in tst_results if s == "skip"),
+            "pending": sum(1 for _, s in tst_results if s == "not_executed"),
+        }
+    except Exception:
+        tests_stats = {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
+
+    # docs 섹션
+    try:
+        docs_stats = count_docs(project_dir)
+    except Exception:
+        docs_stats = {"requirements": 0, "design": 0, "test_plan": 0, "review": 0, "total": 0}
+
+    return {
+        "requirements": requirements_stats,
+        "tests":        tests_stats,
+        "docs":         docs_stats,
+        "updated_at":   date.today().isoformat(),
+    }
+
 
 def parse_requirements(project_dir="."):
     """REQUIREMENTS.md에서 REQ-ID 및 AC 정보를 파싱합니다."""
     path = os.path.join(project_dir, "docs", "01-requirements", "REQUIREMENTS.md")
     if not os.path.exists(path):
-        return set(), set(), set()
+        return set(), set(), set(), {}
 
     with open(path, encoding="utf-8") as f:
         content = f.read()
@@ -392,6 +517,14 @@ def check_trace(project_dir="."):
                 issues.append(f"  X {tid} - 미실행")
                 print(f"  X {tid} - 미실행")
 
+    # stats 계산 및 session.json 업데이트 — 이슈 유무와 무관하게 항상 실행
+    try:
+        stats = compute_stats(project_dir)
+        session["stats"] = stats
+        save_session(session, project_dir)
+    except Exception as e:
+        print(f"  [경고] stats 계산 실패: {e}")
+
     print()
     if issues:
         print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
@@ -481,6 +614,8 @@ def cmd_session(gate, status, feature, project_dir="."):
     # 구현(impl), Gate 4(QA리뷰), Gate 5(최종승인): 소스코드 포함 커밋
     include_source = gate in ("impl", "gate4", "gate5")
     git_commit(commit_msg, project_dir, include_source=include_source)
+    # git push: commit 성공 직후 실행. 실패 시 sys.exit(1) (REQ-006-01, REQ-006-02)
+    git_push(project_dir)
 
 
 # ── export ────────────────────────────────────────────────────────────────
@@ -556,6 +691,91 @@ def cmd_export(output="snapshot.json", project_dir="."):
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
     print(f"  snapshot 생성: {output}")
     print(f"  프로젝트: {snapshot['project']} | Gate: {snapshot['current_gate']}")
+
+
+# ── release ───────────────────────────────────────────────────────────────
+
+# dashboard/ 복사 시 제외할 디렉토리/파일 이름 목록 (REQ-008-03, SEC-002-03)
+_DASHBOARD_EXCLUDES = {"node_modules", ".next", ".env.local"}
+
+
+def _copy_tree_filtered(src_dir, dst_dir, excludes):
+    """excludes에 포함된 이름을 건너뛰며 디렉토리 트리를 복사합니다.
+
+    Args:
+        src_dir: 복사 원본 디렉토리 절대 경로.
+        dst_dir: 복사 대상 디렉토리 절대 경로.
+        excludes: 건너뛸 파일/디렉토리 이름 집합.
+    """
+    import shutil
+    for root, dirs, files in os.walk(src_dir):
+        # 제외 디렉토리는 재귀 탐색에서도 제외 (os.walk in-place 수정)
+        dirs[:] = [d for d in dirs if d not in excludes]
+        rel_root = os.path.relpath(root, src_dir)
+        for f in files:
+            if f in excludes:
+                continue
+            src = os.path.join(root, f)
+            rel_path = os.path.join(rel_root, f) if rel_root != "." else f
+            dst = os.path.join(dst_dir, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+
+
+def cmd_release(target):
+    """Vulcan-Dev에서 Vulcan-Claude-Anvil 경로로 배포 대상 파일을 복사합니다.
+
+    배포 대상: vulcan.py, templates/, dashboard/, README.md
+    배포 제외: docs/, session.json, .claude/, node_modules/, .env.local, .git/
+
+    Args:
+        target: 배포 대상 디렉토리 경로 (절대 또는 상대). (REQ-008-01)
+    """
+    import shutil
+
+    target_abs = os.path.abspath(target)
+
+    # 자기 자신 덮어쓰기 방지 (REQ-008-01)
+    if os.path.abspath(VULCAN_DIR) == target_abs:
+        print(f"오류: 대상 경로가 현재 Vulcan-Dev 디렉토리와 동일합니다. 자기 자신 덮어쓰기는 허용되지 않습니다.")
+        sys.exit(1)
+
+    # 대상 경로 존재 확인
+    if not os.path.isdir(target_abs):
+        print(f"오류: 대상 경로가 존재하지 않습니다 — {target_abs}")
+        sys.exit(1)
+
+    print(f"\nVulcan-Claude release")
+    print(f"  소스: {VULCAN_DIR}")
+    print(f"  대상: {target_abs}\n")
+
+    # vulcan.py 복사
+    src_vulcan = os.path.join(VULCAN_DIR, "vulcan.py")
+    if os.path.isfile(src_vulcan):
+        shutil.copy2(src_vulcan, os.path.join(target_abs, "vulcan.py"))
+        print(f"  생성/업데이트: vulcan.py")
+
+    # templates/ 복사
+    src_templates = os.path.join(VULCAN_DIR, "templates")
+    if os.path.isdir(src_templates):
+        dst_templates = os.path.join(target_abs, "templates")
+        _copy_tree_filtered(src_templates, dst_templates, excludes=set())
+        print(f"  생성/업데이트: templates/")
+
+    # dashboard/ 복사 (node_modules/, .next/, .env.local 제외)
+    src_dashboard = os.path.join(VULCAN_DIR, "dashboard")
+    if os.path.isdir(src_dashboard):
+        dst_dashboard = os.path.join(target_abs, "dashboard")
+        _copy_tree_filtered(src_dashboard, dst_dashboard, excludes=_DASHBOARD_EXCLUDES)
+        print(f"  생성/업데이트: dashboard/")
+
+    # README.md 복사
+    src_readme = os.path.join(VULCAN_DIR, "README.md")
+    if os.path.isfile(src_readme):
+        shutil.copy2(src_readme, os.path.join(target_abs, "README.md"))
+        print(f"  생성/업데이트: README.md")
+
+    print(f"\n완료! {target_abs} 에 배포되었습니다.")
 
 
 # ── upgrade ────────────────────────────────────────────────────────────────
@@ -764,14 +984,8 @@ def init(target_dir, project_name, agent_name):
     gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\n"
     write_file(target_dir, ".gitignore", gitignore)
 
-    # dashboard/ 복사 (Anvil 대시보드)
-    src_dashboard = os.path.join(TEMPLATES_DIR, "dashboard")
-    if os.path.isdir(src_dashboard):
-        dst_dashboard = os.path.join(target_dir, "dashboard")
-        copy_tree(src_dashboard, dst_dashboard)
-        print(f"  생성: dashboard/ (Anvil 대시보드 — Next.js)")
-
     # git init + 초기 커밋
+    # 참고: dashboard/는 Vulcan-Claude-Anvil 루트에 단일 설치하여 재사용합니다 (REQ-007-01)
     try:
         subprocess.run(["git", "init"], cwd=target_dir, check=True, capture_output=True)
         subprocess.run(["git", "add", "-A"], cwd=target_dir, check=True, capture_output=True)
@@ -789,7 +1003,7 @@ def init(target_dir, project_name, agent_name):
     print(f"  2. Claude Code 실행")
     print(f"  3. /vulcan 또는 'Gate 1 시작해줘'로 프로세스 시작")
     print(f"\n대시보드 실행:")
-    print(f"  cd dashboard && npm install && npm run dev")
+    print(f"  cd <Vulcan-Claude-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")
     print(f"\nGate 완료 시:")
     print(f"  python vulcan.py check-trace")
@@ -845,6 +1059,9 @@ def main():
     subparsers.add_parser("upgrade", help="프레임워크 파일 최신화")
     subparsers.add_parser("version", help="현재 프레임워크 버전 확인")
 
+    p_release = subparsers.add_parser("release", help="Vulcan-Claude-Anvil로 코드 배포")
+    p_release.add_argument("--target", required=True, help="배포 대상 경로 (예: ../Vulcan-Claude-Anvil)")
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -865,6 +1082,8 @@ def main():
         cmd_upgrade()
     elif args.command == "version":
         cmd_version()
+    elif args.command == "release":
+        cmd_release(target=args.target)
     else:
         parser.print_help()
 

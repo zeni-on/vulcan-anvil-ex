@@ -1,0 +1,121 @@
+/**
+ * @file schemas.ts
+ * @description Zod 런타임 검증 스키마 정의
+ *
+ * 역할:
+ * - projects.json, session.json 파싱 시 스키마 검증
+ * - 스키마 오류 항목은 제외하고 정상 항목만 반환 (REQ-009-06)
+ *
+ * @see docs/02-design/req-data-design.md §4-2
+ */
+
+import { z } from 'zod'
+
+// ── Project 스키마 ────────────────────────────────────────────────────────────
+
+export const GitHubProjectSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  type: z.literal('github'),
+  repo: z.string().regex(/^[^/]+\/[^/]+$/, 'owner/repo 형식이어야 합니다'),
+  branch: z.string().min(1),
+  addedAt: z.string().datetime(),
+})
+
+export const LocalProjectSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  type: z.literal('local'),
+  path: z.string().min(1),
+  addedAt: z.string().datetime(),
+})
+
+/**
+ * Project discriminated union 스키마.
+ * type 필드 기준으로 GitHubProject 또는 LocalProject 중 하나를 선택한다.
+ */
+export const ProjectSchema = z.discriminatedUnion('type', [
+  GitHubProjectSchema,
+  LocalProjectSchema,
+])
+
+/**
+ * projects.json 전체 배열 스키마.
+ * 개별 항목 파싱 실패 시 해당 항목을 제외하는 폴백 처리를 위해
+ * readProjects()에서 ProjectSchema.safeParse()를 항목별로 호출한다.
+ */
+export const ProjectsListSchema = z.array(ProjectSchema)
+
+// ── Session 스키마 ────────────────────────────────────────────────────────────
+
+export const GateStatusSchema = z.enum(['done', 'in-progress', 'pending', 'blocked'])
+
+export const GateKeySchema = z.enum(['gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5', 'completed'])
+
+// ── Stats 스키마 (REQ-011-02) ─────────────────────────────────────────────────
+
+/**
+ * RequirementsStats Zod 스키마.
+ * 모든 수치는 음수 불허 정수다.
+ */
+export const RequirementsStatsSchema = z.object({
+  groups:       z.number().int().min(0),
+  total:        z.number().int().min(0),
+  implemented:  z.number().int().min(0),
+  pending:      z.number().int().min(0),
+  ac_defined:   z.number().int().min(0),
+  ac_missing:   z.number().int().min(0),
+})
+
+/** TestStats Zod 스키마. 모든 수치는 음수 불허 정수다. */
+export const TestStatsSchema = z.object({
+  total:   z.number().int().min(0),
+  passed:  z.number().int().min(0),
+  failed:  z.number().int().min(0),
+  skipped: z.number().int().min(0),
+  pending: z.number().int().min(0),
+})
+
+/** DocsStats Zod 스키마. 모든 수치는 음수 불허 정수다. */
+export const DocsStatsSchema = z.object({
+  requirements: z.number().int().min(0),
+  design:       z.number().int().min(0),
+  test_plan:    z.number().int().min(0),
+  review:       z.number().int().min(0),
+  total:        z.number().int().min(0),
+})
+
+/** ProjectStats Zod 스키마. updated_at은 YYYY-MM-DD 형식을 검증한다. */
+export const ProjectStatsSchema = z.object({
+  requirements: RequirementsStatsSchema,
+  tests:        TestStatsSchema,
+  docs:         DocsStatsSchema,
+  updated_at:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+})
+
+export const SessionDataSchema = z.object({
+  project: z.string().min(1),
+  vulcan_src: z.string().optional(),
+  vulcan_version: z.string().min(1),
+  current_gate: GateKeySchema,
+  gate_status: z.object({
+    gate1: GateStatusSchema,
+    gate2: GateStatusSchema,
+    gate3: GateStatusSchema,
+    impl: GateStatusSchema,
+    gate4: GateStatusSchema,
+    gate5: GateStatusSchema,
+  }),
+  feature: z.string().optional(),
+  started: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식이어야 합니다'),
+  completed: z.array(z.string()),
+  pending: z.array(z.string()),
+  blocked: z.array(z.string()),
+  /** check-trace 실행 시 계산된 프로젝트 통계. stats 없는 session.json도 유효하다. */
+  stats: ProjectStatsSchema.optional(),
+})
+
+// ── 추론 타입 내보내기 ─────────────────────────────────────────────────────────
+
+export type SessionDataFromSchema = z.infer<typeof SessionDataSchema>
+export type ProjectFromSchema = z.infer<typeof ProjectSchema>
