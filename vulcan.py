@@ -815,7 +815,6 @@ FRAMEWORK_FILES = [
     "commenting-standards.md",
     "GATE_GUIDE.md",
     "docs/CHANGE_PROCESS.md",
-    "docs/TRACEABILITY.md",
     "docs/05-security/baseline.md",
 ]
 
