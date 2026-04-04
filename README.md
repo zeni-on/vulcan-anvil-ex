@@ -90,7 +90,6 @@ my-project/
     │   ├── REQ-NNN-Review.md           #   QA 리뷰
     │   └── UX-Review.md                #   UX 리뷰
     ├── 05-security/baseline.md         # 보안 기준선
-    ├── CHANGE_PROCESS.md               # 변경 관리 절차
     └── TRACEABILITY.md                 # 추적 매트릭스
 ```
 

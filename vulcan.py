@@ -784,6 +784,7 @@ def cmd_release(target):
 DEPRECATED_FILES = [
     ".claude/skills/gate-transition/skill.md",
     "docs/03-test-plan/TEST_PLAN.md",
+    "docs/CHANGE_PROCESS.md",
 ]
 
 FRAMEWORK_FILES = [
@@ -814,7 +815,6 @@ FRAMEWORK_FILES = [
     # docs & guides
     "commenting-standards.md",
     "GATE_GUIDE.md",
-    "docs/CHANGE_PROCESS.md",
     "docs/05-security/baseline.md",
 ]
 
@@ -1000,8 +1000,7 @@ def init(target_dir, project_name, agent_name):
 
     write_file(target_dir, "docs/04-review/.gitkeep", "")
 
-    # CHANGE_PROCESS, TRACEABILITY
-    copy_file(target_dir, "docs/CHANGE_PROCESS.md")
+    # TRACEABILITY
     content = render(read_template("docs/TRACEABILITY.md"), variables)
     write_file(target_dir, "docs/TRACEABILITY.md", content)
 

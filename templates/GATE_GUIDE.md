@@ -168,3 +168,37 @@ python vulcan.py session --gate gate5 --status done --feature "기능명"
 1. REQUIREMENTS.md에 최소 요구사항 작성 (1~3줄)
 2. 설계 문서 생략 가능 (사용자 허용 시)
 3. **Gate 4 QA 리뷰는 절대 생략 불가**
+
+## 변경 관리
+
+요구사항 추가/수정/삭제 시 문서 수정 순서.
+
+### 신규 REQ 추가
+
+```
+REQUIREMENTS.md (REQ + AC 추가)
+  → TRACEABILITY.md (행 추가)
+  → REQ-NNN-Design.md (설계)
+  → TRACEABILITY.md (설계 컬럼)
+  → Test-Plan.md (TST-ID 추가)
+  → TRACEABILITY.md (테스트 컬럼)
+  → 소스 코드 (구현)
+  → REQ-NNN-Review.md (리뷰)
+  → TRACEABILITY.md (리뷰 컬럼 + 상태 → 구현완료)
+```
+
+### 기존 REQ 수정
+
+1. REQUIREMENTS.md에서 해당 REQ 수정, 상태 → `수정예정`
+2. TRACEABILITY.md 상태 → `수정예정`
+3. `REQ-NNN-Design-vN.md` 새 버전 파일로 변경분 작성 (기존 파일 보존)
+4. Test-Plan.md에서 해당 TST-ID를 현재 요구사항 기준으로 덮어쓰기
+5. 구현 → 리뷰 → TRACEABILITY 업데이트
+
+### REQ 삭제
+
+1. REQUIREMENTS.md에서 상태 → `삭제됨` (행 유지, 번호 재사용 금지)
+2. TRACEABILITY.md 상태 → `삭제됨`
+3. Test-Plan.md에서 해당 TST-ID 제거
+4. 소스 코드에서 관련 코드 제거
+5. 설계/리뷰 문서는 삭제하지 않고 보존 (히스토리)
