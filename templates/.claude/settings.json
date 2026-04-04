@@ -12,5 +12,18 @@
       "Bash(pip3 *)",
       "Bash(cd *)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python vulcan.py check-trace 2>/dev/null || true",
+            "statusMessage": "산출물 정합성 검증 중..."
+          }
+        ]
+      }
+    ]
   }
 }

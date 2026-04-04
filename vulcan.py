@@ -780,19 +780,42 @@ def cmd_release(target):
 
 # ── upgrade ────────────────────────────────────────────────────────────────
 
+# upgrade 시 타겟에서 삭제할 파일 (이전 버전에서 제거된 파일)
+DEPRECATED_FILES = [
+    ".claude/skills/gate-transition/skill.md",
+    "docs/03-test-plan/TEST_PLAN.md",
+]
+
 FRAMEWORK_FILES = [
+    # CLAUDE.md & settings
     ".claude/CLAUDE.md",
+    ".claude/settings.json",
+    # agents
+    ".claude/agents/concierge.md",
     ".claude/agents/pm.md",
     ".claude/agents/architect.md",
     ".claude/agents/dba.md",
+    ".claude/agents/ui-designer.md",
     ".claude/agents/frontend-dev.md",
     ".claude/agents/backend-dev.md",
+    ".claude/agents/ux-reviewer.md",
     ".claude/agents/qa.md",
+    # rules
+    ".claude/rules/core-principles.md",
+    ".claude/rules/gate1-requirements.md",
+    ".claude/rules/gate2-design.md",
+    ".claude/rules/gate3-testplan.md",
+    ".claude/rules/gate4-review.md",
+    ".claude/rules/implementation.md",
+    ".claude/rules/traceability.md",
+    # skills
     ".claude/skills/vulcan/skill.md",
-    ".claude/skills/gate-transition/skill.md",
     ".claude/skills/security-baseline/skill.md",
+    # docs & guides
     "commenting-standards.md",
     "GATE_GUIDE.md",
+    "docs/CHANGE_PROCESS.md",
+    "docs/TRACEABILITY.md",
     "docs/05-security/baseline.md",
 ]
 
@@ -862,6 +885,15 @@ def cmd_upgrade(project_dir="."):
         with open(dst, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"  업데이트: {rel_path}")
+
+    for rel_path in DEPRECATED_FILES:
+        dst = os.path.join(project_dir, rel_path)
+        if os.path.exists(dst):
+            os.remove(dst)
+            parent = os.path.dirname(dst)
+            if os.path.isdir(parent) and not os.listdir(parent):
+                os.rmdir(parent)
+            print(f"  삭제 (deprecated): {rel_path}")
 
     if os.path.exists(src_vulcan):
         shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
@@ -936,7 +968,7 @@ def init(target_dir, project_name, agent_name):
     src_claude = os.path.join(TEMPLATES_DIR, ".claude")
     dst_claude = os.path.join(target_dir, ".claude")
     copy_tree(src_claude, dst_claude)
-    print(f"  생성: .claude/ (agents 5, skills 3)")
+    print(f"  생성: .claude/ (agents 9, skills 2, rules 7)")
 
     # .claude/ 내 모든 .md 파일에 변수 치환 적용
     for root, dirs, files in os.walk(dst_claude):
@@ -964,10 +996,15 @@ def init(target_dir, project_name, agent_name):
 
     write_file(target_dir, "docs/02-design/.gitkeep", "")
 
-    content = render(read_template("docs/03-test-plan/TEST_PLAN.md"), variables)
-    write_file(target_dir, "docs/03-test-plan/TEST_PLAN.md", content)
+    content = render(read_template("docs/03-test-plan/Test-Plan.md"), variables)
+    write_file(target_dir, "docs/03-test-plan/Test-Plan.md", content)
 
     write_file(target_dir, "docs/04-review/.gitkeep", "")
+
+    # CHANGE_PROCESS, TRACEABILITY
+    copy_file(target_dir, "docs/CHANGE_PROCESS.md")
+    content = render(read_template("docs/TRACEABILITY.md"), variables)
+    write_file(target_dir, "docs/TRACEABILITY.md", content)
 
     # security
     copy_file(target_dir, "docs/05-security/baseline.md", "docs/05-security/baseline.md")

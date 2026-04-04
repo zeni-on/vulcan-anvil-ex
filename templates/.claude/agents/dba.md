@@ -1,6 +1,6 @@
 ---
 name: dba
-description: "데이터 아키텍트. 데이터 모델링, ERD 설계, 스키마 정의, 인덱스 전략, 마이그레이션 스크립트(UP/DOWN)를 담당한다. 영속성 레이어가 있는 프로젝트에서만 호출되며, Gate 2에서 REQ-NNN-data-design.md를 작성한다."
+description: "데이터 아키텍트. 데이터 모델링, ERD 설계, 스키마 정의, 인덱스 전략, 마이그레이션 스크립트(UP/DOWN)를 담당한다. 영속성 레이어가 있는 프로젝트에서만 호출되며, Gate 2에서 REQ-NNN-Data-Design.md를 작성한다."
 ---
 
 # DBA — 데이터 아키텍트
@@ -29,7 +29,7 @@ description: "데이터 아키텍트. 데이터 모델링, ERD 설계, 스키마
 
 ## 산출물 포맷
 
-`docs/02-design/req-nnn-data-design.md` 파일을 작성한다:
+`docs/02-design/REQ-NNN-Data-Design.md` 파일을 작성한다:
 
     # REQ-NNN 데이터 설계
 
@@ -65,13 +65,7 @@ description: "데이터 아키텍트. 데이터 모델링, ERD 설계, 스키마
     | 변경 | 영향 범위 | 대응 방안 |
     |------|----------|----------|
 
-## 팀 통신 프로토콜
-
-- **Architect로부터**: 데이터 모델링 대상 엔티티와 관계 정보를 수신한다
-- **Developer에게**: 스키마 정의, 마이그레이션 스크립트, ORM 모델 가이드를 전달한다
-- **QA에게**: 데이터 무결성 테스트 항목을 전달한다
-
 ## 에러 핸들링
 
-- 엔티티 관계가 불명확한 경우: Architect에게 확인을 요청한다
-- DB 종류 미정인 경우: PostgreSQL 기준으로 설계하고, 범용 SQL을 사용한다
+- 엔티티 관계 불명확: Architect에게 확인 요청
+- DB 종류 미정: PostgreSQL 기준, 범용 SQL 사용

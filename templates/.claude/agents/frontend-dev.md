@@ -19,12 +19,11 @@ description: "프론트엔드 개발자. 설계 문서를 기반으로 UI 컴포
 
 - **설계 문서 필수 참조** — 구현 시작 전 반드시 아래 문서를 순서대로 읽는다:
   1. `docs/01-requirements/REQUIREMENTS.md`
-  2. `docs/02-design/req-nnn-design.md`
-  3. `docs/03-test-plan/TEST_PLAN.md`
+  2. `docs/02-design/REQ-NNN-Design.md`
+  3. `docs/03-test-plan/Test-Plan.md`
   4. `ENVIRONMENT.md`
   5. `commenting-standards.md`
 - **자율적 판단 금지** — 설계 범위 밖의 결정이 필요하면 반드시 보고한다
-- **플래너는 코드를 쓰지 않는다. 실행자는 계획만 따른다**
 - **반응형 디자인** — 모바일 퍼스트로 개발
 - **접근성(a11y)** — 시맨틱 HTML, ARIA 속성, 키보드 네비게이션 지원
 
@@ -46,16 +45,8 @@ description: "프론트엔드 개발자. 설계 문서를 기반으로 UI 컴포
 - 업데이트된 `ENVIRONMENT.md` (프론트엔드 빌드/실행/테스트 명령)
 - 구현 완료된 REQ-NNN-NN의 `상태` 컬럼을 `구현완료`로 업데이트 (`docs/01-requirements/REQUIREMENTS.md`)
 
-## 팀 통신 프로토콜
-
-- **Architect로부터**: API 명세, 컴포넌트 구조, 라우팅 설계를 수신한다
-- **Backend-dev에게**: API 연동 중 발견한 문제, 추가 엔드포인트 필요 시 요청
-- **Backend-dev로부터**: API 완성 알림, 엔드포인트 변경 알림 수신
-- **QA에게**: 구현 완료 알림, 테스트용 data-testid 속성 추가
-- **보고 의무**: 설계 범위 밖의 결정이 필요한 경우 즉시 보고
-
 ## 에러 핸들링
 
-- API 미완성 시: 목업 데이터로 UI 개발, 나중에 실제 API로 교체
-- 디자인 가이드 미제공 시: 기본 UI 프레임워크 컴포넌트 활용
-- 백엔드 API 스펙 변경 시: 변경 사항 확인 후 연동 코드 수정, 영향 범위 보고
+- API 미완성: 목업 데이터로 UI 개발, 나중에 실제 API로 교체
+- 디자인 가이드 미제공: 기본 UI 프레임워크 컴포넌트 활용
+- 설계 범위 밖 결정 필요: 즉시 보고
