@@ -854,12 +854,12 @@ def cmd_upgrade(project_dir="."):
     import shutil
 
     session = load_session(project_dir)
-    vulcan_src = session.get("vulcan_src", "")
-    src_templates = os.path.join(vulcan_src, "templates") if vulcan_src else ""
+    vulcan_src = VULCAN_DIR
+    src_templates = os.path.join(vulcan_src, "templates")
 
-    if not vulcan_src or not os.path.isdir(src_templates):
+    if not os.path.isdir(src_templates):
         print("오류: Vulcan-Claude 원본 경로를 찾을 수 없습니다.")
-        print("  session.json의 'vulcan_src' 경로를 확인하세요.")
+        print(f"  templates 디렉터리가 없습니다: {src_templates}")
         sys.exit(1)
 
     current_ver = session.get("vulcan_version", "unknown")
@@ -899,6 +899,7 @@ def cmd_upgrade(project_dir="."):
         print(f"  업데이트: vulcan.py")
 
     session["vulcan_version"] = new_ver
+    session["vulcan_src"] = vulcan_src
     save_session(session, project_dir)
 
     print(f"\n완료! v{current_ver} → v{new_ver}")
