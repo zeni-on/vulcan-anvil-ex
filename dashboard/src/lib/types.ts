@@ -181,7 +181,35 @@ export interface ProjectData {
 export interface DocEntry {
   name: string
   path: string    // 상대 경로 (프로젝트 루트 기준)
-  category: 'requirements' | 'design' | 'test-plan' | 'review' | 'other'
+  category: 'discovery' | 'requirements' | 'design' | 'test-plan' | 'review' | 'other'
+  /**
+   * 파일 종류:
+   *  - 'markdown' (기본): dashboard 내 Drawer에서 렌더
+   *  - 'external': OS 기본 앱으로 열어야 하는 파일 (xlsx/pptx/pdf/hwp 등)
+   * 미지정 시 'markdown'으로 간주한다 (기존 호출자 호환).
+   */
+  kind?: 'markdown' | 'external'
+  /** 확장자(소문자, 점 없음). 'external' 유형일 때 아이콘 선택에 사용. */
+  ext?: string
+}
+
+/** 외부 앱으로 열 수 있는 산출물 파일 확장자 (소문자, 점 없음) */
+export const EXTERNAL_DOC_EXTENSIONS = [
+  'pdf',
+  'xlsx',
+  'xls',
+  'pptx',
+  'ppt',
+  'docx',
+  'doc',
+  'hwp',
+  'hwpx',
+] as const
+
+export type ExternalDocExt = (typeof EXTERNAL_DOC_EXTENSIONS)[number]
+
+export function isExternalDocExt(ext: string): ext is ExternalDocExt {
+  return (EXTERNAL_DOC_EXTENSIONS as readonly string[]).includes(ext.toLowerCase())
 }
 
 /** GET /api/projects/[id]/session 응답 타입 */
@@ -194,6 +222,8 @@ export interface SessionApiResponse {
 export interface DocsApiResponse {
   docs: DocEntry[]
   fetchedAt: string
+  /** 프로젝트 타입 — UI에서 '폴더 열기' 버튼 노출 여부 결정에 사용 */
+  projectType: 'local' | 'github'
 }
 
 /** GET /api/projects/[id]/commits 응답 타입 */

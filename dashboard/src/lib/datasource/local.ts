@@ -23,8 +23,21 @@ import {
   DocNode,
   CommitEntry,
   PathTraversalError,
+  EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
 import { SessionDataSchema } from '../schemas'
+
+/** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
+const ALLOWED_DOC_EXTENSIONS = new Set<string>([
+  '.md',
+  ...EXTERNAL_DOC_EXTENSIONS.map((e) => '.' + e),
+])
+
+function getFileExtension(name: string): string | null {
+  const i = name.lastIndexOf('.')
+  if (i < 0) return null
+  return name.slice(i).toLowerCase()
+}
 
 interface LocalDataSourceConfig {
   path: string // projects.json에 등록된 절대 경로
@@ -195,8 +208,11 @@ export class LocalDataSource implements DataSource {
           return { name: f, slug, type: 'dir' as const, children }
         }
 
-        if (!f.endsWith('.md')) return null
-        return { name: f.replace(/\.md$/, ''), slug, type: 'file' as const }
+        const ext = getFileExtension(f)
+        if (!ext || !ALLOWED_DOC_EXTENSIONS.has(ext)) return null
+        // .md는 기존 호환성을 위해 확장자를 떼고, 그 외는 파일명 그대로 노출 (UI 분기용)
+        const name = ext === '.md' ? f.slice(0, -3) : f
+        return { name, slug, type: 'file' as const }
       })
       .filter((node): node is DocNode => node !== null))
   }

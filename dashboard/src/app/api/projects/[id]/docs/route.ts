@@ -24,7 +24,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readProjects } from '@/lib/projects'
 import { createDataSource } from '@/lib/datasource'
-import { DataSourceError, DocEntry, DocNode, PathTraversalError } from '@/lib/types'
+import {
+  DataSourceError,
+  DocEntry,
+  DocNode,
+  PathTraversalError,
+  isExternalDocExt,
+} from '@/lib/types'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -33,6 +39,7 @@ type RouteContext = { params: Promise<{ id: string }> }
  * UI가 Gate별 그룹 표시를 하기 위한 분류 기준이다.
  */
 function resolveCategory(path: string): DocEntry['category'] {
+  if (path.includes('00-discovery')) return 'discovery'
   if (path.includes('01-requirements')) return 'requirements'
   if (path.includes('02-design')) return 'design'
   if (path.includes('03-test-plan')) return 'test-plan'
@@ -43,13 +50,38 @@ function resolveCategory(path: string): DocEntry['category'] {
 /**
  * DocNode 트리를 평면 DocEntry[] 목록으로 변환한다.
  * UI(DocList)가 카테고리 그룹화를 위해 평면 구조를 요구하기 때문이다.
+ *
+ * DataSource 규약: .md 파일은 node.name에서 확장자가 제거되어 있고,
+ * 외부 파일(xlsx/pdf 등)은 확장자가 포함된 파일명 그대로 들어있다.
+ * 점(`.`) 포함 여부로 두 케이스를 구분한다.
  */
 function flattenDocNodes(nodes: DocNode[], parentPath = 'docs'): DocEntry[] {
   const entries: DocEntry[] = []
   for (const node of nodes) {
     if (node.type === 'file') {
-      const path = `${parentPath}/${node.name}.md`
-      entries.push({ name: node.name, path, category: resolveCategory(path) })
+      const dotIdx = node.name.lastIndexOf('.')
+      if (dotIdx >= 0) {
+        // 외부 파일 — 파일명 그대로 사용
+        const ext = node.name.slice(dotIdx + 1).toLowerCase()
+        if (!isExternalDocExt(ext)) continue
+        const filePath = `${parentPath}/${node.name}`
+        entries.push({
+          name: node.name,
+          path: filePath,
+          category: resolveCategory(filePath),
+          kind: 'external',
+          ext,
+        })
+      } else {
+        // 마크다운 — 확장자 복원 필요
+        const filePath = `${parentPath}/${node.name}.md`
+        entries.push({
+          name: node.name,
+          path: filePath,
+          category: resolveCategory(filePath),
+          kind: 'markdown',
+        })
+      }
     } else if (node.children) {
       entries.push(...flattenDocNodes(node.children, `${parentPath}/${node.name}`))
     }
@@ -84,7 +116,11 @@ export async function GET(
     const tree = await dataSource.getDocTree()
     // DocNode 트리 → DocEntry[] 평면 변환 (절대 경로 미포함, SEC-002-04)
     const docs = flattenDocNodes(tree)
-    return NextResponse.json({ docs, fetchedAt: new Date().toISOString() })
+    return NextResponse.json({
+      docs,
+      fetchedAt: new Date().toISOString(),
+      projectType: project.type,
+    })
   } catch (err) {
     // PathTraversalError는 403으로 변환 (SEC-002-02, REQ-009-03)
     if (err instanceof PathTraversalError) {

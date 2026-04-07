@@ -31,6 +31,7 @@ export function useProjectDocs(id: string) {
   return {
     docs: data?.docs ?? [],
     fetchedAt: data?.fetchedAt,
+    projectType: data?.projectType,
     isLoading,
     error,
     mutate,

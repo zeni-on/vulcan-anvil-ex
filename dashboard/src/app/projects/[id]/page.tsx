@@ -26,7 +26,7 @@ import { useProjectSession } from '@/hooks/useProjectSession'
 import { useProjectDocs } from '@/hooks/useProjectDocs'
 import { useProjectCommits } from '@/hooks/useProjectCommits'
 import { useLayoutTemplate } from '@/hooks/useLayoutTemplate'
-import { DocNode } from '@/lib/types'
+import { DocEntry, DocNode } from '@/lib/types'
 
 // ── 메인 페이지 컴포넌트 ─────────────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ export default function ProjectDetailPage() {
 
   const {
     docs,
+    projectType,
     isLoading: docsLoading,
     error: docsError,
     mutate: mutateDocs,
@@ -71,8 +72,32 @@ export default function ProjectDetailPage() {
     await Promise.all([mutateSession(), mutateDocs(), mutateCommits()])
   }
 
+  /**
+   * 외부 파일(xlsx/pdf/hwp 등) 클릭 핸들러.
+   * 서버가 등록된 project.path 기반으로 OS 기본 앱을 실행한다 (REQ-014).
+   */
+  const handleExternalOpen = async (doc: DocEntry) => {
+    try {
+      const res = await fetch(`/api/projects/${id}/open-file`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: doc.path }),
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        // alert이 부담스럽지만 콘솔만으론 사용자가 모를 수 있어 임시 알림 사용
+        // (TODO: 토스트 컴포넌트가 도입되면 교체)
+        alert(body.error ?? `파일 열기 실패 (${res.status})`)
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   /** 공통 레이아웃 props — LayoutA, LayoutB 모두 동일하게 전달 */
   const layoutProps = {
+    projectId: id,
+    projectType,
     session,
     sessionLoading,
     sessionError,
@@ -83,6 +108,7 @@ export default function ProjectDetailPage() {
     commitsLoading,
     commitsError,
     onDocSelect: (doc: DocNode) => setSelectedDoc(doc),
+    onExternalOpen: handleExternalOpen,
   }
 
   return (

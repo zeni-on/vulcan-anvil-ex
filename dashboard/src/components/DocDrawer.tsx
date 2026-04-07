@@ -12,13 +12,57 @@
  * @see docs/02-design/ui-design.md §DocDrawer (REQ-010)
  */
 
-import { useEffect, useRef } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { Children, isValidElement, useEffect, useRef, type ReactNode } from 'react'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { X, AlertCircle } from 'lucide-react'
 import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
+import MermaidBlock from './MermaidBlock'
+
+// rehype-sanitize 기본 스키마는 <code>의 className을 제거한다. mermaid 코드 블록을
+// 식별하려면 language-* 클래스가 보존되어야 하므로 code의 className을 허용한다.
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [...(defaultSchema.attributes?.code ?? []), ['className']],
+  },
+}
+
+/**
+ * react-markdown v10에서 code 블록의 children은 텍스트 노드의 React 트리일 수 있다.
+ * `String(children)`은 객체에 대해 "[object Object]"가 되어 mermaid 파서가 깨지므로
+ * 자식 트리를 재귀적으로 순회해 순수 텍스트만 모은다.
+ */
+function extractText(node: ReactNode): string {
+  if (node == null || node === false || node === true) return ''
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (isValidElement(node)) {
+    const children = (node.props as { children?: ReactNode }).children
+    return Children.toArray(children).map(extractText).join('')
+  }
+  return ''
+}
+
+// react-markdown의 code 렌더러를 가로채 ```mermaid 블록을 SVG로 변환한다.
+const markdownComponents: Components = {
+  code(props) {
+    const { className, children, ...rest } = props
+    if (className?.includes('language-mermaid')) {
+      const text = extractText(children).replace(/\n$/, '')
+      return <MermaidBlock code={text} />
+    }
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    )
+  },
+}
 
 interface DocDrawerProps {
   projectId: string
@@ -57,7 +101,12 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
   }
 
   return (
-    <div className="p-6 overflow-y-auto flex-1">
+    <div
+      // tabIndex로 스크롤 컨테이너에 포커스 가능 → PageUp/PageDown이 이 영역을 스크롤
+      tabIndex={0}
+      data-drawer-scroll
+      className="p-6 overflow-y-auto flex-1 focus:outline-none"
+    >
       <div className="prose prose-invert prose-sm max-w-none
         prose-headings:text-zinc-100
         prose-p:text-zinc-300
@@ -76,7 +125,8 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
         [&_th]:py-1.5 [&_th]:px-2 [&_th]:border [&_th]:border-zinc-700 [&_th]:text-xs [&_th]:bg-zinc-800">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeSanitize]}
+          rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+          components={markdownComponents}
         >
           {content ?? ''}
         </ReactMarkdown>
@@ -89,24 +139,124 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
  * 슬라이드 사이드 패널 Drawer.
  * doc이 null이면 화면 밖으로 숨겨진다 (translate-x-full).
  */
+/** Drawer 안의 tabbable 요소를 DOM 순서대로 모은다. */
+function getFocusable(container: HTMLElement): HTMLElement[] {
+  const selector =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
+    (el) => !el.hasAttribute('aria-hidden') && el.offsetParent !== null,
+  )
+}
+
 export default function DocDrawer({ projectId, doc, onClose }: DocDrawerProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Drawer가 열릴 때 직전 포커스를 저장 → 닫힐 때 복원하기 위함
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const isOpen = doc !== null
 
-  // ESC 키 닫기
+  // ESC 닫기 + Tab 포커스 트랩 + PageUp/Down 스크롤 위임
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      // PageUp/PageDown/Home/End: drawer 밖으로 스크롤이 새거나 포커스가 빠지는
+      // 브라우저 기본 동작을 막고, 직접 drawer 스크롤 영역만 스크롤한다.
+      if (
+        e.key === 'PageUp' ||
+        e.key === 'PageDown' ||
+        e.key === 'Home' ||
+        e.key === 'End'
+      ) {
+        const scrollArea = dialogRef.current?.querySelector<HTMLElement>(
+          '[data-drawer-scroll]',
+        )
+        if (!scrollArea) return
+        // 포커스가 drawer 밖에 있으면 무시 (다른 곳에서 PageDown 사용 가능하게)
+        if (!dialogRef.current?.contains(document.activeElement)) return
+
+        e.preventDefault()
+        // 페이지당 스크롤 양: 컨테이너 높이의 90%
+        const page = scrollArea.clientHeight * 0.9
+        if (e.key === 'PageDown') scrollArea.scrollBy({ top: page, behavior: 'auto' })
+        else if (e.key === 'PageUp') scrollArea.scrollBy({ top: -page, behavior: 'auto' })
+        else if (e.key === 'Home') scrollArea.scrollTo({ top: 0, behavior: 'auto' })
+        else if (e.key === 'End') scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'auto' })
+
+        // 포커스가 스크롤 영역에 머무르도록 보장
+        if (document.activeElement !== scrollArea) scrollArea.focus()
+        return
+      }
+
+      if (e.key !== 'Tab' || !dialogRef.current) return
+
+      const focusables = getFocusable(dialogRef.current)
+      if (focusables.length === 0) {
+        e.preventDefault()
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (e.shiftKey) {
+        if (active === first || !dialogRef.current.contains(active)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (active === last || !dialogRef.current.contains(active)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
-  // Drawer 열릴 때 X 버튼에 포커스
+  // Drawer 열릴 때: 직전 포커스 저장 + 콘텐츠 스크롤 영역에 포커스
+  // (X 버튼 대신 스크롤 영역에 포커스 → PageUp/PageDown이 자연스럽게 본문을 스크롤)
+  // 닫힐 때(effect cleanup): 저장해둔 요소에 포커스 복원
   useEffect(() => {
-    if (isOpen) closeBtnRef.current?.focus()
+    if (!isOpen) return
+
+    previousFocusRef.current = (document.activeElement as HTMLElement) ?? null
+
+    // 콘텐츠 영역은 비동기 로딩이라 다음 프레임에 시도, 없으면 X 버튼 폴백
+    requestAnimationFrame(() => {
+      const scrollArea =
+        dialogRef.current?.querySelector<HTMLElement>('[data-drawer-scroll]')
+      if (scrollArea) scrollArea.focus()
+      else closeBtnRef.current?.focus()
+    })
+
+    return () => {
+      const prev = previousFocusRef.current
+      previousFocusRef.current = null
+      if (prev && typeof prev.focus === 'function' && document.contains(prev)) {
+        // 슬라이드 애니메이션과 충돌하지 않도록 다음 프레임에 복원
+        requestAnimationFrame(() => prev.focus())
+      }
+    }
   }, [isOpen])
+
+  // 콘텐츠가 늦게 로드되는 경우(스켈레톤 → 실제 콘텐츠)에도 스크롤 영역에 포커스가 가도록
+  useEffect(() => {
+    if (!isOpen) return
+    const id = requestAnimationFrame(() => {
+      const scrollArea =
+        dialogRef.current?.querySelector<HTMLElement>('[data-drawer-scroll]')
+      if (scrollArea && !dialogRef.current?.contains(document.activeElement)) {
+        scrollArea.focus()
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [isOpen, doc])
 
   return (
     <>
@@ -121,6 +271,7 @@ export default function DocDrawer({ projectId, doc, onClose }: DocDrawerProps) {
 
       {/* 사이드 패널 */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={doc?.name ?? '문서 뷰어'}

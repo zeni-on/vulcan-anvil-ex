@@ -155,7 +155,7 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
 
   // gate2: category === 'design'인 DocEntry 목록 (UT-011-15)
   if (gate === 'gate2') {
-    const designDocs = docs.filter(d => d.category === 'design')
+    const designDocs = docs.filter(d => d.category === 'design' && d.kind !== 'external')
     return (
       <div className="space-y-2" data-testid="gate-content-gate2">
         <p className="text-xs text-[#6B7280]">생성된 설계 문서</p>
@@ -220,7 +220,7 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
 
   // gate4: category === 'review'인 DocEntry 목록 (QA 리뷰 문서)
   if (gate === 'gate4') {
-    const reviewDocs = docs.filter(d => d.category === 'review')
+    const reviewDocs = docs.filter(d => d.category === 'review' && d.kind !== 'external')
     return (
       <div className="space-y-3" data-testid="gate-content-gate4">
         {reviewDocs.length === 0 ? (

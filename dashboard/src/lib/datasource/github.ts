@@ -16,8 +16,15 @@ import {
   DocNode,
   CommitEntry,
   DataSourceError,
+  EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
 import { SessionDataSchema } from '../schemas'
+
+/** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
+const ALLOWED_DOC_EXTENSIONS_GH = new Set<string>([
+  '.md',
+  ...EXTERNAL_DOC_EXTENSIONS.map((e) => '.' + e),
+])
 
 interface GitHubDataSourceConfig {
   repo: string   // "owner/repo" 형식
@@ -116,10 +123,14 @@ export class GitHubDataSource implements DataSource {
 
       if (!data.tree) return []
 
-      // docs/ 하위 .md 파일만 필터링
-      const docFiles = data.tree.filter(
-        (item) => item.type === 'blob' && item.path.startsWith('docs/') && item.path.endsWith('.md')
-      )
+      // docs/ 하위에서 허용 확장자 파일만 필터링
+      const docFiles = data.tree.filter((item) => {
+        if (item.type !== 'blob' || !item.path.startsWith('docs/')) return false
+        const i = item.path.lastIndexOf('.')
+        if (i < 0) return false
+        const ext = item.path.slice(i).toLowerCase()
+        return ALLOWED_DOC_EXTENSIONS_GH.has(ext)
+      })
 
       return buildDocTree(docFiles.map((f) => f.path))
     } catch (err) {
@@ -209,8 +220,14 @@ function buildDocTree(paths: string[]): DocNode[] {
       const isLast = i === segments.length - 1
 
       if (!currentMap.has(segment)) {
+        // .md는 호환성 위해 확장자 제거, 그 외는 파일명 유지 (UI가 외부파일 분기에 사용)
+        const fileName = isLast
+          ? segment.toLowerCase().endsWith('.md')
+            ? segment.slice(0, -3)
+            : segment
+          : segment
         const node: DocNode = isLast
-          ? { name: segment.replace(/\.md$/, ''), slug, type: 'file' }
+          ? { name: fileName, slug, type: 'file' }
           : { name: segment, slug, type: 'dir', children: [] }
         currentMap.set(segment, { node, childMap: new Map() })
       }

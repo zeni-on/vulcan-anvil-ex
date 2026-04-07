@@ -21,6 +21,7 @@ import DocList from '@/components/DocList'
 import CommitList from '@/components/CommitList'
 import StatsCards from '@/components/StatsCards'
 import CurrentGatePanel from '@/components/CurrentGatePanel'
+import OpenFolderButton from '@/components/OpenFolderButton'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
 import { LayoutProps } from '@/components/LayoutA'
 
@@ -32,6 +33,8 @@ import { LayoutProps } from '@/components/LayoutA'
  * 프로젝트 진행 현황을 우선적으로 보여준다.
  */
 export default function LayoutB({
+  projectId,
+  projectType,
   session,
   sessionLoading,
   sessionError,
@@ -42,6 +45,7 @@ export default function LayoutB({
   commitsLoading,
   commitsError,
   onDocSelect,
+  onExternalOpen,
 }: LayoutProps) {
   return (
     <div data-testid="layout-b" className="h-full flex flex-col overflow-hidden">
@@ -85,16 +89,24 @@ export default function LayoutB({
             aria-labelledby="layout-b-docs-label"
             className="rounded-xl border border-[#374151] bg-[#111827] p-5"
           >
-            <SectionLabel>
-              <span id="layout-b-docs-label">산출물 문서</span>
-            </SectionLabel>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest">
+                <span id="layout-b-docs-label">산출물 문서</span>
+              </h2>
+              {projectType === 'local' && <OpenFolderButton projectId={projectId} />}
+            </div>
 
             {docsLoading && <SectionSkeleton rows={4} />}
             {Boolean(docsError) && !docsLoading && (
               <SectionError message="문서 목록을 불러오지 못했습니다." />
             )}
             {!docsLoading && !docsError && (
-              <DocList docs={docs} onDocSelect={onDocSelect} />
+              <DocList
+                docs={docs}
+                onDocSelect={onDocSelect}
+                onExternalOpen={onExternalOpen}
+                externalDisabled={projectType === 'github'}
+              />
             )}
           </section>
         </div>
