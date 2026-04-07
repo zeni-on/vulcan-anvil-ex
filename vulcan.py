@@ -967,7 +967,7 @@ def init(target_dir, project_name, agent_name):
     src_claude = os.path.join(TEMPLATES_DIR, ".claude")
     dst_claude = os.path.join(target_dir, ".claude")
     copy_tree(src_claude, dst_claude)
-    print(f"  생성: .claude/ (agents 9, skills 2, rules 7)")
+    print(f"  생성: .claude/ (agents 13, skills 2, rules 7)")
 
     # .claude/ 내 모든 .md 파일에 변수 치환 적용
     for root, dirs, files in os.walk(dst_claude):
@@ -989,7 +989,20 @@ def init(target_dir, project_name, agent_name):
     # GATE_GUIDE.md
     copy_file(target_dir, "GATE_GUIDE.md")
 
-    # docs/
+    # docs/00-discovery/
+    copy_file(target_dir, "docs/00-discovery/DISCOVERY-CHECKLIST.md", "docs/00-discovery/DISCOVERY-CHECKLIST.md")
+    copy_file(target_dir, "docs/00-discovery/CHANGELOG.md", "docs/00-discovery/CHANGELOG.md")
+    copy_file(target_dir, "docs/00-discovery/glossary/glossary.md", "docs/00-discovery/glossary/glossary.md")
+    write_file(target_dir, "docs/00-discovery/requirements/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/functional/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/infrastructure/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/technical-review/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/estimation/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/audit/.gitkeep", "")
+    write_file(target_dir, "docs/00-discovery/references/.gitkeep", "")
+    print(f"  생성: docs/00-discovery/")
+
+    # docs/01-requirements/
     content = render(read_template("docs/01-requirements/REQUIREMENTS.md"), variables)
     write_file(target_dir, "docs/01-requirements/REQUIREMENTS.md", content)
 
@@ -1036,7 +1049,7 @@ def init(target_dir, project_name, agent_name):
     print(f"\n다음 단계:")
     print(f"  1. cd {target_dir}")
     print(f"  2. Claude Code 실행")
-    print(f"  3. /vulcan 또는 'Gate 1 시작해줘'로 프로세스 시작")
+    print(f"  3. '상위설계 시작' (Phase 0) 또는 'Gate 1 시작해줘'로 프로세스 시작")
     print(f"\n대시보드 실행:")
     print(f"  cd <Vulcan-Claude-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")
