@@ -1,18 +1,108 @@
-# Vulcan-Claude Gate 프로세스 가이드
+# Vulcan-Claude 프로세스 가이드
 
 ## 개요
 
-Vulcan-Claude는 5-Gate 프로세스를 통해 AI 에이전트와 사람이 협업하여 프로젝트를 개발합니다.
-각 Gate는 산출물 작성 → 사용자 승인 → 정합성 검증 → 상태 전환의 순서로 진행됩니다.
+Vulcan-Claude는 **Phase 0(Discovery) + 5-Gate** 프로세스를 통해 AI 에이전트와 사람이 협업하여 프로젝트를 개발합니다.
 
-## Gate 흐름도
+- **Phase 0**: 탐색적 상위설계. Gate 규약 없이 자유롭게 반복하며 요구사항, 아키텍처, FP를 도출한다.
+- **Gate 1~5**: 각 Gate는 산출물 작성 → 사용자 승인 → 정합성 검증 → 상태 전환의 순서로 진행된다.
+
+## 전체 흐름도
 
 ```
-[Gate 1] → 승인 → [Gate 2] → 승인 → [Gate 3] → 승인 → [구현] → [Gate 4] → 승인 → [Gate 5]
- 요구사항         설계            테스트계획        코딩       QA리뷰         최종승인
-  @PM          @Architect       @QA        @Frontend-dev   @QA          Human
-               @DBA(선택)                  @Backend-dev
+[Phase 0] → 체크리스트 승인 → [Gate 1] → 승인 → [Gate 2] → 승인 → [Gate 3] → 승인 → [구현] → [Gate 4] → 승인 → [Gate 5]
+ Discovery                    요구사항         설계            테스트계획        코딩       QA리뷰         최종승인
+ @BA, @SA, @Estimator          @PM          @Architect       @QA        @Frontend-dev   @QA          Human
+                                             @DBA(선택)                  @Backend-dev
 ```
+
+---
+
+## Phase 0: Discovery (상위설계)
+
+**담당**: BA + SA + Estimator 에이전트
+**성격**: 탐색적, 반복적. **Gate 규약/rules/skills/check-trace 없음.**
+
+### Phase 0과 Gate 1~5의 차이
+
+| | Phase 0 (Discovery) | Gate 1~5 |
+|---|---|---|
+| 규약 | 없음 (자유 반복) | 엄격한 Gate 승인 |
+| 문서 버전 | 파일 버전 관리 (v1→v2→...) | Gate별 확정 |
+| 에이전트 | BA, SA, Estimator | PM, Architect, DBA, ... |
+| 완료 기준 | DISCOVERY-CHECKLIST | check-trace |
+| 코드 작성 | 금지 | 구현 단계에서 허용 |
+
+### 에이전트 역할
+
+| 에이전트 | 역할 | 산출물 |
+|---------|------|--------|
+| **Analyst** (System Analyst) | 현행 시스템 분석, API 표면, 의존성 감사, 기술 부채 식별 | audit/ (고도화 프로젝트만) |
+| **BA** (Business Analyst) | 법령/규정 분석, AS-IS/TO-BE 갭 분석, 요구사항 도출, 용어 정의 | glossary, requirements, functional-detail |
+| **SA** (Solution Architect) | 인프라 설계, 기술 선택/대안 비교, 기술 검토서 | infrastructure, technical-review |
+| **Estimator** | IFPUG FP 산정, 공수/일정/인력 추정 | fp-estimation |
+
+### SA와 Gate 2 Architect(TA)의 관계
+
+| | SA (Phase 0) | Architect/TA (Gate 2) |
+|---|---|---|
+| 질문 | "무엇을/왜 선택?" | "어떻게 만들까?" |
+| 산출물 | 인프라 설계, 기술 검토서 | API 스펙, 모듈 구조, UT-ID |
+| 결정 수준 | Zone 구성, 기술 선택 | 엔드포인트, 시그니처, 의존성 |
+
+SA의 결정이 TA의 입력이 된다.
+
+### 산출물 구조
+
+```
+docs/00-discovery/
+├── DISCOVERY-CHECKLIST.md          # 완료 기준
+├── CHANGELOG.md                    # 전체 변경 이력
+├── glossary/glossary.md            # 용어집 (누적 갱신)
+├── requirements/                   # 상위 요구사항 (버전별)
+│   ├── requirements-v1.md
+│   └── requirements-v2.md
+├── functional/                     # 기능 상세 (버전별)
+│   └── functional-detail-v1.md
+├── infrastructure/                 # 인프라 설계 (버전별)
+│   └── infrastructure-v1.md
+├── technical-review/               # 기술 검토 (주제별)
+│   └── [주제]-review.md
+├── estimation/                     # FP 산정 (버전별)
+│   └── fp-estimation-v1.md
+├── audit/                          # 현행 시스템 분석 (고도화 프로젝트만)
+│   ├── codebase-analysis.md
+│   ├── api-surface.md
+│   ├── dependency-audit.md
+│   └── migration-strategy-vN.md
+└── references/                     # 법령, 가이드라인 등
+```
+
+### 작업 흐름
+
+**신규 개발:**
+1. **BA**: 법령/규정 분석 → 용어 정의 → 상위 요구사항 초안 → 기능 상세
+2. **SA**: 요구사항 기반 인프라 설계 → 기술 검토 → 보안 아키텍처
+3. **Estimator**: 기능 상세 + 기술 검토 결과 → FP 산정 → 공수/일정 추정
+4. **반복**: 요구사항 변경 → 인프라 재설계 → FP 재산정 (자유롭게 반복)
+5. **완료 판단**: DISCOVERY-CHECKLIST 필수 항목 충족 → 사용자 승인
+
+**고도화 프로젝트:**
+1. **Analyst**: 현행 코드/API/의존성 분석 → BA·SA에 입력 제공
+2. **BA**: Analyst 결과 + 법령/규정 → AS-IS/TO-BE 갭 분석 → 요구사항
+3. **SA**: Analyst 결과 + 요구사항 → 기술 선택, 마이그레이션 전략
+4. **Estimator**: 변경 영향 범위 기반 FP 산정
+5. **반복 + 완료 판단**: 위와 동일
+
+### Phase 0 → Gate 1 전환
+
+1. `DISCOVERY-CHECKLIST.md`의 필수 항목을 검토한다
+2. 사용자의 승인을 받는다
+3. Phase 0의 상위 요구사항을 Gate 1의 REQ-NNN/AC-NNN 형식으로 변환한다
+   - PM 에이전트가 `docs/00-discovery/requirements/` 최신 버전을 읽고 정규화
+4. 이후 Gate 1~5 프로세스를 따른다
+
+---
 
 ## Gate 1: 요구사항 정의
 
