@@ -1,6 +1,6 @@
 ---
 name: security-baseline
-description: "OWASP Top 10 보안 체크리스트 및 보안 평가 기준. architect가 설계 시 보안 고려사항(SEC-ID)을 작성하고, qa가 Gate 4에서 보안 점검(항목 D)을 수행할 때 참조한다. '보안 점검', 'OWASP', '취약점 체크', '보안 설계' 등 보안 관련 요청 시 사용한다. 단, 침투 테스트 수행이나 보안 인증 심사는 이 스킬의 범위가 아니다."
+description: "OWASP Top 10 기반 보안 체크리스트와 SEC-ID 작성·검증 기준을 제공하는 스킬. Use when architect가 Gate 2 설계 산출물에 보안 요건(SEC-ID)을 정의·문서화할 때. Use when qa가 Gate 4 리뷰의 Blocker 항목 D(보안 점검)를 수행할 때. Use when 사용자가 '보안 점검', 'OWASP', '취약점 체크', '보안 설계 검토', 'SEC-ID 작성'을 요청할 때. Use when 인증/인가/암호화/입력 검증/세션 관리 등 보안 민감 영역을 설계하거나 리뷰할 때. NOT for 침투 테스트(pentest) 실행, 외부 보안 인증 심사(ISMS·SOC2 등), 보안 사고 대응(인시던트 핸들링), 위협 모델링 워크숍 진행."
 ---
 
 # Security Baseline — OWASP Top 10 보안 체크리스트

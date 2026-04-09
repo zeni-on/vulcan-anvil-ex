@@ -1,6 +1,6 @@
 ---
 name: vulcan
-description: "Phase 0 + 5-Gate 개발 프로세스 오케스트레이터. Discovery(Phase0)→요구사항(Gate1)→설계(Gate2)→테스트계획(Gate3)→구현→QA리뷰(Gate4)→최종승인(Gate5)을 에이전트 팀이 협업하여 수행한다. '상위설계 시작', 'Discovery 시작', 'Gate 1 시작', '프로젝트 시작', '요구사항 정의해줘', '설계 시작', '구현 시작', '리뷰 시작', 'Gate 상태 확인' 등 프로젝트 개발 프로세스 전반에 이 스킬을 사용한다. 단, 프로젝트 초기화(vulcan.py init)나 session.json 직접 수정은 이 스킬의 범위가 아니다."
+description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트레이션하는 스킬로, BA/SA/PM/Architect/DBA/QA/Frontend-dev/Backend-dev/UX-reviewer 에이전트 팀의 협업을 조율한다. Use when 사용자가 새 프로젝트를 시작하거나 '상위설계 시작', 'Discovery 시작', '프로젝트 시작'을 요청할 때. Use when '요구사항 정의', 'Gate 1 시작', 'Gate 2 시작', '설계 시작', '테스트 계획', '구현 시작', 'UX 리뷰', 'QA 리뷰', '최종 승인' 등 Phase 0 또는 Gate 진입을 요청할 때. Use when 'Gate 상태 확인', '다음 Gate로', '진행 상황' 등 프로세스 진행 상태를 묻거나 전환을 요청할 때. NOT for 프로젝트 초기화(vulcan.py init), session.json 직접 편집, 단순 코드 수정·리팩토링 요청, 단일 파일 디버깅."
 ---
 
 # Vulcan — Phase 0 + 5-Gate 개발 프로세스 오케스트레이터
