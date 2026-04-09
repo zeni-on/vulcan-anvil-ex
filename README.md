@@ -115,6 +115,20 @@ Gate 1        Gate 2              Gate 3        구현             UI검수     
 | 4 | qa | REQ-NNN-Review.md | Blocker 전원 Pass |
 | 5 | Human | (수동) | 최종 확인 |
 
+## 가로축 스킬 (Cross-cutting Skills)
+
+5-Gate 프로세스에 종속되지 않는 가로축 스킬은 `.claude/skills/` 아래에 함께 포함됩니다.
+일부는 [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (MIT)에서 가져왔습니다.
+자세한 라이선스는 [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) 참고.
+
+| 스킬 | 자동 발화 시점 | 출처 |
+|------|---------------|------|
+| `vulcan` | Phase 0 / Gate 1~5 진입, 상태 조회 | Vulcan |
+| `security-baseline` | architect의 SEC-ID 작성, qa의 Gate 4 보안 점검 | Vulcan |
+| `debugging-and-error-recovery` | 테스트 실패, 빌드 깨짐, 예외, 회귀 발생 | addyosmani/agent-skills |
+| `context-engineering` | 신규 세션 시작, 컨텍스트 품질 저하, 영역 전환 | addyosmani/agent-skills |
+| `git-workflow-and-versioning` | 모든 코드 변경 (커밋/브랜치/머지) | addyosmani/agent-skills |
+
 ## CLI 명령어
 
 모든 명령어는 **프로젝트 디렉토리에서** 실행합니다 (`init` 제외).

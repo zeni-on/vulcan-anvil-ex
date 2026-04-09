@@ -812,6 +812,9 @@ FRAMEWORK_FILES = [
     # skills
     ".claude/skills/vulcan/skill.md",
     ".claude/skills/security-baseline/skill.md",
+    ".claude/skills/debugging-and-error-recovery/skill.md",
+    ".claude/skills/context-engineering/skill.md",
+    ".claude/skills/git-workflow-and-versioning/skill.md",
     # docs & guides
     "commenting-standards.md",
     "GATE_GUIDE.md",
@@ -968,7 +971,7 @@ def init(target_dir, project_name, agent_name):
     src_claude = os.path.join(TEMPLATES_DIR, ".claude")
     dst_claude = os.path.join(target_dir, ".claude")
     copy_tree(src_claude, dst_claude)
-    print(f"  생성: .claude/ (agents 13, skills 2, rules 7)")
+    print(f"  생성: .claude/ (agents 13, skills 5, rules 7)")
 
     # .claude/ 내 모든 .md 파일에 변수 치환 적용
     for root, dirs, files in os.walk(dst_claude):
