@@ -120,6 +120,7 @@ Gate 1        Gate 2              Gate 3        구현             UI검수     
 5-Gate 프로세스에 종속되지 않는 가로축 스킬은 `.claude/skills/` 아래에 함께 포함됩니다.
 일부는 [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (MIT)에서 가져왔습니다.
 자세한 라이선스는 [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) 참고.
+새 스킬을 작성·기여하려면 [`docs/SKILL_AUTHORING_GUIDE.md`](docs/SKILL_AUTHORING_GUIDE.md)를 먼저 읽으세요.
 
 | 스킬 | 자동 발화 시점 | 출처 |
 |------|---------------|------|
