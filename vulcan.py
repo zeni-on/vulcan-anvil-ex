@@ -406,16 +406,29 @@ def check_trace(project_dir="."):
             print("  Gate 2 검사: TRACEABILITY.md 기반 설계 파일 내 REQ-ID 포함 확인")
             for req in sorted(detail_reqs):
                 info = traceability.get(req)
+                if info and re.search(r'통합|삭제됨', info.get("status", "")):
+                    print(f"  - {req} - {info['status']} (검사 제외)")
+                    continue
                 if not info or not info["design"]:
                     issues.append(f"  X {req} - TRACEABILITY.md에 설계 문서 미등록")
                     continue
-                filepath = os.path.join(design_dir, info["design"])
-                if not os.path.exists(filepath):
-                    issues.append(f"  X {req} - {info['design']} 파일 없음")
-                    continue
-                with open(filepath, encoding="utf-8") as f:
-                    content = f.read()
-                if req in content:
+                # 쉼표 구분된 복수 설계 파일 지원
+                design_files = [f.strip() for f in info["design"].split(',') if f.strip()]
+                found_in_any = False
+                missing_files = []
+                for df in design_files:
+                    filepath = os.path.join(design_dir, df)
+                    if not os.path.exists(filepath):
+                        missing_files.append(df)
+                        continue
+                    with open(filepath, encoding="utf-8") as f:
+                        content = f.read()
+                    if req in content:
+                        found_in_any = True
+                        break
+                if missing_files and not found_in_any:
+                    issues.append(f"  X {req} - {', '.join(missing_files)} 파일 없음")
+                elif found_in_any:
                     print(f"  O {req} - {info['design']} 내 ID 확인")
                 else:
                     issues.append(f"  X {req} - {info['design']} 안에 {req} 없음")
