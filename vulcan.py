@@ -311,8 +311,8 @@ def parse_traceability(project_dir="."):
 
 
 def parse_test_plan(project_dir="."):
-    """TEST_PLAN.md에서 TST-ID → REQ-ID 매핑을 파싱합니다."""
-    path = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
+    """Test-Plan.md에서 TST-ID → REQ-ID 매핑을 파싱합니다."""
+    path = os.path.join(project_dir, "docs", "03-test-plan", "Test-Plan.md")
     if not os.path.exists(path):
         return set()
 
@@ -323,12 +323,12 @@ def parse_test_plan(project_dir="."):
 
 
 def parse_test_plan_status(project_dir="."):
-    """TEST_PLAN.md에서 TST-ID별 실행 상태를 파싱합니다.
+    """Test-Plan.md에서 TST-ID별 실행 상태를 파싱합니다.
     마크다운 테이블 행에서 '| TST-NNN-NN |' 패턴만 파싱합니다.
     템플릿 행(TST-ID, TST-NNN-NN 등)과 본문 참조는 무시합니다.
     Returns: list of (tst_id, status) tuples
     """
-    path = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
+    path = os.path.join(project_dir, "docs", "03-test-plan", "Test-Plan.md")
     if not os.path.exists(path):
         return []
 
@@ -441,7 +441,7 @@ def check_trace(project_dir="."):
             if req in covered:
                 print(f"  O {req} - TST 매핑 확인")
             else:
-                issues.append(f"  X {req} - TEST_PLAN.md에 TST 매핑 없음")
+                issues.append(f"  X {req} - Test-Plan.md에 TST 매핑 없음")
 
         print("\n  Gate 3 검사 (2): TRACEABILITY.md tst_ids 컬럼 등록 여부")
         for req in sorted(detail_reqs):
@@ -497,7 +497,7 @@ def check_trace(project_dir="."):
         print("\n  Gate 4 검사 (2): TST-ID 실행 상태")
         tst_results = parse_test_plan_status(project_dir)
         if not tst_results:
-            issues.append("TEST_PLAN.md에 TST-ID가 없거나 파일이 존재하지 않습니다.")
+            issues.append("Test-Plan.md에 TST-ID가 없거나 파일이 존재하지 않습니다.")
         else:
             not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
             failed = [(tid, s) for tid, s in tst_results if s == 'fail']
@@ -654,9 +654,9 @@ def collect_documents(project_dir="."):
             f"docs/02-design/{f}" for f in os.listdir(design_dir) if f.endswith(".md")
         ])
 
-    tp = os.path.join(project_dir, "docs", "03-test-plan", "TEST_PLAN.md")
+    tp = os.path.join(project_dir, "docs", "03-test-plan", "Test-Plan.md")
     if os.path.exists(tp):
-        docs["test_plan"] = "docs/03-test-plan/TEST_PLAN.md"
+        docs["test_plan"] = "docs/03-test-plan/Test-Plan.md"
 
     review_dir = os.path.join(project_dir, "docs", "04-review")
     if os.path.isdir(review_dir):
@@ -783,7 +783,7 @@ def cmd_release(target):
 # upgrade 시 타겟에서 삭제할 파일 (이전 버전에서 제거된 파일)
 DEPRECATED_FILES = [
     ".claude/skills/gate-transition/skill.md",
-    "docs/03-test-plan/TEST_PLAN.md",
+    "docs/03-test-plan/Test-Plan.md",
     "docs/CHANGE_PROCESS.md",
 ]
 
