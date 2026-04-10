@@ -6,21 +6,7 @@
 
 > 대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
 
-**Agent-Forge의 5-Gate 프로세스**를 **Claude Code 네이티브 하네스**(.claude/)로 재구현한 AI 협업 개발 프레임워크.
-
-## Agent-Forge와 무엇이 다른가
-
-| 관점 | Agent-Forge | Vulcan-Claude-Anvil |
-|------|-------------|---------------|
-| 에이전트 구조 | AGENTS.md 단일 파일 (프롬프트 트릭) | `.claude/agents/*.md` 네이티브 에이전트 |
-| 에이전트 실행 | 한 세션에서 역할 전환 | **Subagents로 병렬 실행** |
-| 스킬 | 없음 | `.claude/skills/*/skill.md` 스킬 트리거 |
-| 규칙 | 없음 | `.claude/rules/*.md` 조건부 로드 |
-| 오케스트레이션 | 프롬프트 규칙 기반 | 의존성 DAG + 에러 핸들링 테이블 |
-| AI 호환 | Claude + Gemini | **Claude Code 전용** (네이티브 기능 활용) |
-| 5-Gate 프로세스 | O | O (동일) |
-| session.json | O | O (동일) |
-| check-trace | O | O (동일) |
+**5-Gate 프로세스** 기반 **Claude Code 네이티브 하네스**(.claude/)로 구현된 AI 협업 개발 프레임워크.
 
 ## 빠른 시작
 
