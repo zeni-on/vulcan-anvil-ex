@@ -448,8 +448,9 @@ def check_trace(project_dir="."):
         covered = parse_test_plan(project_dir)
         traceability = parse_traceability(project_dir)
         for req in sorted(detail_reqs):
-            if traceability.get(req, {}).get("status") == "삭제됨":
-                print(f"  - {req} - 삭제됨 (검사 제외)")
+            req_status = traceability.get(req, {}).get("status", "")
+            if req_status == "삭제됨" or re.search(r'통합', req_status):
+                print(f"  - {req} - {req_status} (검사 제외)")
                 continue
             if req in covered:
                 print(f"  O {req} - TST 매핑 확인")
@@ -459,7 +460,8 @@ def check_trace(project_dir="."):
         print("\n  Gate 3 검사 (2): TRACEABILITY.md tst_ids 컬럼 등록 여부")
         for req in sorted(detail_reqs):
             info = traceability.get(req, {})
-            if info.get("status") == "삭제됨":
+            req_status2 = info.get("status", "")
+            if req_status2 == "삭제됨" or re.search(r'통합', req_status2):
                 continue
             tst_ids = info.get("tst_ids", [])
             if tst_ids:
