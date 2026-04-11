@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vulcan-Claude - 5-Gate AI 협업 개발 프레임워크 (Claude Code 네이티브 하네스)
+Vulcan-Anvil - 5-Gate AI 협업 개발 프레임워크 (Claude Code 네이티브 하네스)
 
 대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
 Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude/) 구조로 재구현.
@@ -14,7 +14,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
   version      현재 프레임워크 버전 확인
 
 사용법:
-  # 초기화 (Vulcan-Claude 디렉토리에서 실행)
+  # 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   python vulcan.py init <target-dir> <project-name> [--agent-name NAME]
 
   # 이하 명령은 프로젝트 디렉토리에서 실행
@@ -985,7 +985,7 @@ def cmd_export(output="snapshot.json", project_dir="."):
 
     snapshot = {
         "schema_version": "1.0",
-        "framework": "vulcan-claude",
+        "framework": "vulcan-anvil",
         "project": session.get("project", ""),
         "exported_at": datetime.now().isoformat(timespec="seconds"),
         "current_gate": session.get("current_gate", "gate1"),
@@ -1035,7 +1035,7 @@ def _copy_tree_filtered(src_dir, dst_dir, excludes):
 
 
 def cmd_release(target):
-    """Vulcan-Dev에서 Vulcan-Claude-Anvil 경로로 배포 대상 파일을 복사합니다.
+    """Vulcan-Dev에서 Vulcan-Anvil 경로로 배포 대상 파일을 복사합니다.
 
     배포 대상: vulcan.py, templates/, dashboard/, README.md
     배포 제외: docs/, session.json, .claude/, node_modules/, .env.local, .git/
@@ -1057,7 +1057,7 @@ def cmd_release(target):
         print(f"오류: 대상 경로가 존재하지 않습니다 — {target_abs}")
         sys.exit(1)
 
-    print(f"\nVulcan-Claude release")
+    print(f"\nVulcan-Anvil release")
     print(f"  소스: {VULCAN_DIR}")
     print(f"  대상: {target_abs}\n")
 
@@ -1175,7 +1175,7 @@ def cmd_upgrade(project_dir="."):
     src_templates = os.path.join(vulcan_src, "templates")
 
     if not os.path.isdir(src_templates):
-        print("오류: Vulcan-Claude 원본 경로를 찾을 수 없습니다.")
+        print("오류: Vulcan-Anvil 원본 경로를 찾을 수 없습니다.")
         print(f"  templates 디렉터리가 없습니다: {src_templates}")
         sys.exit(1)
 
@@ -1184,7 +1184,7 @@ def cmd_upgrade(project_dir="."):
     new_ver = read_version_from_vulcan(src_vulcan)
 
     variables = extract_variables(project_dir)
-    print(f"\nVulcan-Claude upgrade")
+    print(f"\nVulcan-Anvil upgrade")
     print(f"  프로젝트: {variables['PROJECT_NAME']}")
     print(f"  버전: {current_ver} → {new_ver}")
     print(f"  소스: {vulcan_src}\n")
@@ -1238,7 +1238,7 @@ def cmd_upgrade(project_dir="."):
 # ── version ───────────────────────────────────────────────────────────────
 
 def cmd_version(project_dir="."):
-    print(f"Vulcan-Claude v{VULCAN_VERSION}")
+    print(f"Vulcan-Anvil v{VULCAN_VERSION}")
     session_path = os.path.join(project_dir, "session.json")
     if os.path.exists(session_path):
         session = load_session(project_dir)
@@ -1273,7 +1273,7 @@ def create_session_json(target_dir, project_name):
 
 def init(target_dir, project_name, agent_name):
     import shutil
-    print(f"\nVulcan-Claude 초기화")
+    print(f"\nVulcan-Anvil 초기화")
     print(f"  프로젝트: {project_name}")
     print(f"  대상 폴더: {target_dir}\n")
 
@@ -1368,7 +1368,7 @@ def init(target_dir, project_name, agent_name):
     write_file(target_dir, ".gitignore", gitignore)
 
     # git init + 초기 커밋
-    # 참고: dashboard/는 Vulcan-Claude-Anvil 루트에 단일 설치하여 재사용합니다 (REQ-007-01)
+    # 참고: dashboard/는 Vulcan-Anvil 루트에 단일 설치하여 재사용합니다 (REQ-007-01)
     try:
         subprocess.run(["git", "init"], cwd=target_dir, check=True, capture_output=True)
         subprocess.run(["git", "add", "-A"], cwd=target_dir, check=True, capture_output=True)
@@ -1386,7 +1386,7 @@ def init(target_dir, project_name, agent_name):
     print(f"  2. Claude Code 실행")
     print(f"  3. '상위설계 시작' (Phase 0) 또는 'Gate 1 시작해줘'로 프로세스 시작")
     print(f"\n대시보드 실행:")
-    print(f"  cd <Vulcan-Claude-Anvil 경로>/dashboard && npm run dev")
+    print(f"  cd <Vulcan-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")
     print(f"\nGate 완료 시:")
     print(f"  python vulcan.py check-trace")
@@ -1397,11 +1397,11 @@ def init(target_dir, project_name, agent_name):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Vulcan-Claude - 5-Gate AI 협업 개발 프레임워크",
+        description="Vulcan-Anvil - 5-Gate AI 협업 개발 프레임워크",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 명령어:
-  init         새 프로젝트 초기화 (Vulcan-Claude 디렉토리에서 실행)
+  init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   rollback     특정 Gate부터 재시작 (해당 Gate 이후 모두 pending 리셋)
@@ -1460,8 +1460,8 @@ def main():
     subparsers.add_parser("upgrade", help="프레임워크 파일 최신화")
     subparsers.add_parser("version", help="현재 프레임워크 버전 확인")
 
-    p_release = subparsers.add_parser("release", help="Vulcan-Claude-Anvil로 코드 배포")
-    p_release.add_argument("--target", required=True, help="배포 대상 경로 (예: ../Vulcan-Claude-Anvil)")
+    p_release = subparsers.add_parser("release", help="Vulcan-Anvil로 코드 배포")
+    p_release.add_argument("--target", required=True, help="배포 대상 경로 (예: ../Vulcan-Anvil)")
 
     args = parser.parse_args()
 

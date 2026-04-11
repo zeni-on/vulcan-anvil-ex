@@ -1,8 +1,8 @@
-# Vulcan-Claude 프로세스 가이드
+# Vulcan-Anvil 프로세스 가이드
 
 ## 개요
 
-Vulcan-Claude는 **Phase 0(Discovery) + 5-Gate** 프로세스를 통해 AI 에이전트와 사람이 협업하여 프로젝트를 개발합니다.
+Vulcan-Anvil는 **Phase 0(Discovery) + 5-Gate** 프로세스를 통해 AI 에이전트와 사람이 협업하여 프로젝트를 개발합니다.
 
 - **Phase 0**: 탐색적 상위설계. Gate 규약 없이 자유롭게 반복하며 요구사항, 아키텍처, FP를 도출한다.
 - **Gate 1~5**: 각 Gate는 산출물 작성 → 사용자 승인 → 정합성 검증 → 상태 전환의 순서로 진행된다.

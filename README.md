@@ -2,7 +2,7 @@
   <img src="docs/assets/anvil.svg" width="64" height="64" alt="Anvil">
 </p>
 
-# Vulcan-Claude-Anvil
+# Vulcan-Anvil
 
 > 대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
 
@@ -13,7 +13,7 @@
 ### 1. 프로젝트 초기화
 
 ```bash
-# Vulcan-Claude-Anvil 디렉토리에서 실행
+# Vulcan-Anvil 디렉토리에서 실행
 python vulcan.py init ../my-project "MyProject"
 ```
 
@@ -121,7 +121,7 @@ Gate 1        Gate 2              Gate 3        구현             UI검수     
 모든 명령어는 **프로젝트 디렉토리에서** 실행합니다 (`init` 제외).
 
 ```bash
-# 프로젝트 초기화 (Vulcan-Claude-Anvil 디렉토리에서 실행)
+# 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
 python vulcan.py init <target-dir> <project-name>
 
 # Gate 정합성 검사

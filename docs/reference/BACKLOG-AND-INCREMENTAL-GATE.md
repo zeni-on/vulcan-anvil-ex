@@ -1,11 +1,11 @@
 # Backlog Phase와 증분 Gate — 설계 근거
 
-> 본 문서는 Vulcan-Claude-Anvil v1.1 고도화(Backlog Phase 도입, 증분 Gate Rollback, Trivial 재정의)의 배경과 의사결정을 기록한다.
+> 본 문서는 Vulcan-Anvil v1.1 고도화(Backlog Phase 도입, 증분 Gate Rollback, Trivial 재정의)의 배경과 의사결정을 기록한다.
 > 작성일: 2026-04-11 · 출처: IronBull 프로젝트 Backlog 운영 경험
 
 ## 1. 배경 — 왜 5-Gate만으로는 부족한가
 
-Vulcan-Claude-Anvil의 5-Gate 프로세스(요구사항 → 설계 → 테스트계획 → 구현 → QA → 최종승인)는 **"한 번에 끝나는 프로젝트"**를 암묵적으로 전제한다. 그러나 실제 프로젝트는 Gate 5 이후에도 끝나지 않는다.
+Vulcan-Anvil의 5-Gate 프로세스(요구사항 → 설계 → 테스트계획 → 구현 → QA → 최종승인)는 **"한 번에 끝나는 프로젝트"**를 암묵적으로 전제한다. 그러나 실제 프로젝트는 Gate 5 이후에도 끝나지 않는다.
 
 **IronBull 프로젝트에서 관찰된 현상**:
 
@@ -89,4 +89,4 @@ Backlog와 증분 Gate는 여기에 네 번째를 추가한다.
 
 ## 7. 적용 범위
 
-본 문서의 결정은 Vulcan-Claude-Anvil **v1.1부터** 적용된다. IronBull과 같은 기존 프로젝트는 이미 `docs/06-backlog/`를 수동으로 운영 중이므로, v1.1 템플릿으로 마이그레이션할 때 기존 BACKLOG.md를 새 규약에 맞게 재분류해야 한다 (특히 Trivial 기준 변경).
+본 문서의 결정은 Vulcan-Anvil **v1.1부터** 적용된다. IronBull과 같은 기존 프로젝트는 이미 `docs/06-backlog/`를 수동으로 운영 중이므로, v1.1 템플릿으로 마이그레이션할 때 기존 BACKLOG.md를 새 규약에 맞게 재분류해야 한다 (특히 Trivial 기준 변경).

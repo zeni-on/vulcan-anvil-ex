@@ -6,7 +6,7 @@
  * gate2는 category === 'design'인 DocEntry 목록,
  * gate4는 category === 'review'인 DocEntry 목록을 표시한다.
  *
- * 원본: Vulcan-Claude-Anvil/templates/dashboard/src/components/CurrentGatePanel.tsx
+ * 원본: Vulcan-Anvil/templates/dashboard/src/components/CurrentGatePanel.tsx
  * 변경 사항:
  * - SessionData, ProjectStats, DocEntry, DocNode를 @/lib/types에서 import
  * - DesignDoc[], QAResult[] 대신 docs: DocEntry[]를 category로 필터링하여 재사용

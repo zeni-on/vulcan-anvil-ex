@@ -79,7 +79,7 @@ Create a rules file that persists across sessions. This is the highest-leverage 
 - `.windsurfrules` (Windsurf)
 - `.github/copilot-instructions.md` (GitHub Copilot)
 - `AGENTS.md` (OpenAI Codex)
-- `.claude/rules/*.md` (Vulcan-Claude-Anvil — Gate별 path-specific 조건부 로드)
+- `.claude/rules/*.md` (Vulcan-Anvil — Gate별 path-specific 조건부 로드)
 
 ### Level 2: Specs and Architecture
 

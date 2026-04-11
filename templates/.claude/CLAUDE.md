@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}} — Vulcan-Claude Harness
+# {{PROJECT_NAME}} — Vulcan-Anvil Harness
 
 Phase 0(Discovery) + 5-Gate 프로세스에 따라 에이전트 팀이 협업하여 체계적으로 개발하는 하네스.
 

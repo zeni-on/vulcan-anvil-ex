@@ -5,7 +5,7 @@
  * ProjectStats.requirements와 ProjectStats.tests 데이터를 받아
  * 요구사항 현황(5개 카드)과 테스트 현황(4개 카드)을 렌더링한다.
  *
- * 원본: Vulcan-Claude-Anvil/templates/dashboard/src/components/StatsCards.tsx
+ * 원본: Vulcan-Anvil/templates/dashboard/src/components/StatsCards.tsx
  * 변경 사항:
  * - import를 @/lib/types의 ProjectStats로 교체
  * - ac_missing은 숫자이므로 배지 목록 대신 경고 색상으로 표시

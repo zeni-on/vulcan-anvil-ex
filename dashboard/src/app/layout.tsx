@@ -13,7 +13,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Anvil Dashboard',
-  description: 'Vulcan-Claude-Anvil Project Dashboard',
+  description: 'Vulcan-Anvil Project Dashboard',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
