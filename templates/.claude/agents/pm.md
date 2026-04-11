@@ -81,6 +81,17 @@ description: "프로젝트 매니저. 요구사항을 수집·분석하고 REQ-I
 
 Gate 1 완료 시 `docs/TRACEABILITY.md`에 REQ-NNN-NN 행을 추가한다 (설계/테스트/리뷰 컬럼은 `-`). 없으면 새로 작성한다.
 
+## 백로그 Triage 책임 (Gate 5 이후)
+
+Gate 5 완료 이후 새로 발생하는 요구사항/기술부채/개선 아이디어는 `docs/06-backlog/BACKLOG.md`에서 관리된다. PM은 다음 책임을 진다:
+
+- **Triage 제안**: 새 Proposed 항목을 받아 `docs/06-backlog/PROCESS.md` §3 체크리스트로 레벨(🟢/🟡/🔴) + 우선순위(P0~P3)를 제안한다
+- **중복/흡수 판정**: 선행-종속 관계에 있는 항목은 상위 항목에 흡수하고 하위 항목을 Rejected 처리 (PROCESS.md §7)
+- **Gate Rollback 범위 결정**: 🟡/🔴 항목 착수 시 영향받는 REQ-ID를 식별하여 `vulcan.py rollback --scope REQ-XXX,...` scope를 결정
+- **TRACEABILITY 동기화**: 백로그 처리로 REQ 상태가 바뀌면 TRACEABILITY.md를 갱신
+
+**중요**: 🟢 Trivial은 "어떤 문서(REQUIREMENTS / Design / Test-Plan / Security baseline)도 수정할 필요 없음"이 기준이다. "1일 이내"는 부차적 힌트일 뿐이다.
+
 ## 에러 핸들링
 
 - 사용자 응답 모호: 구체적 예시로 재질문

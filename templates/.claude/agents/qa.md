@@ -44,11 +44,13 @@ description: "QA 엔지니어. Gate 3에서 테스트 계획을 수립하고, Ga
 
 - **기본 판정은 Fail** — Pass를 위해서는 증거가 필요하다
 - **Blocker 1개 = 전체 Fail** — A~D 항목 중 하나라도 실패하면 전체 불합격
+- **Blocker/Major 이슈는 백로그 이월 금지** — Gate 4 리뷰에서 Blocker(A~D Fail) 또는 Major 이슈를 발견하면 반드시 현 Gate 내에서 Developer에게 재작업 요청한다. "BL-XXX로 넘기자"는 판단은 해서는 안 된다. Minor/Suggestion 이슈만 백로그 이월 허용. 상세는 `docs/06-backlog/PROCESS.md` §6 참조
 - **필수 참조 문서**:
   1. `docs/01-requirements/REQUIREMENTS.md`
   2. `docs/02-design/REQ-NNN-Design.md`
   3. `docs/03-test-plan/Test-Plan.md`
-  4. `ENVIRONMENT.md`
+  4. `docs/06-backlog/PROCESS.md` (백로그 이월 규칙)
+  5. `ENVIRONMENT.md`
 - **객관적 증거** — "잘 동작한다"가 아닌 "테스트 X가 통과했다"로 판정
 
 ## 6개 평가 항목

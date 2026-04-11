@@ -243,6 +243,56 @@ python vulcan.py session --gate gate1 --status done --feature "기능명"
 python vulcan.py session --gate gate5 --status done --feature "기능명"
 ```
 
+## Backlog (Gate 5 이후 지속 반복)
+
+**담당**: PM (Triage) + QA (Gate 4 Blocker 방어) + 사용자 (우선순위 결정)
+**산출물**: `docs/06-backlog/BACKLOG.md`, `docs/06-backlog/PROCESS.md`
+**설계 근거**: `vulcan-anvil/docs/reference/BACKLOG-AND-INCREMENTAL-GATE.md`
+
+Gate 5는 선을 긋지만 소프트웨어는 "완성"되지 않는다. Gate 5 이후 발생하는 새 요구사항, 기술부채, 개선 아이디어는 백로그로 관리되며, 항목의 성격에 따라 **증분 Gate Rollback**으로 해당 Gate에 재진입한다.
+
+### Triage Level → Gate 재진입 경로
+
+| 레벨 | 기준 | 처리 |
+|------|------|------|
+| 🟢 Trivial | **어떤 문서도 수정할 필요 없음** | 바로 구현 → 커밋 |
+| 🟡 Small | 단일 REQ 범위, 설계 일부 갱신 | `rollback --gate gate2 --scope REQ-XXX` |
+| 🔴 Major | 새 기능, 새 REQ, 아키텍처 영향 | `rollback --gate gate1 --scope REQ-YYY` |
+
+**Trivial 판정 체크리스트** (하나라도 해당되면 🟢이 아니다):
+- 입력 검증/거부 정책 추가? → 🟡
+- API 응답 형식 변경? → 🟡
+- 새 테이블/컬럼? → 🟡
+- 인증/권한 범위 변경? → 🟡
+- 새 외부 의존성? → 🔴
+
+### 증분 Gate Rollback
+
+`--scope` 옵션을 사용하면 session.json에 `rollback_scope`가 기록되고, 이후 `check-trace`는 scope 내 REQ-ID만 재검증 대상으로 삼는다. 기존 문서/코드는 보존된다.
+
+```bash
+# 🟡 Small 예시: REQ-003 페이지네이션 정식 구현
+python vulcan.py rollback --gate gate2 --scope REQ-003 --reason "BL-003"
+# → Gate 2, 3, 4가 pending으로 리셋되지만 REQ-003만 재검증 대상
+# → 다른 REQ는 이미 통과로 간주
+
+# 🔴 Major 예시: NREQ-005/006 Google Drive 동기화 (새 NREQ)
+python vulcan.py rollback --gate gate1 --scope NREQ-005,NREQ-006 --reason "BL-001"
+```
+
+### Gate 4 Blocker 방어 규칙
+
+Gate 4 QA 리뷰에서 Blocker(A~D Fail) 또는 Major 이슈를 발견하면 **백로그 이월은 금지**된다. 반드시 현 Gate 내에서 Developer에게 재작업 요청. Minor/Suggestion 이슈만 백로그 이월 허용. 자세한 내용은 `docs/06-backlog/PROCESS.md` §6 참조.
+
+### 백로그 명령어
+
+```bash
+python vulcan.py backlog list                                   # Active 항목 나열
+python vulcan.py backlog add --title "차트 zoom" --priority P2   # 새 항목 추가 (ID 자동 할당)
+python vulcan.py backlog done --id BL-003 --commit <hash>        # 완료 처리
+python vulcan.py backlog reject --id BL-002 --reason "상위 흡수"  # 반려
+```
+
 ## 에스컬레이션
 
 다음 상황에서는 즉시 사용자에게 보고합니다:

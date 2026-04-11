@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.0.0"
+VULCAN_VERSION = "1.1.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -372,6 +372,24 @@ def check_trace(project_dir="."):
 
     group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
 
+    # 증분 Rollback: rollback_scope가 있으면 scope 내 REQ만 검증 대상
+    rollback_scope = session.get("rollback_scope")
+    if rollback_scope and rollback_scope.get("req_ids"):
+        scope_set = set()
+        for rid in rollback_scope["req_ids"]:
+            # REQ-NNN 형식이면 해당 그룹의 REQ-NNN-NN 전부 포함
+            if re.match(r'^(REQ|NREQ)-\d{3}$', rid):
+                prefix = rid + "-"
+                for r in detail_reqs:
+                    if r.startswith(prefix):
+                        scope_set.add(r)
+            else:
+                scope_set.add(rid)
+        original_count = len(detail_reqs)
+        detail_reqs = {r for r in detail_reqs if r in scope_set}
+        print(f"  [증분 Rollback 모드] scope: {', '.join(sorted(rollback_scope['req_ids']))}")
+        print(f"  scope 내 REQ: {len(detail_reqs)}/{original_count} (나머지는 이미 통과로 간주)\n")
+
     # ── Gate 1: REQ-ID별 AC 존재 여부 + TRACEABILITY.md 행 등록 여부
     if current_gate == "gate1":
         print("  Gate 1 검사 (1): 인수 기준(AC) 정의 여부")
@@ -552,7 +570,13 @@ def check_trace(project_dir="."):
 
 # ── rollback ──────────────────────────────────────────────────────────────
 
-def cmd_rollback(gate, reason="", project_dir="."):
+def cmd_rollback(gate, reason="", scope=None, project_dir="."):
+    """Gate 상태를 되돌린다. --scope가 있으면 증분 Rollback 모드로 작동한다.
+
+    증분 모드에서는 session.json에 rollback_scope를 기록하여 check-trace가
+    scope 내 REQ-ID만 재검증 대상으로 삼도록 한다. 기존 문서/코드는 보존된다.
+    scope 생략 시 기존 전체 rollback 동작과 호환된다.
+    """
     session = load_session(project_dir)
 
     if gate not in GATE_LABELS:
@@ -576,20 +600,293 @@ def cmd_rollback(gate, reason="", project_dir="."):
         if not any(c.startswith(label) for label in labels_to_remove)
     ]
 
+    # 증분 rollback: scope 기록
+    scope_list = []
+    if scope:
+        scope_list = [s.strip() for s in scope.split(",") if s.strip()]
+        session["rollback_scope"] = {
+            "gate": gate,
+            "req_ids": scope_list,
+            "reason": reason,
+        }
+    elif "rollback_scope" in session:
+        # 전체 rollback이면 기존 scope 제거
+        del session["rollback_scope"]
+
     if reason:
         session.setdefault("blocked", [])
-        note = f"[rollback to {gate}] {reason}"
+        scope_tag = f" scope={','.join(scope_list)}" if scope_list else ""
+        note = f"[rollback to {gate}{scope_tag}] {reason}"
         if note not in session["blocked"]:
             session["blocked"].append(note)
 
     save_session(session, project_dir)
-    print(f"  rollback 완료: {gate} ({GATE_LABELS[gate]}) 부터 재시작")
+
+    if scope_list:
+        print(f"  증분 rollback: {gate} ({GATE_LABELS[gate]}) — scope: {', '.join(scope_list)}")
+        print(f"  scope 내 REQ만 재검증 대상. 다른 REQ는 이미 통과로 간주.")
+    else:
+        print(f"  rollback 완료: {gate} ({GATE_LABELS[gate]}) 부터 재시작")
     print(f"  리셋된 Gate: {', '.join(gate_order[rollback_idx:])}")
 
     commit_msg = f"rollback: {gate}부터 재시작 - {GATE_LABELS[gate]}"
+    if scope_list:
+        commit_msg = f"rollback(scope={','.join(scope_list)}): {gate} - {GATE_LABELS[gate]}"
     if reason:
         commit_msg += f" ({reason})"
     git_commit(commit_msg, project_dir, include_source=False)
+
+
+# ── backlog ────────────────────────────────────────────────────────────────
+
+BACKLOG_PATH = "docs/06-backlog/BACKLOG.md"
+
+
+def _parse_backlog_items(content):
+    """BACKLOG.md Active 섹션의 마크다운 테이블에서 BL-NNN 항목을 파싱한다.
+
+    Returns: list of dict{id, title, level, priority, status, req, source, note}
+    """
+    items = []
+    in_active = False
+    for line in content.splitlines():
+        if line.startswith("## Active"):
+            in_active = True
+            continue
+        if in_active and line.startswith("## ") and not line.startswith("## Active"):
+            break
+        if not in_active:
+            continue
+        m = re.match(r'^\|\s*(BL-\d{3})\s*\|', line)
+        if not m:
+            continue
+        cols = [c.strip() for c in line.split("|")[1:-1]]
+        if len(cols) < 8:
+            continue
+        items.append({
+            "id": cols[0], "title": cols[1], "level": cols[2],
+            "priority": cols[3], "status": cols[4], "req": cols[5],
+            "source": cols[6], "note": cols[7],
+        })
+    return items
+
+
+def _next_backlog_id(content):
+    ids = re.findall(r'\bBL-(\d{3})\b', content)
+    next_num = max([int(i) for i in ids], default=0) + 1
+    return f"BL-{next_num:03d}"
+
+
+def cmd_backlog_list(project_dir="."):
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(path):
+        print(f"오류: {BACKLOG_PATH} 없음. 프로젝트가 v1.1 이상인지 확인하세요.")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    items = _parse_backlog_items(content)
+    if not items:
+        print("  백로그 Active 항목이 없습니다.")
+        return
+
+    # 우선순위 순 정렬: P0 > P1 > P2 > P3 > 기타
+    order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+    items.sort(key=lambda x: order.get(x["priority"], 9))
+
+    print(f"\n  백로그 Active {len(items)}건:\n")
+    for it in items:
+        print(f"  {it['id']} [{it['priority']}/{it['level']}] {it['status']:10s} {it['title']}")
+        if it["req"] and it["req"] != "-":
+            print(f"         ↳ {it['req']}  ({it['source']})")
+    print()
+
+
+def cmd_backlog_add(title, level="", priority="P2", req="", source="", note="", project_dir="."):
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(path):
+        print(f"오류: {BACKLOG_PATH} 없음.")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    new_id = _next_backlog_id(content)
+    new_row = (
+        f"| {new_id} | {title} | {level or '—'} | {priority} | Proposed | "
+        f"{req or '-'} | {source or '-'} | {note or '-'} |"
+    )
+
+    # Active 테이블의 placeholder 행이 있으면 대체, 아니면 마지막 BL 행 뒤에 삽입
+    lines = content.splitlines()
+    out = []
+    inserted = False
+    in_active = False
+    for i, line in enumerate(lines):
+        if line.startswith("## Active"):
+            in_active = True
+            out.append(line)
+            continue
+        if in_active and line.startswith("## ") and not line.startswith("## Active"):
+            if not inserted:
+                # Active 섹션이 끝나기 전에 새 행 삽입 (빈 줄 앞)
+                # 직전 빈 줄들 건너뛰고 테이블 끝 찾기
+                j = len(out) - 1
+                while j > 0 and out[j].strip() == "":
+                    j -= 1
+                out.insert(j + 1, new_row)
+                inserted = True
+            in_active = False
+            out.append(line)
+            continue
+        if in_active and "(아직 없음)" in line:
+            out.append(new_row)
+            inserted = True
+            continue
+        out.append(line)
+
+    if not inserted:
+        print("오류: BACKLOG.md Active 섹션을 찾지 못했습니다.")
+        sys.exit(1)
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+    print(f"  추가: {new_id} - {title}")
+    print(f"  다음 단계: Triage (레벨/우선순위 결정) 후 상태 → Triaged")
+
+
+def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
+    """BL 항목을 Done으로 이동시킨다. Active에서 제거 후 Done 섹션에 기록."""
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(path):
+        print(f"오류: {BACKLOG_PATH} 없음.")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    items = _parse_backlog_items(content)
+    target = next((i for i in items if i["id"] == bl_id), None)
+    if not target:
+        print(f"오류: {bl_id}를 Active 섹션에서 찾지 못했습니다.")
+        sys.exit(1)
+
+    done_row = (
+        f"| {target['id']} | {target['title']} | {date.today().isoformat()} | "
+        f"{commit_hash or '-'} | {target['level']} | {target['req']} |"
+    )
+
+    lines = content.splitlines()
+    out = []
+    in_done = False
+    removed = False
+    done_inserted = False
+    for line in lines:
+        # Active에서 대상 행 제거
+        if not removed and re.match(r'^\|\s*' + re.escape(bl_id) + r'\s*\|', line):
+            removed = True
+            continue
+        if line.startswith("## Done"):
+            in_done = True
+            out.append(line)
+            continue
+        if in_done and line.startswith("## ") and not line.startswith("## Done"):
+            in_done = False
+        if in_done and "(아직 없음)" in line and not done_inserted:
+            out.append(done_row)
+            done_inserted = True
+            continue
+        if in_done and re.match(r'^\|\s*\|', line) and not done_inserted:
+            pass  # skip accidentally
+        out.append(line)
+
+    if in_done and not done_inserted:
+        pass
+
+    # 만약 placeholder가 없었다면 Done 섹션 마지막 행 다음에 추가
+    if not done_inserted:
+        new_out = []
+        in_done2 = False
+        appended = False
+        for line in out:
+            if line.startswith("## Done"):
+                in_done2 = True
+                new_out.append(line)
+                continue
+            if in_done2 and line.startswith("## ") and not line.startswith("## Done") and not appended:
+                # 섹션 종료 직전에 삽입
+                j = len(new_out) - 1
+                while j > 0 and new_out[j].strip() == "":
+                    j -= 1
+                new_out.insert(j + 1, done_row)
+                appended = True
+                in_done2 = False
+            new_out.append(line)
+        out = new_out
+        done_inserted = appended
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+    print(f"  완료: {bl_id} → Done ({commit_hash or 'commit 미지정'})")
+
+
+def cmd_backlog_reject(bl_id, reason="", project_dir="."):
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(path):
+        print(f"오류: {BACKLOG_PATH} 없음.")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    items = _parse_backlog_items(content)
+    target = next((i for i in items if i["id"] == bl_id), None)
+    if not target:
+        print(f"오류: {bl_id}를 Active 섹션에서 찾지 못했습니다.")
+        sys.exit(1)
+
+    rej_row = f"| {target['id']} | {target['title']} | {date.today().isoformat()} | {reason or '-'} |"
+
+    lines = content.splitlines()
+    out = []
+    in_rej = False
+    removed = False
+    rej_inserted = False
+    for line in lines:
+        if not removed and re.match(r'^\|\s*' + re.escape(bl_id) + r'\s*\|', line):
+            removed = True
+            continue
+        if line.startswith("## Rejected"):
+            in_rej = True
+            out.append(line)
+            continue
+        if in_rej and line.startswith("## ") and not line.startswith("## Rejected"):
+            in_rej = False
+        if in_rej and "(아직 없음)" in line and not rej_inserted:
+            out.append(rej_row)
+            rej_inserted = True
+            continue
+        out.append(line)
+
+    if not rej_inserted:
+        # fallback: append before next section
+        new_out = []
+        in_rej2 = False
+        appended = False
+        for line in out:
+            if line.startswith("## Rejected"):
+                in_rej2 = True
+                new_out.append(line)
+                continue
+            if in_rej2 and line.startswith("## ") and not line.startswith("## Rejected") and not appended:
+                j = len(new_out) - 1
+                while j > 0 and new_out[j].strip() == "":
+                    j -= 1
+                new_out.insert(j + 1, rej_row)
+                appended = True
+                in_rej2 = False
+            new_out.append(line)
+        out = new_out
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+    print(f"  반려: {bl_id} → Rejected ({reason or '사유 미지정'})")
 
 
 # ── session ────────────────────────────────────────────────────────────────
@@ -834,6 +1131,8 @@ FRAMEWORK_FILES = [
     "commenting-standards.md",
     "GATE_GUIDE.md",
     "docs/05-security/baseline.md",
+    # backlog (v1.1+): PROCESS.md는 upgrade 시 덮어쓰기, BACKLOG.md는 보존
+    "docs/06-backlog/PROCESS.md",
 ]
 
 
@@ -915,6 +1214,18 @@ def cmd_upgrade(project_dir="."):
     if os.path.exists(src_vulcan):
         shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
         print(f"  업데이트: vulcan.py")
+
+    # v1.1+: BACKLOG.md가 없으면 생성 (있으면 사용자 데이터 보존)
+    backlog_dst = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(backlog_dst):
+        tpl = os.path.join(src_templates, "docs/06-backlog/BACKLOG.md")
+        if os.path.exists(tpl):
+            with open(tpl, encoding="utf-8") as f:
+                content = render(f.read(), variables)
+            os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
+            with open(backlog_dst, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"  생성 (v1.1 신규): docs/06-backlog/BACKLOG.md")
 
     session["vulcan_version"] = new_ver
     session["vulcan_src"] = vulcan_src
@@ -1032,6 +1343,11 @@ def init(target_dir, project_name, agent_name):
 
     write_file(target_dir, "docs/04-review/.gitkeep", "")
 
+    # docs/06-backlog/
+    content = render(read_template("docs/06-backlog/BACKLOG.md"), variables)
+    write_file(target_dir, "docs/06-backlog/BACKLOG.md", content)
+    copy_file(target_dir, "docs/06-backlog/PROCESS.md", "docs/06-backlog/PROCESS.md")
+
     # TRACEABILITY
     content = render(read_template("docs/TRACEABILITY.md"), variables)
     write_file(target_dir, "docs/TRACEABILITY.md", content)
@@ -1119,6 +1435,24 @@ def main():
     p_rollback = subparsers.add_parser("rollback", help="특정 Gate부터 재시작 (이후 Gate 모두 pending 리셋)")
     p_rollback.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="재시작할 Gate")
     p_rollback.add_argument("--reason", default="", help="롤백 사유 (선택)")
+    p_rollback.add_argument("--scope", default="", help="증분 rollback scope (REQ-ID 콤마 구분, 예: REQ-003,NREQ-005)")
+
+    p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
+    backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
+    backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
+    bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
+    bl_add.add_argument("--title", required=True)
+    bl_add.add_argument("--level", default="", help="🟢/🟡/🔴 (선택, 나중에 Triage)")
+    bl_add.add_argument("--priority", default="P2", choices=["P0", "P1", "P2", "P3"])
+    bl_add.add_argument("--req", default="")
+    bl_add.add_argument("--source", default="")
+    bl_add.add_argument("--note", default="")
+    bl_done = backlog_sub.add_parser("done", help="백로그 항목 완료 처리")
+    bl_done.add_argument("--id", dest="bl_id", required=True)
+    bl_done.add_argument("--commit", dest="commit_hash", default="")
+    bl_rej = backlog_sub.add_parser("reject", help="백로그 항목 반려")
+    bl_rej.add_argument("--id", dest="bl_id", required=True)
+    bl_rej.add_argument("--reason", default="")
 
     p_export = subparsers.add_parser("export", help="snapshot.json 생성")
     p_export.add_argument("--output", default="snapshot.json", help="출력 파일명")
@@ -1142,7 +1476,21 @@ def main():
     elif args.command == "session":
         cmd_session(gate=args.gate, status=args.status, feature=args.feature)
     elif args.command == "rollback":
-        cmd_rollback(gate=args.gate, reason=args.reason)
+        cmd_rollback(gate=args.gate, reason=args.reason, scope=args.scope or None)
+    elif args.command == "backlog":
+        if args.backlog_cmd == "list":
+            cmd_backlog_list()
+        elif args.backlog_cmd == "add":
+            cmd_backlog_add(
+                title=args.title, level=args.level, priority=args.priority,
+                req=args.req, source=args.source, note=args.note,
+            )
+        elif args.backlog_cmd == "done":
+            cmd_backlog_done(bl_id=args.bl_id, commit_hash=args.commit_hash)
+        elif args.backlog_cmd == "reject":
+            cmd_backlog_reject(bl_id=args.bl_id, reason=args.reason)
+        else:
+            p_backlog.print_help()
     elif args.command == "export":
         cmd_export(output=args.output)
     elif args.command == "upgrade":

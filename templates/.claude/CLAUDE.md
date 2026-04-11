@@ -30,14 +30,15 @@ Phase 0(Discovery) + 5-Gate 프로세스에 따라 에이전트 팀이 협업하
 ## 전체 프로세스
 
 ```
-Phase 0           Gate 1        Gate 2              Gate 3        구현             UI검수        Gate 4       Gate 5
-Discovery    →   요구사항  →   설계          →   테스트계획 →   코딩        →   UX리뷰   →   QA리뷰  →  최종승인
-(BA+SA+Est)       (PM)     (Arch+DBA+UI설계)   (QA)      (FE+BE-dev)   (UX-reviewer)   (QA)      (Human)
-  자유반복→       승인→       승인→             승인→      완료→          승인→        승인→      완료
+Phase 0           Gate 1        Gate 2              Gate 3        구현             UI검수        Gate 4       Gate 5       Backlog
+Discovery    →   요구사항  →   설계          →   테스트계획 →   코딩        →   UX리뷰   →   QA리뷰  →  최종승인   ↺  지속 반복
+(BA+SA+Est)       (PM)     (Arch+DBA+UI설계)   (QA)      (FE+BE-dev)   (UX-reviewer)   (QA)      (Human)    (PM+QA)
+  자유반복→       승인→       승인→             승인→      완료→          승인→        승인→      완료→       증분 rollback
 ```
 
 - **Phase 0**: 탐색적 단계. Gate 규약/rules/skills 없음. 자유롭게 버전 반복.
 - **Gate 1~5**: 각 Gate는 사용자 승인 후 `check-trace` → `session` 명령으로 전환한다.
+- **Backlog (Gate 5 이후)**: Gate 5 완료 이후 새 요구사항/기술부채/개선은 `docs/06-backlog/BACKLOG.md`로 접수되고, Triage Level에 따라 해당 Gate로 **증분 rollback**하여 scope 내 REQ만 재진행한다.
 
 ## 사용법
 
@@ -74,6 +75,8 @@ Discovery    →   요구사항  →   설계          →   테스트계획 →
 | Gate 3 | 테스트 계획서 | `docs/03-test-plan/Test-Plan.md` |
 | UI 검수 | UX 리뷰 보고서 | `docs/04-review/UX-Review.md` |
 | Gate 4 | QA 리뷰 보고서 | `docs/04-review/REQ-NNN-Review.md` |
+| Backlog | 백로그 | `docs/06-backlog/BACKLOG.md` |
+| Backlog | 운영 프로세스 | `docs/06-backlog/PROCESS.md` |
 
 ## 참조 파일
 
