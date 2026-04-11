@@ -1,0 +1,17 @@
+[
+  {
+    "id": "local-example-project-xxxxxx",
+    "name": "My Local Project",
+    "type": "local",
+    "path": "/absolute/path/to/your/vulcan-project",
+    "addedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "github-owner-repo-xxxxxx",
+    "name": "My GitHub Project",
+    "type": "github",
+    "repo": "owner/repo",
+    "branch": "main",
+    "addedAt": "2026-01-01T00:00:00.000Z"
+  }
+]
