@@ -15,7 +15,7 @@
  */
 
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DocList from '@/components/DocList'
 import { DocEntry } from '@/lib/types'
@@ -91,5 +91,35 @@ describe('DocList', () => {
     render(<DocList docs={reqOnly} />)
     expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
     expect(screen.queryByTestId('doc-category-review')).not.toBeInTheDocument()
+  })
+
+  it('카테고리 토글 버튼이 렌더링된다', () => {
+    render(<DocList docs={mockDocs} />)
+    expect(screen.getByTestId('doc-category-toggle-requirements')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-toggle-design')).toBeInTheDocument()
+  })
+
+  it('카테고리 토글 버튼 클릭 시 문서 목록이 접힌다', () => {
+    render(<DocList docs={mockDocs} />)
+    expect(screen.getByText('REQUIREMENTS')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('doc-category-toggle-requirements'))
+    expect(screen.queryByText('REQUIREMENTS')).not.toBeInTheDocument()
+  })
+
+  it('카테고리 토글 버튼 두 번 클릭 시 문서 목록이 다시 펼쳐진다', () => {
+    render(<DocList docs={mockDocs} />)
+    const toggle = screen.getByTestId('doc-category-toggle-requirements')
+    fireEvent.click(toggle)
+    expect(screen.queryByText('REQUIREMENTS')).not.toBeInTheDocument()
+    fireEvent.click(toggle)
+    expect(screen.getByText('REQUIREMENTS')).toBeInTheDocument()
+  })
+
+  it('카테고리 토글 버튼에 aria-expanded 속성이 설정된다', () => {
+    render(<DocList docs={mockDocs} />)
+    const toggle = screen.getByTestId('doc-category-toggle-requirements')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })

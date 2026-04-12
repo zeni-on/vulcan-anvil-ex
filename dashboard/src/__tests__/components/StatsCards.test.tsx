@@ -108,3 +108,41 @@ describe('StatsCards 기본 렌더링', () => {
     expect(screen.getByText('75%')).toBeInTheDocument()
   })
 })
+
+// ── 백로그 통계 렌더링 ──────────────────────────────────────────────────────
+
+describe('StatsCards 백로그 현황', () => {
+  const statsWithBacklog = (): ProjectStats => ({
+    ...makeStats(),
+    backlog: {
+      active:   4,
+      done:     1,
+      rejected: 0,
+      by_level:    { trivial: 3, small: 1, major: 0 },
+      by_priority: { p0: 1, p1: 1, p2: 2, p3: 0 },
+    },
+  })
+
+  it('backlog가 있으면 백로그 현황 섹션을 표시한다', () => {
+    render(<StatsCards stats={statsWithBacklog()} />)
+    expect(screen.getByTestId('backlog-stats')).toBeInTheDocument()
+    expect(screen.getByText('백로그 현황')).toBeInTheDocument()
+  })
+
+  it('backlog가 없으면 백로그 현황 섹션을 표시하지 않는다', () => {
+    render(<StatsCards stats={makeStats()} />)
+    expect(screen.queryByTestId('backlog-stats')).not.toBeInTheDocument()
+  })
+
+  it('Active/Done/Rejected 건수를 표시한다', () => {
+    render(<StatsCards stats={statsWithBacklog()} />)
+    expect(screen.getByText('Active')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
+    expect(screen.getByText('Rejected')).toBeInTheDocument()
+  })
+
+  it('P0 건수가 있으면 보조 텍스트로 표시한다', () => {
+    render(<StatsCards stats={statsWithBacklog()} />)
+    expect(screen.getByText('P0 1건')).toBeInTheDocument()
+  })
+})

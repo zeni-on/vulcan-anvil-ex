@@ -82,7 +82,13 @@ claude
 
 ### 3. 개발 시작
 
+요구사항이 명확하면 바로 Gate 1, 탐색이 필요하면 Phase 0부터 시작합니다.
+
 ```
+# Phase 0 — 요구사항 탐색이 필요한 경우 (선택)
+> Discovery 시작해줘. 할 일 관리 웹앱을 만들려고 해.
+
+# Gate 1 — 요구사항이 명확한 경우
 > Gate 1 시작해줘. 할 일 관리 웹앱을 만들려고 해.
 ```
 
@@ -135,27 +141,32 @@ my-project/
     └── TRACEABILITY.md                 # 추적 매트릭스
 ```
 
-## 5-Gate 프로세스
+## 전체 프로세스
 
 ```
-Gate 1        Gate 2              Gate 3        구현             UI검수        Gate 4       Gate 5
-요구사항  →   설계          →   테스트계획 →   코딩        →   UX리뷰   →   QA리뷰  →  최종승인
- (PM)     (Arch+DBA+UI설계)   (QA)      (FE+BE-dev)   (UX-reviewer)   (QA)      (Human)
+Phase 0           Gate 1        Gate 2              Gate 3        구현             UI검수        Gate 4       Gate 5       Backlog
+Discovery    →   요구사항  →   설계          →   테스트계획 →   코딩        →   UX리뷰   →   QA리뷰  →  최종승인   ↺  지속 반복
+(BA+SA+Est)       (PM)     (Arch+DBA+UI설계)   (QA)      (FE+BE-dev)   (UX-reviewer)   (QA)      (Human)    (PM+QA)
+  자유반복→       승인→       승인→             승인→      완료→          승인→        승인→      완료→       증분 rollback
 ```
 
-각 Gate는 **사용자 승인** 후 다음 Gate로 진행합니다.
+- **Phase 0**: 탐색적 단계. Gate 규약 없음. BA/SA/Estimator가 자유롭게 반복.
+- **Gate 1~5**: 각 Gate는 사용자 승인 후 다음 Gate로 진행합니다.
+- **Backlog**: Gate 5 이후 신규 요구사항/개선은 BACKLOG.md로 접수 → 해당 Gate로 증분 rollback.
 
-| Gate | 담당 에이전트 | 산출물 | 검증 |
+| 단계 | 담당 에이전트 | 산출물 | 검증 |
 |------|-------------|--------|------|
-| 1 | pm | REQUIREMENTS.md | REQ-ID별 AC 존재 |
-| 2a | architect | REQ-NNN-Design.md | REQ 그룹별 설계 파일 존재 |
-| 2b | dba | REQ-NNN-Data-Design.md | DB 있는 프로젝트만 |
-| 2c | ui-designer | UI-Design.md | 2a 완료 후 |
-| 3 | qa | Test-Plan.md | REQ-ID별 TST-ID 매핑 |
+| Phase 0 | ba, sa, estimator, analyst | 요구사항·인프라·FP 산정 | 자유 반복, 규약 없음 |
+| Gate 1 | pm | REQUIREMENTS.md | REQ-ID별 AC 존재 |
+| Gate 2a | architect | REQ-NNN-Design.md | REQ 그룹별 설계 파일 존재 |
+| Gate 2b | dba | REQ-NNN-Data-Design.md | DB 있는 프로젝트만 |
+| Gate 2c | ui-designer | UI-Design.md | 2a 완료 후 |
+| Gate 3 | qa | Test-Plan.md | REQ-ID별 TST-ID 매핑 |
 | 구현 | frontend-dev + backend-dev | 소스 코드 + 단위 테스트 | 병렬 구현 |
 | UI 검수 | ux-reviewer | UX-Review.md | 스크린샷 기반 검수 |
-| 4 | qa | REQ-NNN-Review.md | Blocker 전원 Pass |
-| 5 | Human | (수동) | 최종 확인 |
+| Gate 4 | qa | REQ-NNN-Review.md | Blocker 전원 Pass |
+| Gate 5 | Human | (수동) | 최종 확인 |
+| Backlog | pm + qa | BACKLOG.md | Triage Level별 증분 rollback |
 
 ## 가로축 스킬 (Cross-cutting Skills)
 

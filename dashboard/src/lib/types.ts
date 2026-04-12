@@ -94,6 +94,23 @@ export interface DocsStats {
   total: number
 }
 
+export interface BacklogStats {
+  active:    number
+  done:      number
+  rejected:  number
+  by_level: {
+    trivial: number
+    small:   number
+    major:   number
+  }
+  by_priority: {
+    p0: number
+    p1: number
+    p2: number
+    p3: number
+  }
+}
+
 /**
  * session.json stats 필드 전체 타입.
  * check-trace 실행 시 한 번 계산되어 session.json에 기록된다.
@@ -102,6 +119,7 @@ export interface ProjectStats {
   requirements: RequirementsStats
   tests: TestStats
   docs: DocsStats
+  backlog?: BacklogStats
   updated_at: string  // "YYYY-MM-DD"
 }
 

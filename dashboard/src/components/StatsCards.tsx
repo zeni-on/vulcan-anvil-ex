@@ -22,6 +22,7 @@ import {
   XCircle,
   AlertCircle,
   Layers,
+  BookOpen,
 } from 'lucide-react'
 
 // ── StatCard 내부 컴포넌트 ────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ interface StatsCardsProps {
  * - ac_missing > 0이면 AC 커버리지 카드를 경고 색상(yellow)으로 표시 (UT-011-13)
  */
 export default function StatsCards({ stats }: StatsCardsProps) {
-  const { requirements: req, tests } = stats
+  const { requirements: req, tests, backlog } = stats
 
   // 파생 값 계산 — 나누기 0 방어 (UT-011-12)
   const acCoverage = req.total > 0
@@ -172,6 +173,43 @@ export default function StatsCards({ stats }: StatsCardsProps) {
           />
         </div>
       </div>
+
+      {/* 백로그 현황 — backlog 데이터가 있을 때만 표시 */}
+      {backlog && (
+        <div data-testid="backlog-stats">
+          <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
+            백로그 현황
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              icon={<BookOpen className="w-5 h-5" />}
+              label="Active"
+              value={backlog.active}
+              sub={backlog.by_priority.p0 > 0 ? `P0 ${backlog.by_priority.p0}건` : undefined}
+              color={backlog.active > 0 ? 'yellow' : 'default'}
+            />
+            <StatCard
+              icon={<CheckCircle className="w-5 h-5" />}
+              label="Done"
+              value={backlog.done}
+              color={backlog.done > 0 ? 'green' : 'default'}
+            />
+            <StatCard
+              icon={<XCircle className="w-5 h-5" />}
+              label="Rejected"
+              value={backlog.rejected}
+              color="default"
+            />
+            <StatCard
+              icon={<AlertCircle className="w-5 h-5" />}
+              label="레벨별"
+              value={backlog.active}
+              sub={`🟢${backlog.by_level.trivial} 🟡${backlog.by_level.small} 🔴${backlog.by_level.major}`}
+              color="default"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -85,11 +85,29 @@ export const DocsStatsSchema = z.object({
   total:        z.number().int().min(0),
 })
 
+export const BacklogStatsSchema = z.object({
+  active:   z.number().int().min(0),
+  done:     z.number().int().min(0),
+  rejected: z.number().int().min(0),
+  by_level: z.object({
+    trivial: z.number().int().min(0),
+    small:   z.number().int().min(0),
+    major:   z.number().int().min(0),
+  }),
+  by_priority: z.object({
+    p0: z.number().int().min(0),
+    p1: z.number().int().min(0),
+    p2: z.number().int().min(0),
+    p3: z.number().int().min(0),
+  }),
+})
+
 /** ProjectStats Zod 스키마. updated_at은 YYYY-MM-DD 형식을 검증한다. */
 export const ProjectStatsSchema = z.object({
   requirements: RequirementsStatsSchema,
   tests:        TestStatsSchema,
   docs:         DocsStatsSchema,
+  backlog:      BacklogStatsSchema.optional(),
   updated_at:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 })
 
