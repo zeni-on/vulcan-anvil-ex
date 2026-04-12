@@ -1095,7 +1095,6 @@ def cmd_release(target):
 # upgrade 시 타겟에서 삭제할 파일 (이전 버전에서 제거된 파일)
 DEPRECATED_FILES = [
     ".claude/skills/gate-transition/skill.md",
-    "docs/03-test-plan/Test-Plan.md",
     "docs/CHANGE_PROCESS.md",
 ]
 
