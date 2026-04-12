@@ -44,6 +44,8 @@ function resolveCategory(path: string): DocEntry['category'] {
   if (path.includes('02-design')) return 'design'
   if (path.includes('03-test-plan')) return 'test-plan'
   if (path.includes('04-review')) return 'review'
+  if (path.includes('05-security')) return 'security'
+  if (path.includes('06-backlog')) return 'backlog'
   return 'other'
 }
 

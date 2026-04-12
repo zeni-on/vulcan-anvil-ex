@@ -199,7 +199,7 @@ export interface ProjectData {
 export interface DocEntry {
   name: string
   path: string    // 상대 경로 (프로젝트 루트 기준)
-  category: 'discovery' | 'requirements' | 'design' | 'test-plan' | 'review' | 'other'
+  category: 'discovery' | 'requirements' | 'design' | 'test-plan' | 'review' | 'security' | 'backlog' | 'other'
   /**
    * 파일 종류:
    *  - 'markdown' (기본): dashboard 내 Drawer에서 렌더
