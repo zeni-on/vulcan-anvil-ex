@@ -12,7 +12,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { DocEntry, DocNode } from '@/lib/types'
 import {
   ChevronDown,
@@ -187,14 +187,12 @@ function DocItem({
  * 루트 직속 파일은 헤더 없이 항상 보여준다.
  */
 function CollapsibleSubfolderGroup({
-  category,
   sortedKeys,
   subGroups,
   onDocSelect,
   onExternalOpen,
   externalDisabled,
 }: {
-  category: DocEntry['category']
   sortedKeys: string[]
   subGroups: Map<string, DocEntry[]>
   onDocSelect?: (doc: DocNode) => void
@@ -214,11 +212,7 @@ function CollapsibleSubfolderGroup({
   }
 
   return (
-    <div data-testid={`doc-category-${category}`}>
-      <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest mb-1">
-        {CATEGORY_LABEL[category]}
-      </p>
-      <div className="mb-4">
+    <div className="mb-4">
         {sortedKeys.map((subPath) => {
           const isRoot = subPath === ''
           const isOpen = !collapsed.has(subPath)
@@ -273,13 +267,13 @@ function CollapsibleSubfolderGroup({
             </div>
           )
         })}
-      </div>
     </div>
   )
 }
 
 /**
- * 카테고리 섹션 — 그룹 헤더 + 해당 카테고리 문서 목록.
+ * 카테고리 섹션 — 그룹 헤더(토글 가능) + 해당 카테고리 문서 목록.
+ * 카테고리 타이틀을 클릭하면 문서 목록 전체를 접거나 펼칠 수 있다. 기본은 펼침.
  */
 function CategorySection({
   category,
@@ -294,10 +288,13 @@ function CategorySection({
   onExternalOpen?: (doc: DocEntry) => void
   externalDisabled?: boolean
 }) {
+  const [isOpen, setIsOpen] = useState(true)
+
   if (docs.length === 0) return null
 
   // 하위폴더 그룹화가 정의된 카테고리(예: discovery)는 subPath별로 묶어서 렌더
   const prefix = CATEGORY_PREFIX[category]
+  let content: React.ReactNode
   if (prefix) {
     const subGroups = new Map<string, DocEntry[]>()
     for (const doc of docs) {
@@ -312,10 +309,8 @@ function CategorySection({
       if (b === '') return 1
       return a.localeCompare(b)
     })
-
-    return (
+    content = (
       <CollapsibleSubfolderGroup
-        category={category}
         sortedKeys={sortedKeys}
         subGroups={subGroups}
         onDocSelect={onDocSelect}
@@ -323,13 +318,8 @@ function CategorySection({
         externalDisabled={externalDisabled}
       />
     )
-  }
-
-  return (
-    <div data-testid={`doc-category-${category}`}>
-      <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest mb-1">
-        {CATEGORY_LABEL[category]}
-      </p>
+  } else {
+    content = (
       <ul className="space-y-0.5 mb-4">
         {docs.map((doc) => (
           <DocItem
@@ -341,6 +331,27 @@ function CategorySection({
           />
         ))}
       </ul>
+    )
+  }
+
+  return (
+    <div data-testid={`doc-category-${category}`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        data-testid={`doc-category-toggle-${category}`}
+        className="flex items-center gap-1 w-full text-left text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest mb-1 py-0.5 rounded hover:text-white transition-colors"
+      >
+        {isOpen ? (
+          <ChevronDown className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+        )}
+        {CATEGORY_LABEL[category]}
+        <span className="ml-1 font-normal normal-case tracking-normal text-[#6B7280]">({docs.length})</span>
+      </button>
+      {isOpen && content}
     </div>
   )
 }
