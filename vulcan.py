@@ -1057,6 +1057,7 @@ def cmd_export(output="snapshot.json", project_dir="."):
         "blocked": session.get("blocked", []),
         "timeline": git_log_timeline(project_dir),
         "documents": collect_documents(project_dir),
+        "stats": session.get("stats"),
     }
 
     out_path = os.path.join(project_dir, output)
