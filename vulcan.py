@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.1.0"
+VULCAN_VERSION = "1.2.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -1288,6 +1288,23 @@ def cmd_upgrade(project_dir="."):
                 f.write(content)
             print(f"  생성 (v1.1 신규): docs/06-backlog/BACKLOG.md")
 
+    # v1.2+: 설계·리뷰 템플릿이 없으면 생성 (있으면 사용자 작업 보존)
+    for tpl_rel, label in [
+        ("docs/02-design/REQ-NNN-Design.md", "Gate 2 설계 템플릿"),
+        ("docs/04-review/UX-Review.md",       "UX 리뷰 템플릿"),
+        ("docs/04-review/REQ-NNN-Review.md",  "QA 리뷰 템플릿"),
+    ]:
+        dst = os.path.join(project_dir, tpl_rel)
+        if not os.path.exists(dst):
+            tpl = os.path.join(src_templates, tpl_rel)
+            if os.path.exists(tpl):
+                with open(tpl, encoding="utf-8") as f:
+                    content = render(f.read(), variables)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                with open(dst, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"  생성 (v1.2 신규): {tpl_rel} ({label})")
+
     session["vulcan_version"] = new_ver
     session["vulcan_src"] = vulcan_src
     save_session(session, project_dir)
@@ -1397,12 +1414,18 @@ def init(target_dir, project_name, agent_name):
     content = render(read_template("docs/01-requirements/REQUIREMENTS.md"), variables)
     write_file(target_dir, "docs/01-requirements/REQUIREMENTS.md", content)
 
-    write_file(target_dir, "docs/02-design/.gitkeep", "")
+    # docs/02-design/ — 설계 문서 템플릿 (Architect가 REQ-NNN-Design.md로 복사하여 사용)
+    copy_file(target_dir, "docs/02-design/REQ-NNN-Design.md", "docs/02-design/REQ-NNN-Design.md")
+    print(f"  생성: docs/02-design/REQ-NNN-Design.md (Gate 2 설계 템플릿)")
 
     content = render(read_template("docs/03-test-plan/Test-Plan.md"), variables)
     write_file(target_dir, "docs/03-test-plan/Test-Plan.md", content)
 
-    write_file(target_dir, "docs/04-review/.gitkeep", "")
+    # docs/04-review/ — UX 리뷰·QA 리뷰 템플릿
+    content = render(read_template("docs/04-review/UX-Review.md"), variables)
+    write_file(target_dir, "docs/04-review/UX-Review.md", content)
+    copy_file(target_dir, "docs/04-review/REQ-NNN-Review.md", "docs/04-review/REQ-NNN-Review.md")
+    print(f"  생성: docs/04-review/ (UX-Review.md, REQ-NNN-Review.md 템플릿)")
 
     # docs/06-backlog/
     content = render(read_template("docs/06-backlog/BACKLOG.md"), variables)
