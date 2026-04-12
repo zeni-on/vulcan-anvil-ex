@@ -244,10 +244,21 @@ def compute_stats(project_dir="."):
     except Exception:
         docs_stats = {"requirements": 0, "design": 0, "test_plan": 0, "review": 0, "total": 0}
 
+    # backlog 섹션
+    try:
+        backlog_stats = compute_backlog_stats(project_dir)
+    except Exception:
+        backlog_stats = {
+            "active": 0, "done": 0, "rejected": 0,
+            "by_level": {"trivial": 0, "small": 0, "major": 0},
+            "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
+        }
+
     return {
         "requirements": requirements_stats,
         "tests":        tests_stats,
         "docs":         docs_stats,
+        "backlog":      backlog_stats,
         "updated_at":   date.today().isoformat(),
     }
 
@@ -669,6 +680,56 @@ def _parse_backlog_items(content):
             "source": cols[6], "note": cols[7],
         })
     return items
+
+
+def compute_backlog_stats(project_dir="."):
+    """BACKLOG.md에서 Active/Done/Rejected 건수와 레벨·우선순위별 카운트를 계산한다."""
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if not os.path.exists(path):
+        return {
+            "active": 0, "done": 0, "rejected": 0,
+            "by_level": {"trivial": 0, "small": 0, "major": 0},
+            "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
+        }
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    # Active 항목 파싱 (레벨·우선순위 포함)
+    active_items = _parse_backlog_items(content)
+
+    # Done / Rejected 건수: BL-NNN 행만 카운트 (헤더·빈행 제외)
+    def _count_section(section_header):
+        count = 0
+        in_section = False
+        for line in content.splitlines():
+            if line.startswith(f"## {section_header}"):
+                in_section = True
+                continue
+            if in_section and line.startswith("## ") and not line.startswith(f"## {section_header}"):
+                break
+            if in_section and re.match(r'^\|\s*BL-\d{3}\s*\|', line):
+                count += 1
+        return count
+
+    level_map = {"🟢": "trivial", "🟡": "small", "🔴": "major"}
+    by_level = {"trivial": 0, "small": 0, "major": 0}
+    by_priority = {"p0": 0, "p1": 0, "p2": 0, "p3": 0}
+    for item in active_items:
+        lv = level_map.get(item["level"])
+        if lv:
+            by_level[lv] += 1
+        pr = item["priority"].lower()
+        if pr in by_priority:
+            by_priority[pr] += 1
+
+    return {
+        "active":       len(active_items),
+        "done":         _count_section("Done"),
+        "rejected":     _count_section("Rejected"),
+        "by_level":     by_level,
+        "by_priority":  by_priority,
+    }
 
 
 def _next_backlog_id(content):
