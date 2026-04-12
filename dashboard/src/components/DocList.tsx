@@ -31,6 +31,8 @@ const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
   design:       '설계',
   'test-plan':  '테스트 계획',
   review:       '리뷰',
+  security:     '보안',
+  backlog:      '백로그',
   other:        '기타',
 }
 
@@ -41,6 +43,8 @@ const CATEGORY_ORDER: DocEntry['category'][] = [
   'design',
   'test-plan',
   'review',
+  'security',
+  'backlog',
   'other',
 ]
 
@@ -248,7 +252,7 @@ function CollapsibleSubfolderGroup({
                 ) : (
                   <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-[#9CA3AF]" aria-hidden="true" />
                 )}
-                <span data-testid={`doc-subfolder-${subPath}`}>{subPath}/</span>
+                <span data-testid={`doc-subfolder-${subPath}`}>{subPath}</span>
                 <span className="ml-1 text-[#6B7280] font-normal">({items.length})</span>
               </button>
               {isOpen && (
@@ -372,7 +376,7 @@ export default function DocList({
       acc[cat] = docs.filter((d) => d.category === cat)
       return acc
     },
-    { discovery: [], requirements: [], design: [], 'test-plan': [], review: [], other: [] },
+    { discovery: [], requirements: [], design: [], 'test-plan': [], review: [], security: [], backlog: [], other: [] },
   )
 
   const hasAny = docs.length > 0
