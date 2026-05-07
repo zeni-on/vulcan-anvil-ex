@@ -22,13 +22,13 @@
 최소 성공 추적 경로는 다음과 같다.
 
 ```text
-REQ -> AC -> FUNC -> SCR/PGM -> UT/IT -> Result
+REQ -> AC -> FUNC -> SCR/PGM -> UT/IT/UI -> Result
 ```
 
 보안 민감 기능은 다음 경로를 가져야 한다.
 
 ```text
-REQ/NREQ -> SEC -> SCR/PGM -> UT/IT -> Result
+REQ/NREQ -> SEC -> SCR/PGM -> UT/IT/UI -> Result
 ```
 
 성능 민감 기능은 다음 경로를 가진다.
@@ -45,13 +45,14 @@ NREQ -> PGM/IF/DB -> PT -> Result
 | `NREQ` | `AC` 또는 검증 기준 | `SEC`, `PT`, 운영 문서 |
 | `AC` | `REQ` 또는 `NREQ`, 테스트 ID | `SEC` |
 | `FUNC` | `REQ`, `AC` | `SCR`, `PGM`, `DB`, `IF` |
-| `SCR` | `FUNC` 또는 `REQ` | `SEC`, `PGM`, `UT`, `IT` |
+| `SCR` | `FUNC` 또는 `REQ` | `SEC`, `PGM`, `UT`, `IT`, `UI` |
 | `PGM` | `FUNC` 또는 `REQ` | `SCR`, `DB`, `IF`, `SEC`, `UT`, `IT` |
 | `DB` | `REQ`, `FUNC`, 또는 `PGM` | `SEC`, `PT` |
 | `IF` | `REQ`, `FUNC`, 또는 `PGM` | `SEC`, `IT`, 외부 시스템 ID |
 | `SEC` | `REQ`, `NREQ`, `SCR`, 또는 `PGM` | `UT`, `IT`, 보안 가이드 참조 |
 | `UT` | `PGM`, `AC` 또는 `SEC` | 소스 파일 경로, 테스트 명령 |
 | `IT` | `REQ` 또는 `AC` | `SCR`, `PGM`, `IF`, `DB` |
+| `UI` | `SCR`, `AC`, 또는 `SEC` | 화면 캡처 경로, 브라우저/뷰포트, 테스트 결과 문서 |
 | `PT` | `NREQ` | `PGM`, `DB`, `IF`, 테스트 환경 |
 | `CR` | 영향받는 ID | 의사결정, 승인, 릴리즈 노트 |
 
@@ -143,4 +144,3 @@ SEC-001 비밀번호는 평문으로 저장하지 않는다.
 - 검증 계획이 없는 보안 민감 산출물
 - 요구사항, 인수기준, 보안항목, 비기능 요구사항 중 어느 것과도 연결되지 않은 테스트 케이스
 - 영향받는 ID가 없는 승인된 변경요청
-

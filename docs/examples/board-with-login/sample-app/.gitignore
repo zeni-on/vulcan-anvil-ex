@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.pytest-tmp/
+pytest-cache-files-*/
+*.pyc
+*.pyo
+*.db
+*.sqlite
+*.log
+.venv/

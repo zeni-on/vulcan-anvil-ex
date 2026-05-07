@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>로그인 게시판</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/posts" aria-label="게시판 홈">로그인 게시판</a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="/posts">목록</a>
+        <a href="/posts/new" data-auth-link>글쓰기</a>
+        <a href="/login" data-guest-link>로그인</a>
+        <a href="/signup" data-guest-link>회원가입</a>
+        <button class="ghost" type="button" data-logout hidden>로그아웃</button>
+      </nav>
+    </header>
+    <main id="app" class="page" tabindex="-1"></main>
+    <template id="page-shell">
+      <section class="panel">
+        <div class="panel-heading">
+          <p class="eyebrow"></p>
+          <h1></h1>
+        </div>
+        <div class="panel-body"></div>
+      </section>
+    </template>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>
