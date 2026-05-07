@@ -13,6 +13,8 @@
 - `SCREEN_SPEC_TEMPLATE.md`: 화면설계서
 - `TEST_CASE_TEMPLATE.md`: 테스트케이스 정의서
 - `DEVELOPMENT_STANDARD_TEMPLATE.md`: 개발표준정의서
+- `CHANGE_REQUEST_TEMPLATE.md`: 변경요청서
+- `QA_FINDING_TEMPLATE.md`: QA 발견사항
 
 템플릿 작성 기준:
 

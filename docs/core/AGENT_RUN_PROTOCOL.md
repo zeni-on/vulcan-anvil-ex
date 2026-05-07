@@ -1,0 +1,259 @@
+# Agent Run Protocol
+
+> 상태: 초안 v0.1
+> 목적: Vulcan-Anvil Ex에서 Codex, GPT, Claude 등 서로 다른 에이전트가 동일한 산출물과 Gate 규칙을 기준으로 작업하도록 공통 실행 규약을 정의한다.
+
+## 1. 기본 원칙
+
+Agent Run Protocol은 특정 모델이나 제품의 사용법이 아니다.
+
+이 문서는 에이전트가 프로젝트 산출물을 읽고, 작업을 수행하고, 결과와 증적을 남기는 공통 계약을 정의한다. Adapter는 이 계약을 각 도구의 명령, 프롬프트, API, 세션 방식에 맞게 변환한다.
+
+Core 원칙:
+
+- 에이전트는 항상 승인된 문서와 추적표를 먼저 읽고 작업한다.
+- 에이전트의 모든 작업은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `PT`, `UI` 중 하나 이상과 연결되어야 한다.
+- 에이전트가 임의로 범위를 확장하지 않도록 Run Scope를 명시한다.
+- Gate 완료 전에는 산출물, 구현, 테스트, 증적, 미해결 이슈를 함께 남긴다.
+- 모델별 차이는 Adapter에서 흡수하고 Core 산출물 형식은 유지한다.
+
+## 2. Run 단위
+
+하나의 Run은 에이전트에게 위임 가능한 최소 작업 단위다.
+
+Run은 다음 중 하나의 목적을 가진다.
+
+| Run 유형 | 목적 | 대표 산출물 |
+| --- | --- | --- |
+| Discovery Run | 요구사항, 참조문서, 현행 코드 분석 | 분석 메모, 질문 목록, `DEC`, `RISK` |
+| Design Run | 요구사항을 설계 산출물로 전개 | 기능명세, 화면명세, 프로그램명세, DB명세 |
+| Implementation Run | 승인된 설계를 코드로 구현 | 소스 코드, 설정, 리소스, 마이그레이션 |
+| Test Run | 테스트 코드와 실행 결과 작성 | `UT`, `IT`, `PT`, `UI`, 결과서 |
+| Evidence Run | 화면 캡처, 로그, 결과 파일 정리 | 증적 파일, 결과 문서 |
+| Review Run | 추적성, 보안, 품질 점검 | 이슈, 변경요청, 리뷰 결과 |
+| QA Fix Run | G4에서 발견된 기존 설계 범위 내 결함 수정 | `FIND`, 수정 코드, 재검증 결과 |
+| Change Impact Run | 변경요청 영향도 분석과 재진입 Gate 판단 | `CR`, 영향받는 ID, scope, 승인 판단 |
+
+Run은 너무 크게 만들지 않는다.
+
+좋은 Run 예시:
+
+```text
+REQ-005 게시글 작성 기능의 PGM-005 구현 및 UT-007/UT-008 통과
+SCR-003 게시글 목록 화면 구현 및 UI-003 캡처 증적 생성
+SEC-003 작성자 권한 검증 누락 여부 리뷰
+FIND-001 비로그인 게시글 작성 실패 결함 수정 및 UT-008 재실행
+CR-001 게시글 첨부파일 요청 영향도 분석
+```
+
+나쁜 Run 예시:
+
+```text
+게시판 전체 개발
+문서 전부 정리
+테스트 적당히 추가
+```
+
+## 3. Run 입력 계약
+
+Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한다.
+
+| 입력 | 필수 여부 | 설명 |
+| --- | --- | --- |
+| Run ID | 필수 | 에이전트 실행 단위 ID. 예: `RUN-001` |
+| Run 유형 | 필수 | Discovery, Design, Implementation, Test, Evidence, Review |
+| 목표 | 필수 | 이번 Run에서 완료할 구체적 목표 |
+| 범위 | 필수 | 수정 가능 파일, 읽기 전용 파일, 제외 파일 |
+| 기준 문서 | 필수 | 요구사항, 추적표, 관련 설계문서, 개발표준 |
+| 관련 ID | 필수 | `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, 테스트 ID |
+| Gate | 필수 | 현재 Gate와 완료 조건 |
+| 금지사항 | 필수 | 민감문서, 임의 리팩터링, 승인 없는 범위 변경 등 |
+| 완료 조건 | 필수 | 테스트, 캡처, 문서 갱신, 리뷰 기준 |
+| 질문 정책 | 필수 | 막혔을 때 질문할 조건 |
+
+입력 예시:
+
+```yaml
+run_id: RUN-001
+run_type: Implementation
+goal: PGM-005 게시글 작성 API 구현
+gate: G2
+scope:
+  writable:
+    - docs/examples/board-with-login/sample-app/app/api/posts.py
+    - docs/examples/board-with-login/sample-app/app/services/post_service.py
+  readonly:
+    - docs/examples/board-with-login/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+    - docs/examples/board-with-login/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - docs/seed-docs/reference-standards/
+  excluded:
+    - docs/ref-docs/
+related_ids:
+  req: [REQ-005]
+  ac: [AC-007, AC-008]
+  func: [FUNC-005]
+  pgm: [PGM-005]
+  sec: [SEC-002, SEC-004]
+completion:
+  - 구현 파일 작성
+  - UT-007, UT-008 통과
+  - 추적표 증적 갱신
+```
+
+## 4. Run 출력 계약
+
+에이전트는 작업 완료 시 다음 결과를 남겨야 한다.
+
+| 출력 | 필수 여부 | 설명 |
+| --- | --- | --- |
+| 변경 요약 | 필수 | 무엇을 왜 바꿨는지 |
+| 변경 파일 | 필수 | 파일 경로 목록 |
+| 관련 ID | 필수 | 변경과 연결된 추적 ID |
+| 검증 결과 | 필수 | 실행한 테스트/명령/캡처 결과 |
+| 증적 | 해당 시 필수 | 테스트 결과서, 스크린샷, 로그, 커밋 |
+| 미해결 이슈 | 필수 | 남은 질문, 위험, 후속 작업 |
+| 다음 Run 제안 | 선택 | 이어서 진행할 수 있는 구체 작업 |
+
+출력은 사람에게 설명 가능한 문장과 기계가 읽을 수 있는 구조를 함께 갖는 것이 좋다.
+
+권장 출력 형식:
+
+```yaml
+run_id: RUN-001
+status: Completed
+changed_files:
+  - docs/examples/board-with-login/sample-app/app/api/posts.py
+related_ids:
+  - REQ-005
+  - AC-007
+  - PGM-005
+verification:
+  - command: python -m pytest tests
+    result: passed
+evidence:
+  - DOC-QA-G4-002_Test-Result_v0.1.md
+open_issues: []
+```
+
+## 5. Gate별 실행 규칙
+
+| Gate | 에이전트 역할 | 완료 조건 |
+| --- | --- | --- |
+| P0 | 배경, 제약, 참조문서 파악 | 질문/가정/위험이 기록됨 |
+| G1 | 요구사항과 인수기준 정리 | `REQ`, `NREQ`, `AC`가 추적표에 반영됨 |
+| G2 | 기능, 화면, 프로그램, DB, 보안 설계 | `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, 개발표준 연결 |
+| G3 | 테스트 계획 작성 | `UT`, `IT`, `PT`, `UI`가 `AC`/`SEC`와 연결됨 |
+| G4 | 구현, 테스트, 증적 생성 | 테스트 결과와 화면/로그 증적이 추적표에 연결됨 |
+| G5 | 승인, 릴리즈, 인수인계 | 승인본, 변경이력, 릴리즈 증적 정리 |
+
+에이전트는 현재 Gate의 완료 조건을 만족하지 못하면 다음 Gate로 넘어갔다고 선언하지 않는다.
+
+## 6. 승인과 질문 규칙
+
+에이전트는 다음 상황에서 작업을 멈추고 질문해야 한다.
+
+- 요구사항이 서로 충돌한다.
+- 승인된 ID를 변경해야 한다.
+- Run Scope 밖의 파일을 수정해야 한다.
+- 민감문서 또는 제외 경로를 읽거나 포함해야 한다.
+- 보안 기준을 낮추는 선택이 필요하다.
+- 테스트 결과를 통과로 볼 수 없는 애매한 상태가 발생한다.
+
+다음 상황에서는 에이전트가 합리적으로 판단하고 진행할 수 있다.
+
+- 문서의 기존 패턴과 일치하는 필드 추가
+- 명백한 오탈자 수정
+- 테스트 통과를 위한 좁은 범위의 구현 보정
+- `.gitignore`에 생성물 제외 규칙 추가
+- 추적표에 이미 존재하는 ID의 증적 경로 추가
+
+## 7. 산출물 갱신 규칙
+
+에이전트가 코드를 변경하면 최소한 다음 항목을 점검한다.
+
+- 관련 프로그램명세의 `PGM` 설명과 실제 구현이 맞는가
+- 관련 화면명세의 `SCR` 설명과 실제 화면이 맞는가
+- 관련 테스트케이스의 `UT`, `IT`, `PT`, `UI`가 존재하는가
+- 테스트 결과서가 최신 실행 결과를 반영하는가
+- 요구사항추적표의 상태와 증적이 갱신되었는가
+
+문서 갱신이 이번 Run 범위 밖이면 `ISSUE` 또는 다음 Run 제안으로 남긴다.
+
+## 8. Adapter 책임
+
+Adapter는 Core 규약을 특정 에이전트 실행 방식으로 변환한다.
+
+Adapter가 책임지는 것:
+
+- Core 입력 계약을 모델별 프롬프트나 명령으로 변환
+- 세션 컨텍스트 길이에 맞춰 문서 요약/선별
+- 도구 사용 가능 여부 확인
+- 실행 결과를 Core 출력 계약으로 정규화
+- 실패, 중단, 사용자 질문을 일관된 상태로 기록
+
+Adapter가 책임지지 않는 것:
+
+- Core ID 체계 임의 변경
+- 프로젝트 산출물 종류 임의 축소
+- 승인 없이 Gate 완료 기준 완화
+- 민감문서 커밋 또는 외부 전송
+
+## 9. 상태 값
+
+Run 상태는 다음 값을 사용한다.
+
+| 상태 | 의미 |
+| --- | --- |
+| Planned | 실행 전 |
+| Running | 실행 중 |
+| Blocked | 질문, 승인, 환경 문제로 중단 |
+| Completed | 완료 조건 충족 |
+| CompletedWithIssues | 주요 결과는 있으나 후속 이슈 존재 |
+| Failed | 완료 조건 미충족 |
+| Cancelled | 사용자 또는 상위 계획에 의해 취소 |
+
+## 10. 실패 기록 규칙
+
+실패는 숨기지 않는다.
+
+실패한 Run은 다음을 남긴다.
+
+- 실패한 명령 또는 작업
+- 관찰된 오류
+- 영향받는 ID
+- 재시도 여부
+- 후속 조치 제안
+
+예시:
+
+```yaml
+run_id: RUN-004
+status: Blocked
+blocked_reason: "브라우저 캡처 도구가 networkidle 대기 옵션을 지원하지 않음"
+affected_ids:
+  - UI-003
+resolution: "load 상태 대기와 명시적 안정화 대기로 캡처 재시도"
+```
+
+## 11. 최소 파일 구조
+
+프로젝트는 에이전트 실행 기록을 다음 위치 중 하나에 둘 수 있다.
+
+```text
+docs/runs/
+docs/examples/{sample}/runs/
+```
+
+권장 파일명:
+
+```text
+RUN-001_{run-name}_v0.1.md
+```
+
+Adapter별 내부 로그는 필요하면 다음 위치를 사용한다.
+
+```text
+docs/adapters/{adapter-name}/
+```
+
+단, 모델별 내부 로그에는 민감정보, 토큰, 외부 비공개 데이터가 포함되지 않아야 한다.

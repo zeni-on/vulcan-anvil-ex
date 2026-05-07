@@ -8,7 +8,7 @@ title_ko: DB명세서
 project: Board With Login Sample
 gate: G2
 status: Draft
-version: v0.1
+version: v0.2
 owner_role: Data Architect
 author: Codex
 reviewer: Technical Architect
@@ -18,7 +18,7 @@ updated_at: 2026-05-07
 related_ids:
   - DB-001
   - DB-002
-change_reason: 로그인 게시판 샘플 최초 초안 작성
+change_reason: RUN-002 데이터 표준 검토 결과 반영
 ---
 ```
 
@@ -55,9 +55,9 @@ DB명세서는 프로젝트 단어사전의 `TERM`, `DOMAIN`을 기준으로 작
 
 | 순번 | TERM-ID | 논리명 | 물리명 | 도메인 | 데이터 타입 | 길이 | PK | FK | NN | 기본값 | 보안 분류 | 관련 SEC | 설명 |
 | ---: | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TERM-001 | 사용자ID | id | DOMAIN-002 | VARCHAR | 100 | Y | N | Y |  | 식별정보 | SEC-004 | 사용자 내부 식별자 |
-| 2 | TERM-002 | 이메일 | email | DOMAIN-001 | VARCHAR | 254 | N | N | Y |  | 식별정보 | SEC-004 | 로그인 식별자, Unique |
-| 3 | TERM-003 | 비밀번호해시값 | password_hash | DOMAIN-005 | VARCHAR | 255 | N | N | Y |  | 인증정보 | SEC-001 | 원문 비밀번호 저장 금지 |
+| 1 | TERM-001 | 사용자ID | id | DOMAIN-006 | INTEGER |  | Y | N | Y |  | 식별정보 | SEC-004 | 사용자 내부 식별자 |
+| 2 | TERM-002 | 이메일주소 | email | DOMAIN-001 | VARCHAR | 254 | N | N | Y |  | 식별정보 | SEC-004 | 로그인 식별자, Unique |
+| 3 | TERM-003 | 사용자암호화비밀번호 | password_hash | DOMAIN-005 | VARCHAR | 255 | N | N | Y |  | 인증정보 | SEC-001 | 원문 비밀번호 저장 금지 |
 | 4 | TERM-004 | 사용자명 | user_nm | DOMAIN-002 | VARCHAR | 100 | N | N | Y |  | 개인정보 |  | 화면 표시명 |
 | 5 | TERM-009 | 작성일시 | created_at | DOMAIN-004 | DATETIME |  | N | N | Y | CURRENT_TIMESTAMP | 일반 |  | 계정 생성 시각 |
 | 6 | TERM-010 | 수정일시 | updated_at | DOMAIN-004 | DATETIME |  | N | N | Y | CURRENT_TIMESTAMP | 일반 |  | 계정 수정 시각 |
@@ -97,10 +97,10 @@ DB명세서는 프로젝트 단어사전의 `TERM`, `DOMAIN`을 기준으로 작
 
 | 순번 | TERM-ID | 논리명 | 물리명 | 도메인 | 데이터 타입 | 길이 | PK | FK | NN | 기본값 | 보안 분류 | 관련 SEC | 설명 |
 | ---: | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TERM-005 | 게시글ID | id | DOMAIN-002 | VARCHAR | 100 | Y | N | Y |  | 일반 |  | 게시글 내부 식별자 |
-| 2 | TERM-006 | 게시글제목 | post_ttl | DOMAIN-002 | VARCHAR | 100 | N | N | Y |  | 일반 | SEC-004 | 제목 입력값 검증 |
-| 3 | TERM-007 | 게시글내용 | post_cn | DOMAIN-003 | VARCHAR | 4000 | N | N | Y |  | 일반 | SEC-004 | 본문 입력값 검증 및 XSS 방지 |
-| 4 | TERM-008 | 작성자ID | author_id | DOMAIN-002 | VARCHAR | 100 | N | Y | Y |  | 식별정보 | SEC-003 | users.id 참조 |
+| 1 | TERM-005 | 게시물ID | id | DOMAIN-006 | INTEGER |  | Y | N | Y |  | 일반 |  | 게시물 내부 식별자 |
+| 2 | TERM-006 | 게시물제목 | post_ttl | DOMAIN-007 | VARCHAR | 200 | N | N | Y |  | 일반 | SEC-004 | 제목 입력값 검증 |
+| 3 | TERM-007 | 게시물내용 | post_cn | DOMAIN-003 | TEXT |  | N | N | Y |  | 일반 | SEC-004 | 본문 입력값 검증 및 XSS 방지 |
+| 4 | TERM-008 | 작성자아이디 | author_id | DOMAIN-006 | INTEGER |  | N | Y | Y |  | 식별정보 | SEC-003 | users.id 참조 |
 | 5 | TERM-009 | 작성일시 | created_at | DOMAIN-004 | DATETIME |  | N | N | Y | CURRENT_TIMESTAMP | 일반 |  | 게시글 생성 시각 |
 | 6 | TERM-010 | 수정일시 | updated_at | DOMAIN-004 | DATETIME |  | N | N | Y | CURRENT_TIMESTAMP | 일반 |  | 게시글 수정 시각 |
 
@@ -138,15 +138,18 @@ DB명세서는 프로젝트 단어사전의 `TERM`, `DOMAIN`을 기준으로 작
 
 | TERM-ID | 논리명 | 공공데이터 표준 용어 | 영문 약어 | 도메인 | 표준 준용 상태 | 등록/변형 사유 |
 | --- | --- | --- | --- | --- | --- | --- |
-| TERM-002 | 이메일 | 확인필요 | 확인필요 | 확인필요 | 확인필요 | 공공데이터 공통표준 실제 대조 필요 |
-| TERM-003 | 비밀번호해시값 | 확인필요 | PSWD_HASH_VAL | DOMAIN-005 | 프로젝트신규 | 원문 비밀번호와 저장 해시값을 구분 |
-| TERM-004 | 사용자명 | 확인필요 | USER_NM | DOMAIN-002 | 확인필요 | 공공데이터 공통표준 실제 대조 필요 |
-| TERM-006 | 게시글제목 | 확인필요 | POST_TTL | DOMAIN-002 | 프로젝트신규 | 샘플 업무 용어 |
-| TERM-007 | 게시글내용 | 확인필요 | POST_CN | DOMAIN-003 | 프로젝트신규 | 샘플 업무 용어 |
+| TERM-002 | 이메일주소 | 이메일주소 계열 용어 | EML_ADDR | 주소V320 / DOMAIN-001 | 준용 | 물리 컬럼 email은 구현 관례로 유지 |
+| TERM-003 | 사용자암호화비밀번호 | 사용자암호화비밀번호 | USER_ENPSWD | 암호화번호V256 / DOMAIN-005 | 준용 | 구현 컬럼 password_hash는 해시 저장 의미를 명확히 하기 위해 유지 |
+| TERM-004 | 사용자명 | 사용자명 | USER_NM | 명V100 / DOMAIN-002 | 준용 | 공통표준 용어와 약어 일치 |
+| TERM-006 | 게시물제목 | 게시물제목 | PST_TTL | 명V256 / DOMAIN-007 | 변형 | 구현 컬럼 post_ttl은 표준 약어를 따르되 샘플 구현은 200자 제한 |
+| TERM-007 | 게시물내용 | 게시물내용 | PST_CN | 내용V4000 / DOMAIN-003 | 준용 | 구현 컬럼 post_cn은 표준 약어 기반 |
+| TERM-008 | 작성자아이디 | 사용자아이디/작성자명 대조 | WRTR_ID | DOMAIN-006 | 프로젝트신규 | FK 컬럼 성격상 작성자명 대신 내부 ID를 저장하므로 프로젝트 용어로 등록 |
+| TERM-009 | 작성일시 | 작성일시 | WRT_DT | 연월일시분초D / DOMAIN-004 | 준용 | 구현 컬럼 created_at은 개발 표준 네이밍으로 유지 |
+| TERM-010 | 수정일시 | 수정일시 | MDFCN_DT | 연월일시분초D / DOMAIN-004 | 준용 | 구현 컬럼 updated_at은 개발 표준 네이밍으로 유지 |
 
 ## 6. 변경이력
 
 | 버전 | 일자 | 변경내용 | 작성자 | 검토자 | 승인자 |
 | --- | --- | --- | --- | --- | --- |
 | v0.1 | 2026-05-07 | 로그인 게시판 샘플 DB명세 최초 작성 | Codex |  |  |
-
+| v0.2 | 2026-05-07 | RUN-002 기준 공공데이터 공통표준 대조 결과 반영 | Codex |  |  |
