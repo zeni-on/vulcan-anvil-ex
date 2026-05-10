@@ -61,6 +61,7 @@ Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한
 | 입력 | 필수 여부 | 설명 |
 | --- | --- | --- |
 | Run ID | 필수 | 에이전트 실행 단위 ID. 예: `RUN-001` |
+| Persona | 필수 | 작업 persona. 예: `requirements`, `design`, `build`, `review`. 상세는 `AGENT_PERSONAS.md`를 따른다. |
 | Run 유형 | 필수 | Discovery, Design, Implementation, Test, Evidence, Review |
 | 목표 | 필수 | 이번 Run에서 완료할 구체적 목표 |
 | 범위 | 필수 | 수정 가능 파일, 읽기 전용 파일, 제외 파일 |
@@ -75,6 +76,7 @@ Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한
 
 ```yaml
 run_id: RUN-001
+persona: build
 run_type: Implementation
 goal: PGM-005 게시글 작성 API 구현
 gate: G2

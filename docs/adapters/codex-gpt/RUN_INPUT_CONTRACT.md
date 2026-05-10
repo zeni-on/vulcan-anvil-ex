@@ -25,7 +25,8 @@ Run Input Contract는 에이전트에게 주는 작업지시서다.
 | --- | --- | --- |
 | `run_id` | 예 | 실행 단위 ID. 예: `RUN-001` |
 | `adapter` | 예 | Adapter 이름. 예: `codex-gpt` |
-| `agent_role` | 예 | 에이전트 역할. 예: `implementation-agent`, `review-agent` |
+| `persona` | 예 | 표준 작업 persona. 예: `requirements`, `design`, `build`, `review` |
+| `agent_role` | 아니오 | adapter 호환용 보조 역할명. 예: `implementation-agent`, `review-agent` |
 | `run_type` | 예 | `Discovery`, `Design`, `Implementation`, `Test`, `Evidence`, `Review` |
 | `gate` | 예 | 현재 Gate. 예: `G2`, `G4` |
 | `project` | 예 | 대상 프로젝트 또는 샘플 이름 |
@@ -44,6 +45,7 @@ Run Input Contract는 에이전트에게 주는 작업지시서다.
 ```yaml
 run_id: RUN-001
 adapter: codex-gpt
+persona: build
 agent_role: implementation-agent
 run_type: Implementation
 gate: G4

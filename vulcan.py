@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.4.0"
+VULCAN_VERSION = "1.5.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -62,9 +62,29 @@ RUN_SKILLS = {
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
 }
+RUN_PERSONAS = {
+    "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
+    "requirements": "요구사항, 비기능 요구사항, 인수기준을 정리한다.",
+    "design": "기능, 화면, 프로그램, DB, 보안 설계를 작성한다.",
+    "test-design": "AC, SEC, NREQ를 검증 가능한 테스트로 전개한다.",
+    "build": "승인된 설계를 코드, 설정, 테스트 코드로 구현한다.",
+    "evidence": "테스트 결과, 화면 캡처, 로그 등 증적을 만든다.",
+    "review": "추적성, 보안, 품질, 설계 준수 여부를 검토한다.",
+    "release": "승인 후보, 릴리즈 범위, 인수인계 항목을 정리한다.",
+    "change-control": "변경요청 영향도와 재진입 Gate를 판단한다.",
+    "documentation": "용어, 문서 버전, 산출물 일관성을 정리한다.",
+}
+RUN_SKILL_DEFAULT_PERSONAS = {
+    "traceability-review": "review",
+    "security-review": "review",
+    "data-standard-review": "review",
+    "qa-fix-loop": "build",
+    "change-impact-analysis": "change-control",
+}
 RUN_REQUIRED_KEYS = [
     "run_id",
     "adapter",
+    "persona",
     "status",
     "skill",
     "related_ids",
@@ -242,6 +262,20 @@ def format_yaml_list(items):
     if not items:
         return "[]"
     return "[" + ", ".join(items) + "]"
+
+
+def default_persona_for_run(gate, skill):
+    if skill in RUN_SKILL_DEFAULT_PERSONAS:
+        return RUN_SKILL_DEFAULT_PERSONAS[skill]
+
+    return {
+        "gate1": "requirements",
+        "gate2": "design",
+        "gate3": "test-design",
+        "impl": "build",
+        "gate4": "review",
+        "gate5": "release",
+    }.get(gate, "review")
 
 
 def load_session(project_dir="."):
@@ -1476,11 +1510,19 @@ def cmd_version(project_dir="."):
 
 # ── init ───────────────────────────────────────────────────────────────────
 
-def cmd_run_new(adapter, gate, skill, title, related_ids, project_dir="."):
+def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_dir="."):
     if skill not in RUN_SKILLS:
         print(f"오류: 알 수 없는 skill입니다: {skill}")
         print("사용 가능 skill:")
         for name in RUN_SKILLS:
+            print(f"  - {name}")
+        sys.exit(1)
+
+    persona = persona or default_persona_for_run(gate, skill)
+    if persona not in RUN_PERSONAS:
+        print(f"오류: 알 수 없는 persona입니다: {persona}")
+        print("사용 가능 persona:")
+        for name in RUN_PERSONAS:
             print(f"  - {name}")
         sys.exit(1)
 
@@ -1495,6 +1537,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, project_dir="."):
 run_id: {run_id}
 adapter: {adapter}
 gate: {gate}
+persona: {persona}
 skill: {skill}
 skill_path: {skill_path}
 status: Draft
@@ -1517,10 +1560,12 @@ open_issues: []
 - `AGENTS.md`
 - `docs/core/ID_SYSTEM.md`
 - `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
 - `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
 - `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
 - `{skill_path}`
 
 ## 3. 입력 범위
@@ -1528,6 +1573,7 @@ open_issues: []
 | 항목 | 내용 |
 | --- | --- |
 | 관련 ID | `{format_yaml_list(ids)}` |
+| Persona | `{persona}` |
 | 대상 문서 | TBD |
 | 대상 코드 | TBD |
 | 제외 범위 | TBD |
@@ -1535,10 +1581,11 @@ open_issues: []
 ## 4. 수행 지시
 
 1. 관련 문서와 코드를 확인한다.
-2. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
-3. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
-4. 검증 명령을 실행하고 결과를 기록한다.
-5. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다.
+2. `{persona}` persona의 책임과 금지사항을 확인한다.
+3. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
+4. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
+5. 검증 명령을 실행하고 결과를 기록한다.
+6. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다.
 
 ## 5. 완료 보고
 
@@ -1591,6 +1638,12 @@ def check_run_file(path):
         skill = skill_match.group(1).strip()
         if skill not in RUN_SKILLS:
             issues.append(f"알 수 없는 skill 값: {skill}")
+
+    persona_match = re.search(r"^\s*persona\s*:\s*(.+)$", content, re.MULTILINE)
+    if persona_match:
+        persona = persona_match.group(1).strip()
+        if persona not in RUN_PERSONAS:
+            issues.append(f"알 수 없는 persona 값: {persona}")
 
     if re.search(r"result\s*:\s*passed", content, re.IGNORECASE) and not re.search(r"command\s*:", content):
         issues.append("passed 결과가 있지만 검증 command가 없습니다.")
@@ -1821,6 +1874,7 @@ def main():
     p_run_new = subparsers.add_parser("run-new", help="Codex/GPT Run 초안 생성")
     p_run_new.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
     p_run_new.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_run_new.add_argument("--persona", default="", choices=[""] + sorted(RUN_PERSONAS.keys()), help="Run persona")
     p_run_new.add_argument("--skill", required=True, choices=sorted(RUN_SKILLS.keys()), help="Run skill")
     p_run_new.add_argument("--title", required=True, help="Run 제목")
     p_run_new.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
@@ -1875,6 +1929,7 @@ def main():
             skill=args.skill,
             title=args.title,
             related_ids=args.related_ids,
+            persona=args.persona or None,
         )
     elif args.command == "run-check":
         cmd_run_check(args.run_file)

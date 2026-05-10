@@ -68,6 +68,7 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 | --- | --- |
 | `RUN_INPUT_CONTRACT.md` | Codex/GPT에게 전달할 표준 작업지시서 형식 |
 | `RUN_OUTPUT_CONTRACT.md` | Codex/GPT가 반환해야 하는 표준 완료보고서 형식 |
+| `PERSONA_DELEGATION.md` | Codex/GPT subagent 위임과 persona 적용 규칙 |
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 |
 | `LIMITATIONS.md` | Codex/GPT Adapter 한계와 승인 필요 상황 |
 | `skills/` | Codex/GPT가 상황별로 명시적으로 읽는 작업 절차 카드 |

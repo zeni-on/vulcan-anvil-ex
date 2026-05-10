@@ -30,6 +30,7 @@
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
 - `docs/core/DATA_STANDARD_RULES.md`
+- `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
 
@@ -38,6 +39,7 @@ Codex/GPT 전용 실행에는 다음 문서도 함께 읽는다.
 - `docs/adapters/codex-gpt/README.md`
 - `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
 - `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
 - `docs/adapters/codex-gpt/GATE_PROMPTS.md`
 - `docs/adapters/codex-gpt/LIMITATIONS.md`
 
@@ -62,6 +64,8 @@ docs/adapters/codex-gpt/skills/
 ## 5. Run 규칙
 
 - 작고 명확한 Run 단위로 작업한다.
+- Run에는 가능한 한 `persona`를 명시한다. 표준 persona는 `docs/core/AGENT_PERSONAS.md`를 따른다.
+- Codex subagent를 사용할 수 있으면 persona 단위로 위임하되, 최종 결과는 메인 에이전트가 Run 출력 계약으로 정규화한다.
 - 의미 있는 모든 변경은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `UI`, `FIND`, `CR` 같은 관련 ID와 연결한다.
 - QA 이슈가 승인된 설계 범위 안의 결함이면 `FIND`로 기록하고 G4 QA Fix Loop로 처리한다.
 - 이슈가 요구사항, 인수기준, 아키텍처, 보안 기준선, 데이터 설계, 릴리즈 범위를 바꾸면 `CR`로 승격한다.
