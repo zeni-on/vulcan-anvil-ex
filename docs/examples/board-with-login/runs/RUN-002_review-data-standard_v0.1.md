@@ -6,7 +6,10 @@ run_id: RUN-002
 title: Review Data Standard
 title_ko: 로그인 게시판 샘플 데이터 표준 검토
 project: Board With Login Sample
+adapter: codex-gpt
 agent_adapter: codex-gpt
+persona: review
+skill: data-standard-review
 agent_role: review-agent
 gate: G4
 status: Completed
@@ -18,6 +21,18 @@ related_ids:
   db: [DB-001, DB-002]
   data: [TERM-002, TERM-003, TERM-004, TERM-006, TERM-007, TERM-008, TERM-009, TERM-010]
   issue: [ISSUE-004, ISSUE-007]
+verification_results:
+  - command: "python -m pytest tests -p no:cacheprovider --ignore pytest-cache-files-*"
+    result: passed
+  - command: "python -m ruff check ."
+    result: passed
+evidence:
+  - docs/examples/board-with-login/DOC-DATA-G2-001_Project-Glossary_v0.1.md
+  - docs/examples/board-with-login/DOC-DATA-G2-002_Database-Spec_v0.1.md
+traceability_updates:
+  - docs/examples/board-with-login/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+open_issues:
+  - ISSUE-008
 ---
 ```
 
@@ -40,6 +55,8 @@ related_ids:
 run:
   run_id: RUN-002
   adapter: codex-gpt
+  persona: review
+  skill: data-standard-review
   role: review-agent
   gate: G4
   objective: "DB-001, DB-002 데이터 항목을 공공데이터 공통표준과 대조하고 ISSUE-004를 해소할 수 있는지 판단한다."

@@ -23,6 +23,7 @@ Adapter는 다음 질문에 답한다.
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
 - `docs/core/DATA_STANDARD_RULES.md`
+- `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 
 ## 3. 우선 구현 순서
@@ -30,7 +31,7 @@ Adapter는 다음 질문에 답한다.
 권장 순서:
 
 1. `codex-gpt`: 현재 샘플 개발 흐름을 기준으로 첫 Adapter를 만든다.
-2. `claude`: 같은 Run Protocol을 Claude 실행 방식에 매핑한다.
+2. `claude`: 같은 Run Protocol과 persona 체계를 Claude 실행 방식에 매핑한다.
 3. `dashboard`: Run 상태, 산출물 상태, 추적표 상태를 시각화한다.
 
 ## 4. Adapter 산출물
@@ -43,6 +44,7 @@ Adapter는 최소 다음 산출물을 가진다.
 | `RUN_INPUT_CONTRACT.md` | 해당 에이전트에 전달할 입력 형식 |
 | `RUN_OUTPUT_CONTRACT.md` | 해당 에이전트 결과를 정규화하는 형식 |
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 또는 실행 지침 |
+| `PERSONA_MAPPING.md` | Core persona와 도구별 agent/subagent 이름의 매핑 |
 | `LIMITATIONS.md` | 모델/도구 한계, 보안 주의사항 |
 
 ## 5. 다음 작업

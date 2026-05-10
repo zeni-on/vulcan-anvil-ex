@@ -6,6 +6,8 @@ run_id: RUN-001
 title: Review Traceability
 title_ko: 로그인 게시판 샘플 추적성 리뷰
 adapter: codex-gpt
+persona: review
+skill: traceability-review
 run_type: Review
 gate: G4
 status: CompletedWithIssues
@@ -42,6 +44,8 @@ change_reason: Codex/GPT Adapter 입력/출력 계약 검증을 위한 첫 Revie
 ```yaml
 run_id: RUN-001
 adapter: codex-gpt
+persona: review
+skill: traceability-review
 agent_role: review-agent
 run_type: Review
 gate: G4
@@ -65,9 +69,11 @@ source_documents:
   required:
     - docs/core/ID_SYSTEM.md
     - docs/core/TRACEABILITY_RULES.md
+    - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
     - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/adapters/codex-gpt/PERSONA_DELEGATION.md
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/examples/board-with-login/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/examples/board-with-login/DOC-CORE-G2-001_Function-Spec_v0.1.md

@@ -7,6 +7,27 @@ description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트
 
 에이전트 팀을 조율하여 Phase 0(Discovery) + 5-Gate 프로세스에 따라 체계적으로 프로젝트를 개발한다.
 
+## Ex Persona 원칙
+
+Vulcan-Anvil Ex에서 표준 역할은 `.claude/agents/*.md` 파일명이 아니라 `docs/core/AGENT_PERSONAS.md`의 persona다.
+
+Claude adapter는 기존 agent 파일명을 호환용으로 유지한다. 오케스트레이터는 먼저 persona를 판단한 뒤 `docs/adapters/claude/PERSONA_MAPPING.md`에 따라 Claude agent를 선택한다.
+
+대표 매핑:
+
+| Ex persona | Claude agent |
+| --- | --- |
+| `discovery` | concierge, analyst, ba, sa, estimator |
+| `requirements` | pm |
+| `design` | architect, dba, ui-designer |
+| `test-design` | qa |
+| `build` | frontend-dev, backend-dev |
+| `evidence` | ux-reviewer |
+| `review` | qa, ux-reviewer |
+| `change-control` | pm, qa 또는 오케스트레이터 직접 |
+
+subagent를 투입할 때는 agent 이름뿐 아니라 `persona`, `related_ids`, `scope`, `completion_criteria`를 함께 전달한다.
+
 ## 에이전트 구성
 
 ### Phase 0 (Discovery) — 상위설계
@@ -23,14 +44,14 @@ description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트
 | 에이전트 | 파일 | 역할 |
 |---------|------|------|
 | concierge | `.claude/agents/concierge.md` | 온보딩, 프로젝트 개요 파악 |
-| pm | `.claude/agents/pm.md` | 요구사항 수집, REQ-ID 체계화, AC 작성 |
+| pm | `.claude/agents/pm.md` | `requirements` persona. 요구사항 수집, REQ-ID 체계화, AC 작성 |
 | architect | `.claude/agents/architect.md` | 시스템 설계, API, 모듈 구조, UT-ID 할당 |
 | ui-designer | `.claude/agents/ui-designer.md` | UI 설계, 와이어프레임, 디자인 토큰 |
 | dba | `.claude/agents/dba.md` | 데이터 모델링, ERD, 마이그레이션 |
-| frontend-dev | `.claude/agents/frontend-dev.md` | 프론트엔드 구현, UI 컴포넌트, API 연동 |
-| backend-dev | `.claude/agents/backend-dev.md` | 백엔드 구현, API, DB 연동, 인증 |
-| ux-reviewer | `.claude/agents/ux-reviewer.md` | UI 검수, 스크린샷 분석, 접근성 검증 |
-| qa | `.claude/agents/qa.md` | 테스트 계획, 코드 리뷰, 판정 |
+| frontend-dev | `.claude/agents/frontend-dev.md` | `build` persona. 프론트엔드 구현, UI 컴포넌트, API 연동 |
+| backend-dev | `.claude/agents/backend-dev.md` | `build` persona. 백엔드 구현, API, DB 연동, 인증 |
+| ux-reviewer | `.claude/agents/ux-reviewer.md` | `evidence`/`review` persona. UI 검수, 스크린샷 분석, 접근성 검증 |
+| qa | `.claude/agents/qa.md` | `test-design`/`review` persona. 테스트 계획, 코드 리뷰, 판정 |
 
 ## 워크플로우
 
@@ -56,7 +77,7 @@ description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트
 
 1. `docs/00-discovery/DISCOVERY-CHECKLIST.md`의 필수 항목을 검토한다
 2. 미충족 항목이 있으면 사용자에게 보고한다
-3. 사용자 승인 후, `Agent(pm)`을 투입하여 Phase 0 산출물을 REQ-NNN/AC-NNN 형식으로 변환한다
+3. 사용자 승인 후, `requirements` persona로 `Agent(pm)`을 투입하여 Phase 0 산출물을 REQ-NNN/AC-NNN 형식으로 변환한다
 4. 이후 기존 Gate 1~5 프로세스를 따른다
 
 ### Phase 1: 준비 (오케스트레이터 직접 수행)
@@ -76,7 +97,7 @@ description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트
 "프로젝트 시작" 또는 자연어 요청 시:
 1. `Agent(concierge)` 투입 — 사용자와 대화로 프로젝트 개요 수집
 2. Concierge가 **프로젝트 온보딩 요약**을 반환
-3. 오케스트레이터가 온보딩 요약을 컨텍스트에 포함하여 `Agent(pm)` 투입
+3. 오케스트레이터가 온보딩 요약을 컨텍스트에 포함하여 `requirements` persona로 `Agent(pm)` 투입
 
 ### Phase 2: Gate별 팀 구성 및 실행
 
@@ -84,15 +105,15 @@ description: "Phase 0(Discovery)와 Gate 1~5 개발 프로세스를 오케스트
 
 | Gate | 담당 | 비고 |
 |------|------|------|
-| Gate 1 | pm | |
-| Gate 2a | architect | Gate 2a/2b 병렬 |
-| Gate 2b | dba | DB 있는 프로젝트만 |
-| Gate 2c | ui-designer | 2a 완료 후 |
-| Gate 3 | qa | |
-| 구현 | frontend-dev + backend-dev | |
-| UI 검수 | ux-reviewer | |
-| Gate 4 | qa | |
-| Gate 5 | 사용자 | |
+| Gate 1 | requirements → pm | |
+| Gate 2a | design → architect | Gate 2a/2b 병렬 |
+| Gate 2b | design → dba | DB 있는 프로젝트만 |
+| Gate 2c | design → ui-designer | 2a 완료 후 |
+| Gate 3 | test-design → qa | |
+| 구현 | build → frontend-dev + backend-dev | |
+| UI 검수 | evidence/review → ux-reviewer | |
+| Gate 4 | review → qa | |
+| Gate 5 | release → 사용자/오케스트레이터 | |
 
 ### 작업 분할 전략 (컨텍스트 보호)
 
@@ -152,13 +173,13 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 | 사용자 요청 | 투입 에이전트 |
 |-----------|-------------|
 | "상위설계 시작", "Discovery 시작" | analyst, ba, sa, estimator (요청에 따라) |
-| "프로젝트 시작", 자연어 요청 | concierge → pm |
-| "Gate 1 시작", "요구사항 정의" | pm |
-| "Gate 2 시작", "설계 시작" | architect + dba (병렬) → ui-designer |
-| "Gate 3 시작", "테스트 계획" | qa |
-| "구현 시작", "코딩 시작" | frontend-dev + backend-dev |
-| "UI 검수", "UX 리뷰" | ux-reviewer |
-| "Gate 4 시작", "리뷰 시작" | qa |
+| "프로젝트 시작", 자연어 요청 | discovery → concierge, 이후 requirements → pm |
+| "Gate 1 시작", "요구사항 정의" | requirements → pm |
+| "Gate 2 시작", "설계 시작" | design → architect + dba (병렬) → ui-designer |
+| "Gate 3 시작", "테스트 계획" | test-design → qa |
+| "구현 시작", "코딩 시작" | build → frontend-dev + backend-dev |
+| "UI 검수", "UX 리뷰" | evidence/review → ux-reviewer |
+| "Gate 4 시작", "리뷰 시작" | review → qa |
 | "상태 확인" | (오케스트레이터 직접) |
 | "롤백해줘" | (오케스트레이터 직접) |
 

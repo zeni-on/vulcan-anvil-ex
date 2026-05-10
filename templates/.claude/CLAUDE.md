@@ -4,16 +4,18 @@ Phase 0(Discovery) + 5-Gate 프로세스에 따라 에이전트 팀이 협업하
 
 **핵심 원칙**: 플래너는 코드를 쓰지 않는다. 실행자는 계획만 따른다.
 
+**Ex persona 원칙**: `.claude/agents/*.md` 파일명은 Claude 호환용 실행 이름이고, 표준 작업 역할은 `docs/core/AGENT_PERSONAS.md`의 persona를 따른다. Claude agent와 Ex persona의 매핑은 `docs/adapters/claude/PERSONA_MAPPING.md`를 기준으로 한다.
+
 ## 구조
 
 ```
 .claude/
 ├── agents/                  — 에이전트 정의
 │   ├── ba.md, sa.md, estimator.md, analyst.md — Phase 0 (Discovery)
-│   ├── concierge.md, pm.md, architect.md   — Gate 1~2
+│   ├── concierge.md, pm.md, architect.md   — Gate 1~2 (pm은 requirements persona)
 │   ├── ui-designer.md, dba.md              — Gate 2
-│   ├── frontend-dev.md, backend-dev.md     — 구현
-│   ├── ux-reviewer.md, qa.md               — Gate 3~4
+│   ├── frontend-dev.md, backend-dev.md     — 구현 (build persona)
+│   ├── ux-reviewer.md, qa.md               — Gate 3~4 (test-design/review/evidence persona)
 ├── rules/                   — Gate별 규칙 (path-specific 조건부 로드)
 │   ├── core-principles.md   — 항상 로드 (핵심 원칙)
 │   ├── gate1-requirements.md — docs/01-requirements/** 접근 시
