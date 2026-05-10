@@ -27,6 +27,7 @@
 
 - `docs/core/ID_SYSTEM.md`
 - `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/CONTROLLER_PROTOCOL.md`
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
 - `docs/core/DATA_STANDARD_RULES.md`
@@ -43,7 +44,17 @@ Codex/GPT 전용 실행에는 다음 문서도 함께 읽는다.
 - `docs/adapters/codex-gpt/GATE_PROMPTS.md`
 - `docs/adapters/codex-gpt/LIMITATIONS.md`
 
-## 4. Skill 카드
+## 4. Controller 규칙
+
+메인 에이전트는 Controller 역할을 맡는다. Controller는 persona가 아니라 계획, 위임, 검증, 보고를 조율하는 역할이다.
+
+- 작업 범위가 작지 않으면 먼저 `docs/core/CONTROLLER_PROTOCOL.md`를 확인한다.
+- 필요한 경우 `python vulcan.py controller-plan --goal "<목표>" --gate <gate>`로 계획 Run을 만든다.
+- 화면 검수, 별도 CLI 검증, GitHub 리뷰, Claude 교차 검토처럼 실행 환경을 나눌 필요가 있으면 `python vulcan.py handoff ...`로 handoff Run을 만든다.
+- subagent 또는 다른 실행 환경의 결과는 최종 사실로 바로 확정하지 않고 Controller가 다시 검증한다.
+- 구현자가 자기 구현을 최종 승인하지 않도록 review persona 또는 별도 환경 검수를 둔다.
+
+## 5. Skill 카드
 
 Codex/GPT skill은 다음 위치에 있는 가벼운 작업 절차 카드다.
 
@@ -61,7 +72,7 @@ docs/adapters/codex-gpt/skills/
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
 | 변경요청 또는 영향도 분석 | `docs/adapters/codex-gpt/skills/change-impact-analysis.md` |
 
-## 5. Run 규칙
+## 6. Run 규칙
 
 - 작고 명확한 Run 단위로 작업한다.
 - Run에는 가능한 한 `persona`를 명시한다. 표준 persona는 `docs/core/AGENT_PERSONAS.md`를 따른다.
@@ -72,13 +83,13 @@ docs/adapters/codex-gpt/skills/
 - 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다.
 - 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
 
-## 6. 참고문서 경계
+## 7. 참고문서 경계
 
 - `docs/seed-docs/`는 프로젝트에 주입된 공개 표준 문서 영역이다. 읽기 전용 참고자료로 취급한다.
 - `docs/ref-docs/`에는 민감한 프로젝트 참고문서가 들어갈 수 있다. 이 디렉터리 아래 파일은 커밋하지 않는다.
 - 민감한 참고자료가 필요하면 필요한 규칙이나 결정만 프로젝트 산출물에 요약해 남긴다.
 
-## 7. 출력
+## 8. 출력
 
 Run 종료 시 간결한 완료 보고를 제공하고, 필요한 경우 다음 위치에 Run 기록을 작성하거나 갱신한다.
 

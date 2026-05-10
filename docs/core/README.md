@@ -1,11 +1,12 @@
 # Vulcan-Anvil Ex Core
 
-이 디렉토리는 Vulcan-Anvil Ex의 모델 독립 Core 규칙을 정의한다.
+이 디렉터리는 Vulcan-Anvil Ex의 모델 독립 Core 규칙을 정의한다.
 
 현재 초안 문서:
 
 - `ID_SYSTEM.md`: ID Prefix, 문서 ID, 파일명, 버전 규칙
 - `TRACEABILITY_RULES.md`: 요구사항, 설계, 보안, 테스트, 증적 간 필수 연결 규칙
+- `CONTROLLER_PROTOCOL.md`: 메인 에이전트의 계획, 위임, 검증, handoff 판단 규칙
 - `DOCUMENT_METADATA.md`: 공식 문서에 공통으로 들어갈 메타데이터 필드
 - `REFERENCE_STANDARDS.md`: 보안 가이드와 공공데이터 표준 참조 및 준용 규칙
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전, 용어, 도메인, 데이터 항목명 관리 규칙

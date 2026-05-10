@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.5.0"
+VULCAN_VERSION = "1.6.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -56,11 +56,13 @@ PROJECT_ROOT_FILES = [
     "AGENTS.md",
 ]
 RUN_SKILLS = {
+    "controller-plan": "docs/core/CONTROLLER_PROTOCOL.md",
     "traceability-review": "docs/adapters/codex-gpt/skills/traceability-review.md",
     "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
+    "handoff": "docs/core/CONTROLLER_PROTOCOL.md",
 }
 RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
@@ -75,12 +77,23 @@ RUN_PERSONAS = {
     "documentation": "용어, 문서 버전, 산출물 일관성을 정리한다.",
 }
 RUN_SKILL_DEFAULT_PERSONAS = {
+    "controller-plan": "documentation",
     "traceability-review": "review",
     "security-review": "review",
     "data-standard-review": "review",
     "qa-fix-loop": "build",
     "change-impact-analysis": "change-control",
+    "handoff": "review",
 }
+GATE_DEFAULT_PERSONAS = {
+    "gate1": "requirements",
+    "gate2": "design",
+    "gate3": "test-design",
+    "impl": "build",
+    "gate4": "review",
+    "gate5": "release",
+}
+HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
 RUN_REQUIRED_KEYS = [
     "run_id",
     "adapter",
@@ -1560,6 +1573,7 @@ open_issues: []
 - `AGENTS.md`
 - `docs/core/ID_SYSTEM.md`
 - `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/CONTROLLER_PROTOCOL.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
@@ -1608,6 +1622,210 @@ TBD
     write_file(project_dir, rel_path, content)
     print(f"\nRun 초안 생성 완료: {rel_path}")
     print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
+
+
+def cmd_controller_plan(goal, gate, related_ids, persona=None, adapter="codex-gpt", project_dir="."):
+    persona = persona or GATE_DEFAULT_PERSONAS.get(gate, "review")
+    if persona not in RUN_PERSONAS:
+        print(f"오류: 알 수 없는 persona입니다: {persona}")
+        sys.exit(1)
+
+    run_id = next_run_id(project_dir)
+    title = f"Controller Plan - {goal}"
+    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(title)}_v0.1.md")
+    ids = split_csv(related_ids)
+    skill = "controller-plan"
+    skill_path = RUN_SKILLS[skill]
+
+    content = f"""# {run_id} {title}
+
+```yaml
+run_id: {run_id}
+adapter: {adapter}
+gate: {gate}
+persona: {persona}
+skill: {skill}
+skill_path: {skill_path}
+status: Draft
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Controller 목표
+
+{goal}
+
+## 2. 먼저 읽을 문서
+
+- `AGENTS.md`
+- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/AGENT_PERSONAS.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/CHANGE_CONTROL_PROCESS.md`
+- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
+- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+
+## 3. 판단 범위
+
+| 항목 | 내용 |
+| --- | --- |
+| Gate | `{gate}` |
+| 우선 persona | `{persona}` |
+| 관련 ID | `{format_yaml_list(ids)}` |
+| 목표 산출물 | TBD |
+| 제외 범위 | TBD |
+| 사용자 승인 필요 항목 | TBD |
+
+## 4. 권장 Run 순서
+
+| 순서 | persona | 목적 | 산출물 | 검증 |
+| --- | --- | --- | --- | --- |
+| 1 | `{persona}` | 현재 목표와 관련 산출물 확인 | 영향 범위와 누락 항목 | 문서 존재 여부 |
+| 2 | TBD | 필요한 구현 또는 문서 수정 | 변경 파일 | 테스트/정적검사 |
+| 3 | `review` | 산출물, 추적성, 증적 검수 | FIND/CR/ISSUE 판단 | `vulcan.py run-check` |
+
+## 5. Controller 체크리스트
+
+- [ ] 목표와 관련 ID가 연결되어 있다.
+- [ ] 위임할 persona와 직접 수행할 일을 구분했다.
+- [ ] 서브에이전트 결과를 최종 사실로 확정하기 전에 Controller가 재검증한다.
+- [ ] 구현자가 스스로 최종 검수를 끝내지 않도록 `review` 또는 별도 환경 검수를 둔다.
+- [ ] `FIND`, `CR`, `ISSUE` 분류 기준을 적용한다.
+- [ ] 다음 단계로 넘기기 전에 필요한 사용자 승인을 받는다.
+
+## 6. 완료 보고
+
+### 요약
+
+TBD
+
+### 위임 결과
+
+TBD
+
+### 검증 결과
+
+TBD
+
+### 다음 핸드오프
+
+TBD
+"""
+    write_file(project_dir, rel_path, content)
+    print(f"\nController 계획 생성 완료: {rel_path}")
+    print("다음 단계: 계획을 검토한 뒤 필요한 persona Run 또는 handoff를 생성합니다.")
+
+
+def cmd_handoff(target, title, from_run, gate, related_ids, persona="review", adapter="codex-gpt", project_dir="."):
+    if target not in HANDOFF_TARGETS:
+        print(f"오류: 알 수 없는 handoff 대상입니다: {target}")
+        print("사용 가능 대상:")
+        for name in HANDOFF_TARGETS:
+            print(f"  - {name}")
+        sys.exit(1)
+    if persona not in RUN_PERSONAS:
+        print(f"오류: 알 수 없는 persona입니다: {persona}")
+        sys.exit(1)
+
+    run_id = next_run_id(project_dir)
+    full_title = f"Handoff to {target} - {title}"
+    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(full_title)}_v0.1.md")
+    ids = split_csv(related_ids)
+    skill = "handoff"
+    skill_path = RUN_SKILLS[skill]
+    source_run = from_run or "TBD"
+
+    content = f"""# {run_id} {full_title}
+
+```yaml
+run_id: {run_id}
+adapter: {adapter}
+gate: {gate}
+persona: {persona}
+skill: {skill}
+skill_path: {skill_path}
+status: Draft
+created_at: {date.today()}
+handoff_to: {target}
+from_run: {source_run}
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Handoff 목표
+
+{title}
+
+## 2. 이전 맥락
+
+| 항목 | 내용 |
+| --- | --- |
+| 이전 Run | `{source_run}` |
+| 대상 환경 | `{target}` |
+| 요청 persona | `{persona}` |
+| 관련 ID | `{format_yaml_list(ids)}` |
+
+## 3. 대상 환경 지시
+
+- `desktop`: 구현 결과를 브라우저로 열고 화면, 상호작용, 스크린샷 증적을 확인한다.
+- `cli`: 테스트, 린트, `vulcan.py run-check`, `vulcan.py check-trace`처럼 재현 가능한 명령을 우선 실행한다.
+- `github`: PR diff, 리뷰 코멘트, CI 결과를 기준으로 코드 변경 위험을 검수한다.
+- `codex-review`: GitHub 코드 리뷰 결과를 Vulcan 산출물의 `FIND`, `CR`, `ISSUE` 후보로 변환한다.
+- `claude`: `CLAUDE.md`와 Claude agent/skill 구조를 참고하되 Core 규약과 추적성 규칙을 우선한다.
+- `manual`: 사람이 확인해야 하는 승인, 정책, 일정, 대외 커뮤니케이션 항목을 정리한다.
+
+## 4. 먼저 읽을 문서
+
+- `AGENTS.md`
+- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/AGENT_PERSONAS.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/CHANGE_CONTROL_PROCESS.md`
+- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+
+## 5. 완료 조건
+
+- [ ] 이전 Run의 결론을 그대로 믿지 않고 대상 환경에서 재검증했다.
+- [ ] 검증 명령, 화면 캡처, PR 리뷰, 수동 확인 중 하나 이상의 증적을 남겼다.
+- [ ] 발견사항을 `FIND`, `CR`, `ISSUE` 중 하나로 분류했다.
+- [ ] 필요한 문서 또는 추적표 갱신 대상을 기록했다.
+- [ ] Controller에게 다음 의사결정 항목을 반환했다.
+
+## 6. 완료 보고
+
+### 요약
+
+TBD
+
+### 검증 결과
+
+TBD
+
+### 증적
+
+TBD
+
+### Controller 결정 필요 항목
+
+TBD
+"""
+    write_file(project_dir, rel_path, content)
+    print(f"\nHandoff 문서 생성 완료: {rel_path}")
+    print("다음 단계: 대상 환경에서 검증한 뒤 이 Run 파일을 갱신합니다.")
 
 
 def check_run_file(path):
@@ -1883,6 +2101,22 @@ def main():
     p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
 
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
+    p_controller_plan = subparsers.add_parser("controller-plan", help="Controller 실행 계획 Run 생성")
+    p_controller_plan.add_argument("--goal", required=True, help="Controller가 수립할 목표")
+    p_controller_plan.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
+    p_controller_plan.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_controller_plan.add_argument("--persona", default="", choices=[""] + sorted(RUN_PERSONAS.keys()), help="우선 적용 persona")
+    p_controller_plan.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+
+    p_handoff = subparsers.add_parser("handoff", help="다른 환경/에이전트로 넘길 검수 Run 생성")
+    p_handoff.add_argument("--to", required=True, choices=sorted(HANDOFF_TARGETS), help="handoff 대상")
+    p_handoff.add_argument("--title", required=True, help="handoff 목표")
+    p_handoff.add_argument("--from-run", default="", help="이전 Run ID 또는 파일명")
+    p_handoff.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
+    p_handoff.add_argument("--gate", default="gate4", choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_handoff.add_argument("--persona", default="review", choices=sorted(RUN_PERSONAS.keys()), help="handoff persona")
+    p_handoff.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -1933,6 +2167,24 @@ def main():
         )
     elif args.command == "run-check":
         cmd_run_check(args.run_file)
+    elif args.command == "controller-plan":
+        cmd_controller_plan(
+            goal=args.goal,
+            gate=args.gate,
+            related_ids=args.related_ids,
+            persona=args.persona or None,
+            adapter=args.adapter,
+        )
+    elif args.command == "handoff":
+        cmd_handoff(
+            target=args.to,
+            title=args.title,
+            from_run=args.from_run,
+            gate=args.gate,
+            related_ids=args.related_ids,
+            persona=args.persona,
+            adapter=args.adapter,
+        )
     elif args.command == "backlog":
         if args.backlog_cmd == "list":
             cmd_backlog_list()
