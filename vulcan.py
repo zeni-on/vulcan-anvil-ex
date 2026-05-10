@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.3.0"
+VULCAN_VERSION = "1.4.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -54,6 +54,24 @@ PROJECT_DOC_DIRS = [
 ]
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
+]
+RUN_SKILLS = {
+    "traceability-review": "docs/adapters/codex-gpt/skills/traceability-review.md",
+    "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
+    "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
+    "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
+    "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
+}
+RUN_REQUIRED_KEYS = [
+    "run_id",
+    "adapter",
+    "status",
+    "skill",
+    "related_ids",
+    "verification_results",
+    "evidence",
+    "traceability_updates",
+    "open_issues",
 ]
 
 GATE_LABELS = {
@@ -194,6 +212,36 @@ def ensure_gitignore_entry(project_dir, entry):
     with open(path, "w", encoding="utf-8") as f:
         f.write(existing + suffix + entry.rstrip() + "\n")
     print(f"  update: .gitignore ({entry})")
+
+
+def slugify(value):
+    value = value.strip().lower()
+    value = re.sub(r"[^0-9a-zA-Z가-힣_-]+", "-", value)
+    value = re.sub(r"-+", "-", value).strip("-")
+    return value or "run"
+
+
+def split_csv(value):
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def next_run_id(project_dir="."):
+    runs_dir = os.path.join(project_dir, "docs", "runs")
+    max_num = 0
+    if os.path.isdir(runs_dir):
+        for name in os.listdir(runs_dir):
+            match = re.match(r"RUN-(\d+)", name)
+            if match:
+                max_num = max(max_num, int(match.group(1)))
+    return f"RUN-{max_num + 1:03d}"
+
+
+def format_yaml_list(items):
+    if not items:
+        return "[]"
+    return "[" + ", ".join(items) + "]"
 
 
 def load_session(project_dir="."):
@@ -1428,6 +1476,150 @@ def cmd_version(project_dir="."):
 
 # ── init ───────────────────────────────────────────────────────────────────
 
+def cmd_run_new(adapter, gate, skill, title, related_ids, project_dir="."):
+    if skill not in RUN_SKILLS:
+        print(f"오류: 알 수 없는 skill입니다: {skill}")
+        print("사용 가능 skill:")
+        for name in RUN_SKILLS:
+            print(f"  - {name}")
+        sys.exit(1)
+
+    run_id = next_run_id(project_dir)
+    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(title)}_v0.1.md")
+    ids = split_csv(related_ids)
+    skill_path = RUN_SKILLS[skill]
+
+    content = f"""# {run_id} {title}
+
+```yaml
+run_id: {run_id}
+adapter: {adapter}
+gate: {gate}
+skill: {skill}
+skill_path: {skill_path}
+status: Draft
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Run 목표
+
+{title}
+
+## 2. 에이전트가 먼저 읽을 문서
+
+- `AGENTS.md`
+- `docs/core/ID_SYSTEM.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/CHANGE_CONTROL_PROCESS.md`
+- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `{skill_path}`
+
+## 3. 입력 범위
+
+| 항목 | 내용 |
+| --- | --- |
+| 관련 ID | `{format_yaml_list(ids)}` |
+| 대상 문서 | TBD |
+| 대상 코드 | TBD |
+| 제외 범위 | TBD |
+
+## 4. 수행 지시
+
+1. 관련 문서와 코드를 확인한다.
+2. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
+3. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
+4. 검증 명령을 실행하고 결과를 기록한다.
+5. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다.
+
+## 5. 완료 보고
+
+### 요약
+
+TBD
+
+### 변경 파일
+
+TBD
+
+### 검증 결과
+
+TBD
+
+### 후속 조치
+
+TBD
+"""
+    write_file(project_dir, rel_path, content)
+    print(f"\nRun 초안 생성 완료: {rel_path}")
+    print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
+
+
+def check_run_file(path):
+    issues = []
+    warnings = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError as e:
+        print(f"오류: Run 파일을 읽을 수 없습니다: {e}")
+        sys.exit(1)
+
+    for key in RUN_REQUIRED_KEYS:
+        if not re.search(rf"^\s*{re.escape(key)}\s*:", content, re.MULTILINE):
+            issues.append(f"필수 필드 누락: {key}")
+
+    if not re.search(r"\b(REQ|NREQ|AC|FUNC|SCR|PGM|DB|IF|SEC|UT|IT|PT|UI|FIND|CR|ISSUE|RUN)-\d+\b", content):
+        issues.append("관련 추적 ID가 없습니다.")
+
+    status_match = re.search(r"^\s*status\s*:\s*(.+)$", content, re.MULTILINE)
+    if status_match:
+        status = status_match.group(1).strip()
+        if status not in {"Draft", "InProgress", "Completed", "Blocked", "Failed", "CompletedWithIssues"}:
+            issues.append(f"허용되지 않은 status 값: {status}")
+
+    skill_match = re.search(r"^\s*skill\s*:\s*(.+)$", content, re.MULTILINE)
+    if skill_match:
+        skill = skill_match.group(1).strip()
+        if skill not in RUN_SKILLS:
+            issues.append(f"알 수 없는 skill 값: {skill}")
+
+    if re.search(r"result\s*:\s*passed", content, re.IGNORECASE) and not re.search(r"command\s*:", content):
+        issues.append("passed 결과가 있지만 검증 command가 없습니다.")
+
+    if re.search(r"status\s*:\s*Completed", content) and re.search(r"verification_results\s*:\s*\[\]", content):
+        warnings.append("Completed 상태이지만 verification_results가 비어 있습니다.")
+
+    if re.search(r"status\s*:\s*Completed", content) and re.search(r"traceability_updates\s*:\s*\[\]", content):
+        warnings.append("Completed 상태이지만 traceability_updates가 비어 있습니다.")
+
+    return issues, warnings
+
+
+def cmd_run_check(run_file):
+    issues, warnings = check_run_file(run_file)
+    if warnings:
+        print("경고:")
+        for warning in warnings:
+            print(f"  - {warning}")
+
+    if issues:
+        print("Run 검증 실패:")
+        for issue in issues:
+            print(f"  - {issue}")
+        sys.exit(1)
+
+    print("Run 검증 통과")
+
+
 def create_session_json(target_dir, project_name):
     session = {
         "project": project_name,
@@ -1626,6 +1818,16 @@ def main():
     p_rollback.add_argument("--reason", default="", help="롤백 사유 (선택)")
     p_rollback.add_argument("--scope", default="", help="증분 rollback scope (REQ-ID 콤마 구분, 예: REQ-003,NREQ-005)")
 
+    p_run_new = subparsers.add_parser("run-new", help="Codex/GPT Run 초안 생성")
+    p_run_new.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
+    p_run_new.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_run_new.add_argument("--skill", required=True, choices=sorted(RUN_SKILLS.keys()), help="Run skill")
+    p_run_new.add_argument("--title", required=True, help="Run 제목")
+    p_run_new.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+
+    p_run_check = subparsers.add_parser("run-check", help="Run 결과 문서 검사")
+    p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
+
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
@@ -1666,6 +1868,16 @@ def main():
         cmd_session(gate=args.gate, status=args.status, feature=args.feature)
     elif args.command == "rollback":
         cmd_rollback(gate=args.gate, reason=args.reason, scope=args.scope or None)
+    elif args.command == "run-new":
+        cmd_run_new(
+            adapter=args.adapter,
+            gate=args.gate,
+            skill=args.skill,
+            title=args.title,
+            related_ids=args.related_ids,
+        )
+    elif args.command == "run-check":
+        cmd_run_check(args.run_file)
     elif args.command == "backlog":
         if args.backlog_cmd == "list":
             cmd_backlog_list()
