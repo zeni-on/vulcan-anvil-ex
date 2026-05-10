@@ -38,10 +38,20 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.2.0"
+VULCAN_VERSION = "1.3.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
+PROJECT_DOC_SETS = [
+    "docs/core",
+    "docs/templates",
+    "docs/adapters",
+    "docs/seed-docs",
+]
+PROJECT_DOC_DIRS = [
+    "docs/runs",
+    "docs/ref-docs",
+]
 
 GATE_LABELS = {
     "gate1": "Gate 1 요구사항",
@@ -95,6 +105,77 @@ def copy_tree(src_dir, dst_dir):
             dst = os.path.join(dst_dir, rel_path)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
+
+
+def copy_source_tree(target_dir, rel_dir, variables=None, overwrite=True, source_root=None):
+    """Copy a repository directory into the target project.
+
+    Markdown and JSON files are rendered with project variables; binary files are copied as-is.
+    """
+    import shutil
+
+    src_dir = os.path.join(source_root or VULCAN_DIR, rel_dir)
+    if not os.path.isdir(src_dir):
+        return 0
+
+    copied = 0
+    render_exts = {".md", ".json", ".txt", ".yml", ".yaml"}
+    for root, dirs, files in os.walk(src_dir):
+        rel_root = os.path.relpath(root, src_dir)
+        for f in files:
+            src = os.path.join(root, f)
+            child_rel = os.path.join(rel_root, f) if rel_root != "." else f
+            dst_rel = os.path.join(rel_dir, child_rel)
+            dst = os.path.join(target_dir, dst_rel)
+
+            if os.path.exists(dst) and not overwrite:
+                continue
+
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            ext = os.path.splitext(f)[1].lower()
+            if variables is not None and ext in render_exts:
+                with open(src, encoding="utf-8") as fp:
+                    content = render(fp.read(), variables)
+                with open(dst, "w", encoding="utf-8") as fp:
+                    fp.write(content)
+            else:
+                shutil.copy2(src, dst)
+            copied += 1
+    return copied
+
+
+def install_project_doc_framework(target_dir, variables, overwrite=True, source_root=None):
+    """Install audit/agent document framework files into a project."""
+    for rel_dir in PROJECT_DOC_SETS:
+        copied = copy_source_tree(
+            target_dir,
+            rel_dir,
+            variables=variables,
+            overwrite=overwrite,
+            source_root=source_root,
+        )
+        if copied:
+            print(f"  install/update: {rel_dir}/ ({copied} files)")
+
+    for rel_dir in PROJECT_DOC_DIRS:
+        write_file(target_dir, os.path.join(rel_dir, ".gitkeep"), "")
+
+
+def ensure_gitignore_entry(project_dir, entry):
+    path = os.path.join(project_dir, ".gitignore")
+    existing = ""
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            existing = f.read()
+
+    lines = {line.strip() for line in existing.splitlines()}
+    if entry.strip() in lines:
+        return
+
+    suffix = "" if not existing or existing.endswith("\n") else "\n"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(existing + suffix + entry.rstrip() + "\n")
+    print(f"  update: .gitignore ({entry})")
 
 
 def load_session(project_dir="."):
@@ -1232,7 +1313,7 @@ def cmd_upgrade(project_dir="."):
     import shutil
 
     session = load_session(project_dir)
-    vulcan_src = VULCAN_DIR
+    vulcan_src = session.get("vulcan_src") or VULCAN_DIR
     src_templates = os.path.join(vulcan_src, "templates")
 
     if not os.path.isdir(src_templates):
@@ -1304,6 +1385,9 @@ def cmd_upgrade(project_dir="."):
                 with open(dst, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"  생성 (v1.2 신규): {tpl_rel} ({label})")
+
+    install_project_doc_framework(project_dir, variables, overwrite=True, source_root=vulcan_src)
+    ensure_gitignore_entry(project_dir, "docs/ref-docs/")
 
     session["vulcan_version"] = new_ver
     session["vulcan_src"] = vulcan_src
@@ -1440,6 +1524,9 @@ def init(target_dir, project_name, agent_name):
     copy_file(target_dir, "docs/05-security/baseline.md", "docs/05-security/baseline.md")
     write_file(target_dir, "docs/05-security/compliance/.gitkeep", "")
 
+    # audit and agent coding document framework
+    install_project_doc_framework(target_dir, variables, overwrite=True)
+
     # session.json
     create_session_json(target_dir, project_name)
 
@@ -1448,7 +1535,7 @@ def init(target_dir, project_name, agent_name):
     print(f"  생성: vulcan.py")
 
     # .gitignore
-    gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\n"
+    gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n"
     write_file(target_dir, ".gitignore", gitignore)
 
     # git init + 초기 커밋
