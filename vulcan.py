@@ -260,8 +260,18 @@ def split_csv(value):
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def runs_rel_dir(project_dir="."):
+    docs_runs = os.path.join(project_dir, "docs", "runs")
+    root_runs = os.path.join(project_dir, "runs")
+    if os.path.isdir(docs_runs):
+        return os.path.join("docs", "runs")
+    if os.path.isdir(root_runs):
+        return "runs"
+    return os.path.join("docs", "runs")
+
+
 def next_run_id(project_dir="."):
-    runs_dir = os.path.join(project_dir, "docs", "runs")
+    runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
     max_num = 0
     if os.path.isdir(runs_dir):
         for name in os.listdir(runs_dir):
@@ -1540,7 +1550,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
         sys.exit(1)
 
     run_id = next_run_id(project_dir)
-    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(title)}_v0.1.md")
+    rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
     ids = split_csv(related_ids)
     skill_path = RUN_SKILLS[skill]
 
@@ -1632,7 +1642,7 @@ def cmd_controller_plan(goal, gate, related_ids, persona=None, adapter="codex-gp
 
     run_id = next_run_id(project_dir)
     title = f"Controller Plan - {goal}"
-    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(title)}_v0.1.md")
+    rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
     ids = split_csv(related_ids)
     skill = "controller-plan"
     skill_path = RUN_SKILLS[skill]
@@ -1739,7 +1749,7 @@ def cmd_handoff(target, title, from_run, gate, related_ids, persona="review", ad
 
     run_id = next_run_id(project_dir)
     full_title = f"Handoff to {target} - {title}"
-    rel_path = os.path.join("docs", "runs", f"{run_id}_{slugify(full_title)}_v0.1.md")
+    rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(full_title)}_v0.1.md")
     ids = split_csv(related_ids)
     skill = "handoff"
     skill_path = RUN_SKILLS[skill]
