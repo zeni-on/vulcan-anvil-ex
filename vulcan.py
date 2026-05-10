@@ -108,6 +108,7 @@ RUN_REQUIRED_KEYS = [
 ]
 
 GATE_LABELS = {
+    "phase0": "Phase 0 Discovery",
     "gate1": "Gate 1 요구사항",
     "gate2": "Gate 2 설계",
     "gate3": "Gate 3 테스트 플랜",
@@ -584,7 +585,7 @@ def parse_test_plan_status(project_dir="."):
 
 def check_trace(project_dir="."):
     session = load_session(project_dir)
-    current_gate = session.get("current_gate", "gate1")
+    current_gate = session.get("current_gate", "phase0")
     issues = []
 
     print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
@@ -803,7 +804,7 @@ def cmd_rollback(gate, reason="", scope=None, project_dir="."):
         print(f"  사용 가능: {', '.join(GATE_LABELS.keys())}")
         sys.exit(1)
 
-    gate_order = ["gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
+    gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
     rollback_idx = gate_order.index(gate)
 
     # 대상 gate 및 이후 모든 gate를 pending으로 리셋
@@ -1206,7 +1207,7 @@ def cmd_session(gate, status, feature, project_dir="."):
 
     session["gate_status"][gate] = status
 
-    gate_order = ["gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
+    gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
     if status == "done":
         current_idx = gate_order.index(gate)
         if current_idx + 1 < len(gate_order):
@@ -1290,7 +1291,7 @@ def cmd_export(output="snapshot.json", project_dir="."):
         "framework": "vulcan-anvil",
         "project": session.get("project", ""),
         "exported_at": datetime.now().isoformat(timespec="seconds"),
-        "current_gate": session.get("current_gate", "gate1"),
+        "current_gate": session.get("current_gate", "phase0"),
         "gate_status": session.get("gate_status", {}),
         "feature": session.get("feature", ""),
         "started": session.get("started", ""),
@@ -1945,8 +1946,9 @@ def create_session_json(target_dir, project_name):
         "project": project_name,
         "vulcan_src": VULCAN_DIR,
         "vulcan_version": VULCAN_VERSION,
-        "current_gate": "gate1",
+        "current_gate": "phase0",
         "gate_status": {
+            "phase0": "pending",
             "gate1": "pending",
             "gate2": "pending",
             "gate3": "pending",

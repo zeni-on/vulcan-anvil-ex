@@ -47,7 +47,7 @@ interface LocalDataSourceConfig {
 const DEFAULT_SESSION: SessionData = {
   project: 'Unknown Project',
   vulcan_version: '0.0.0',
-  current_gate: 'gate1',
+  current_gate: 'phase0',
   gate_status: {
     gate1: 'pending',
     gate2: 'pending',
