@@ -70,8 +70,22 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 | `RUN_OUTPUT_CONTRACT.md` | Codex/GPT가 반환해야 하는 표준 완료보고서 형식 |
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 |
 | `LIMITATIONS.md` | Codex/GPT Adapter 한계와 승인 필요 상황 |
+| `skills/` | Codex/GPT가 상황별로 명시적으로 읽는 작업 절차 카드 |
 
-## 7. 다음 검증 작업
+## 7. Skill 카드
+
+Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
+런타임 플러그인이 아니라 `AGENTS.md`가 상황별로 참조하는 절차 카드다.
+
+| 상황 | Skill |
+| --- | --- |
+| 추적성 검토 | `skills/traceability-review.md` |
+| 보안 검토 | `skills/security-review.md` |
+| 표준용어/DB명세 검토 | `skills/data-standard-review.md` |
+| QA 결함 수정 루프 | `skills/qa-fix-loop.md` |
+| 변경요청 영향도 분석 | `skills/change-impact-analysis.md` |
+
+## 8. 다음 검증 작업
 
 다음 단계에서는 로그인 게시판 샘플을 기준으로 실제 Run 입력 파일을 작성한다.
 
