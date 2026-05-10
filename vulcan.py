@@ -52,6 +52,9 @@ PROJECT_DOC_DIRS = [
     "docs/runs",
     "docs/ref-docs",
 ]
+PROJECT_ROOT_FILES = [
+    "AGENTS.md",
+]
 
 GATE_LABELS = {
     "gate1": "Gate 1 요구사항",
@@ -146,6 +149,21 @@ def copy_source_tree(target_dir, rel_dir, variables=None, overwrite=True, source
 
 def install_project_doc_framework(target_dir, variables, overwrite=True, source_root=None):
     """Install audit/agent document framework files into a project."""
+    source_root = source_root or VULCAN_DIR
+
+    for rel_path in PROJECT_ROOT_FILES:
+        src = os.path.join(source_root, rel_path)
+        dst = os.path.join(target_dir, rel_path)
+        if not os.path.isfile(src):
+            continue
+        if os.path.exists(dst) and not overwrite:
+            continue
+        with open(src, encoding="utf-8") as fp:
+            content = render(fp.read(), variables)
+        with open(dst, "w", encoding="utf-8") as fp:
+            fp.write(content)
+        print(f"  install/update: {rel_path}")
+
     for rel_dir in PROJECT_DOC_SETS:
         copied = copy_source_tree(
             target_dir,

@@ -30,6 +30,9 @@ docs/examples/board-with-login/
 
 Codex/GPT Adapter는 다음 특징을 고려한다.
 
+- Codex/GPT 런타임의 기본 진입 문서는 루트 `AGENTS.md`다.
+- `AGENTS.md`는 세부 규칙을 중복하지 않고 `docs/core/`와 `docs/adapters/codex-gpt/`를 참조한다.
+- Claude 전용 `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/`는 같은 저장소에 공존할 수 있으나 Codex/GPT의 기본 실행 계약은 아니다.
 - 파일 읽기와 수정, 테스트 실행을 한 흐름에서 처리할 수 있다.
 - 산출물과 코드가 같은 워크스페이스에 있을 때 추적표 갱신까지 이어가기 좋다.
 - 컨텍스트가 길어지면 Run Scope를 좁혀야 한다.
