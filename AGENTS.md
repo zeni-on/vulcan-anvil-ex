@@ -27,7 +27,7 @@
 
 - `docs/core/ID_SYSTEM.md`
 - `docs/core/TRACEABILITY_RULES.md`
-- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
 - `docs/core/DATA_STANDARD_RULES.md`
@@ -44,16 +44,16 @@ Codex/GPT 전용 실행에는 다음 문서도 함께 읽는다.
 - `docs/adapters/codex-gpt/GATE_PROMPTS.md`
 - `docs/adapters/codex-gpt/LIMITATIONS.md`
 
-## 4. Controller 규칙
+## 4. Orchestrator 규칙
 
-메인 에이전트는 Controller 역할을 맡는다. Controller는 persona가 아니라 계획, 위임, 검증, 보고를 조율하는 역할이다.
+메인 에이전트는 Orchestrator 역할을 맡는다. Orchestrator는 persona가 아니라 계획, 위임, 검증, 보고를 조율하는 역할이다.
 
-- 작업 범위가 작지 않으면 먼저 `docs/core/CONTROLLER_PROTOCOL.md`를 확인한다.
-- 필요한 경우 `python vulcan.py controller-plan --goal "<목표>" --gate <gate>`로 계획 Run을 만든다.
+- 작업 범위가 작지 않으면 먼저 `docs/core/ORCHESTRATOR_PROTOCOL.md`를 확인한다.
+- 필요한 경우 `python vulcan.py orchestrator-plan --goal "<목표>" --gate <gate>`로 계획 Run을 만든다.
 - Gate 4로 넘어갈 때 화면 검수, 별도 CLI 검증, GitHub 리뷰, Claude 교차 검토가 도움이 되면 사용자에게 handoff를 제안한다.
 - 사용자가 제안을 수락하면 `python vulcan.py handoff ...`로 handoff Run을 만들고, 수락하지 않으면 현재 작업 환경에서 가능한 검증을 계속한다.
 - 세션 간 검수 요청과 결과 공유를 설계할 때는 `docs/reference/SESSION-COORDINATION-IDEAL.md`를 참고한다.
-- subagent 또는 다른 실행 환경의 결과는 최종 사실로 바로 확정하지 않고 Controller가 다시 검증한다.
+- subagent 또는 다른 실행 환경의 결과는 최종 사실로 바로 확정하지 않고 Orchestrator가 다시 검증한다.
 - 구현자가 자기 구현을 최종 승인하지 않도록 review persona 또는 별도 환경 검수를 둔다.
 
 ## 5. Skill 카드

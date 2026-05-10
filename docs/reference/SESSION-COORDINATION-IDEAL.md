@@ -14,7 +14,7 @@ Vulcan-Anvil Ex는 CLI, Codex Desktop, Claude, GitHub Code Review 같은 서로 
 
 - 모든 세션은 같은 저장소의 상태 파일을 읽고 쓴다.
 - 작업 요청, 검수 요청, 검수 결과는 파일로 남긴다.
-- Controller는 파일 상태를 기준으로 다음 행동을 결정한다.
+- Orchestrator는 파일 상태를 기준으로 다음 행동을 결정한다.
 - 실시간 이벤트는 필수가 아니라 향후 확장 옵션으로 둔다.
 
 ## 3. 공유 상태 구성
@@ -33,7 +33,7 @@ Vulcan-Anvil Ex는 CLI, Codex Desktop, Claude, GitHub Code Review 같은 서로 
 
 ```mermaid
 flowchart TD
-  A["CLI 또는 Desktop Controller"] --> B["Run 완료"]
+  A["CLI 또는 Desktop Orchestrator"] --> B["Run 완료"]
   B --> C["Review 요청 파일 생성"]
   C --> D{"검수 환경 선택"}
   D --> E["Codex Desktop 세션"]
@@ -44,7 +44,7 @@ flowchart TD
   F --> I
   G --> I
   H --> I
-  I --> J["Controller가 결과 수집"]
+  I --> J["Orchestrator가 결과 수집"]
   J --> K{"분류"}
   K --> L["FIND: QA Fix Loop"]
   K --> M["CR: Change Control"]
@@ -90,7 +90,7 @@ docs/reviews/
 - `findings`
 - `change_requests`
 - `issues`
-- `controller_decision_needed`
+- `orchestrator_decision_needed`
 
 ## 6. 실시간 트리거의 한계
 
@@ -107,16 +107,16 @@ docs/reviews/
 
 | 단계 | 방식 | 설명 |
 | --- | --- | --- |
-| Level 1 | 파일 기반 수동 동기화 | Controller가 review 요청 파일을 만들고, 다른 세션이 열릴 때 이를 읽어 처리한다. |
+| Level 1 | 파일 기반 수동 동기화 | Orchestrator가 review 요청 파일을 만들고, 다른 세션이 열릴 때 이를 읽어 처리한다. |
 | Level 2 | Polling/Watcher | `vulcan.py review-watch` 같은 명령이 새 review 요청을 감지해 사용자에게 알린다. |
 | Level 3 | GitHub/PR 연동 | review 결과를 PR comment, check summary, issue comment로 올리고 CLI가 다시 가져온다. |
 | Level 4 | Event Broker | 로컬 또는 원격 이벤트 채널로 세션에 알림을 보낸다. |
 
 처음 구현은 Level 1을 목표로 한다. Level 2부터는 편의 기능이며 Core 프로세스의 필수 조건이 아니다.
 
-## 8. Controller의 역할
+## 8. Orchestrator의 역할
 
-Controller는 다음 책임을 가진다.
+Orchestrator는 다음 책임을 가진다.
 
 - 검수 요청이 필요한지 판단한다.
 - 사용자에게 handoff 또는 review queue 생성을 제안한다.
@@ -124,7 +124,7 @@ Controller는 다음 책임을 가진다.
 - 다른 세션이 작성한 결과를 읽고 `FIND`, `CR`, `ISSUE`, 승인 후보로 분류한다.
 - 필요한 경우 GitHub, backlog, traceability, Run 문서를 갱신한다.
 
-Controller는 다른 세션의 결과를 자동 승인하지 않는다. 결과 파일은 판단 재료이며, 최종 결정은 Controller와 사용자의 승인 흐름을 따른다.
+Orchestrator는 다른 세션의 결과를 자동 승인하지 않는다. 결과 파일은 판단 재료이며, 최종 결정은 Orchestrator와 사용자의 승인 흐름을 따른다.
 
 ## 9. Vulcan-Anvil Reviewer 아이디어
 

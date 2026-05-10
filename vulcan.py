@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "1.6.0"
+VULCAN_VERSION = "0.1.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -56,13 +56,13 @@ PROJECT_ROOT_FILES = [
     "AGENTS.md",
 ]
 RUN_SKILLS = {
-    "controller-plan": "docs/core/CONTROLLER_PROTOCOL.md",
+    "orchestrator-plan": "docs/core/ORCHESTRATOR_PROTOCOL.md",
     "traceability-review": "docs/adapters/codex-gpt/skills/traceability-review.md",
     "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
-    "handoff": "docs/core/CONTROLLER_PROTOCOL.md",
+    "handoff": "docs/core/ORCHESTRATOR_PROTOCOL.md",
 }
 RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
@@ -77,7 +77,7 @@ RUN_PERSONAS = {
     "documentation": "용어, 문서 버전, 산출물 일관성을 정리한다.",
 }
 RUN_SKILL_DEFAULT_PERSONAS = {
-    "controller-plan": "documentation",
+    "orchestrator-plan": "documentation",
     "traceability-review": "review",
     "security-review": "review",
     "data-standard-review": "review",
@@ -854,13 +854,13 @@ def cmd_rollback(gate, reason="", scope=None, project_dir="."):
 
 # ── backlog ────────────────────────────────────────────────────────────────
 
-BACKLOG_PATH = "docs/06-backlog/BACKLOG.md"
+BACKLOG_PATH = "docs/backlog/BACKLOG.md"
 
 
 def _parse_backlog_items(content):
     """BACKLOG.md Active 섹션의 마크다운 테이블에서 BL-NNN 항목을 파싱한다.
 
-    Returns: list of dict{id, title, level, priority, status, req, source, note}
+    Returns: list of dict{id, title, type, level, priority, status, req, gate, run, source, note}
     """
     items = []
     in_active = False
@@ -878,11 +878,20 @@ def _parse_backlog_items(content):
         cols = [c.strip() for c in line.split("|")[1:-1]]
         if len(cols) < 8:
             continue
-        items.append({
-            "id": cols[0], "title": cols[1], "level": cols[2],
-            "priority": cols[3], "status": cols[4], "req": cols[5],
-            "source": cols[6], "note": cols[7],
-        })
+        if len(cols) >= 11:
+            items.append({
+                "id": cols[0], "title": cols[1], "type": cols[2],
+                "level": cols[3], "priority": cols[4], "status": cols[5],
+                "req": cols[6], "gate": cols[7], "run": cols[8],
+                "source": cols[9], "note": cols[10],
+            })
+        else:
+            items.append({
+                "id": cols[0], "title": cols[1], "type": "-",
+                "level": cols[2], "priority": cols[3], "status": cols[4],
+                "req": cols[5], "gate": "-", "run": "-",
+                "source": cols[6], "note": cols[7],
+            })
     return items
 
 
@@ -916,7 +925,10 @@ def compute_backlog_stats(project_dir="."):
                 count += 1
         return count
 
-    level_map = {"🟢": "trivial", "🟡": "small", "🔴": "major"}
+    level_map = {
+        "Trivial": "trivial", "Small": "small", "Major": "major",
+        "🟢": "trivial", "🟡": "small", "🔴": "major",
+    }
     by_level = {"trivial": 0, "small": 0, "major": 0}
     by_priority = {"p0": 0, "p1": 0, "p2": 0, "p3": 0}
     for item in active_items:
@@ -945,7 +957,7 @@ def _next_backlog_id(content):
 def cmd_backlog_list(project_dir="."):
     path = os.path.join(project_dir, BACKLOG_PATH)
     if not os.path.exists(path):
-        print(f"오류: {BACKLOG_PATH} 없음. 프로젝트가 v1.1 이상인지 확인하세요.")
+        print(f"오류: {BACKLOG_PATH} 없음. 프로젝트가 Vulcan-Anvil Ex 구조인지 확인하세요.")
         sys.exit(1)
     with open(path, encoding="utf-8") as f:
         content = f.read()
@@ -960,13 +972,27 @@ def cmd_backlog_list(project_dir="."):
 
     print(f"\n  백로그 Active {len(items)}건:\n")
     for it in items:
-        print(f"  {it['id']} [{it['priority']}/{it['level']}] {it['status']:10s} {it['title']}")
+        item_type = "" if it.get("type") in ("", "-") else f"{it['type']}/"
+        print(f"  {it['id']} [{it['priority']}/{item_type}{it['level']}] {it['status']:10s} {it['title']}")
         if it["req"] and it["req"] != "-":
             print(f"         ↳ {it['req']}  ({it['source']})")
+        if it.get("gate") and it["gate"] != "-":
+            print(f"         ↳ gate: {it['gate']}  run: {it.get('run') or '-'}")
     print()
 
 
-def cmd_backlog_add(title, level="", priority="P2", req="", source="", note="", project_dir="."):
+def cmd_backlog_add(
+    title,
+    level="",
+    priority="P2",
+    req="",
+    source="",
+    note="",
+    item_type="IDEA",
+    gate="phase0",
+    run="",
+    project_dir=".",
+):
     path = os.path.join(project_dir, BACKLOG_PATH)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
@@ -976,8 +1002,8 @@ def cmd_backlog_add(title, level="", priority="P2", req="", source="", note="", 
 
     new_id = _next_backlog_id(content)
     new_row = (
-        f"| {new_id} | {title} | {level or '—'} | {priority} | Proposed | "
-        f"{req or '-'} | {source or '-'} | {note or '-'} |"
+        f"| {new_id} | {title} | {item_type or 'IDEA'} | {level or '-'} | {priority} | Proposed | "
+        f"{req or '-'} | {gate or '-'} | {run or '-'} | {source or '-'} | {note or '-'} |"
     )
 
     # Active 테이블의 placeholder 행이 있으면 대체, 아니면 마지막 BL 행 뒤에 삽입
@@ -1035,7 +1061,8 @@ def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
 
     done_row = (
         f"| {target['id']} | {target['title']} | {date.today().isoformat()} | "
-        f"{commit_hash or '-'} | {target['level']} | {target['req']} |"
+        f"{commit_hash or '-'} | {target.get('type', '-')} | {target['level']} | "
+        f"{target['req']} | {target.get('run', '-')} |"
     )
 
     lines = content.splitlines()
@@ -1397,7 +1424,7 @@ FRAMEWORK_FILES = [
     "GATE_GUIDE.md",
     "docs/05-security/baseline.md",
     # backlog (v1.1+): PROCESS.md는 upgrade 시 덮어쓰기, BACKLOG.md는 보존
-    "docs/06-backlog/PROCESS.md",
+    "docs/backlog/PROCESS.md",
 ]
 
 
@@ -1483,14 +1510,14 @@ def cmd_upgrade(project_dir="."):
     # v1.1+: BACKLOG.md가 없으면 생성 (있으면 사용자 데이터 보존)
     backlog_dst = os.path.join(project_dir, BACKLOG_PATH)
     if not os.path.exists(backlog_dst):
-        tpl = os.path.join(src_templates, "docs/06-backlog/BACKLOG.md")
+        tpl = os.path.join(src_templates, "docs/backlog/BACKLOG.md")
         if os.path.exists(tpl):
             with open(tpl, encoding="utf-8") as f:
                 content = render(f.read(), variables)
             os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
             with open(backlog_dst, "w", encoding="utf-8") as f:
                 f.write(content)
-            print(f"  생성 (v1.1 신규): docs/06-backlog/BACKLOG.md")
+            print(f"  생성 (Ex 신규): docs/backlog/BACKLOG.md")
 
     # v1.2+: 설계·리뷰 템플릿이 없으면 생성 (있으면 사용자 작업 보존)
     for tpl_rel, label in [
@@ -1583,7 +1610,7 @@ open_issues: []
 - `AGENTS.md`
 - `docs/core/ID_SYSTEM.md`
 - `docs/core/TRACEABILITY_RULES.md`
-- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
@@ -1634,17 +1661,17 @@ TBD
     print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
 
 
-def cmd_controller_plan(goal, gate, related_ids, persona=None, adapter="codex-gpt", project_dir="."):
+def cmd_orchestrator_plan(goal, gate, related_ids, persona=None, adapter="codex-gpt", project_dir="."):
     persona = persona or GATE_DEFAULT_PERSONAS.get(gate, "review")
     if persona not in RUN_PERSONAS:
         print(f"오류: 알 수 없는 persona입니다: {persona}")
         sys.exit(1)
 
     run_id = next_run_id(project_dir)
-    title = f"Controller Plan - {goal}"
+    title = f"Orchestrator Plan - {goal}"
     rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
     ids = split_csv(related_ids)
-    skill = "controller-plan"
+    skill = "orchestrator-plan"
     skill_path = RUN_SKILLS[skill]
 
     content = f"""# {run_id} {title}
@@ -1667,14 +1694,14 @@ change_requests: []
 open_issues: []
 ```
 
-## 1. Controller 목표
+## 1. Orchestrator 목표
 
 {goal}
 
 ## 2. 먼저 읽을 문서
 
 - `AGENTS.md`
-- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/TRACEABILITY_RULES.md`
@@ -1702,11 +1729,11 @@ open_issues: []
 | 2 | TBD | 필요한 구현 또는 문서 수정 | 변경 파일 | 테스트/정적검사 |
 | 3 | `review` | 산출물, 추적성, 증적 검수 | FIND/CR/ISSUE 판단 | `vulcan.py run-check` |
 
-## 5. Controller 체크리스트
+## 5. Orchestrator 체크리스트
 
 - [ ] 목표와 관련 ID가 연결되어 있다.
 - [ ] 위임할 persona와 직접 수행할 일을 구분했다.
-- [ ] 서브에이전트 결과를 최종 사실로 확정하기 전에 Controller가 재검증한다.
+- [ ] 서브에이전트 결과를 최종 사실로 확정하기 전에 Orchestrator가 재검증한다.
 - [ ] 구현자가 스스로 최종 검수를 끝내지 않도록 `review` 관점의 검수를 둔다.
 - [ ] Gate 4 진입 시 별도 handoff가 도움이 되는지 사용자에게 제안한다.
 - [ ] 사용자가 handoff를 수락하지 않으면 현재 작업 환경에서 가능한 검증을 계속한다.
@@ -1732,7 +1759,7 @@ TBD
 TBD
 """
     write_file(project_dir, rel_path, content)
-    print(f"\nController 계획 생성 완료: {rel_path}")
+    print(f"\nOrchestrator 계획 생성 완료: {rel_path}")
     print("다음 단계: 계획을 검토한 뒤 필요한 persona Run 또는 handoff를 생성합니다.")
 
 
@@ -1802,7 +1829,7 @@ open_issues: []
 ## 4. 먼저 읽을 문서
 
 - `AGENTS.md`
-- `docs/core/CONTROLLER_PROTOCOL.md`
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/TRACEABILITY_RULES.md`
@@ -1815,7 +1842,7 @@ open_issues: []
 - [ ] 검증 명령, 화면 캡처, PR 리뷰, 수동 확인 중 하나 이상의 증적을 남겼다.
 - [ ] 발견사항을 `FIND`, `CR`, `ISSUE` 중 하나로 분류했다.
 - [ ] 필요한 문서 또는 추적표 갱신 대상을 기록했다.
-- [ ] Controller에게 다음 의사결정 항목을 반환했다.
+- [ ] Orchestrator에게 다음 의사결정 항목을 반환했다.
 
 ## 6. 완료 보고
 
@@ -1831,7 +1858,7 @@ TBD
 
 TBD
 
-### Controller 결정 필요 항목
+### Orchestrator 결정 필요 항목
 
 TBD
 """
@@ -2004,10 +2031,10 @@ def init(target_dir, project_name, agent_name):
     copy_file(target_dir, "docs/04-review/REQ-NNN-Review.md", "docs/04-review/REQ-NNN-Review.md")
     print(f"  생성: docs/04-review/ (UX-Review.md, REQ-NNN-Review.md 템플릿)")
 
-    # docs/06-backlog/
-    content = render(read_template("docs/06-backlog/BACKLOG.md"), variables)
-    write_file(target_dir, "docs/06-backlog/BACKLOG.md", content)
-    copy_file(target_dir, "docs/06-backlog/PROCESS.md", "docs/06-backlog/PROCESS.md")
+    # docs/backlog/
+    content = render(read_template("docs/backlog/BACKLOG.md"), variables)
+    write_file(target_dir, "docs/backlog/BACKLOG.md", content)
+    copy_file(target_dir, "docs/backlog/PROCESS.md", "docs/backlog/PROCESS.md")
 
     # TRACEABILITY
     content = render(read_template("docs/TRACEABILITY.md"), variables)
@@ -2113,12 +2140,12 @@ def main():
     p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
 
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
-    p_controller_plan = subparsers.add_parser("controller-plan", help="Controller 실행 계획 Run 생성")
-    p_controller_plan.add_argument("--goal", required=True, help="Controller가 수립할 목표")
-    p_controller_plan.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
-    p_controller_plan.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
-    p_controller_plan.add_argument("--persona", default="", choices=[""] + sorted(RUN_PERSONAS.keys()), help="우선 적용 persona")
-    p_controller_plan.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+    p_orchestrator_plan = subparsers.add_parser("orchestrator-plan", help="Orchestrator 실행 계획 Run 생성")
+    p_orchestrator_plan.add_argument("--goal", required=True, help="Orchestrator가 수립할 목표")
+    p_orchestrator_plan.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
+    p_orchestrator_plan.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
+    p_orchestrator_plan.add_argument("--persona", default="", choices=[""] + sorted(RUN_PERSONAS.keys()), help="우선 적용 persona")
+    p_orchestrator_plan.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
 
     p_handoff = subparsers.add_parser("handoff", help="다른 환경/에이전트로 넘길 검수 Run 생성")
     p_handoff.add_argument("--to", required=True, choices=sorted(HANDOFF_TARGETS), help="handoff 대상")
@@ -2138,6 +2165,9 @@ def main():
     bl_add.add_argument("--req", default="")
     bl_add.add_argument("--source", default="")
     bl_add.add_argument("--note", default="")
+    bl_add.add_argument("--type", dest="item_type", default="IDEA", choices=["IDEA", "FIND", "CR", "ISSUE", "DEBT"])
+    bl_add.add_argument("--backlog-gate", dest="backlog_gate", default="phase0", help="재진입 Gate 후보")
+    bl_add.add_argument("--run", default="", help="관련 Run ID 또는 파일")
     bl_done = backlog_sub.add_parser("done", help="백로그 항목 완료 처리")
     bl_done.add_argument("--id", dest="bl_id", required=True)
     bl_done.add_argument("--commit", dest="commit_hash", default="")
@@ -2179,8 +2209,8 @@ def main():
         )
     elif args.command == "run-check":
         cmd_run_check(args.run_file)
-    elif args.command == "controller-plan":
-        cmd_controller_plan(
+    elif args.command == "orchestrator-plan":
+        cmd_orchestrator_plan(
             goal=args.goal,
             gate=args.gate,
             related_ids=args.related_ids,
@@ -2204,6 +2234,7 @@ def main():
             cmd_backlog_add(
                 title=args.title, level=args.level, priority=args.priority,
                 req=args.req, source=args.source, note=args.note,
+                item_type=args.item_type, gate=args.backlog_gate, run=args.run,
             )
         elif args.backlog_cmd == "done":
             cmd_backlog_done(bl_id=args.bl_id, commit_hash=args.commit_hash)

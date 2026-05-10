@@ -123,17 +123,20 @@ scope: REQ-005, AC-008, FUNC-005, PGM-005, SEC-002, UT-008
 
 ## 7. Backlog와의 관계
 
-Backlog는 CR 자체가 아니다. Backlog는 승인됐지만 현재 즉시 처리하지 않는 작업 대기열이다.
+Backlog는 CR 자체가 아니며, Gate 밖에 있는 단순 TODO도 아니다. Backlog는 Phase 0, FIND, CR, ISSUE, 기술부채를 다음 Run 또는 재진입 Gate로 연결하는 대기열이다.
 
 | 상황 | 처리 |
 | --- | --- |
+| Phase 0 아이디어가 아직 요구사항으로 확정되지 않음 | `IDEA`로 Backlog 등록 후 Gate 1 후보로 정리 |
 | CR 승인, 즉시 반영 | 바로 Run 생성 |
-| CR 승인, 다음 배치 반영 | Backlog 등록 |
+| CR 승인, 다음 배치 반영 | `CR`로 Backlog 등록 |
 | CR 반려 | CR 상태를 Rejected로 기록 |
-| CR 보류 | CR 상태를 Deferred로 기록 |
-| FIND가 다음 배치로 밀림 | Minor 이하만 Backlog 등록 가능 |
+| CR 보류 | CR 상태를 Deferred로 기록하고 필요하면 `ISSUE` 또는 Backlog에 보류 사유 기록 |
+| FIND가 다음 배치로 밀림 | Minor 이하만 `FIND`로 Backlog 등록 가능 |
+| 판단이 불명확함 | `ISSUE`로 Backlog 등록 후 사용자 의사결정 요청 |
+| 기술부채 또는 운영 개선 | `DEBT`로 Backlog 등록 |
 
-G4에서 Blocker 또는 Major 결함은 Backlog로 넘기지 않는다. 현재 Gate 안에서 해결하거나 CR로 승격해야 한다.
+Backlog 항목은 `유형`, `관련 ID`, `재진입 Gate`, `관련 Run`, `우선순위`를 함께 가져야 한다. G4에서 Blocker 또는 Major 결함은 Backlog로 넘기지 않는다. 현재 Gate 안에서 해결하거나 CR로 승격해야 한다.
 
 ## 8. 에이전트 판단 규칙
 
