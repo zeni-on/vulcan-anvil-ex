@@ -33,6 +33,7 @@ const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
   review:       '리뷰',
   security:     '보안',
   backlog:      '백로그',
+  runs:         'Runs',
   other:        '기타',
 }
 
@@ -45,12 +46,15 @@ const CATEGORY_ORDER: DocEntry['category'][] = [
   'review',
   'security',
   'backlog',
+  'runs',
   'other',
 ]
 
 /** 카테고리별 docs/ 루트 접두사 — 하위폴더 추출 시 제거할 베이스 경로 */
 const CATEGORY_PREFIX: Partial<Record<DocEntry['category'], string>> = {
   discovery: 'docs/00-discovery/',
+  backlog: 'docs/backlog/',
+  runs: 'docs/runs/',
 }
 
 /**
@@ -376,7 +380,7 @@ export default function DocList({
       acc[cat] = docs.filter((d) => d.category === cat)
       return acc
     },
-    { discovery: [], requirements: [], design: [], 'test-plan': [], review: [], security: [], backlog: [], other: [] },
+    { discovery: [], requirements: [], design: [], 'test-plan': [], review: [], security: [], backlog: [], runs: [], other: [] },
   )
 
   const hasAny = docs.length > 0

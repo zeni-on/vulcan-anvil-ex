@@ -50,7 +50,7 @@ export const ProjectsListSchema = z.array(ProjectSchema)
 
 export const GateStatusSchema = z.enum(['done', 'in-progress', 'pending', 'blocked'])
 
-export const GateKeySchema = z.enum(['gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5', 'completed'])
+export const GateKeySchema = z.enum(['phase0', 'gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5', 'completed'])
 
 // ── Stats 스키마 (REQ-011-02) ─────────────────────────────────────────────────
 
@@ -78,10 +78,14 @@ export const TestStatsSchema = z.object({
 
 /** DocsStats Zod 스키마. 모든 수치는 음수 불허 정수다. */
 export const DocsStatsSchema = z.object({
+  discovery:    z.number().int().min(0).optional(),
   requirements: z.number().int().min(0),
   design:       z.number().int().min(0),
   test_plan:    z.number().int().min(0),
   review:       z.number().int().min(0),
+  security:     z.number().int().min(0).optional(),
+  backlog:      z.number().int().min(0).optional(),
+  runs:         z.number().int().min(0).optional(),
   total:        z.number().int().min(0),
 })
 
@@ -89,6 +93,13 @@ export const BacklogStatsSchema = z.object({
   active:   z.number().int().min(0),
   done:     z.number().int().min(0),
   rejected: z.number().int().min(0),
+  by_type: z.object({
+    idea:  z.number().int().min(0),
+    find:  z.number().int().min(0),
+    cr:    z.number().int().min(0),
+    issue: z.number().int().min(0),
+    debt:  z.number().int().min(0),
+  }).optional(),
   by_level: z.object({
     trivial: z.number().int().min(0),
     small:   z.number().int().min(0),

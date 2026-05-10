@@ -29,6 +29,12 @@ const GATE_META: Record<string, {
   borderColor: string
   badgeColor: string
 }> = {
+  phase0: {
+    label: 'Phase 0 - Discovery',
+    description: '아이디어, 질문, 범위 후보를 정리하고 Gate 1 또는 Backlog로 넘기는 단계',
+    borderColor: 'border-cyan-500',
+    badgeColor: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
+  },
   gate1: {
     label: 'Gate 1 — 요구사항',
     description: 'PM이 REQ-ID와 AC를 정의하는 단계',
@@ -138,6 +144,23 @@ interface GateContentProps {
 function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
   const { requirements: req, tests } = stats
 
+  if (gate === 'phase0') {
+    const discoveryDocs = docs.filter(d => d.category === 'discovery' && d.kind !== 'external')
+    const backlogDocs = docs.filter(d => d.category === 'backlog' && d.kind !== 'external')
+    return (
+      <div className="space-y-3" data-testid="gate-content-phase0">
+        <Row label="Discovery docs" value={`${discoveryDocs.length} files`} status={discoveryDocs.length > 0 ? 'ok' : 'warn'} />
+        <Row label="Backlog docs" value={`${backlogDocs.length} files`} status={backlogDocs.length > 0 ? 'ok' : 'warn'} />
+        <ul className="space-y-1.5">
+          {[...discoveryDocs, ...backlogDocs].slice(0, 6).map(doc => (
+            <li key={doc.path}>
+              <DocLink doc={doc} onDocSelect={onDocSelect} iconColor="text-cyan-400" />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
   // gate1: REQ/AC 현황 행 (UT-011-14)
   if (gate === 'gate1') {
     return (

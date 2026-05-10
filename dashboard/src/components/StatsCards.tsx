@@ -77,7 +77,12 @@ interface StatsCardsProps {
  * - ac_missing > 0이면 AC 커버리지 카드를 경고 색상(yellow)으로 표시 (UT-011-13)
  */
 export default function StatsCards({ stats }: StatsCardsProps) {
-  const { requirements: req, tests, backlog } = stats
+  const { requirements: req, tests, docs, backlog } = stats
+  const backlogTypeSummary = backlog?.by_type
+    ? `IDEA ${backlog.by_type.idea} / CR ${backlog.by_type.cr} / ISSUE ${backlog.by_type.issue}`
+    : backlog?.by_priority.p0
+      ? `P0 ${backlog.by_priority.p0} items`
+      : undefined
 
   // 파생 값 계산 — 나누기 0 방어 (UT-011-12)
   const acCoverage = req.total > 0
@@ -175,6 +180,37 @@ export default function StatsCards({ stats }: StatsCardsProps) {
       </div>
 
       {/* 백로그 현황 — backlog 데이터가 있을 때만 표시 */}
+      <div>
+        <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
+          Docs
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            icon={<FileText className="w-5 h-5" />}
+            label="Discovery"
+            value={docs.discovery ?? 0}
+            color={(docs.discovery ?? 0) > 0 ? 'blue' : 'default'}
+          />
+          <StatCard
+            icon={<FileText className="w-5 h-5" />}
+            label="Security"
+            value={docs.security ?? 0}
+            color={(docs.security ?? 0) > 0 ? 'blue' : 'default'}
+          />
+          <StatCard
+            icon={<BookOpen className="w-5 h-5" />}
+            label="Backlog"
+            value={docs.backlog ?? 0}
+            color={(docs.backlog ?? 0) > 0 ? 'yellow' : 'default'}
+          />
+          <StatCard
+            icon={<Layers className="w-5 h-5" />}
+            label="Runs"
+            value={docs.runs ?? 0}
+            color={(docs.runs ?? 0) > 0 ? 'green' : 'default'}
+          />
+        </div>
+      </div>
       {backlog && (
         <div data-testid="backlog-stats">
           <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
@@ -185,7 +221,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
               icon={<BookOpen className="w-5 h-5" />}
               label="Active"
               value={backlog.active}
-              sub={backlog.by_priority.p0 > 0 ? `P0 ${backlog.by_priority.p0}건` : undefined}
+              sub={backlogTypeSummary}
               color={backlog.active > 0 ? 'yellow' : 'default'}
             />
             <StatCard
@@ -204,7 +240,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
               icon={<AlertCircle className="w-5 h-5" />}
               label="레벨별"
               value={backlog.active}
-              sub={`🟢${backlog.by_level.trivial} 🟡${backlog.by_level.small} 🔴${backlog.by_level.major}`}
+              sub={`T ${backlog.by_level.trivial} / S ${backlog.by_level.small} / M ${backlog.by_level.major}`}
               color="default"
             />
           </div>

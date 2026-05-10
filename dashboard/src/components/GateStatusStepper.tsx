@@ -12,8 +12,11 @@
 
 import { SessionData, GateStatusKey, GateStatus } from '@/lib/types'
 
+type StepKey = 'phase0' | GateStatusKey
+
 /** Gate 메타데이터 — 순서와 레이블 정의 */
-const GATES: Array<{ key: GateStatusKey; label: string; sub: string }> = [
+const GATES: Array<{ key: StepKey; label: string; sub: string }> = [
+  { key: 'phase0', label: 'Phase 0', sub: 'Discovery' },
   { key: 'gate1', label: 'Gate 1', sub: '요구사항' },
   { key: 'gate2', label: 'Gate 2', sub: '설계' },
   { key: 'gate3', label: 'Gate 3', sub: '테스트 플랜' },
@@ -47,7 +50,8 @@ function getConnectorClass(status: GateStatus): string {
 function GateIcon({ status, index }: { status: GateStatus; index: number }) {
   if (status === 'done') return <span aria-hidden="true">✓</span>
   if (status === 'blocked') return <span aria-hidden="true">!</span>
-  return <span aria-hidden="true">{index + 1}</span>
+  if (index === 0) return <span aria-hidden="true">0</span>
+  return <span aria-hidden="true">{index}</span>
 }
 
 /** Gate 상태 한국어 레이블 */
@@ -71,10 +75,21 @@ interface GateStatusStepperProps {
  */
 export default function GateStatusStepper({ session }: GateStatusStepperProps) {
   const isAllCompleted = session.current_gate === 'completed'
+  const currentIndex = GATES.findIndex((g) => g.key === session.current_gate)
+
+  const getStepStatus = (gate: { key: StepKey }): GateStatus => {
+    if (isAllCompleted) return 'done'
+    if (gate.key === 'phase0') {
+      if (session.current_gate === 'phase0') return 'in-progress'
+      if (currentIndex > 0 || session.gate_status.gate1 !== 'pending') return 'done'
+      return 'pending'
+    }
+    return session.gate_status[gate.key] ?? 'pending'
+  }
 
   const doneCount = isAllCompleted
     ? GATES.length
-    : GATES.filter((g) => session.gate_status[g.key] === 'done').length
+    : GATES.filter((g) => getStepStatus(g) === 'done').length
   const progressPct = Math.round((doneCount / GATES.length) * 100)
 
   return (
@@ -91,7 +106,7 @@ export default function GateStatusStepper({ session }: GateStatusStepperProps) {
           hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500"
       >
         {GATES.map((gate, i) => {
-          const status: GateStatus = isAllCompleted ? 'done' : session.gate_status[gate.key]
+          const status = getStepStatus(gate)
           const isCurrent = !isAllCompleted && session.current_gate === gate.key
 
           return (

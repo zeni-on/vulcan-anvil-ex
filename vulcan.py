@@ -368,10 +368,14 @@ def count_docs(project_dir="."):
         total 합계를 담은 dict.
     """
     categories = {
+        "discovery":    os.path.join(project_dir, "docs", "00-discovery"),
         "requirements": os.path.join(project_dir, "docs", "01-requirements"),
         "design":       os.path.join(project_dir, "docs", "02-design"),
         "test_plan":    os.path.join(project_dir, "docs", "03-test-plan"),
         "review":       os.path.join(project_dir, "docs", "04-review"),
+        "security":     os.path.join(project_dir, "docs", "05-security"),
+        "backlog":      os.path.join(project_dir, "docs", "backlog"),
+        "runs":         os.path.join(project_dir, "docs", "runs"),
     }
     counts = {}
     for key, dir_path in categories.items():
@@ -901,6 +905,7 @@ def compute_backlog_stats(project_dir="."):
     if not os.path.exists(path):
         return {
             "active": 0, "done": 0, "rejected": 0,
+            "by_type": {"idea": 0, "find": 0, "cr": 0, "issue": 0, "debt": 0},
             "by_level": {"trivial": 0, "small": 0, "major": 0},
             "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
         }
@@ -931,7 +936,11 @@ def compute_backlog_stats(project_dir="."):
     }
     by_level = {"trivial": 0, "small": 0, "major": 0}
     by_priority = {"p0": 0, "p1": 0, "p2": 0, "p3": 0}
+    by_type = {"idea": 0, "find": 0, "cr": 0, "issue": 0, "debt": 0}
     for item in active_items:
+        typ = item.get("type", "").lower()
+        if typ in by_type:
+            by_type[typ] += 1
         lv = level_map.get(item["level"])
         if lv:
             by_level[lv] += 1
@@ -943,6 +952,7 @@ def compute_backlog_stats(project_dir="."):
         "active":       len(active_items),
         "done":         _count_section("Done"),
         "rejected":     _count_section("Rejected"),
+        "by_type":      by_type,
         "by_level":     by_level,
         "by_priority":  by_priority,
     }

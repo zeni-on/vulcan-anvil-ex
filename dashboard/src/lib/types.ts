@@ -18,10 +18,10 @@
  * 'completed'는 Gate 5 완료 후 vulcan.py가 current_gate에만 기록하는 최종 상태다.
  * gate_status Record의 키로는 사용하지 않는다.
  */
-export type GateKey = 'gate1' | 'gate2' | 'gate3' | 'impl' | 'gate4' | 'gate5' | 'completed'
+export type GateKey = 'phase0' | 'gate1' | 'gate2' | 'gate3' | 'impl' | 'gate4' | 'gate5' | 'completed'
 
 /** gate_status Record에서 사용하는 키 — 'completed'는 current_gate 전용이므로 제외 */
-export type GateStatusKey = Exclude<GateKey, 'completed'>
+export type GateStatusKey = Exclude<GateKey, 'phase0' | 'completed'>
 
 /** Gate 단위 상태 값 */
 export type GateStatus = 'done' | 'in-progress' | 'pending' | 'blocked'
@@ -87,10 +87,14 @@ export interface TestStats {
  * docs/ 하위 각 카테고리 디렉토리의 .md 파일 수를 담는다.
  */
 export interface DocsStats {
+  discovery?: number
   requirements: number
   design: number
   test_plan: number
   review: number
+  security?: number
+  backlog?: number
+  runs?: number
   total: number
 }
 
@@ -98,6 +102,13 @@ export interface BacklogStats {
   active:    number
   done:      number
   rejected:  number
+  by_type?: {
+    idea:  number
+    find:  number
+    cr:    number
+    issue: number
+    debt:  number
+  }
   by_level: {
     trivial: number
     small:   number
@@ -199,7 +210,7 @@ export interface ProjectData {
 export interface DocEntry {
   name: string
   path: string    // 상대 경로 (프로젝트 루트 기준)
-  category: 'discovery' | 'requirements' | 'design' | 'test-plan' | 'review' | 'security' | 'backlog' | 'other'
+  category: 'discovery' | 'requirements' | 'design' | 'test-plan' | 'review' | 'security' | 'backlog' | 'runs' | 'other'
   /**
    * 파일 종류:
    *  - 'markdown' (기본): dashboard 내 Drawer에서 렌더
