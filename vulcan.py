@@ -2145,11 +2145,16 @@ def create_session_json(target_dir, project_name):
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
-def init(target_dir, project_name, agent_name):
+def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False):
     import shutil
     print(f"\nVulcan-Anvil 초기화")
     print(f"  프로젝트: {project_name}")
     print(f"  대상 폴더: {target_dir}\n")
+
+    if require_remote and not remote_url:
+        print("오류: --require-remote가 지정되었지만 --remote가 없습니다.")
+        print("  예: python vulcan.py init <dir> <name> --remote <git-url> --require-remote")
+        sys.exit(1)
 
     if os.path.exists(target_dir):
         files = os.listdir(target_dir)
@@ -2223,7 +2228,18 @@ def init(target_dir, project_name, agent_name):
             cwd=target_dir, check=True, capture_output=True
         )
         print(f"  생성: git 저장소 초기화 + 초기 커밋")
+
+        if remote_url:
+            subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=target_dir, check=True, capture_output=True)
+            print(f"  생성: git remote origin")
+            subprocess.run(["git", "push", "-u", "origin", "HEAD"], cwd=target_dir, check=True, capture_output=True)
+            print(f"  푸시 완료: origin HEAD")
+        else:
+            print("  안내: remote가 설정되지 않았습니다. Gate 시작/완료 push를 사용하려면 remote를 설정하세요.")
     except Exception as e:
+        if require_remote or remote_url:
+            print(f"  오류: git 초기화 또는 remote push 실패 - {e}")
+            sys.exit(1)
         print(f"  경고: git 초기화 실패 - {e}")
 
     print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
@@ -2231,6 +2247,8 @@ def init(target_dir, project_name, agent_name):
     print(f"  1. cd {target_dir}")
     print(f"  2. Codex 또는 Claude 런타임 실행")
     print(f"  3. Orchestrator에게 '무엇을 만들지' 설명하고 Phase 0부터 시작")
+    if not remote_url:
+        print(f"  4. 협업/GitHub 대시보드를 쓰려면 git remote를 설정하세요.")
     print(f"\n대시보드 실행:")
     print(f"  cd <Vulcan-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")
@@ -2258,6 +2276,7 @@ def main():
 
 예시:
   python vulcan.py init ../my-app "MyApp"
+  python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git
   python vulcan.py check-trace
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
@@ -2272,6 +2291,8 @@ def main():
     p_init.add_argument("target_dir", help="초기화할 프로젝트 폴더 경로")
     p_init.add_argument("project_name", help="프로젝트 이름")
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
+    p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
+    p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
 
@@ -2352,6 +2373,8 @@ def main():
             target_dir=os.path.abspath(args.target_dir),
             project_name=args.project_name,
             agent_name=args.agent_name,
+            remote_url=args.remote or None,
+            require_remote=args.require_remote,
         )
     elif args.command == "check-trace":
         check_trace()
