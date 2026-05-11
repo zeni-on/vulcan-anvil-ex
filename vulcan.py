@@ -1381,6 +1381,27 @@ def cmd_session(gate, status, feature, project_dir="."):
     git_push(project_dir)
 
 
+def cmd_gate_start(gate, feature=None, project_dir="."):
+    """현재 진행 Gate를 명시적으로 전환한다.
+
+    Gate 시작은 작업 상태 전환일 뿐 완료 커밋/푸시 대상이 아니다.
+    """
+    session = load_session(project_dir)
+
+    if gate not in GATE_LABELS:
+        print(f"오류: 유효하지 않은 gate - {gate}")
+        print(f"  사용 가능: {', '.join(GATE_LABELS.keys())}")
+        sys.exit(1)
+
+    if feature:
+        session["feature"] = feature
+
+    session["current_gate"] = gate
+    session.setdefault("gate_status", {})[gate] = "pending"
+    save_session(session, project_dir)
+    print(f"  Gate 시작: {gate} - {GATE_LABELS[gate]}")
+
+
 # ── export ────────────────────────────────────────────────────────────────
 
 def git_log_timeline(project_dir="."):
@@ -2218,6 +2239,7 @@ def main():
 명령어:
   init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
+  gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   rollback     특정 Gate부터 재시작 (해당 Gate 이후 모두 pending 리셋)
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
@@ -2227,6 +2249,7 @@ def main():
 예시:
   python vulcan.py init ../my-app "MyApp"
   python vulcan.py check-trace
+  python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
   python vulcan.py rollback --gate gate2 --reason "요구사항 추가"
   python vulcan.py export
@@ -2241,6 +2264,10 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+
+    p_gate_start = subparsers.add_parser("gate-start", help="현재 진행 Gate 전환")
+    p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
+    p_gate_start.add_argument("--feature", default="", help="작업 기능명")
 
     p_session = subparsers.add_parser("session", help="Gate 상태 업데이트 + git commit")
     p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
@@ -2318,6 +2345,8 @@ def main():
         )
     elif args.command == "check-trace":
         check_trace()
+    elif args.command == "gate-start":
+        cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
         cmd_session(gate=args.gate, status=args.status, feature=args.feature)
     elif args.command == "rollback":
