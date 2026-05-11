@@ -24,6 +24,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `discovery` | 배경, 제약, 현행 자료, 질문, 위험을 정리한다. | P0 | 분석 메모, 질문, 가정, 위험 |
 | `requirements` | 요구사항, 비기능 요구사항, 인수기준을 정리한다. | G1 | 요구사항정의서, 요구사항추적표 |
 | `design` | 기능, 화면, 프로그램, DB, 보안 설계를 작성한다. | G2 | 기능명세서, 화면설계서, 프로그램명세서, DB명세서 |
+| `screen-design` | 화면 구조, 시안, 와이어프레임, UI 기준 증적을 설계한다. | G2 | 화면설계서, UI 시안, 와이어프레임, 기준 스크린샷 |
 | `security-review` | 보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다. | G1, G2, G3, G4 | 보안 검토 결과, 보안 FIND/CR |
 | `screen-review` | 화면 식별, 화면상태, 와이어프레임, UI 증적 기준 누락을 검토한다. | G2, G3, G4 | 화면 검토 결과, UI FIND/CR |
 | `development-review` | 개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다. | G2, G4 | 개발표준 검토 결과, 표준 준수 FIND |
@@ -55,7 +56,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | --- | --- | --- |
 | P0 Discovery | `discovery` | `documentation` |
 | G1 Requirements | `requirements` | `security-review`, `review`, `documentation` |
-| G2 Design | `design` | `security-review`, `screen-review`, `development-review`, `documentation` |
+| G2 Design | `design` | `screen-design`, `security-review`, `screen-review`, `development-review`, `documentation` |
 | G3 Test Planning | `test-design` | `security-review`, `screen-review`, `review` |
 | G4 Implementation | `build` | `evidence`, `security-review`, `screen-review`, `development-review`, `review` |
 | G5 Approval | `release` | `review`, `documentation` |
@@ -99,6 +100,7 @@ completion_criteria:
 | --- | --- |
 | `requirements` | 승인 없이 설계나 구현 상세를 확정하지 않는다. |
 | `design` | 구현 코드를 작성하지 않는다. 단, 사용자가 명시한 샘플 구현은 예외다. |
+| `screen-design` | 시안을 실제 구현 완료로 간주하지 않는다. 외부 시안을 가져와도 `SCR-ID`와 검증 기준 없이 사용하지 않는다. |
 | `security-review` | 보안 기준 완화나 위험 수용을 임의로 승인하지 않는다. |
 | `screen-review` | 취향성 디자인 선호를 필수 결함으로 올리지 않는다. 다만 화면 누락, 상태 누락, 증적 불가 항목은 결함으로 본다. |
 | `development-review` | 프로젝트가 이미 승인한 기술스택을 임의로 변경하지 않는다. |

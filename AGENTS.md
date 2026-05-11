@@ -70,6 +70,7 @@ docs/adapters/codex-gpt/skills/
 | 작업 | Skill |
 | --- | --- |
 | 추적성 검토 | `docs/adapters/codex-gpt/skills/traceability-review.md` |
+| 화면 설계 | `docs/adapters/codex-gpt/skills/screen-design.md` |
 | 보안 검토 | `docs/adapters/codex-gpt/skills/security-review.md` |
 | 화면 검토 | `docs/adapters/codex-gpt/skills/screen-review.md` |
 | 개발표준 검토 | `docs/adapters/codex-gpt/skills/development-standard-review.md` |

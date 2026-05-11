@@ -11,6 +11,7 @@ Vulcan-Anvil Ex Run을 수행하기 전에 어떤 절차를 읽어야 하는지 
 | --- | --- |
 | `persona-run` | 요구사항 작성, 설계, 테스트 설계, 구현, 증적 정리처럼 표준 persona 자체가 작업 절차일 때 |
 | `traceability-review.md` | 산출물, 코드, 테스트, 증적이 ID로 연결되어 있는지 검토할 때 |
+| `screen-design.md` | 화면 구조, 외부/생성 시안, 와이어프레임, UI 기준 증적을 설계할 때 |
 | `security-review.md` | 보안 설계, 보안 구현, 보안 테스트 커버리지를 검토할 때 |
 | `screen-review.md` | 화면 목록, 화면 상태, 와이어프레임/시안, UI 테스트/증적 기준을 검토할 때 |
 | `development-standard-review.md` | 개발표준정의서, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토할 때 |
