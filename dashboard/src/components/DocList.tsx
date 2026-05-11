@@ -28,11 +28,16 @@ import {
 const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
   discovery:    '상위설계',
   requirements: '요구사항',
+  traceability:  '추적',
   design:       '설계',
   'test-plan':  '테스트 계획',
   review:       '리뷰',
   security:     '보안',
   backlog:      '백로그',
+  standards:    '표준/참고',
+  templates:    '템플릿',
+  agent:        '에이전트 운영',
+  reference:    '운영 규칙',
   runs:         'Runs',
   other:        '기타',
 }
@@ -41,20 +46,72 @@ const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
 const CATEGORY_ORDER: DocEntry['category'][] = [
   'discovery',
   'requirements',
+  'traceability',
   'design',
   'test-plan',
   'review',
   'security',
   'backlog',
+  'standards',
+  'templates',
+  'agent',
+  'reference',
+  'runs',
+  'other',
+]
+
+const ARTIFACT_CATEGORY_ORDER: DocEntry['category'][] = [
+  'discovery',
+  'requirements',
+  'traceability',
+  'design',
+  'test-plan',
+  'review',
+  'security',
+  'backlog',
+]
+
+const SUPPORT_CATEGORY_ORDER: DocEntry['category'][] = [
+  'standards',
+  'templates',
+  'agent',
+  'reference',
   'runs',
   'other',
 ]
 
 /** 카테고리별 docs/ 루트 접두사 — 하위폴더 추출 시 제거할 베이스 경로 */
 const CATEGORY_PREFIX: Partial<Record<DocEntry['category'], string>> = {
-  discovery: 'docs/00-discovery/',
-  backlog: 'docs/backlog/',
+  discovery: 'docs/artifacts/00-discovery/',
+  requirements: 'docs/artifacts/01-requirements/',
+  traceability: 'docs/artifacts/02-traceability/',
+  design: 'docs/artifacts/02-design/',
+  'test-plan': 'docs/artifacts/03-test/',
+  review: 'docs/artifacts/04-review/',
+  backlog: 'docs/artifacts/05-change/',
+  security: 'docs/artifacts/06-security/',
+  standards: 'docs/seed-docs/',
+  templates: 'docs/templates/',
+  agent: 'docs/adapters/',
+  reference: 'docs/core/',
   runs: 'docs/runs/',
+}
+
+function DocSectionGroup({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mb-4" data-testid={`doc-section-${title}`}>
+      <div className="mb-2 border-b border-[#29303D] pb-1 text-[10px] font-semibold uppercase tracking-widest text-[#6B7280]">
+        {title}
+      </div>
+      {children}
+    </div>
+  )
 }
 
 /**
@@ -286,24 +343,34 @@ function CollapsibleSubfolderGroup({
 function CategorySection({
   category,
   docs,
+  defaultOpen = true,
+  showWhenEmpty = false,
   onDocSelect,
   onExternalOpen,
   externalDisabled,
 }: {
   category: DocEntry['category']
   docs: DocEntry[]
+  defaultOpen?: boolean
+  showWhenEmpty?: boolean
   onDocSelect?: (doc: DocNode) => void
   onExternalOpen?: (doc: DocEntry) => void
   externalDisabled?: boolean
 }) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
-  if (docs.length === 0) return null
+  if (docs.length === 0 && !showWhenEmpty) return null
 
   // 하위폴더 그룹화가 정의된 카테고리(예: discovery)는 subPath별로 묶어서 렌더
   const prefix = CATEGORY_PREFIX[category]
   let content: React.ReactNode
-  if (prefix) {
+  if (docs.length === 0) {
+    content = (
+      <div className="mb-2 px-1 py-1 text-[11px] text-[#4B5563]">
+        문서 없음
+      </div>
+    )
+  } else if (prefix) {
     const subGroups = new Map<string, DocEntry[]>()
     for (const doc of docs) {
       const subPath = extractSubPath(doc, prefix)
@@ -380,10 +447,27 @@ export default function DocList({
       acc[cat] = docs.filter((d) => d.category === cat)
       return acc
     },
-    { discovery: [], requirements: [], design: [], 'test-plan': [], review: [], security: [], backlog: [], runs: [], other: [] },
+    {
+      discovery: [],
+      requirements: [],
+      traceability: [],
+      design: [],
+      'test-plan': [],
+      review: [],
+      security: [],
+      backlog: [],
+      standards: [],
+      templates: [],
+      agent: [],
+      reference: [],
+      runs: [],
+      other: [],
+    },
   )
 
   const hasAny = docs.length > 0
+  const hasArtifactDocs = ARTIFACT_CATEGORY_ORDER.some((cat) => grouped[cat].length > 0)
+  const hasSupportDocs = SUPPORT_CATEGORY_ORDER.some((cat) => grouped[cat].length > 0)
 
   return (
     <div
@@ -391,16 +475,39 @@ export default function DocList({
       className="overflow-x-hidden"
     >
       {hasAny ? (
-        CATEGORY_ORDER.map((cat) => (
-          <CategorySection
-            key={cat}
-            category={cat}
-            docs={grouped[cat]}
-            onDocSelect={onDocSelect}
-            onExternalOpen={onExternalOpen}
-            externalDisabled={externalDisabled}
-          />
-        ))
+        <>
+          {hasArtifactDocs && (
+            <DocSectionGroup title="프로젝트 산출물">
+              {ARTIFACT_CATEGORY_ORDER.map((cat) => (
+                <CategorySection
+                  key={cat}
+                  category={cat}
+                  docs={grouped[cat]}
+                  defaultOpen={grouped[cat].length > 0}
+                  showWhenEmpty
+                  onDocSelect={onDocSelect}
+                  onExternalOpen={onExternalOpen}
+                  externalDisabled={externalDisabled}
+                />
+              ))}
+            </DocSectionGroup>
+          )}
+          {hasSupportDocs && (
+            <DocSectionGroup title="운영/템플릿">
+              {SUPPORT_CATEGORY_ORDER.map((cat) => (
+                <CategorySection
+                  key={cat}
+                  category={cat}
+                  docs={grouped[cat]}
+                  defaultOpen={false}
+                  onDocSelect={onDocSelect}
+                  onExternalOpen={onExternalOpen}
+                  externalDisabled={externalDisabled}
+                />
+              ))}
+            </DocSectionGroup>
+          )}
+        </>
       ) : (
         <p className="text-sm text-[#6B7280] py-2">산출물 문서가 없습니다.</p>
       )}

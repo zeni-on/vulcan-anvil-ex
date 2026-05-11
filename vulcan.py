@@ -49,8 +49,39 @@ PROJECT_DOC_SETS = [
     "docs/seed-docs",
 ]
 PROJECT_DOC_DIRS = [
+    "docs/artifacts/00-discovery",
+    "docs/artifacts/01-requirements",
+    "docs/artifacts/02-traceability",
+    "docs/artifacts/02-design/architecture",
+    "docs/artifacts/02-design/function",
+    "docs/artifacts/02-design/program",
+    "docs/artifacts/02-design/screen",
+    "docs/artifacts/02-design/data",
+    "docs/artifacts/02-design/security",
+    "docs/artifacts/02-design/development-standard",
+    "docs/artifacts/03-test",
+    "docs/artifacts/04-review",
+    "docs/artifacts/05-change",
+    "docs/artifacts/06-security",
     "docs/runs",
     "docs/ref-docs",
+]
+PROJECT_ARTIFACT_TEMPLATES = [
+    ("docs/templates/PROJECT_BRIEF_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-001_Project-Brief_v0.1.md"),
+    ("docs/templates/STAKEHOLDER_SCOPE_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-002_Stakeholder-And-Scope_v0.1.md"),
+    ("docs/templates/AS_IS_TO_BE_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-003_As-Is-To-Be_v0.1.md"),
+    ("docs/templates/RISK_ASSUMPTION_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md"),
+    ("docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md", "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"),
+    ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
+    ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
+    ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md"),
+    ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
+    ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
+    ("docs/templates/DATABASE_SPEC_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md"),
+    ("docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md", "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md"),
+    ("docs/templates/TEST_CASE_TEMPLATE.md", "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md"),
+    ("docs/templates/QA_FINDING_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"),
+    ("docs/templates/CHANGE_REQUEST_TEMPLATE.md", "docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md"),
 ]
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
@@ -231,6 +262,25 @@ def install_project_doc_framework(target_dir, variables, overwrite=True, source_
         write_file(target_dir, os.path.join(rel_dir, ".gitkeep"), "")
 
 
+def install_project_artifacts(target_dir, variables, overwrite=False, source_root=None):
+    """Install official Ex artifact working documents into docs/artifacts/."""
+    source_root = source_root or VULCAN_DIR
+
+    for src_rel, dst_rel in PROJECT_ARTIFACT_TEMPLATES:
+        src = os.path.join(source_root, src_rel)
+        dst = os.path.join(target_dir, dst_rel)
+        if not os.path.isfile(src):
+            continue
+        if os.path.exists(dst) and not overwrite:
+            continue
+        with open(src, encoding="utf-8") as fp:
+            content = render(fp.read(), variables)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as fp:
+            fp.write(content)
+        print(f"  install/update: {dst_rel}")
+
+
 def ensure_gitignore_entry(project_dir, entry):
     path = os.path.join(project_dir, ".gitignore")
     existing = ""
@@ -369,27 +419,72 @@ def count_docs(project_dir="."):
         total 합계를 담은 dict.
     """
     categories = {
-        "discovery":    os.path.join(project_dir, "docs", "00-discovery"),
-        "requirements": os.path.join(project_dir, "docs", "01-requirements"),
-        "design":       os.path.join(project_dir, "docs", "02-design"),
-        "test_plan":    os.path.join(project_dir, "docs", "03-test-plan"),
-        "review":       os.path.join(project_dir, "docs", "04-review"),
-        "security":     os.path.join(project_dir, "docs", "05-security"),
-        "backlog":      os.path.join(project_dir, "docs", "backlog"),
-        "runs":         os.path.join(project_dir, "docs", "runs"),
+        "discovery": [
+            os.path.join(project_dir, "docs", "artifacts", "00-discovery"),
+            os.path.join(project_dir, "docs", "00-discovery"),
+        ],
+        "requirements": [
+            os.path.join(project_dir, "docs", "artifacts", "01-requirements"),
+            os.path.join(project_dir, "docs", "01-requirements"),
+        ],
+        "design": [
+            os.path.join(project_dir, "docs", "artifacts", "02-design"),
+            os.path.join(project_dir, "docs", "02-design"),
+        ],
+        "test_plan": [
+            os.path.join(project_dir, "docs", "artifacts", "03-test"),
+            os.path.join(project_dir, "docs", "03-test-plan"),
+        ],
+        "review": [
+            os.path.join(project_dir, "docs", "artifacts", "04-review"),
+            os.path.join(project_dir, "docs", "04-review"),
+        ],
+        "security": [
+            os.path.join(project_dir, "docs", "artifacts", "06-security"),
+            os.path.join(project_dir, "docs", "05-security"),
+        ],
+        "backlog": [
+            os.path.join(project_dir, "docs", "artifacts", "05-change"),
+            os.path.join(project_dir, "docs", "backlog"),
+        ],
+        "runs": [
+            os.path.join(project_dir, "docs", "runs"),
+        ],
     }
     counts = {}
-    for key, dir_path in categories.items():
+    for key, dir_paths in categories.items():
         count = 0
-        try:
-            for root, _dirs, files in os.walk(dir_path):
-                count += sum(1 for f in files if f.endswith(".md"))
-        except OSError:
-            # 디렉토리 미존재 또는 권한 오류 — 0으로 처리하고 계속 진행
-            count = 0
+        existing_dirs = [dir_path for dir_path in dir_paths if os.path.isdir(dir_path)]
+        dirs_to_count = existing_dirs[:1]
+        for dir_path in dirs_to_count:
+            try:
+                for root, _dirs, files in os.walk(dir_path):
+                    count += sum(1 for f in files if f.endswith(".md"))
+            except OSError:
+                # 디렉토리 미존재 또는 권한 오류 — 0으로 처리하고 계속 진행
+                continue
         counts[key] = count
     counts["total"] = sum(counts.values())
     return counts
+
+
+def find_first_existing(project_dir, candidates):
+    for rel_path in candidates:
+        path = os.path.join(project_dir, rel_path)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def find_artifact_file(project_dir, rel_dir, name_pattern):
+    base = os.path.join(project_dir, rel_dir)
+    if not os.path.isdir(base):
+        return None
+    for root, _dirs, files in os.walk(base):
+        for filename in files:
+            if re.search(name_pattern, filename, re.IGNORECASE):
+                return os.path.join(root, filename)
+    return None
 
 
 def compute_stats(project_dir="."):
@@ -411,7 +506,7 @@ def compute_stats(project_dir="."):
         traceability = parse_traceability(project_dir)
         implemented = sum(
             1 for info in traceability.values()
-            if info.get("status") in ("구현완료", "완료")
+            if info.get("status") in ("구현완료", "완료", "Implemented", "Verified")
         )
         total_reqs = len(detail_reqs)
         # ac가 있는 REQ: defined_acs에 해당 AC-ID가 있거나 ac_delegates에 위임 참조가 있는 경우
@@ -474,8 +569,14 @@ def compute_stats(project_dir="."):
 
 def parse_requirements(project_dir="."):
     """REQUIREMENTS.md에서 REQ-ID 및 AC 정보를 파싱합니다."""
-    path = os.path.join(project_dir, "docs", "01-requirements", "REQUIREMENTS.md")
-    if not os.path.exists(path):
+    path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "01-requirements"),
+        r"requirements.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "01-requirements", "REQUIREMENTS.md"),
+    ])
+    if not path:
         return set(), set(), set(), {}
 
     with open(path, encoding="utf-8") as f:
@@ -507,8 +608,14 @@ def parse_traceability(project_dir="."):
     Returns: dict[req_id] = {"design": str, "tst_ids": list, "review": str, "status": str}
     TRACEABILITY.md가 없으면 빈 dict 반환 (하위 호환성 유지).
     """
-    path = os.path.join(project_dir, "docs", "TRACEABILITY.md")
-    if not os.path.exists(path):
+    path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-traceability"),
+        r"traceability.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "TRACEABILITY.md"),
+    ])
+    if not path:
         return {}
     result = {}
     with open(path, encoding="utf-8") as f:
@@ -519,12 +626,18 @@ def parse_traceability(project_dir="."):
             if len(cols) < 6:
                 continue
             req_id = cols[1]
-            if not re.match(r'REQ-\d{3}-\d{2}', req_id):
+            if not re.match(r'REQ-\d{3}(?:-\d{2})?$', req_id):
                 continue
-            design  = cols[2] if cols[2] != '-' else ''
-            tst_raw = cols[3] if cols[3] != '-' else ''
-            review  = cols[4] if cols[4] != '-' else ''
-            status  = cols[5] if len(cols) > 5 else ''
+            if len(cols) >= 16:
+                design = ", ".join(c for c in cols[4:9] if c and c not in ("-", "미정", "해당없음"))
+                tst_raw = ", ".join(c for c in cols[11:14] if c and c not in ("-", "미정", "해당없음"))
+                review = cols[15] if len(cols) > 15 and cols[15] not in ("-", "미정", "해당없음") else ""
+                status = cols[14] if len(cols) > 14 else ""
+            else:
+                design  = cols[2] if cols[2] != '-' else ''
+                tst_raw = cols[3] if cols[3] != '-' else ''
+                review  = cols[4] if cols[4] != '-' else ''
+                status  = cols[5] if len(cols) > 5 else ''
             tst_ids = [t.strip() for t in tst_raw.split(',') if t.strip() and t.strip() != '-']
             result[req_id] = {"design": design, "tst_ids": tst_ids, "review": review, "status": status}
     return result
@@ -532,8 +645,14 @@ def parse_traceability(project_dir="."):
 
 def parse_test_plan(project_dir="."):
     """Test-Plan.md에서 TST-ID → REQ-ID 매핑을 파싱합니다."""
-    path = os.path.join(project_dir, "docs", "03-test-plan", "Test-Plan.md")
-    if not os.path.exists(path):
+    path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "03-test"),
+        r"(test.*case|test.*plan|test.*cases).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "03-test-plan", "Test-Plan.md"),
+    ])
+    if not path:
         return set()
 
     with open(path, encoding="utf-8") as f:
@@ -544,43 +663,54 @@ def parse_test_plan(project_dir="."):
 
 def parse_test_plan_status(project_dir="."):
     """Test-Plan.md에서 TST-ID별 실행 상태를 파싱합니다.
-    마크다운 테이블 행에서 '| TST-NNN-NN |' 패턴만 파싱합니다.
-    템플릿 행(TST-ID, TST-NNN-NN 등)과 본문 참조는 무시합니다.
+    테스트 케이스 목록 형식의 마크다운 테이블 행만 파싱합니다.
+    보안 기준표처럼 테스트 ID를 참조만 하는 표는 집계하지 않습니다.
     Returns: list of (tst_id, status) tuples
     """
-    path = os.path.join(project_dir, "docs", "03-test-plan", "Test-Plan.md")
-    if not os.path.exists(path):
+    path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "03-test"),
+        r"(test.*case|test.*plan|test.*cases).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "03-test-plan", "Test-Plan.md"),
+    ])
+    if not path:
         return []
 
     with open(path, encoding="utf-8") as f:
         content = f.read()
 
-    results = []
+    results = {}
     for line in content.splitlines():
         # 마크다운 테이블 행만 대상 (|로 시작)
         if not line.strip().startswith('|'):
             continue
+        if re.search(r'\b(?:REQ|NREQ|AC|SEC|PGM|SCR)-\s*(?:/|\||$)', line):
+            continue
+        cols = [c.strip() for c in line.strip().strip('|').split('|')]
+        if len(cols) < 9:
+            continue
         # 구체적인 TST-ID만 매칭 (TST-NNN-NN 또는 TST-SEC-NN 형식)
         # TST-ID, TST-NNN-NN 같은 템플릿/플레이스홀더는 제외
-        tst_match = re.search(r'\|\s*(TST-(?:\d{3}-\d{2}|SEC-\d{2}))\s*\|', line)
+        tst_match = re.search(r'\|\s*((?:TST|UT|IT|PT|UI)-(?:\d{3}(?:-\d{2})?|SEC-\d{2}))\s*\|', line)
         if not tst_match:
             continue
         tst_id = tst_match.group(1)
 
         # 상태 판별: Pass/Fail/Skip/미실행
-        line_lower = line.lower()
-        if re.search(r'\bpass\b', line_lower):
+        status_cell = cols[-1].lower()
+        if re.search(r'\bpass\b', status_cell):
             status = 'pass'
-        elif re.search(r'\bfail\b', line_lower):
+        elif re.search(r'\bfail\b', status_cell):
             status = 'fail'
-        elif re.search(r'\bskip\b', line_lower):
+        elif re.search(r'\bskip\b', status_cell):
             status = 'skip'
         else:
             status = 'not_executed'
 
-        results.append((tst_id, status))
+        results[tst_id] = status
 
-    return results
+    return list(results.items())
 
 
 def check_trace(project_dir="."):
@@ -1548,6 +1678,7 @@ def cmd_upgrade(project_dir="."):
                 print(f"  생성 (v1.2 신규): {tpl_rel} ({label})")
 
     install_project_doc_framework(project_dir, variables, overwrite=True, source_root=vulcan_src)
+    install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
 
     session["vulcan_version"] = new_ver
@@ -2013,51 +2144,14 @@ def init(target_dir, project_name, agent_name):
     # GATE_GUIDE.md
     copy_file(target_dir, "GATE_GUIDE.md")
 
-    # docs/00-discovery/
-    copy_file(target_dir, "docs/00-discovery/DISCOVERY-CHECKLIST.md", "docs/00-discovery/DISCOVERY-CHECKLIST.md")
-    copy_file(target_dir, "docs/00-discovery/CHANGELOG.md", "docs/00-discovery/CHANGELOG.md")
-    copy_file(target_dir, "docs/00-discovery/glossary/glossary.md", "docs/00-discovery/glossary/glossary.md")
-    write_file(target_dir, "docs/00-discovery/requirements/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/functional/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/infrastructure/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/technical-review/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/estimation/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/audit/.gitkeep", "")
-    write_file(target_dir, "docs/00-discovery/references/.gitkeep", "")
-    print(f"  생성: docs/00-discovery/")
-
-    # docs/01-requirements/
-    content = render(read_template("docs/01-requirements/REQUIREMENTS.md"), variables)
-    write_file(target_dir, "docs/01-requirements/REQUIREMENTS.md", content)
-
-    # docs/02-design/ — 설계 문서 템플릿 (Architect가 REQ-NNN-Design.md로 복사하여 사용)
-    copy_file(target_dir, "docs/02-design/REQ-NNN-Design.md", "docs/02-design/REQ-NNN-Design.md")
-    print(f"  생성: docs/02-design/REQ-NNN-Design.md (Gate 2 설계 템플릿)")
-
-    content = render(read_template("docs/03-test-plan/Test-Plan.md"), variables)
-    write_file(target_dir, "docs/03-test-plan/Test-Plan.md", content)
-
-    # docs/04-review/ — UX 리뷰·QA 리뷰 템플릿
-    content = render(read_template("docs/04-review/UX-Review.md"), variables)
-    write_file(target_dir, "docs/04-review/UX-Review.md", content)
-    copy_file(target_dir, "docs/04-review/REQ-NNN-Review.md", "docs/04-review/REQ-NNN-Review.md")
-    print(f"  생성: docs/04-review/ (UX-Review.md, REQ-NNN-Review.md 템플릿)")
-
     # docs/backlog/
     content = render(read_template("docs/backlog/BACKLOG.md"), variables)
     write_file(target_dir, "docs/backlog/BACKLOG.md", content)
     copy_file(target_dir, "docs/backlog/PROCESS.md", "docs/backlog/PROCESS.md")
 
-    # TRACEABILITY
-    content = render(read_template("docs/TRACEABILITY.md"), variables)
-    write_file(target_dir, "docs/TRACEABILITY.md", content)
-
-    # security
-    copy_file(target_dir, "docs/05-security/baseline.md", "docs/05-security/baseline.md")
-    write_file(target_dir, "docs/05-security/compliance/.gitkeep", "")
-
     # audit and agent coding document framework
     install_project_doc_framework(target_dir, variables, overwrite=True)
+    install_project_artifacts(target_dir, variables, overwrite=False)
 
     # session.json
     create_session_json(target_dir, project_name)
@@ -2086,8 +2180,8 @@ def init(target_dir, project_name, agent_name):
     print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
     print(f"\n다음 단계:")
     print(f"  1. cd {target_dir}")
-    print(f"  2. Claude Code 실행")
-    print(f"  3. '상위설계 시작' (Phase 0) 또는 'Gate 1 시작해줘'로 프로세스 시작")
+    print(f"  2. Codex 또는 Claude 런타임 실행")
+    print(f"  3. Orchestrator에게 '무엇을 만들지' 설명하고 Phase 0부터 시작")
     print(f"\n대시보드 실행:")
     print(f"  cd <Vulcan-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")

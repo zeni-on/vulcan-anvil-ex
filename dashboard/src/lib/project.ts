@@ -30,8 +30,9 @@ export function readSession(): Session {
   } catch {
     return {
       project: 'Unknown Project',
-      current_gate: 'gate1',
+      current_gate: 'phase0',
       gate_status: {
+        phase0: 'pending',
         gate1: 'pending',
         gate2: 'pending',
         gate3: 'pending',

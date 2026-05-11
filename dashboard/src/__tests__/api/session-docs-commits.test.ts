@@ -94,13 +94,23 @@ const VALID_SESSION: SessionData = {
 }
 
 const VALID_DOCS: DocNode[] = [
-  { name: 'REQUIREMENTS', slug: ['docs', '01-requirements', 'REQUIREMENTS.md'], type: 'file' },
   {
-    name: '01-requirements',
-    slug: ['docs', '01-requirements'],
+    name: 'artifacts',
+    slug: ['docs', 'artifacts'],
     type: 'dir',
     children: [
-      { name: 'REQUIREMENTS', slug: ['docs', '01-requirements', 'REQUIREMENTS.md'], type: 'file' },
+      {
+        name: '01-requirements',
+        slug: ['docs', 'artifacts', '01-requirements'],
+        type: 'dir',
+        children: [
+          {
+            name: 'DOC-CORE-G1-001_Requirements-Spec_v0.1',
+            slug: ['docs', 'artifacts', '01-requirements', 'DOC-CORE-G1-001_Requirements-Spec_v0.1.md'],
+            type: 'file',
+          },
+        ],
+      },
     ],
   },
 ]
@@ -239,8 +249,167 @@ describe('GET /api/projects/[id]/docs', () => {
 
     expect(res.status).toBe(200)
     expect(Array.isArray(body.docs)).toBe(true)
-    expect(body.docs).toHaveLength(VALID_DOCS.length)
+    expect(body.docs).toHaveLength(1)
+    expect(body.docs[0]).toEqual(expect.objectContaining({
+      path: 'docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md',
+      category: 'requirements',
+    }))
     expect(body.fetchedAt).toBeTruthy()
+  })
+
+  it('EX 문서 구조를 산출물/운영 문서 카테고리로 분류한다', async () => {
+    mockReadProjects.mockReturnValue([LOCAL_PROJECT])
+    mockGetDocTree.mockResolvedValue([
+      {
+        name: 'artifacts',
+        type: 'dir',
+        children: [
+          {
+            name: '02-traceability',
+            type: 'dir',
+            children: [{ name: 'DOC-CORE-G4-001_Traceability-Matrix_v0.1', type: 'file' }],
+          },
+        ],
+      },
+      {
+        name: 'templates',
+        type: 'dir',
+        children: [{ name: 'REQUIREMENTS_SPEC_TEMPLATE', type: 'file' }],
+      },
+      {
+        name: 'adapters',
+        type: 'dir',
+        children: [{ name: 'README', type: 'file' }],
+      },
+      {
+        name: 'seed-docs',
+        type: 'dir',
+        children: [{ name: 'README', type: 'file' }],
+      },
+      {
+        name: 'core',
+        type: 'dir',
+        children: [{ name: 'ID_SYSTEM', type: 'file' }],
+      },
+    ])
+
+    const req = makeRequest('http://localhost:3001/api/projects/local-test-abc123/docs')
+    const ctx = makeContext('local-test-abc123')
+    const res = await docsGET(req, ctx)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.docs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: 'docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md',
+        category: 'traceability',
+      }),
+      expect.objectContaining({ path: 'docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md', category: 'templates' }),
+      expect.objectContaining({ path: 'docs/adapters/README.md', category: 'agent' }),
+      expect.objectContaining({ path: 'docs/seed-docs/README.md', category: 'standards' }),
+      expect.objectContaining({ path: 'docs/core/ID_SYSTEM.md', category: 'reference' }),
+    ]))
+  })
+
+  it('예전 Gate 템플릿 플레이스홀더는 산출물 목록에 노출하지 않는다', async () => {
+    mockReadProjects.mockReturnValue([LOCAL_PROJECT])
+    mockGetDocTree.mockResolvedValue([
+      {
+        name: '00-discovery',
+        type: 'dir',
+        children: [
+          { name: 'CHANGELOG', type: 'file' },
+          { name: 'DISCOVERY-CHECKLIST', type: 'file' },
+          {
+            name: 'glossary',
+            type: 'dir',
+            children: [{ name: 'glossary', type: 'file' }],
+          },
+        ],
+      },
+      {
+        name: '02-design',
+        type: 'dir',
+        children: [{ name: 'REQ-NNN-Design', type: 'file' }],
+      },
+      {
+        name: '03-test-plan',
+        type: 'dir',
+        children: [{ name: 'Test-Plan', type: 'file' }],
+      },
+      {
+        name: '04-review',
+        type: 'dir',
+        children: [
+          { name: 'REQ-NNN-Review', type: 'file' },
+          { name: 'UX-Review', type: 'file' },
+        ],
+      },
+      {
+        name: '05-security',
+        type: 'dir',
+        children: [{ name: 'baseline', type: 'file' }],
+      },
+      {
+        name: 'backlog',
+        type: 'dir',
+        children: [
+          { name: 'BACKLOG', type: 'file' },
+          { name: 'PROCESS', type: 'file' },
+        ],
+      },
+      {
+        name: '01-requirements',
+        type: 'dir',
+        children: [{ name: 'REQUIREMENTS', type: 'file' }],
+      },
+      {
+        name: 'artifacts',
+        type: 'dir',
+        children: [
+          {
+            name: '01-requirements',
+            type: 'dir',
+            children: [{ name: 'DOC-CORE-G1-001_Requirements-Spec_v0.1', type: 'file' }],
+          },
+          {
+            name: '05-change',
+            type: 'dir',
+            children: [{ name: 'DOC-PM-G0-001_Change-Request_v0.1', type: 'file' }],
+          },
+        ],
+      },
+    ])
+
+    const req = makeRequest('http://localhost:3001/api/projects/local-test-abc123/docs')
+    const ctx = makeContext('local-test-abc123')
+    const res = await docsGET(req, ctx)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.docs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: 'docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md',
+        category: 'requirements',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md',
+        category: 'backlog',
+      }),
+    ]))
+    expect(body.docs).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'docs/00-discovery/CHANGELOG.md' }),
+      expect.objectContaining({ path: 'docs/00-discovery/DISCOVERY-CHECKLIST.md' }),
+      expect.objectContaining({ path: 'docs/00-discovery/glossary/glossary.md' }),
+      expect.objectContaining({ path: 'docs/01-requirements/REQUIREMENTS.md' }),
+      expect.objectContaining({ path: 'docs/backlog/BACKLOG.md' }),
+      expect.objectContaining({ path: 'docs/backlog/PROCESS.md' }),
+      expect.objectContaining({ path: 'docs/02-design/REQ-NNN-Design.md' }),
+      expect.objectContaining({ path: 'docs/03-test-plan/Test-Plan.md' }),
+      expect.objectContaining({ path: 'docs/04-review/REQ-NNN-Review.md' }),
+      expect.objectContaining({ path: 'docs/04-review/UX-Review.md' }),
+      expect.objectContaining({ path: 'docs/05-security/baseline.md' }),
+    ]))
   })
 
   /**

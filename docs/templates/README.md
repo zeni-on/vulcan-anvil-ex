@@ -4,6 +4,10 @@
 
 현재 초안 템플릿:
 
+- `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서
+- `STAKEHOLDER_SCOPE_TEMPLATE.md`: 이해관계자 및 범위 정의서
+- `AS_IS_TO_BE_TEMPLATE.md`: 현행/개선 방향 정의서
+- `RISK_ASSUMPTION_TEMPLATE.md`: 위험 및 가정 정의서
 - `REQUIREMENTS_SPEC_TEMPLATE.md`: 요구사항정의서
 - `TRACEABILITY_MATRIX_TEMPLATE.md`: 요구사항추적표
 - `FUNCTION_SPEC_TEMPLATE.md`: 기능명세서

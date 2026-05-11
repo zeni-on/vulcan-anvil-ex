@@ -39,15 +39,51 @@ type RouteContext = { params: Promise<{ id: string }> }
  * UI가 Gate별 그룹 표시를 하기 위한 분류 기준이다.
  */
 function resolveCategory(path: string): DocEntry['category'] {
-  if (path.includes('00-discovery')) return 'discovery'
-  if (path.includes('01-requirements')) return 'requirements'
-  if (path.includes('02-design')) return 'design'
-  if (path.includes('03-test-plan')) return 'test-plan'
-  if (path.includes('04-review')) return 'review'
-  if (path.includes('05-security')) return 'security'
-  if (path.includes('backlog')) return 'backlog'
-  if (path.includes('runs')) return 'runs'
+  const normalizedPath = path.toLowerCase()
+  const fileName = normalizedPath.split('/').pop() ?? ''
+
+  if (normalizedPath.includes('docs/artifacts/00-discovery/')) return 'discovery'
+  if (normalizedPath.includes('docs/artifacts/01-requirements/')) return 'requirements'
+  if (normalizedPath.includes('docs/artifacts/02-traceability/')) return 'traceability'
+  if (normalizedPath.includes('docs/artifacts/02-design/')) return 'design'
+  if (normalizedPath.includes('docs/artifacts/03-test/')) return 'test-plan'
+  if (normalizedPath.includes('docs/artifacts/04-review/')) return 'review'
+  if (normalizedPath.includes('docs/artifacts/05-change/')) return 'backlog'
+  if (normalizedPath.includes('docs/artifacts/06-security/')) return 'security'
+  if (normalizedPath.includes('docs/00-discovery/')) return 'discovery'
+  if (normalizedPath.includes('docs/01-requirements/')) return 'requirements'
+  if (normalizedPath.includes('docs/02-design/')) return 'design'
+  if (normalizedPath.includes('docs/03-test-plan/')) return 'test-plan'
+  if (normalizedPath.includes('docs/04-review/')) return 'review'
+  if (normalizedPath.includes('docs/05-security/')) return 'security'
+  if (normalizedPath.includes('docs/backlog/')) return 'backlog'
+  if (normalizedPath.includes('docs/seed-docs/')) return 'standards'
+  if (normalizedPath.includes('docs/templates/')) return 'templates'
+  if (normalizedPath.includes('docs/adapters/')) return 'agent'
+  if (normalizedPath.includes('docs/core/')) return 'reference'
+  if (normalizedPath.includes('docs/reference/')) return 'reference'
+  if (normalizedPath.includes('docs/runs/')) return 'runs'
+  if (fileName === 'traceability.md') return 'traceability'
   return 'other'
+}
+
+const HIDDEN_LEGACY_TEMPLATE_PATHS = new Set([
+  'docs/00-discovery/changelog.md',
+  'docs/00-discovery/discovery-checklist.md',
+  'docs/00-discovery/glossary/glossary.md',
+  'docs/01-requirements/requirements.md',
+  'docs/02-design/req-nnn-design.md',
+  'docs/03-test-plan/test-plan.md',
+  'docs/04-review/req-nnn-review.md',
+  'docs/04-review/ux-review.md',
+  'docs/05-security/baseline.md',
+  'docs/backlog/process.md',
+  'docs/backlog/backlog.md',
+  'docs/traceability.md',
+])
+
+function shouldExposeDoc(path: string): boolean {
+  return !HIDDEN_LEGACY_TEMPLATE_PATHS.has(path.toLowerCase())
 }
 
 /**
@@ -63,11 +99,11 @@ function flattenDocNodes(nodes: DocNode[], parentPath = 'docs'): DocEntry[] {
   for (const node of nodes) {
     if (node.type === 'file') {
       const dotIdx = node.name.lastIndexOf('.')
-      if (dotIdx >= 0) {
+      if (dotIdx >= 0 && isExternalDocExt(node.name.slice(dotIdx + 1).toLowerCase())) {
         // 외부 파일 — 파일명 그대로 사용
         const ext = node.name.slice(dotIdx + 1).toLowerCase()
-        if (!isExternalDocExt(ext)) continue
         const filePath = `${parentPath}/${node.name}`
+        if (!shouldExposeDoc(filePath)) continue
         entries.push({
           name: node.name,
           path: filePath,
@@ -78,6 +114,7 @@ function flattenDocNodes(nodes: DocNode[], parentPath = 'docs'): DocEntry[] {
       } else {
         // 마크다운 — 확장자 복원 필요
         const filePath = `${parentPath}/${node.name}.md`
+        if (!shouldExposeDoc(filePath)) continue
         entries.push({
           name: node.name,
           path: filePath,

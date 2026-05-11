@@ -21,11 +21,11 @@ import DocList from '@/components/DocList'
 import { DocEntry } from '@/lib/types'
 
 const mockDocs: DocEntry[] = [
-  { name: 'REQUIREMENTS',   path: 'docs/01-requirements/REQUIREMENTS.md',   category: 'requirements' },
-  { name: 'req-001-design', path: 'docs/02-design/req-001-design.md',        category: 'design' },
-  { name: 'ui-design',      path: 'docs/02-design/ui-design.md',             category: 'design' },
-  { name: 'TEST_PLAN',      path: 'docs/03-test-plan/TEST_PLAN.md',          category: 'test-plan' },
-  { name: 'ux-review',      path: 'docs/04-review/ux-review.md',             category: 'review' },
+  { name: 'REQUIREMENTS', path: 'docs/artifacts/01-requirements/REQUIREMENTS.md', category: 'requirements' },
+  { name: 'function-spec', path: 'docs/artifacts/02-design/function/function-spec.md', category: 'design' },
+  { name: 'screen-spec', path: 'docs/artifacts/02-design/screen/screen-spec.md', category: 'design' },
+  { name: 'TEST_PLAN', path: 'docs/artifacts/03-test/TEST_PLAN.md', category: 'test-plan' },
+  { name: 'ux-review', path: 'docs/artifacts/04-review/ux-review.md', category: 'review' },
 ]
 
 describe('DocList', () => {
@@ -64,10 +64,12 @@ describe('DocList', () => {
     expect(screen.getByText('REQUIREMENTS')).toBeInTheDocument()
   })
 
-  it('design 카테고리 파일들(req-001-design, ui-design)을 표시한다', () => {
+  it('design 카테고리 파일을 하위 폴더별로 표시한다', () => {
     render(<DocList docs={mockDocs} />)
-    expect(screen.getByText('req-001-design')).toBeInTheDocument()
-    expect(screen.getByText('ui-design')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-function')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-screen')).toBeInTheDocument()
+    expect(screen.getByText('function-spec')).toBeInTheDocument()
+    expect(screen.getByText('screen-spec')).toBeInTheDocument()
   })
 
   it('총 5개의 doc-item을 렌더링한다', () => {
@@ -81,16 +83,36 @@ describe('DocList', () => {
     ]
     render(<DocList docs={otherDocs} />)
     expect(screen.getByTestId('doc-category-other')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('doc-category-toggle-other'))
     expect(screen.getByText('NOTE')).toBeInTheDocument()
   })
 
-  it('카테고리에 해당하는 문서가 없으면 해당 섹션을 렌더링하지 않는다', () => {
+  it('산출물과 운영/템플릿 문서를 별도 섹션으로 분리한다', () => {
+    const mixedDocs: DocEntry[] = [
+      ...mockDocs,
+      { name: 'FUNCTION_SPEC_TEMPLATE', path: 'docs/templates/FUNCTION_SPEC_TEMPLATE.md', category: 'templates' },
+      { name: 'GATE_PROMPTS', path: 'docs/adapters/codex-gpt/GATE_PROMPTS.md', category: 'agent' },
+    ]
+    render(<DocList docs={mixedDocs} />)
+
+    expect(screen.getByTestId('doc-section-프로젝트 산출물')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-section-운영/템플릿')).toBeInTheDocument()
+    expect(screen.getByText('REQUIREMENTS')).toBeInTheDocument()
+    expect(screen.queryByText('FUNCTION_SPEC_TEMPLATE')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('doc-category-toggle-templates'))
+    expect(screen.getByText('FUNCTION_SPEC_TEMPLATE')).toBeInTheDocument()
+  })
+
+  it('프로젝트 산출물은 문서가 없는 카테고리도 폴더 구조로 렌더링한다', () => {
     const reqOnly: DocEntry[] = [
-      { name: 'REQUIREMENTS', path: 'docs/01-requirements/REQUIREMENTS.md', category: 'requirements' },
+      { name: 'REQUIREMENTS', path: 'docs/artifacts/01-requirements/REQUIREMENTS.md', category: 'requirements' },
     ]
     render(<DocList docs={reqOnly} />)
-    expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('doc-category-review')).not.toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-design')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-review')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-toggle-design')).toHaveTextContent('(0)')
+    expect(screen.getByTestId('doc-category-toggle-review')).toHaveTextContent('(0)')
   })
 
   it('카테고리 토글 버튼이 렌더링된다', () => {
