@@ -660,11 +660,17 @@ def parse_traceability(project_dir="."):
             req_id = cols[1]
             if not re.match(r'REQ-\d{3}(?:-\d{2})?$', req_id):
                 continue
-            if len(cols) >= 16:
+            is_ex_matrix_row = (
+                len(cols) >= 17
+                and re.match(r'AC-\d{3}-\d{2}$', cols[3] if len(cols) > 3 else "")
+            )
+            if is_ex_matrix_row:
                 design = ", ".join(c for c in cols[4:9] if c and c not in ("-", "미정", "해당없음"))
                 tst_raw = ", ".join(c for c in cols[11:14] if c and c not in ("-", "미정", "해당없음"))
                 review = cols[15] if len(cols) > 15 and cols[15] not in ("-", "미정", "해당없음") else ""
                 status = cols[14] if len(cols) > 14 else ""
+            elif req_id in result:
+                continue
             else:
                 design  = cols[2] if cols[2] != '-' else ''
                 tst_raw = cols[3] if cols[3] != '-' else ''
@@ -889,43 +895,58 @@ def check_trace(project_dir="."):
 
     # ── Gate 4: 리뷰 파일 내 REQ-ID 포함 여부 + TST-ID 실행 상태
     if current_gate == "gate4":
-        review_dir = os.path.join(project_dir, "docs", "04-review")
+        review_dirs = [
+            os.path.join(project_dir, "docs", "artifacts", "04-review"),
+            os.path.join(project_dir, "docs", "04-review"),
+        ]
+        review_files = []
+        for review_dir in review_dirs:
+            if os.path.isdir(review_dir):
+                for root, _, files in os.walk(review_dir):
+                    if os.path.basename(root).lower() == "evidence":
+                        continue
+                    for filename in files:
+                        if filename.lower().endswith(".md"):
+                            review_files.append(os.path.join(root, filename))
         traceability = parse_traceability(project_dir)
 
         if traceability:
             print("  Gate 4 검사 (1): TRACEABILITY.md 기반 리뷰 파일 내 REQ-ID 포함 확인")
-            file_contents = {}  # 파일별 내용 캐시 (중복 읽기 방지)
+            file_contents = {}
+            for filepath in review_files:
+                with open(filepath, encoding="utf-8") as f:
+                    file_contents[filepath] = f.read()
             for req in sorted(detail_reqs):
                 info = traceability.get(req, {})
                 status = info.get("status", "")
                 if status in ("미구현", "삭제됨"):
                     print(f"  - {req} - {status} (리뷰 검사 제외)")
                     continue
-                review = info.get("review", "")
-                if not review:
-                    issues.append(f"  X {req} - TRACEABILITY.md에 리뷰 문서 미등록")
-                    continue
-                filepath = os.path.join(review_dir, review)
-                if not os.path.exists(filepath):
-                    issues.append(f"  X {req} - {review} 파일 없음")
-                    continue
-                if review not in file_contents:
-                    with open(filepath, encoding="utf-8") as f:
-                        file_contents[review] = f.read()
-                if req in file_contents[review]:
-                    print(f"  O {req} - {review} 내 ID 확인")
+                matched = [
+                    os.path.relpath(path, project_dir)
+                    for path, content in file_contents.items()
+                    if req in content
+                ]
+                if matched:
+                    print(f"  O {req} - 리뷰 문서 내 ID 확인 ({matched[0]})")
                 else:
-                    issues.append(f"  X {req} - {review} 안에 {req} 없음")
+                    issues.append(f"  X {req} - docs/artifacts/04-review 리뷰 문서 안에 {req} 없음")
         else:
             print("  Gate 4 검사 (1): REQ 그룹별 리뷰 파일 존재 여부 (TRACEABILITY.md 없음 — fallback)")
-            review_dir = os.path.join(project_dir, "docs", "04-review")
+            if not review_files:
+                for group in sorted(group_reqs):
+                    issues.append(f"  X {group} - docs/artifacts/04-review 리뷰 문서 없음")
+                    continue
+            file_contents = {}
+            for filepath in review_files:
+                if filepath not in file_contents:
+                    with open(filepath, encoding="utf-8") as f:
+                        file_contents[filepath] = f.read()
             for group in sorted(group_reqs):
-                filename = f"{group.lower()}-review.md"
-                filepath = os.path.join(review_dir, filename)
-                if os.path.exists(filepath):
-                    print(f"  O {group} - {filename} 확인")
+                if any(group in content for content in file_contents.values()):
+                    print(f"  O {group} - 리뷰 문서 내 ID 확인")
                 else:
-                    issues.append(f"  X {group} - docs/04-review/{filename} 없음")
+                    issues.append(f"  X {group} - docs/artifacts/04-review 리뷰 문서 안에 {group} 없음")
 
         print("\n  Gate 4 검사 (2): TST-ID 실행 상태")
         tst_results = parse_test_plan_status(project_dir)
