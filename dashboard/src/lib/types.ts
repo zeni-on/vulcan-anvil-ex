@@ -234,6 +234,10 @@ export interface DocEntry {
   kind?: 'markdown' | 'external'
   /** 확장자(소문자, 점 없음). 'external' 유형일 때 아이콘 선택에 사용. */
   ext?: string
+  /** Run 문서 메타데이터. category === 'runs'일 때 YAML 헤더에서 파싱한다. */
+  runGate?: string
+  runPersona?: string
+  runStatus?: string
 }
 
 /** 외부 앱으로 열 수 있는 산출물 파일 확장자 (소문자, 점 없음) */

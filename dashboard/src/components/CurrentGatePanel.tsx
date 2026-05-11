@@ -73,6 +73,8 @@ const GATE_META: Record<string, {
   },
 }
 
+const GATE_ORDER = ['phase0', 'gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5']
+
 // ── CurrentGatePanel 컴포넌트 ─────────────────────────────────────────────────
 
 interface CurrentGatePanelProps {
@@ -127,6 +129,7 @@ export default function CurrentGatePanel({
           onDocSelect={onDocSelect}
         />
       </div>
+      <RunStatusSummary gate={gate} docs={docs} onDocSelect={onDocSelect} />
     </div>
   )
 }
@@ -283,6 +286,104 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
   }
 
   return null
+}
+
+function RunStatusSummary({
+  gate,
+  docs,
+  onDocSelect,
+}: {
+  gate: string
+  docs: DocEntry[]
+  onDocSelect?: (doc: DocNode) => void
+}) {
+  const runDocs = docs.filter(d => d.category === 'runs' && d.kind !== 'external')
+  if (runDocs.length === 0) return null
+
+  const currentIdx = GATE_ORDER.indexOf(gate)
+  const currentRuns = runDocs.filter(d => d.runGate === gate)
+  const upcomingRuns = runDocs.filter((d) => {
+    const idx = GATE_ORDER.indexOf(d.runGate ?? '')
+    return currentIdx >= 0 && idx > currentIdx
+  })
+  const otherRuns = runDocs.filter(d => !currentRuns.includes(d) && !upcomingRuns.includes(d))
+
+  return (
+    <div className="border-t border-[#374151] pt-3" data-testid="run-status-summary">
+      <h3 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-2">
+        Run 현황
+      </h3>
+      <div className="grid gap-2 md:grid-cols-3">
+        <RunBucket
+          label="현재 Gate Run"
+          docs={currentRuns}
+          empty="진행 Run 없음"
+          onDocSelect={onDocSelect}
+          tone="current"
+        />
+        <RunBucket
+          label="준비된 다음 Run"
+          docs={upcomingRuns}
+          empty="준비 Run 없음"
+          onDocSelect={onDocSelect}
+          tone="upcoming"
+        />
+        <RunBucket
+          label="기타 Run"
+          docs={otherRuns}
+          empty="기타 Run 없음"
+          onDocSelect={onDocSelect}
+          tone="other"
+        />
+      </div>
+    </div>
+  )
+}
+
+function RunBucket({
+  label,
+  docs,
+  empty,
+  onDocSelect,
+  tone,
+}: {
+  label: string
+  docs: DocEntry[]
+  empty: string
+  onDocSelect?: (doc: DocNode) => void
+  tone: 'current' | 'upcoming' | 'other'
+}) {
+  const toneClass = {
+    current: 'text-cyan-300',
+    upcoming: 'text-blue-300',
+    other: 'text-[#9CA3AF]',
+  }[tone]
+
+  return (
+    <div className="rounded-lg border border-[#374151] bg-[#0B1220] px-3 py-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-xs text-[#9CA3AF]">{label}</span>
+        <span className={`text-xs font-semibold ${toneClass}`}>{docs.length}</span>
+      </div>
+      {docs.length === 0 ? (
+        <p className="text-xs text-[#4B5563]">{empty}</p>
+      ) : (
+        <ul className="space-y-1">
+          {docs.slice(0, 3).map(doc => (
+            <li key={doc.path}>
+              <DocLink doc={doc} onDocSelect={onDocSelect} iconColor={toneClass} />
+              <p className="ml-8 text-[11px] text-[#6B7280]">
+                {doc.runGate ?? '-'} · {doc.runPersona ?? '-'} · {doc.runStatus ?? '-'}
+              </p>
+            </li>
+          ))}
+          {docs.length > 3 && (
+            <li className="text-xs text-[#6B7280]">+{docs.length - 3}개 더 있음</li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 // ── Row 헬퍼 컴포넌트 ─────────────────────────────────────────────────────────

@@ -36,12 +36,14 @@ jest.mock('../../lib/projects', () => ({
 const mockGetSession = jest.fn()
 const mockGetDocTree = jest.fn()
 const mockGetCommits = jest.fn()
+const mockReadDocFile = jest.fn()
 
 jest.mock('../../lib/datasource', () => ({
   createDataSource: jest.fn(() => ({
     getSession: mockGetSession,
     getDocTree: mockGetDocTree,
     getCommits: mockGetCommits,
+    readDocFile: mockReadDocFile,
   })),
 }))
 
@@ -137,7 +139,7 @@ beforeEach(() => {
     getSession: mockGetSession,
     getDocTree: mockGetDocTree,
     getCommits: mockGetCommits,
-    readDocFile: jest.fn(),
+    readDocFile: mockReadDocFile,
   }))
 })
 
@@ -255,6 +257,44 @@ describe('GET /api/projects/[id]/docs', () => {
       category: 'requirements',
     }))
     expect(body.fetchedAt).toBeTruthy()
+  })
+
+  it('Run 문서의 gate/persona/status 메타데이터를 파싱한다', async () => {
+    mockReadProjects.mockReturnValue([LOCAL_PROJECT])
+    mockGetDocTree.mockResolvedValue([
+      {
+        name: 'runs',
+        type: 'dir',
+        children: [{ name: 'RUN-002_gate1-requirements_v0.1', type: 'file' }],
+      },
+    ])
+    mockReadDocFile.mockResolvedValue(`---
+# RUN-002
+
+\`\`\`yaml
+run_id: RUN-002
+gate: gate1
+persona: requirements
+status: Draft
+\`\`\`
+`)
+
+    const req = makeRequest('http://localhost:3001/api/projects/local-test-abc123/docs')
+    const ctx = makeContext('local-test-abc123')
+    const res = await docsGET(req, ctx)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(mockReadDocFile).toHaveBeenCalledWith('runs/RUN-002_gate1-requirements_v0.1.md')
+    expect(body.docs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: 'docs/runs/RUN-002_gate1-requirements_v0.1.md',
+        category: 'runs',
+        runGate: 'gate1',
+        runPersona: 'requirements',
+        runStatus: 'Draft',
+      }),
+    ]))
   })
 
   it('EX 문서 구조를 산출물/운영 문서 카테고리로 분류한다', async () => {

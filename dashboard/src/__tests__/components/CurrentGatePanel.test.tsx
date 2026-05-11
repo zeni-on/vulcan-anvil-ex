@@ -75,6 +75,26 @@ const mockDocs: DocEntry[] = [
   { name: 'req-001-review.md',  path: 'docs/04-review/req-001-review.md',        category: 'review' },
 ]
 
+const mockDocsWithRuns: DocEntry[] = [
+  ...mockDocs,
+  {
+    name: 'RUN-001_phase0_v0.1',
+    path: 'docs/runs/RUN-001_phase0_v0.1.md',
+    category: 'runs',
+    runGate: 'phase0',
+    runPersona: 'discovery',
+    runStatus: 'Draft',
+  },
+  {
+    name: 'RUN-002_gate1_v0.1',
+    path: 'docs/runs/RUN-002_gate1_v0.1.md',
+    category: 'runs',
+    runGate: 'gate1',
+    runPersona: 'requirements',
+    runStatus: 'Draft',
+  },
+]
+
 // ── UT-011-14: gate1일 때 REQ/AC 현황 행 렌더링 ──────────────────────────────
 
 describe('UT-011-14: current_gate === "gate1"', () => {
@@ -96,6 +116,20 @@ describe('UT-011-14: current_gate === "gate1"', () => {
   it('AC 정의 완료 행이 표시된다', () => {
     render(<CurrentGatePanel session={makeSession('gate1')} stats={mockStats} docs={mockDocs} />)
     expect(screen.getByText('AC 정의 완료')).toBeInTheDocument()
+  })
+})
+
+describe('Run 현황 표시', () => {
+  it('현재 Gate Run과 준비된 다음 Run을 구분해 표시한다', () => {
+    render(<CurrentGatePanel session={makeSession('phase0')} stats={mockStats} docs={mockDocsWithRuns} />)
+
+    expect(screen.getByTestId('run-status-summary')).toBeInTheDocument()
+    expect(screen.getByText('현재 Gate Run')).toBeInTheDocument()
+    expect(screen.getByText('준비된 다음 Run')).toBeInTheDocument()
+    expect(screen.getByText('RUN-001_phase0_v0.1')).toBeInTheDocument()
+    expect(screen.getByText('RUN-002_gate1_v0.1')).toBeInTheDocument()
+    expect(screen.getByText('phase0 · discovery · Draft')).toBeInTheDocument()
+    expect(screen.getByText('gate1 · requirements · Draft')).toBeInTheDocument()
   })
 })
 

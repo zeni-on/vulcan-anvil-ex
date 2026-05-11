@@ -129,6 +129,34 @@ function flattenDocNodes(nodes: DocNode[], parentPath = 'docs'): DocEntry[] {
   return entries
 }
 
+function parseRunMeta(content: string): Pick<DocEntry, 'runGate' | 'runPersona' | 'runStatus'> {
+  const meta: Pick<DocEntry, 'runGate' | 'runPersona' | 'runStatus'> = {}
+  const yamlMatch = content.match(/```yaml\s*([\s\S]*?)```/)
+  const yaml = yamlMatch?.[1] ?? content
+  for (const line of yaml.split(/\r?\n/)) {
+    const match = line.match(/^\s*(gate|persona|status)\s*:\s*(.+?)\s*$/)
+    if (!match) continue
+    const value = match[2].replace(/^['"]|['"]$/g, '')
+    if (match[1] === 'gate') meta.runGate = value
+    if (match[1] === 'persona') meta.runPersona = value
+    if (match[1] === 'status') meta.runStatus = value
+  }
+  return meta
+}
+
+async function enrichRunDocs(docs: DocEntry[], dataSource: Awaited<ReturnType<typeof createDataSource>>): Promise<DocEntry[]> {
+  return Promise.all(docs.map(async (doc) => {
+    if (doc.category !== 'runs' || doc.kind === 'external') return doc
+    try {
+      const relPath = doc.path.replace(/^docs\//, '')
+      const content = await dataSource.readDocFile(relPath)
+      return { ...doc, ...parseRunMeta(content) }
+    } catch {
+      return doc
+    }
+  }))
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: RouteContext,
@@ -155,7 +183,7 @@ export async function GET(
   try {
     const tree = await dataSource.getDocTree()
     // DocNode 트리 → DocEntry[] 평면 변환 (절대 경로 미포함, SEC-002-04)
-    const docs = flattenDocNodes(tree)
+    const docs = await enrichRunDocs(flattenDocNodes(tree), dataSource)
     return NextResponse.json({
       docs,
       fetchedAt: new Date().toISOString(),
