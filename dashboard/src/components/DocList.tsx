@@ -21,6 +21,7 @@ import {
   FileSpreadsheet,
   FileText,
   FileType,
+  Image,
   Presentation,
 } from 'lucide-react'
 
@@ -155,6 +156,12 @@ function ExtensionIcon({ ext, className }: { ext: string; className?: string }) 
     case 'hwp':
     case 'hwpx':
       return <FileText className={`${cn} text-sky-500`} aria-hidden="true" />
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'webp':
+    case 'gif':
+      return <Image className={`${cn} text-violet-500`} aria-hidden="true" />
     default:
       return <FileText className={`${cn} text-gray-500`} aria-hidden="true" />
   }

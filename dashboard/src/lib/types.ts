@@ -251,6 +251,11 @@ export const EXTERNAL_DOC_EXTENSIONS = [
   'doc',
   'hwp',
   'hwpx',
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
 ] as const
 
 export type ExternalDocExt = (typeof EXTERNAL_DOC_EXTENSIONS)[number]
