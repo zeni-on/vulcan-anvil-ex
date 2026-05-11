@@ -80,6 +80,7 @@ Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
 
 | 상황 | Skill |
 | --- | --- |
+| 표준 persona Run | `persona-run` (`docs/core/AGENT_RUN_PROTOCOL.md`) |
 | 추적성 검토 | `skills/traceability-review.md` |
 | 보안 검토 | `skills/security-review.md` |
 | 표준용어/DB명세 검토 | `skills/data-standard-review.md` |

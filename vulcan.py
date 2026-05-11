@@ -88,6 +88,7 @@ PROJECT_ROOT_FILES = [
 ]
 RUN_SKILLS = {
     "orchestrator-plan": "docs/core/ORCHESTRATOR_PROTOCOL.md",
+    "persona-run": "docs/core/AGENT_RUN_PROTOCOL.md",
     "traceability-review": "docs/adapters/codex-gpt/skills/traceability-review.md",
     "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
@@ -109,6 +110,7 @@ RUN_PERSONAS = {
 }
 RUN_SKILL_DEFAULT_PERSONAS = {
     "orchestrator-plan": "documentation",
+    "persona-run": "",
     "traceability-review": "review",
     "security-review": "review",
     "data-standard-review": "review",
@@ -339,17 +341,11 @@ def format_yaml_list(items):
 
 
 def default_persona_for_run(gate, skill):
-    if skill in RUN_SKILL_DEFAULT_PERSONAS:
-        return RUN_SKILL_DEFAULT_PERSONAS[skill]
+    skill_persona = RUN_SKILL_DEFAULT_PERSONAS.get(skill)
+    if skill_persona:
+        return skill_persona
 
-    return {
-        "gate1": "requirements",
-        "gate2": "design",
-        "gate3": "test-design",
-        "impl": "build",
-        "gate4": "review",
-        "gate5": "release",
-    }.get(gate, "review")
+    return GATE_DEFAULT_PERSONAS.get(gate, "review")
 
 
 def load_session(project_dir="."):

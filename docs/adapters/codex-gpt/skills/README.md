@@ -9,6 +9,7 @@ Vulcan-Anvil Ex Run을 수행하기 전에 어떤 절차를 읽어야 하는지 
 
 | Skill | 사용할 때 |
 | --- | --- |
+| `persona-run` | 요구사항 작성, 설계, 테스트 설계, 구현, 증적 정리처럼 표준 persona 자체가 작업 절차일 때 |
 | `traceability-review.md` | 산출물, 코드, 테스트, 증적이 ID로 연결되어 있는지 검토할 때 |
 | `security-review.md` | 보안 설계, 보안 구현, 보안 테스트 커버리지를 검토할 때 |
 | `data-standard-review.md` | 프로젝트 용어집, DB 명세, 데이터 명명, 공공데이터 표준 준수 여부를 검토할 때 |
