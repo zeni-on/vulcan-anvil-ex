@@ -397,6 +397,18 @@ def git_push(project_dir="."):
         print(f"  푸시 완료")
     except subprocess.CalledProcessError as e:
         stderr = e.stderr.decode(errors="replace").strip()
+        if "has no upstream branch" in stderr:
+            try:
+                subprocess.run(
+                    ["git", "push", "-u", "origin", "HEAD"],
+                    cwd=project_dir,
+                    check=True,
+                    capture_output=True,
+                )
+                print("  푸시 완료: origin HEAD")
+                return
+            except subprocess.CalledProcessError as retry_error:
+                stderr = retry_error.stderr.decode(errors="replace").strip()
         print(f"git push 실패: {stderr}")
         sys.exit(1)
 
