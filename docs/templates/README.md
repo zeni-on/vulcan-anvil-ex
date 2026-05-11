@@ -25,7 +25,8 @@
 - 모든 공식 산출물은 `docs/core/DOCUMENT_METADATA.md`의 메타데이터 필드를 따른다.
 - 모든 ID는 `docs/core/ID_SYSTEM.md`의 Prefix 규칙을 따른다.
 - 모든 연결 관계는 `docs/core/TRACEABILITY_RULES.md`의 추적성 규칙을 따른다.
-- 보안항목과 데이터 항목은 `docs/core/REFERENCE_STANDARDS.md`의 참고표준 준용 규칙을 따른다.
+- 보안항목은 `docs/core/SECURITY_BASELINE.md`의 기준선을 우선 적용하고, `docs/core/REFERENCE_STANDARDS.md`의 참고표준 준용 규칙을 따른다.
+- 데이터 항목은 `docs/core/REFERENCE_STANDARDS.md`와 `docs/core/DATA_STANDARD_RULES.md`의 데이터 표준 규칙을 따른다.
 - 프로젝트 데이터 용어는 `docs/core/DATA_STANDARD_RULES.md`의 데이터 표준 규칙을 따른다.
 - 개발 언어, 패키지 구조, 코드/주석/테스트 컨벤션은 개발표준정의서에 명시하고 구현 전에 확정한다.
 - 템플릿은 사람이 빈칸을 채우는 양식이면서, 에이전트가 대화/코드/테스트 결과를 바탕으로 작성할 수 있는 작업 지침이어야 한다.

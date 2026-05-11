@@ -7,6 +7,7 @@
 ## 필수 입력
 
 - `docs/core/REFERENCE_STANDARDS.md`
+- `docs/core/SECURITY_BASELINE.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/templates/PROGRAM_SPEC_TEMPLATE.md`
 - `docs/templates/SCREEN_SPEC_TEMPLATE.md`
@@ -15,19 +16,21 @@
 
 ## 절차
 
-1. 관련 `REQ`, `NREQ`, `SCR`, `PGM`, `SEC` ID를 식별한다.
-2. 설계 문서에 보안 통제가 반영되어 있는지 확인한다.
-3. 구현이 승인된 보안 설계를 따르는지 확인한다.
-4. 테스트가 보안 통제를 증명하는지 확인한다.
-5. 승인된 범위 안의 미해결 보안 이슈는 `FIND`로 기록한다.
-6. 보안 기준선, 인수기준, 설계 범위가 바뀌어야 하면 `CR`로 승격한다.
+1. 관련 `REQ`, `NREQ`, `SCR`, `PGM`, `DB`, `SEC` ID를 식별한다.
+2. `SECURITY_BASELINE.md`의 기능 유형별 체크리스트로 누락된 `SEC-ID` 후보를 찾는다.
+3. 각 `SEC-ID`에 `KISA/SR`, `OWASP`, `CWE` 매핑이 있는지 확인한다.
+4. 설계 문서에 보안 통제가 반영되어 있는지 확인한다.
+5. 구현이 승인된 보안 설계를 따르는지 확인한다.
+6. 테스트가 보안 통제를 증명하는지 확인한다.
+7. 승인된 범위 안의 미해결 보안 이슈는 `FIND`로 기록한다.
+8. 보안 기준선, 인수기준, 설계 범위가 바뀌어야 하면 `CR`로 승격한다.
 
 ## 출력
 
 다음을 반환한다.
 
 - 검토한 보안 ID
-- 사용한 보안 가이드 참조
+- 사용한 보안 가이드 참조(`KISA/SR`, `OWASP`, `CWE`)
 - 누락되었거나 약한 통제 항목
 - 테스트 커버리지 상태
 - `FIND` 또는 `CR` 권고

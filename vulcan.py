@@ -91,6 +91,8 @@ RUN_SKILLS = {
     "persona-run": "docs/core/AGENT_RUN_PROTOCOL.md",
     "traceability-review": "docs/adapters/codex-gpt/skills/traceability-review.md",
     "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
+    "screen-review": "docs/adapters/codex-gpt/skills/screen-review.md",
+    "development-standard-review": "docs/adapters/codex-gpt/skills/development-standard-review.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
@@ -100,6 +102,9 @@ RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
     "requirements": "요구사항, 비기능 요구사항, 인수기준을 정리한다.",
     "design": "기능, 화면, 프로그램, DB, 보안 설계를 작성한다.",
+    "security-review": "보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다.",
+    "screen-review": "화면 식별, 화면상태, 와이어프레임, UI 증적 기준 누락을 검토한다.",
+    "development-review": "개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다.",
     "test-design": "AC, SEC, NREQ를 검증 가능한 테스트로 전개한다.",
     "build": "승인된 설계를 코드, 설정, 테스트 코드로 구현한다.",
     "evidence": "테스트 결과, 화면 캡처, 로그 등 증적을 만든다.",
@@ -751,6 +756,99 @@ def parse_test_plan_status(project_dir="."):
     return list(results.items())
 
 
+def find_development_standard_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "development-standard"),
+        r"development.*standard.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "development-standard.md"),
+        os.path.join("docs", "02-design", "Development-Standard.md"),
+    ])
+
+
+def split_trace_values(value):
+    return [
+        item.strip().strip("`")
+        for item in re.split(r",|\n", value or "")
+        if item.strip() and item.strip() not in ("-", "미정", "해당없음")
+    ]
+
+
+def is_probable_source_path(value):
+    normalized = value.replace("\\", "/")
+    source_exts = (
+        ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".kt", ".go", ".rs",
+        ".cs", ".php", ".rb", ".html", ".css", ".scss", ".vue", ".svelte",
+    )
+    if not normalized.lower().endswith(source_exts):
+        return False
+    return "/" in normalized or normalized.startswith(("app", "src", "tests", "test"))
+
+
+def is_probable_text_file(path):
+    text_exts = (
+        ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".kt", ".go", ".rs",
+        ".cs", ".php", ".rb", ".html", ".css", ".scss", ".vue", ".svelte",
+        ".md", ".json", ".yml", ".yaml", ".txt",
+    )
+    return path.lower().endswith(text_exts)
+
+
+def validate_development_standard(project_dir="."):
+    issues = []
+    path = find_development_standard_file(project_dir)
+    if not path:
+        return [], ["개발표준정의서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("언어/런타임", r"Language|Runtime|적용 언어|적용 프레임워크"),
+        ("패키지 구조", r"패키지 구조|app/|src/"),
+        ("메시지 관리", r"메시지|message"),
+        ("주석/코딩 컨벤션", r"주석|코드 컨벤션|네이밍"),
+        ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|go test|cargo test|dotnet test"),
+        ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    return [rel_path], issues
+
+
+def has_completed_run(project_dir=".", gate=None, skill=None, persona=None):
+    runs_dir = os.path.join(project_dir, "docs", "runs")
+    if not os.path.isdir(runs_dir):
+        return False
+
+    for root, _, files in os.walk(runs_dir):
+        for filename in files:
+            if not filename.lower().endswith(".md"):
+                continue
+            path = os.path.join(root, filename)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+            if gate and not re.search(rf'(?m)^gate:\s*{re.escape(gate)}\s*$', content):
+                continue
+            if skill and not re.search(rf'(?m)^skill:\s*{re.escape(skill)}\s*$', content):
+                continue
+            if persona and not re.search(rf'(?m)^persona:\s*{re.escape(persona)}\s*$', content):
+                continue
+            if re.search(r'(?m)^status:\s*(Completed|Verified)\s*$', content):
+                return True
+    return False
+
+
 def check_trace(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
@@ -866,6 +964,18 @@ def check_trace(project_dir="."):
                 else:
                     issues.append(f"  X {group} - docs/02-design/{filename} 없음")
 
+        print("\n  Gate 2 검사: Gate 3 진입 전 설계 검수 Run 완료 여부")
+        required_review_runs = [
+            ("security-review", "보안 검토"),
+            ("screen-review", "화면 검토"),
+            ("development-standard-review", "개발표준 검토"),
+        ]
+        for skill_name, label in required_review_runs:
+            if has_completed_run(project_dir, gate="gate2", skill=skill_name):
+                print(f"  O {label} Run 완료 확인 ({skill_name})")
+            else:
+                issues.append(f"  X {label} Run 미완료 - Gate 3 진입 전 {skill_name} 완료 필요")
+
     # ── Gate 3: 모든 REQ-NNN-NN에 TST-ID 매핑 여부 + TRACEABILITY.md tst_ids 등록 여부
     if current_gate == "gate3":
         print("  Gate 3 검사 (1): REQ-ID별 TST-ID 커버리지")
@@ -892,6 +1002,71 @@ def check_trace(project_dir="."):
                 print(f"  O {req} - TST-ID {', '.join(tst_ids)} 등록 확인")
             else:
                 issues.append(f"  X {req} - TRACEABILITY.md에 tst_ids 미등록")
+
+    # ── Impl: 개발표준 확정 + 구현 파일/테스트 연결 확인
+    if current_gate == "impl":
+        print("  Impl 검사 (1): 개발표준정의서 확정 여부")
+        dev_standard_files, dev_standard_issues = validate_development_standard(project_dir)
+        if dev_standard_files and not dev_standard_issues:
+            print(f"  O 개발표준정의서 확인 ({dev_standard_files[0]})")
+        for issue in dev_standard_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Impl 검사 (2): TRACEABILITY.md 구현 증적 파일 존재 및 ID 포함 여부")
+        traceability = parse_traceability(project_dir)
+        if not traceability:
+            issues.append("  X TRACEABILITY.md 없음 - 구현 파일 연결 확인 불가")
+        for req in sorted(detail_reqs):
+            info = traceability.get(req, {})
+            req_status = info.get("status", "")
+            if req_status == "삭제됨" or re.search(r'통합', req_status):
+                continue
+
+            evidence_paths = [
+                item for item in split_trace_values(info.get("review", ""))
+                if is_probable_source_path(item)
+            ]
+            if not evidence_paths:
+                issues.append(f"  X {req} - 추적표 증적에 구현 파일 경로 없음")
+                continue
+
+            existing_paths = []
+            id_found = False
+            related_ids = [req] + info.get("tst_ids", [])
+            for evidence_path in evidence_paths:
+                full_path = os.path.join(project_dir, evidence_path)
+                if not os.path.exists(full_path):
+                    issues.append(f"  X {req} - 구현 증적 파일 없음: {evidence_path}")
+                    continue
+                existing_paths.append(evidence_path)
+                if is_probable_text_file(full_path):
+                    try:
+                        with open(full_path, encoding="utf-8") as f:
+                            content = f.read()
+                    except UnicodeDecodeError:
+                        content = ""
+                    if any(related_id and related_id in content for related_id in related_ids):
+                        id_found = True
+
+            if existing_paths:
+                print(f"  O {req} - 구현 파일 존재 확인 ({', '.join(existing_paths[:3])})")
+                if id_found:
+                    print(f"  O {req} - 구현/테스트 파일 내 관련 ID 확인")
+                else:
+                    issues.append(f"  X {req} - 구현/테스트 파일 안에 관련 REQ 또는 TEST ID 없음")
+
+        print("\n  Impl 검사 (3): 테스트케이스 실행 상태")
+        tst_results = parse_test_plan_status(project_dir)
+        if not tst_results:
+            issues.append("  X 테스트케이스 실행 상태 없음")
+        else:
+            not_passed = [(tid, status) for tid, status in tst_results if status != "pass"]
+            passed = [(tid, status) for tid, status in tst_results if status == "pass"]
+            print(f"  총 {len(tst_results)}건: Pass {len(passed)}, 미통과 {len(not_passed)}")
+            for tid, _ in passed:
+                print(f"  O {tid} - Pass")
+            for tid, status in not_passed:
+                issues.append(f"  X {tid} - {status}")
 
     # ── Gate 4: 리뷰 파일 내 REQ-ID 포함 여부 + TST-ID 실행 상태
     if current_gate == "gate4":

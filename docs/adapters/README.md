@@ -22,6 +22,7 @@ Adapter는 다음 질문에 답한다.
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
+- `docs/core/SECURITY_BASELINE.md`
 - `docs/core/DATA_STANDARD_RULES.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`

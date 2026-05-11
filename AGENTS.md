@@ -30,6 +30,7 @@
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
+- `docs/core/SECURITY_BASELINE.md`
 - `docs/core/DATA_STANDARD_RULES.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
@@ -70,6 +71,8 @@ docs/adapters/codex-gpt/skills/
 | --- | --- |
 | 추적성 검토 | `docs/adapters/codex-gpt/skills/traceability-review.md` |
 | 보안 검토 | `docs/adapters/codex-gpt/skills/security-review.md` |
+| 화면 검토 | `docs/adapters/codex-gpt/skills/screen-review.md` |
+| 개발표준 검토 | `docs/adapters/codex-gpt/skills/development-standard-review.md` |
 | 표준용어 또는 DB 명명 검토 | `docs/adapters/codex-gpt/skills/data-standard-review.md` |
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
 | 변경요청 또는 영향도 분석 | `docs/adapters/codex-gpt/skills/change-impact-analysis.md` |
