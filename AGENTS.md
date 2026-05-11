@@ -49,7 +49,13 @@ Codex/GPT 전용 실행에는 다음 문서도 함께 읽는다.
 
 메인 에이전트는 Orchestrator 역할을 맡는다. Orchestrator는 persona가 아니라 계획, 위임, 검증, 보고를 조율하는 역할이다.
 
+- 새 프로젝트에서 사용자가 인사하거나 방향을 묻는 정도의 첫 메시지를 보내면 먼저 컨시어지 역할을 한다. 짧게 Orchestrator 역할, 현재 Gate, 사용자가 말해주면 좋은 항목을 안내하고 바로 코딩이나 문서 작성을 시작하지 않는다.
+- 컨시어지 응답은 길게 설명하지 않는다. 예: "저는 이 프로젝트의 Orchestrator로 요구사항부터 설계, 구현, 테스트, 증적까지 Gate별로 조율합니다. 지금은 Phase 0이므로 만들고 싶은 기능, 사용자, 제약, 참고자료를 알려주시면 먼저 범위와 질문을 정리하겠습니다."
 - 작업 범위가 작지 않으면 먼저 `docs/core/ORCHESTRATOR_PROTOCOL.md`를 확인한다.
+- 항상 `session.json.current_gate`를 먼저 확인하고, 현재 Gate보다 앞선 산출물, Run, 코드, 테스트를 만들지 않는다.
+- Gate 전환은 문서에 `gate:` 값을 적는 것으로 완료되지 않는다. `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py check-trace`로 상태를 확인하고 갱신해야 한다.
+- 사용자가 "앱을 만들어줘", "기능을 구현해줘"처럼 end-to-end 목표를 말해도, 현재 Gate가 `phase0` 또는 `gate1`이면 요구사항/질문/승인 지점까지만 정리하고 구현으로 넘어가기 전에 사용자 승인을 받는다.
+- `gate2`, `gate3`, `impl`, `gate4`로 넘어가려면 이전 Gate의 완료 상태와 사용자 승인 또는 명시적인 진행 지시가 있어야 한다.
 - 필요한 경우 `python vulcan.py orchestrator-plan --goal "<목표>" --gate <gate>`로 계획 Run을 만든다.
 - Gate 4로 넘어갈 때 화면 검수, 별도 CLI 검증, GitHub 리뷰, Claude 교차 검토가 도움이 되면 사용자에게 handoff를 제안한다.
 - 사용자가 제안을 수락하면 `python vulcan.py handoff ...`로 handoff Run을 만들고, 수락하지 않으면 현재 작업 환경에서 가능한 검증을 계속한다.
@@ -73,7 +79,10 @@ docs/adapters/codex-gpt/skills/
 | 화면 설계 | `docs/adapters/codex-gpt/skills/screen-design.md` |
 | 보안 검토 | `docs/adapters/codex-gpt/skills/security-review.md` |
 | 화면 검토 | `docs/adapters/codex-gpt/skills/screen-review.md` |
+| UI 품질 검토 | `docs/adapters/codex-gpt/skills/ui-review.md` |
 | 개발표준 검토 | `docs/adapters/codex-gpt/skills/development-standard-review.md` |
+| 구현 계획 | `docs/adapters/codex-gpt/skills/implementation-plan.md` |
+| Build Wave 실행 | `docs/adapters/codex-gpt/skills/build-wave.md` |
 | 표준용어 또는 DB 명명 검토 | `docs/adapters/codex-gpt/skills/data-standard-review.md` |
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
 | 변경요청 또는 영향도 분석 | `docs/adapters/codex-gpt/skills/change-impact-analysis.md` |
@@ -87,7 +96,10 @@ docs/adapters/codex-gpt/skills/
 - QA 이슈가 승인된 설계 범위 안의 결함이면 `FIND`로 기록하고 G4 QA Fix Loop로 처리한다.
 - 이슈가 요구사항, 인수기준, 아키텍처, 보안 기준선, 데이터 설계, 릴리즈 범위를 바꾸면 `CR`로 승격한다.
 - 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다.
-- 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
+- 현재 Gate 안에서 허용된 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
+- 구현 파일, 테스트 코드, 테스트 결과서, 화면 증적은 `impl` 또는 `gate4` 범위가 승인된 뒤 작성한다. 단, 사용자가 명시적으로 프로토타입을 요청하면 산출물에 `ISSUE` 또는 `DEC`로 예외 범위를 기록한다.
+- 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 Run 구현은 Wave를 생략할 수 있지만, 구현 Run에 생략 이유와 검증 범위를 남긴다.
+- `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계
 

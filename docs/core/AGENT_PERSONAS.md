@@ -27,8 +27,10 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `screen-design` | 화면 구조, 시안, 와이어프레임, UI 기준 증적을 설계한다. | G2 | 화면설계서, UI 시안, 와이어프레임, 기준 스크린샷 |
 | `security-review` | 보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다. | G1, G2, G3, G4 | 보안 검토 결과, 보안 FIND/CR |
 | `screen-review` | 화면 식별, 화면상태, 와이어프레임, UI 증적 기준 누락을 검토한다. | G2, G3, G4 | 화면 검토 결과, UI FIND/CR |
+| `ui-review` | 구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선이 충분한지 까다롭게 검토한다. | G2, G4 | UI 품질 검토 결과, UI 보강 ISSUE/FIND |
 | `development-review` | 개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다. | G2, G4 | 개발표준 검토 결과, 표준 준수 FIND |
 | `test-design` | AC, SEC, NREQ를 검증 가능한 테스트로 전개한다. | G3 | 테스트케이스, 테스트계획, 증적 기준 |
+| `build-planning` | 승인된 설계와 테스트 기준을 구현 가능한 Build Wave로 나눈다. | Impl | 구현 계획, Build Wave 목록, 위임 계획 |
 | `build` | 승인된 설계를 코드, 설정, 테스트 코드로 구현한다. | G4 | 소스 코드, 단위 테스트, 빌드 결과 |
 | `evidence` | 테스트 결과, 화면 캡처, 로그 등 증적을 만든다. | G4 | 테스트결과서, UI 증적, 실행 로그 |
 | `review` | 추적성, 보안, 품질, 설계 준수 여부를 검토한다. | G4, G5 | 발견사항, FIND, CR, 리뷰 결과 |
@@ -46,6 +48,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `pm` | `requirements` | 실제 PM 직책과 혼동을 피한다. |
 | `architect`, `dba`, `ui-designer` | `design` | 필요하면 설계 Run을 기능/데이터/화면으로 나눈다. |
 | `qa` Gate 3 | `test-design` | 테스트를 설계하는 역할이다. |
+| `tech-lead`, `implementation-lead` | `build-planning` | 구현 전에 Wave, 의존성, 위임, 커밋 단위를 계획하는 역할이다. |
 | `frontend-dev`, `backend-dev` | `build` | 요즘 표현에 맞춰 구현 실행자는 build persona로 묶는다. |
 | `qa` Gate 4, `ux-reviewer` | `review` 또는 `evidence` | 판정은 review, 캡처/결과 정리는 evidence로 분리한다. |
 | `human` | `approver` | persona가 아니라 승인 책임자다. |
@@ -56,9 +59,10 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | --- | --- | --- |
 | P0 Discovery | `discovery` | `documentation` |
 | G1 Requirements | `requirements` | `security-review`, `review`, `documentation` |
-| G2 Design | `design` | `screen-design`, `security-review`, `screen-review`, `development-review`, `documentation` |
-| G3 Test Planning | `test-design` | `security-review`, `screen-review`, `review` |
-| G4 Implementation | `build` | `evidence`, `security-review`, `screen-review`, `development-review`, `review` |
+| G2 Design | `design` | `screen-design`, `security-review`, `screen-review`, `ui-review`, `development-review`, `documentation` |
+| G3 Test Planning | `test-design` | `security-review`, `screen-review`, `ui-review`, `review` |
+| Impl Planning | `build-planning` | `review`, `security-review`, `ui-review`, `development-review` |
+| G4 Implementation | `build` | `evidence`, `security-review`, `screen-review`, `ui-review`, `development-review`, `review` |
 | G5 Approval | `release` | `review`, `documentation` |
 | Change Request | `change-control` | 영향 범위에 따라 `requirements`, `design`, `build`, `review` |
 
@@ -103,8 +107,10 @@ completion_criteria:
 | `screen-design` | 시안을 실제 구현 완료로 간주하지 않는다. 외부 시안을 가져와도 `SCR-ID`와 검증 기준 없이 사용하지 않는다. |
 | `security-review` | 보안 기준 완화나 위험 수용을 임의로 승인하지 않는다. |
 | `screen-review` | 취향성 디자인 선호를 필수 결함으로 올리지 않는다. 다만 화면 누락, 상태 누락, 증적 불가 항목은 결함으로 본다. |
+| `ui-review` | 개인 취향을 강요하지 않는다. 다만 텍스트 와이어프레임만으로 구현 품질이 흔들릴 경우 `Minimal` 또는 `Needs Mockup`으로 판정한다. |
 | `development-review` | 프로젝트가 이미 승인한 기술스택을 임의로 변경하지 않는다. |
 | `test-design` | 테스트를 위한 테스트를 만들지 않는다. AC, SEC, NREQ와 연결되지 않은 테스트는 만들지 않는다. |
+| `build-planning` | 코드를 작성하지 않는다. 구현 순서, Wave, 위임, 검증, 커밋 단위만 계획한다. |
 | `build` | 승인된 설계 범위 밖의 요구사항을 임의로 추가하지 않는다. |
 | `evidence` | 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다. |
 | `review` | 단순 취향성 리팩터링을 필수 결함으로 올리지 않는다. |

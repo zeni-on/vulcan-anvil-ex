@@ -109,6 +109,23 @@ Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 
 
 Orchestrator는 Backlog 항목을 볼 때 우선순위만 보지 않고 관련 ID, 영향 범위, 재진입 Gate, 관련 Run을 함께 확인합니다. `vulcan.py backlog` 명령은 이 대기열을 등록, 조회, 완료, 반려하는 보조 도구입니다.
 
+## Build Wave
+
+구현 단계는 작업 규모에 따라 운영 강도를 조절합니다. 작은 샘플이나 단일 기능은 하나의 구현 Run으로 진행할 수 있고, 중간 이상 작업이나 subagent/여러 커밋/여러 모듈이 필요한 작업은 `implementation-plan` Run을 만든 뒤 승인된 구현 범위를 여러 `Build Wave`로 나눕니다.
+
+```text
+Implementation Plan
+→ BW-001 프로젝트 뼈대와 공통 설정
+→ BW-002 인증/회원가입/로그인
+→ BW-003 TODO 데이터와 CRUD
+→ BW-004 UI 상태와 오류/빈 상태
+→ BW-005 테스트 결과, 화면 증적, 추적표 정리
+```
+
+각 `Build Wave`는 하나의 검증 가능한 구현 배치입니다. Wave가 끝나면 코드, 테스트, 추적표/Run 기록, 검증 결과, 커밋 후보가 함께 남아야 합니다. Wave 단위는 subagent 위임, 커밋, 실패 시 재작업 범위의 기본 단위가 됩니다.
+
+Build Wave를 생략할 수는 있지만, 구현 Run에는 생략 이유, 단일 Run 범위, 관련 ID, 실행할 테스트, 추적표 갱신 기준, 커밋 메시지 후보를 남깁니다.
+
 ## 핵심 개념
 
 ### Core
@@ -179,6 +196,22 @@ python vulcan.py init ../my-project "My Project"
 
 초기화하면 Core 문서, 템플릿, adapter 문서, 공개 표준 참고자료, `AGENTS.md`가 프로젝트에 복사됩니다.
 
+GitHub 같은 원격 저장소와 함께 시작할 때는 `--remote`를 같이 지정합니다.
+
+```powershell
+python vulcan.py init ../my-project "My Project" --remote https://github.com/julyinsung/my-project.git
+```
+
+`--remote`를 사용하면 생성된 프로젝트에 `origin` remote를 등록하고 초기 커밋을 원격 저장소로 push합니다. 단, 원격 저장소가 아직 없거나 권한 문제가 있으면 로컬 초기 커밋까지만 완료하고 경고를 출력합니다. 대시보드에서 GitHub 주소를 기준으로 프로젝트를 등록하거나, 다른 환경에서 같은 프로젝트를 이어서 작업할 때 이 방식이 좋습니다.
+
+원격 저장소 등록과 push가 반드시 성공해야 하는 프로젝트라면 `--require-remote`를 함께 사용합니다.
+
+```powershell
+python vulcan.py init ../my-project "My Project" --remote https://github.com/julyinsung/my-project.git --require-remote
+```
+
+`--require-remote`가 있으면 remote 등록 또는 push에 실패했을 때 초기화를 실패로 처리합니다. 원격 저장소가 아직 없거나 권한 문제가 있을 수 있으므로, 보통은 GitHub에서 빈 저장소를 먼저 만든 뒤 URL을 넣습니다.
+
 ### 2. 프로젝트에서 작업
 
 ```powershell
@@ -191,11 +224,13 @@ cd ../my-project
 - Codex Desktop: 프로젝트 폴더를 열고 대화를 시작한다.
 - Claude: Claude 런타임에서 프로젝트 폴더와 adapter 문서를 기준으로 작업한다.
 
+처음에는 가볍게 인사하거나 목표를 말하면 됩니다. Orchestrator는 먼저 자신이 요구사항, 설계, 구현, 테스트, 증적을 Gate별로 조율하는 역할임을 짧게 안내하고, 현재 Phase 0에서 필요한 입력을 물어봅니다.
+
 사용자는 다음처럼 시작하면 됩니다.
 
 > 로그인과 게시글 작성 기능이 있는 게시판 샘플을 만들고 싶어. 감리 대응 문서와 테스트 증적까지 같이 만들어줘.
 
-그러면 Orchestrator는 `AGENTS.md`, `docs/core/`, adapter 규칙을 읽고 필요한 질문을 한 뒤, 요구사항부터 구현과 검증까지 단계별로 진행합니다.
+그러면 Orchestrator는 `AGENTS.md`, `docs/core/`, adapter 규칙을 읽고 필요한 질문을 한 뒤, 현재 Gate에서 허용된 범위부터 단계별로 진행합니다. Phase 0 또는 Gate 1에서는 바로 구현하지 않고 범위, 요구사항, 질문, 승인 지점을 먼저 정리합니다.
 
 ## CLI 참고
 

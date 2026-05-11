@@ -15,7 +15,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 
 사용법:
   # 초기화 (Vulcan-Anvil 디렉토리에서 실행)
-  python vulcan.py init <target-dir> <project-name> [--agent-name NAME]
+  python vulcan.py init <target-dir> <project-name> [--agent-name NAME] [--remote GIT_URL] [--require-remote]
 
   # 이하 명령은 프로젝트 디렉토리에서 실행
   python vulcan.py check-trace
@@ -96,7 +96,10 @@ RUN_SKILLS = {
     "screen-design": "docs/adapters/codex-gpt/skills/screen-design.md",
     "security-review": "docs/adapters/codex-gpt/skills/security-review.md",
     "screen-review": "docs/adapters/codex-gpt/skills/screen-review.md",
+    "ui-review": "docs/adapters/codex-gpt/skills/ui-review.md",
     "development-standard-review": "docs/adapters/codex-gpt/skills/development-standard-review.md",
+    "implementation-plan": "docs/adapters/codex-gpt/skills/implementation-plan.md",
+    "build-wave": "docs/adapters/codex-gpt/skills/build-wave.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
@@ -109,8 +112,10 @@ RUN_PERSONAS = {
     "screen-design": "화면 구조, 시안, 와이어프레임, UI 기준 증적을 설계한다.",
     "security-review": "보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다.",
     "screen-review": "화면 식별, 화면상태, 와이어프레임, UI 증적 기준 누락을 검토한다.",
+    "ui-review": "구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선이 충분한지 검토한다.",
     "development-review": "개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다.",
     "test-design": "AC, SEC, NREQ를 검증 가능한 테스트로 전개한다.",
+    "build-planning": "승인된 설계와 테스트 기준을 구현 가능한 Build Wave로 나눈다.",
     "build": "승인된 설계를 코드, 설정, 테스트 코드로 구현한다.",
     "evidence": "테스트 결과, 화면 캡처, 로그 등 증적을 만든다.",
     "review": "추적성, 보안, 품질, 설계 준수 여부를 검토한다.",
@@ -124,6 +129,10 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "traceability-review": "review",
     "screen-design": "screen-design",
     "security-review": "review",
+    "screen-review": "screen-review",
+    "ui-review": "ui-review",
+    "implementation-plan": "build-planning",
+    "build-wave": "build",
     "data-standard-review": "review",
     "qa-fix-loop": "build",
     "change-impact-analysis": "change-control",
@@ -160,6 +169,8 @@ GATE_LABELS = {
     "gate4": "Gate 4 QA 검토",
     "gate5": "Gate 5 최종 승인",
 }
+
+GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 
 
 # ── 공통 유틸 ──────────────────────────────────────────────────────────────
@@ -629,6 +640,16 @@ def parse_requirements(project_dir="."):
             detail_reqs.add(detail_match.group(1))
 
     defined_acs = set(re.findall(r'###\s+AC-(\d{3}-\d{2})', content))
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cols = [c.strip() for c in stripped.strip("|").split("|")]
+        if not cols or set(cols[0]) <= {"-"}:
+            continue
+        ac_match = re.fullmatch(r"AC-(\d{3}-\d{2})", cols[0])
+        if ac_match:
+            defined_acs.add(ac_match.group(1))
 
     # AC 위임 관계 파싱: REQ-XXX-XX 행에 자기 AC는 없지만 다른 AC-ID가 참조되면 위임
     ac_delegates = {}
@@ -677,6 +698,11 @@ def parse_traceability(project_dir="."):
             )
             if is_ex_matrix_row:
                 design = ", ".join(c for c in cols[4:9] if c and c not in ("-", "미정", "해당없음"))
+                test_columns = {
+                    "UT-ID": cols[11] if len(cols) > 11 else "",
+                    "IT-ID": cols[12] if len(cols) > 12 else "",
+                    "PT-ID": cols[13] if len(cols) > 13 else "",
+                }
                 tst_raw = ", ".join(c for c in cols[11:14] if c and c not in ("-", "미정", "해당없음"))
                 review = cols[15] if len(cols) > 15 and cols[15] not in ("-", "미정", "해당없음") else ""
                 status = cols[14] if len(cols) > 14 else ""
@@ -687,8 +713,15 @@ def parse_traceability(project_dir="."):
                 tst_raw = cols[3] if cols[3] != '-' else ''
                 review  = cols[4] if cols[4] != '-' else ''
                 status  = cols[5] if len(cols) > 5 else ''
+                test_columns = {"TST-ID": tst_raw}
             tst_ids = [t.strip() for t in tst_raw.split(',') if t.strip() and t.strip() != '-']
-            result[req_id] = {"design": design, "tst_ids": tst_ids, "review": review, "status": status}
+            result[req_id] = {
+                "design": design,
+                "tst_ids": tst_ids,
+                "review": review,
+                "status": status,
+                "test_columns": test_columns,
+            }
     return result
 
 
@@ -855,12 +888,158 @@ def has_completed_run(project_dir=".", gate=None, skill=None, persona=None):
     return False
 
 
+def collect_run_gate_records(project_dir="."):
+    runs_dir = os.path.join(project_dir, "docs", "runs")
+    records = []
+    if not os.path.isdir(runs_dir):
+        return records
+
+    for root, _, files in os.walk(runs_dir):
+        for filename in files:
+            if not filename.lower().endswith(".md"):
+                continue
+            if filename == ".gitkeep":
+                continue
+            path = os.path.join(root, filename)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                continue
+            gate_match = re.search(r'(?m)^gate:\s*([A-Za-z0-9_-]+)\s*$', content)
+            status_match = re.search(r'(?m)^status:\s*(.+?)\s*$', content)
+            records.append({
+                "path": os.path.relpath(path, project_dir),
+                "gate": gate_match.group(1).lower() if gate_match else "",
+                "status": status_match.group(1).strip() if status_match else "",
+            })
+    return records
+
+
+def detect_early_implementation_files(project_dir="."):
+    candidates = [
+        "app",
+        "src",
+        "tests",
+        "test",
+        "package.json",
+        "pyproject.toml",
+        "requirements.txt",
+        "pom.xml",
+        "build.gradle",
+    ]
+    found = []
+    for rel_path in candidates:
+        path = os.path.join(project_dir, rel_path)
+        if not os.path.exists(path):
+            continue
+        if os.path.isdir(path):
+            has_real_file = False
+            for _root, _dirs, files in os.walk(path):
+                if any(filename != ".gitkeep" for filename in files):
+                    has_real_file = True
+                    break
+            if has_real_file:
+                found.append(rel_path)
+        else:
+            found.append(rel_path)
+    return found
+
+
+def validate_gate_progression(project_dir=".", current_gate="phase0"):
+    issues = []
+    if current_gate not in GATE_ORDER:
+        return issues
+
+    current_idx = GATE_ORDER.index(current_gate)
+    run_records = collect_run_gate_records(project_dir)
+    future_runs = [
+        record for record in run_records
+        if record["gate"] in GATE_ORDER and GATE_ORDER.index(record["gate"]) > current_idx
+    ]
+    for record in future_runs:
+        issues.append(
+            f"  X 프로세스 위반: 현재 Gate는 {current_gate}인데 앞선 Gate Run이 존재합니다 "
+            f"({record['gate']}, {record['path']})"
+        )
+
+    if current_idx < GATE_ORDER.index("impl"):
+        early_files = detect_early_implementation_files(project_dir)
+        for rel_path in early_files:
+            issues.append(
+                f"  X 프로세스 위반: 현재 Gate는 {current_gate}인데 구현/테스트 파일 후보가 존재합니다 ({rel_path})"
+            )
+
+    return issues
+
+
+def validate_artifact_content_boundaries(project_dir="."):
+    issues = []
+    artifact_dir = os.path.join(project_dir, "docs", "artifacts")
+    if not os.path.isdir(artifact_dir):
+        return issues
+
+    operational_patterns = [
+        r"현재\s*Gate\s*는\s*[A-Za-z0-9_-]+",
+        r"현재\s*게이트\s*는\s*[A-Za-z0-9_-]+",
+        r"current\s+gate\s+is\s+[A-Za-z0-9_-]+",
+    ]
+    target_sections = ("주요 제약", "요구사항", "성공 기준", "비목표")
+
+    for root, _, files in os.walk(artifact_dir):
+        if os.path.basename(root).lower() == "evidence":
+            continue
+        for filename in files:
+            if not filename.lower().endswith(".md"):
+                continue
+            path = os.path.join(root, filename)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                continue
+
+            current_section = ""
+            for idx, line in enumerate(lines, start=1):
+                section_match = re.match(r"^#{2,}\s*(.+?)\s*$", line)
+                if section_match:
+                    current_section = section_match.group(1)
+                if not any(section in current_section for section in target_sections):
+                    continue
+                if any(re.search(pattern, line, re.IGNORECASE) for pattern in operational_patterns):
+                    rel_path = os.path.relpath(path, project_dir)
+                    issues.append(
+                        f"  X 문서 경계 위반: {rel_path}:{idx}에 운영 상태가 업무 산출물 본문에 기록되었습니다 "
+                        "(현재 Gate/Run 상태는 session.json 또는 docs/runs에 기록)"
+                    )
+    return issues
+
+
+def is_unresolved_trace_value(value):
+    normalized = value.strip().lower()
+    return normalized in {"", "-", "미정", "확인필요", "tbd", "todo"}
+
+
 def check_trace(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
     issues = []
 
     print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
+
+    progression_issues = validate_gate_progression(project_dir, current_gate)
+    if progression_issues:
+        print("  Gate 진행 상태 검사: 위반 감지")
+        issues.extend(progression_issues)
+    else:
+        print("  Gate 진행 상태 검사: OK")
+
+    boundary_issues = validate_artifact_content_boundaries(project_dir)
+    if boundary_issues:
+        print("  문서 내용 경계 검사: 위반 감지")
+        issues.extend(boundary_issues)
+    else:
+        print("  문서 내용 경계 검사: OK")
 
     group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
 
@@ -974,6 +1153,7 @@ def check_trace(project_dir="."):
         required_review_runs = [
             ("security-review", "보안 검토"),
             ("screen-review", "화면 검토"),
+            ("ui-review", "UI 품질 검토"),
             ("development-standard-review", "개발표준 검토"),
         ]
         for skill_name, label in required_review_runs:
@@ -1003,6 +1183,16 @@ def check_trace(project_dir="."):
             req_status2 = info.get("status", "")
             if req_status2 == "삭제됨" or re.search(r'통합', req_status2):
                 continue
+            unresolved_columns = [
+                label for label, value in info.get("test_columns", {}).items()
+                if is_unresolved_trace_value(value)
+            ]
+            if unresolved_columns:
+                issues.append(
+                    f"  X {req} - TRACEABILITY.md 테스트 컬럼 미정: {', '.join(unresolved_columns)} "
+                    "(테스트가 불필요하면 '해당없음', 통합/UI 테스트로 대체하면 해당 IT/UI ID를 명시)"
+                )
+                continue
             tst_ids = info.get("tst_ids", [])
             if tst_ids:
                 print(f"  O {req} - TST-ID {', '.join(tst_ids)} 등록 확인")
@@ -1011,7 +1201,13 @@ def check_trace(project_dir="."):
 
     # ── Impl: 개발표준 확정 + 구현 파일/테스트 연결 확인
     if current_gate == "impl":
-        print("  Impl 검사 (1): 개발표준정의서 확정 여부")
+        print("  Impl 검사 (0): Implementation Plan Run 여부")
+        if has_completed_run(project_dir, gate="impl", skill="implementation-plan"):
+            print("  O Implementation Plan Run 완료 확인")
+        else:
+            print("  ! Implementation Plan Run 없음 - 작은 단일 Run 구현이면 생략 가능, 중간 이상 작업은 Build Wave 계획 권장")
+
+        print("\n  Impl 검사 (1): 개발표준정의서 확정 여부")
         dev_standard_files, dev_standard_issues = validate_development_standard(project_dir)
         if dev_standard_files and not dev_standard_issues:
             print(f"  O 개발표준정의서 확인 ({dev_standard_files[0]})")
@@ -2453,23 +2649,37 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     # git init + 초기 커밋
     # 참고: dashboard/는 Vulcan-Anvil 루트에 단일 설치하여 재사용합니다 (REQ-007-01)
     try:
-        subprocess.run(["git", "init"], cwd=target_dir, check=True, capture_output=True)
+        try:
+            subprocess.run(["git", "init", "-b", "main"], cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        except subprocess.CalledProcessError:
+            subprocess.run(["git", "init"], cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            subprocess.run(["git", "branch", "-M", "main"], cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
         subprocess.run(["git", "add", "-A"], cwd=target_dir, check=True, capture_output=True)
         subprocess.run(
             ["git", "commit", "-m", f"init: {project_name} 프로젝트 초기화"],
-            cwd=target_dir, check=True, capture_output=True
+            cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
         print(f"  생성: git 저장소 초기화 + 초기 커밋")
+        print(f"  생성: git 기본 브랜치 main")
 
         if remote_url:
-            subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=target_dir, check=True, capture_output=True)
-            print(f"  생성: git remote origin")
-            subprocess.run(["git", "push", "-u", "origin", "HEAD"], cwd=target_dir, check=True, capture_output=True)
-            print(f"  푸시 완료: origin HEAD")
+            try:
+                subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+                print(f"  생성: git remote origin")
+                subprocess.run(["git", "push", "-u", "origin", "HEAD"], cwd=target_dir, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+                print(f"  푸시 완료: origin HEAD")
+            except subprocess.CalledProcessError as e:
+                detail = (e.stderr or e.stdout or str(e)).strip()
+                message = f"git remote 등록 또는 push 실패 - {detail}"
+                if require_remote:
+                    print(f"  오류: {message}")
+                    sys.exit(1)
+                print(f"  경고: {message}")
+                print("  안내: 로컬 초기 커밋은 완료되었습니다. 원격 저장소를 만든 뒤 직접 push할 수 있습니다.")
         else:
             print("  안내: remote가 설정되지 않았습니다. Gate 시작/완료 push를 사용하려면 remote를 설정하세요.")
     except Exception as e:
-        if require_remote or remote_url:
+        if require_remote:
             print(f"  오류: git 초기화 또는 remote push 실패 - {e}")
             sys.exit(1)
         print(f"  경고: git 초기화 실패 - {e}")
@@ -2509,6 +2719,7 @@ def main():
 예시:
   python vulcan.py init ../my-app "MyApp"
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git
+  python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git --require-remote
   python vulcan.py check-trace
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
