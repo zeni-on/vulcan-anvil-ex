@@ -363,10 +363,12 @@ def save_session(session, project_dir="."):
         json.dump(session, f, ensure_ascii=False, indent=2)
 
 
-def git_commit(message, project_dir=".", include_source=False):
+def git_commit(message, project_dir=".", include_source=False, paths=None):
     try:
-        subprocess.run(["git", "add", "session.json"], cwd=project_dir, check=True, capture_output=True)
-        subprocess.run(["git", "add", "docs/"], cwd=project_dir, check=True, capture_output=True)
+        if paths is None:
+            paths = ["session.json", "docs/"]
+        for path in paths:
+            subprocess.run(["git", "add", path], cwd=project_dir, check=True, capture_output=True)
         if include_source:
             # 구현/QA 이후: .gitignore가 관리하는 범위 내에서 모든 변경 포함
             subprocess.run(["git", "add", "-A"], cwd=project_dir, check=True, capture_output=True)
@@ -1384,7 +1386,8 @@ def cmd_session(gate, status, feature, project_dir="."):
 def cmd_gate_start(gate, feature=None, project_dir="."):
     """현재 진행 Gate를 명시적으로 전환한다.
 
-    Gate 시작은 작업 상태 전환일 뿐 완료 커밋/푸시 대상이 아니다.
+    Gate 시작은 원격 대시보드/다른 세션이 현재 단계를 알 수 있도록
+    session.json만 커밋하고 push한다.
     """
     session = load_session(project_dir)
 
@@ -1400,6 +1403,13 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
     session.setdefault("gate_status", {})[gate] = "pending"
     save_session(session, project_dir)
     print(f"  Gate 시작: {gate} - {GATE_LABELS[gate]}")
+
+    feature_label = session.get("feature", "")
+    commit_msg = f"session: {gate} start - {GATE_LABELS[gate]}"
+    if feature_label:
+        commit_msg += f" ({feature_label})"
+    git_commit(commit_msg, project_dir, paths=["session.json"])
+    git_push(project_dir)
 
 
 # ── export ────────────────────────────────────────────────────────────────
