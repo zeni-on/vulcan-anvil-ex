@@ -799,11 +799,20 @@ def check_trace(project_dir="."):
 
     # ── Gate 2: 설계 파일 내 REQ-ID 포함 여부 (TRACEABILITY.md 우선, 없으면 그룹 파일 fallback)
     if current_gate == "gate2":
-        design_dir = os.path.join(project_dir, "docs", "02-design")
+        design_dir = find_first_existing(project_dir, [
+            os.path.join("docs", "artifacts", "02-design"),
+            os.path.join("docs", "02-design"),
+        ])
         traceability = parse_traceability(project_dir)
 
         if traceability:
             print("  Gate 2 검사: TRACEABILITY.md 기반 설계 파일 내 REQ-ID 포함 확인")
+            design_docs = []
+            if design_dir and os.path.isdir(design_dir):
+                for root, _dirs, files in os.walk(design_dir):
+                    for file_name in files:
+                        if file_name.endswith(".md"):
+                            design_docs.append(os.path.join(root, file_name))
             for req in sorted(detail_reqs):
                 info = traceability.get(req)
                 if info and re.search(r'통합|삭제됨', info.get("status", "")):
@@ -817,7 +826,9 @@ def check_trace(project_dir="."):
                 found_in_any = False
                 missing_files = []
                 for df in design_files:
-                    filepath = os.path.join(design_dir, df)
+                    if not df.endswith(".md"):
+                        continue
+                    filepath = os.path.join(design_dir or "", df)
                     if not os.path.exists(filepath):
                         missing_files.append(df)
                         continue
@@ -826,17 +837,24 @@ def check_trace(project_dir="."):
                     if req in content:
                         found_in_any = True
                         break
+                if not found_in_any and design_docs:
+                    for filepath in design_docs:
+                        with open(filepath, encoding="utf-8") as f:
+                            content = f.read()
+                        if req in content:
+                            found_in_any = True
+                            break
                 if missing_files and not found_in_any:
                     issues.append(f"  X {req} - {', '.join(missing_files)} 파일 없음")
                 elif found_in_any:
-                    print(f"  O {req} - {info['design']} 내 ID 확인")
+                    print(f"  O {req} - 설계 산출물 내 ID 확인")
                 else:
-                    issues.append(f"  X {req} - {info['design']} 안에 {req} 없음")
+                    issues.append(f"  X {req} - 설계 산출물 안에 {req} 없음")
         else:
             print("  Gate 2 검사: REQ 그룹별 설계 파일 존재 여부 (TRACEABILITY.md 없음 — fallback)")
             for group in sorted(group_reqs):
                 filename = f"{group.lower()}-design.md"
-                filepath = os.path.join(design_dir, filename)
+                filepath = os.path.join(design_dir or "", filename)
                 if os.path.exists(filepath):
                     print(f"  O {group} - {filename} 확인")
                 else:
