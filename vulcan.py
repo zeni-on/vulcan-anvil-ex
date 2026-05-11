@@ -582,9 +582,31 @@ def parse_requirements(project_dir="."):
     with open(path, encoding="utf-8") as f:
         content = f.read()
 
-    detail_reqs = set(re.findall(r'\bREQ-\d{3}-\d{2}\b', content))
-    all_reqs = set(re.findall(r'\bREQ-\d{3}\b', content))
-    group_reqs = {r for r in all_reqs if not re.match(r'REQ-\d{3}-\d{2}', r)}
+    group_reqs = set()
+    detail_reqs = set()
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            cols = [c.strip() for c in stripped.strip("|").split("|")]
+            if not cols or set(cols[0]) <= {"-"}:
+                continue
+            if re.fullmatch(r"REQ-\d{3}", cols[0]):
+                name = cols[1] if len(cols) > 1 else ""
+                description = cols[2] if len(cols) > 2 else ""
+                if name or description:
+                    group_reqs.add(cols[0])
+            elif re.fullmatch(r"REQ-\d{3}-\d{2}", cols[0]):
+                name = cols[1] if len(cols) > 1 else ""
+                description = cols[2] if len(cols) > 2 else ""
+                if name or description:
+                    detail_reqs.add(cols[0])
+            continue
+
+        detail_match = re.match(r"^#{3,6}\s+(REQ-\d{3}-\d{2})\s+(.+)$", stripped)
+        if detail_match and detail_match.group(2).strip():
+            detail_reqs.add(detail_match.group(1))
+
     defined_acs = set(re.findall(r'###\s+AC-(\d{3}-\d{2})', content))
 
     # AC 위임 관계 파싱: REQ-XXX-XX 행에 자기 AC는 없지만 다른 AC-ID가 참조되면 위임

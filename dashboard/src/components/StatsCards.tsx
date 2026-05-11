@@ -81,7 +81,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
   const backlogTypeSummary = backlog?.by_type
     ? `IDEA ${backlog.by_type.idea} / CR ${backlog.by_type.cr} / ISSUE ${backlog.by_type.issue}`
     : backlog?.by_priority.p0
-      ? `P0 ${backlog.by_priority.p0} items`
+      ? `P0 ${backlog.by_priority.p0}건`
       : undefined
 
   // 파생 값 계산 — 나누기 0 방어 (UT-011-12)
@@ -103,7 +103,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatCard
             icon={<Layers className="w-5 h-5" />}
-            label="REQ 그룹"
+            label="상위 요구사항"
             value={req.groups}
             sub="REQ-NNN"
             color="blue"
@@ -179,33 +179,32 @@ export default function StatsCards({ stats }: StatsCardsProps) {
         </div>
       </div>
 
-      {/* 백로그 현황 — backlog 데이터가 있을 때만 표시 */}
       <div>
         <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
-          Docs
+          문서 현황
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
             icon={<FileText className="w-5 h-5" />}
-            label="Discovery"
+            label="Discovery 문서"
             value={docs.discovery ?? 0}
             color={(docs.discovery ?? 0) > 0 ? 'blue' : 'default'}
           />
           <StatCard
             icon={<FileText className="w-5 h-5" />}
-            label="Security"
+            label="Security 문서"
             value={docs.security ?? 0}
             color={(docs.security ?? 0) > 0 ? 'blue' : 'default'}
           />
           <StatCard
             icon={<BookOpen className="w-5 h-5" />}
-            label="Backlog"
+            label="Backlog/CR 문서"
             value={docs.backlog ?? 0}
             color={(docs.backlog ?? 0) > 0 ? 'yellow' : 'default'}
           />
           <StatCard
             icon={<Layers className="w-5 h-5" />}
-            label="Runs"
+            label="Run 문서"
             value={docs.runs ?? 0}
             color={(docs.runs ?? 0) > 0 ? 'green' : 'default'}
           />

@@ -83,9 +83,9 @@ describe('UT-011-14: current_gate === "gate1"', () => {
     expect(screen.getByTestId('gate-content-gate1')).toBeInTheDocument()
   })
 
-  it('REQ 그룹 행이 표시된다', () => {
+  it('상위 요구사항 행이 표시된다', () => {
     render(<CurrentGatePanel session={makeSession('gate1')} stats={mockStats} docs={mockDocs} />)
-    expect(screen.getByText('REQ 그룹')).toBeInTheDocument()
+    expect(screen.getByText('상위 요구사항')).toBeInTheDocument()
   })
 
   it('상세 요구사항 행이 표시된다', () => {

@@ -165,7 +165,7 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
   if (gate === 'gate1') {
     return (
       <div className="space-y-3" data-testid="gate-content-gate1">
-        <Row label="REQ 그룹" value={`${req.groups}개`} />
+        <Row label="상위 요구사항" value={`${req.groups}개`} />
         <Row label="상세 요구사항" value={`${req.total}개`} />
         <Row
           label="AC 정의 완료"
