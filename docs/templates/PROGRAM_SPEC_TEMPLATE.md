@@ -27,6 +27,8 @@ change_reason: 최초 초안 작성
 
 프로그램명세서는 “어떤 프로그램이 어떤 입력을 받아 어떤 로직으로 처리하고 어떤 결과를 반환하는가”를 설명한다.
 
+API가 있는 경우 프로그램명세서는 API 목록과 처리 모듈의 책임을 요약하고, 요청/응답/상태코드/오류/인증/예시는 별도 API 정의서(`docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md`)에서 상세화한다.
+
 ## 2. 작성 기준
 
 - 프로그램은 `PGM-001` 형식으로 부여한다.
@@ -34,12 +36,14 @@ change_reason: 최초 초안 작성
 - 프로그램의 입력/출력 항목은 프로젝트 단어사전 `TERM`과 연결한다.
 - 보안 민감 프로그램은 `SEC`와 외부 보안 기준 `SR`을 함께 기록한다.
 - 단위테스트는 프로그램 로직을 검증하되, 검증 이유는 `AC`, `SEC`, `NREQ` 중 하나에서 나와야 한다.
+- REST, GraphQL, 내부 HTTP API가 있으면 API 정의서의 `API-ID`와 연결한다.
+- API가 없으면 API 관련 칸은 `해당없음`으로 쓰고, 프로그램 유형은 `Module`, `Service`, `Batch`, `Component`, `CLI`처럼 실제 유형으로 작성한다.
 
 ## 3. 프로그램 목록
 
 | PGM-ID | 프로그램명 | 유형 | 관련 FUNC | 관련 SCR | 관련 DB | 관련 SEC | 상태 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PGM-001 |  | API / Batch / Module / Service | FUNC- | SCR- | DB- | SEC- | Draft |
+| PGM-001 |  | Module | FUNC- | SCR- | DB- | SEC- | Draft |
 
 ## 4. 프로그램 상세
 
@@ -49,7 +53,7 @@ change_reason: 최초 초안 작성
 | --- | --- |
 | PGM-ID | PGM-001 |
 | 프로그램명 |  |
-| 유형 | API / Batch / Module / Service / Component |
+| 유형 | Module |
 | 설명 |  |
 | 관련 요구사항 | REQ- |
 | 관련 인수기준 | AC- |
@@ -57,18 +61,20 @@ change_reason: 최초 초안 작성
 | 관련 화면 | SCR- |
 | 관련 데이터 | DB- |
 | 관련 보안항목 | SEC- |
+| 관련 API | 해당없음 |
 
 #### 4.1 인터페이스
 
 | 항목 | 내용 |
 | --- | --- |
-| 호출 방식 | REST / GraphQL / CLI / Event / Internal Call |
+| 호출 방식 | Internal Call |
 | 엔드포인트/함수명 |  |
-| Method | GET / POST / PUT / PATCH / DELETE |
-| 인증 필요 | Y/N |
+| Method | 해당없음 |
+| 인증 필요 | 해당없음 |
 | 권한 조건 |  |
-| 요청 Content-Type |  |
-| 응답 Content-Type |  |
+| 요청 Content-Type | 해당없음 |
+| 응답 Content-Type | 해당없음 |
+| API 정의서 | 해당없음 |
 
 #### 4.2 입력 파라미터
 

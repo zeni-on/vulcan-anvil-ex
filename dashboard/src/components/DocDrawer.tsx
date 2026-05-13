@@ -62,6 +62,11 @@ interface DocumentMetadata {
   project?: string
   status?: string
   updatedAt?: string
+  runId?: string
+  gate?: string
+  persona?: string
+  skill?: string
+  createdAt?: string
 }
 
 function parseMetadataBlock(block: string): DocumentMetadata {
@@ -76,17 +81,38 @@ function parseMetadataBlock(block: string): DocumentMetadata {
     else if (key === 'project') metadata.project = cleanValue
     else if (key === 'status') metadata.status = cleanValue
     else if (key === 'updated_at') metadata.updatedAt = cleanValue
+    else if (key === 'run_id') metadata.runId = cleanValue
+    else if (key === 'gate') metadata.gate = cleanValue
+    else if (key === 'persona') metadata.persona = cleanValue
+    else if (key === 'skill') metadata.skill = cleanValue
+    else if (key === 'created_at') metadata.createdAt = cleanValue
   }
   return metadata
 }
 
 function splitDocumentMetadata(content: string): { metadata: DocumentMetadata; body: string; raw?: string } {
-  const match = content.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/i)
-  if (!match) return { metadata: {}, body: content }
+  const frontMatterMatch = content.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/i)
+  if (frontMatterMatch) {
+    return {
+      metadata: parseMetadataBlock(frontMatterMatch[1]),
+      body: content.replace(frontMatterMatch[0], '').trimStart(),
+      raw: frontMatterMatch[1].trim(),
+    }
+  }
+
+  const yamlMatch = content.match(/```ya?ml\s*\n([\s\S]*?)\n```/i)
+  if (!yamlMatch || yamlMatch.index == null || yamlMatch.index > 240) {
+    return { metadata: {}, body: content }
+  }
+
+  const rawYaml = yamlMatch[1].trim()
+  const looksLikeRunMetadata = /^(run_id|adapter|gate|persona|skill|status|created_at):/m.test(rawYaml)
+  if (!looksLikeRunMetadata) return { metadata: {}, body: content }
+
   return {
-    metadata: parseMetadataBlock(match[1]),
-    body: content.replace(match[0], '').trimStart(),
-    raw: match[1].trim(),
+    metadata: parseMetadataBlock(rawYaml),
+    body: content.replace(yamlMatch[0], '').trimStart(),
+    raw: rawYaml,
   }
 }
 
@@ -129,6 +155,11 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
   const { content, isLoading, error } = useDocContent(projectId, doc)
   const [showMetadata, setShowMetadata] = useState(false)
   const genericDoc = splitDocumentMetadata(content ?? '')
+  const hasMetadataHeader =
+    genericDoc.metadata.titleKo ||
+    genericDoc.metadata.title ||
+    genericDoc.metadata.runId ||
+    genericDoc.raw
 
   if (isLoading) return <LoadingSkeleton />
 
@@ -156,23 +187,28 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       ) : content && isTraceabilityDoc(doc, content) ? (
         <TraceabilityDocView model={parseTraceabilityDoc(content)} />
       ) : content && isScreenSpecDoc(doc, content) ? (
-        <ScreenSpecDocView model={parseScreenSpecDoc(content)} />
+        <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
       ) : content && isQaDoc(doc, content) ? (
         <QaDocView model={parseQaDoc(content)} projectId={projectId} />
       ) : (
         <div className="rounded-md bg-slate-100 p-4 text-slate-800">
-          {(genericDoc.metadata.titleKo || genericDoc.metadata.title) && (
+          {hasMetadataHeader && (
             <header className="mb-4 rounded-md border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-4 shadow-sm">
               <div className="text-xs font-medium text-blue-700">
-                {genericDoc.metadata.title ?? 'Document'}
+                {genericDoc.metadata.title ?? genericDoc.metadata.runId ?? 'Document'}
               </div>
               <h2 className="mt-1 text-lg font-semibold text-slate-950">
-                {genericDoc.metadata.titleKo ?? genericDoc.metadata.title}
+                {genericDoc.metadata.titleKo ?? genericDoc.metadata.title ?? doc.name}
               </h2>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
                 {genericDoc.metadata.project && <span>프로젝트: {genericDoc.metadata.project}</span>}
+                {genericDoc.metadata.gate && <span>Gate: {genericDoc.metadata.gate}</span>}
+                {genericDoc.metadata.persona && <span>Persona: {genericDoc.metadata.persona}</span>}
+                {genericDoc.metadata.skill && <span>Skill: {genericDoc.metadata.skill}</span>}
                 {genericDoc.metadata.status && <span>상태: {genericDoc.metadata.status}</span>}
-                {genericDoc.metadata.updatedAt && <span>수정일: {genericDoc.metadata.updatedAt}</span>}
+                {(genericDoc.metadata.updatedAt || genericDoc.metadata.createdAt) && (
+                  <span>일자: {genericDoc.metadata.updatedAt ?? genericDoc.metadata.createdAt}</span>
+                )}
               </div>
               {genericDoc.raw && (
                 <div className="mt-3">
@@ -189,7 +225,7 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
                     메타데이터 보기
                   </button>
                   {showMetadata && (
-                    <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-xs text-slate-100">
+                    <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
                       <code>{genericDoc.raw}</code>
                     </pre>
                   )}
@@ -204,7 +240,7 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
             prose-p:text-slate-700
             prose-a:text-blue-700 prose-a:no-underline hover:prose-a:underline
             prose-code:bg-slate-100 prose-code:text-slate-900 prose-code:px-1 prose-code:rounded prose-code:text-xs
-            prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800
+            prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:text-slate-800
             prose-blockquote:border-blue-300 prose-blockquote:bg-blue-50 prose-blockquote:px-3 prose-blockquote:py-1 prose-blockquote:text-slate-700
             prose-th:text-blue-950 prose-td:text-slate-700
             prose-hr:border-slate-200

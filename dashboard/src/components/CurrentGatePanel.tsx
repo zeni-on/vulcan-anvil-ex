@@ -226,20 +226,61 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
 
   // impl: 구현 진행률 바 (UT-011-16)
   if (gate === 'impl') {
-    const pct = req.total > 0 ? Math.round((req.implemented / req.total) * 100) : 0
+    const implementation = stats.implementation
+    const implReq = implementation?.requirements
+    const waveStats = implementation?.waves
+    const reqTotal = implReq?.total ?? req.total
+    const reqImplemented = implReq?.implemented ?? req.implemented
+    const reqPct = reqTotal > 0 ? Math.round((reqImplemented / reqTotal) * 100) : 0
+    const wavePct = waveStats && waveStats.total > 0
+      ? Math.round((waveStats.completed / waveStats.total) * 100)
+      : 0
     return (
-      <div className="space-y-3" data-testid="gate-content-impl">
+      <div className="space-y-4" data-testid="gate-content-impl">
         <Row
-          label="구현 진행률"
-          value={`${req.implemented} / ${req.total} (${pct}%)`}
-          status={req.implemented === req.total && req.total > 0 ? 'ok' : 'warn'}
+          label="요구사항 구현률"
+          value={`${reqImplemented} / ${reqTotal} (${reqPct}%)`}
+          status={reqImplemented === reqTotal && reqTotal > 0 ? 'ok' : 'warn'}
         />
-        <div className="w-full bg-[#1F2937] rounded-full h-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="w-full bg-[#1F2937] rounded-full h-2" role="progressbar" aria-label="요구사항 구현률" aria-valuenow={reqPct} aria-valuemin={0} aria-valuemax={100}>
           <div
-            className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-orange-500'}`}
-            style={{ width: `${pct}%` }}
+            className={`h-2 rounded-full transition-all ${reqPct === 100 ? 'bg-green-500' : 'bg-orange-500'}`}
+            style={{ width: `${reqPct}%` }}
           />
         </div>
+        {waveStats && (
+          <div className="space-y-2" data-testid="build-wave-progress">
+            <Row
+              label="Build Wave"
+              value={`${waveStats.completed} / ${waveStats.total} (${wavePct}%)`}
+              status={waveStats.total > 0 && waveStats.completed === waveStats.total ? 'ok' : 'warn'}
+            />
+            <div className="w-full bg-[#1F2937] rounded-full h-2" role="progressbar" aria-label="Build Wave 진행률" aria-valuenow={wavePct} aria-valuemin={0} aria-valuemax={100}>
+              <div
+                className={`h-2 rounded-full transition-all ${wavePct === 100 ? 'bg-green-500' : 'bg-cyan-500'}`}
+                style={{ width: `${wavePct}%` }}
+              />
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {waveStats.items.slice(0, 4).map(item => (
+                <div
+                  key={item.id}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    item.id === waveStats.current
+                      ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200'
+                      : 'border-[#374151] bg-[#0B1120] text-[#9CA3AF]'
+                  }`}
+                >
+                  <span className="font-semibold">{item.id}</span>
+                  <span className="ml-2">{item.status}</span>
+                </div>
+              ))}
+            </div>
+            {waveStats.current && (
+              <p className="text-xs text-cyan-300">현재 Wave: {waveStats.current}</p>
+            )}
+          </div>
+        )}
       </div>
     )
   }

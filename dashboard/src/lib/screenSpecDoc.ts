@@ -26,6 +26,13 @@ export interface ScreenDetail {
   fields: Record<string, string>
   wireframe?: string
   stateText?: string
+  tables: ScreenTable[]
+}
+
+export interface ScreenTable {
+  title: string
+  headers: string[]
+  rows: string[][]
 }
 
 export interface ScreenSpecDocModel {
@@ -36,6 +43,7 @@ export interface ScreenSpecDocModel {
   screens: ScreenListRow[]
   evidences: ScreenEvidenceRow[]
   details: ScreenDetail[]
+  extraTables: ScreenTable[]
 }
 
 interface MarkdownTable {
@@ -119,11 +127,69 @@ function firstTable(tables: MarkdownTable[], headers: string[]): MarkdownTable |
   return tables.find((table) => hasHeaders(table, headers))
 }
 
+function toScreenTable(title: string, table: MarkdownTable): ScreenTable {
+  return {
+    title,
+    headers: table.headers,
+    rows: table.rows.map((row) => table.headers.map((header) => row[header] ?? '')),
+  }
+}
+
+function extractTitledTables(content: string): ScreenTable[] {
+  const lines = content.split(/\r?\n/)
+  const tables: ScreenTable[] = []
+  let currentHeading = '표'
+  let index = 0
+
+  while (index < lines.length) {
+    const headingMatch = lines[index].match(/^#{2,6}\s+(.+?)\s*$/)
+    if (headingMatch) currentHeading = headingMatch[1].trim()
+
+    const line = lines[index]
+    const next = lines[index + 1]
+    if (line.trim().startsWith('|') && next && isDividerRow(next)) {
+      const headers = splitTableRow(line)
+      const rows: string[][] = []
+      index += 2
+
+      while (index < lines.length && lines[index].trim().startsWith('|')) {
+        const cells = splitTableRow(lines[index])
+        if (cells.length === headers.length) rows.push(cells)
+        index += 1
+      }
+
+      tables.push({ title: currentHeading, headers, rows })
+      continue
+    }
+    index += 1
+  }
+
+  return tables
+}
+
+function isMetadataTable(table: ScreenTable): boolean {
+  return (
+    hasHeaders({ headers: table.headers, rows: [] }, ['항목', '내용']) ||
+    hasHeaders({ headers: table.headers, rows: [] }, ['SCR-ID', '화면명', '유형']) ||
+    hasHeaders({ headers: table.headers, rows: [] }, ['SCR-ID', '시안/와이어프레임 ID', '파일/URL'])
+  )
+}
+
+function tableKey(table: ScreenTable): string {
+  return JSON.stringify([table.title, table.headers, table.rows])
+}
+
 function extractScreenDetails(content: string): ScreenDetail[] {
   const sections = [...content.matchAll(/^###\s+(?:\d+(?:\.\d+)?\s+)?(SCR-\d{3})\s+(.+)$/gm)]
   return sections.map((match, index) => {
     const start = match.index ?? 0
-    const end = sections[index + 1]?.index ?? content.length
+    const nextScreenStart = sections[index + 1]?.index ?? content.length
+    const afterHeading = content.indexOf('\n', start)
+    const searchStart = afterHeading >= 0 ? afterHeading + 1 : start + 1
+    const nextTopLevelSection = content.slice(searchStart).search(/^##\s+/m)
+    const nextTopLevelStart =
+      nextTopLevelSection >= 0 ? searchStart + nextTopLevelSection : content.length
+    const end = Math.min(nextScreenStart, nextTopLevelStart)
     const block = content.slice(start, end)
     const table = firstTable(extractTables(block), ['항목', '내용'])
     const fields = Object.fromEntries(
@@ -133,12 +199,14 @@ function extractScreenDetails(content: string): ScreenDetail[] {
     )
     const wireframe = block.match(/텍스트 와이어프레임:\s*\n\n```text\n([\s\S]*?)\n```/)?.[1]?.trim()
     const stateText = block.match(/상태:\s*([^\n]+)/)?.[1]?.trim()
+    const tables = extractTitledTables(block).filter((candidate) => !isMetadataTable(candidate))
     return {
       scrId: match[1],
       name: match[2].trim(),
       fields,
       wireframe,
       stateText,
+      tables,
     }
   })
 }
@@ -156,8 +224,12 @@ export function isScreenSpecDoc(doc: DocNode, content: string): boolean {
 
 export function parseScreenSpecDoc(content: string): ScreenSpecDocModel {
   const tables = extractTables(content)
+  const titledTables = extractTitledTables(content)
   const screenTable = firstTable(tables, ['SCR-ID', '화면명', '유형'])
   const evidenceTable = firstTable(tables, ['SCR-ID', '시안/와이어프레임 ID', '파일/URL'])
+  const representedTitles = new Set(['화면 목록', '화면 시안 및 기준 증적'])
+  const details = extractScreenDetails(content)
+  const detailTableKeys = new Set(details.flatMap((detail) => detail.tables.map(tableKey)))
 
   return {
     title: extractMetadata(content, 'title_ko') ?? '화면설계서',
@@ -186,6 +258,13 @@ export function parseScreenSpecDoc(content: string): ScreenSpecDocModel {
         status: getCell(row, ['상태']),
       }))
       .filter((row) => row.scrId.startsWith('SCR-') && row.refId),
-    details: extractScreenDetails(content),
+    details,
+    extraTables: titledTables.filter((table) => {
+      if (representedTitles.has(table.title)) return false
+      if (table.title.includes('SCR-')) return false
+      if (detailTableKeys.has(tableKey(table))) return false
+      if (isMetadataTable(table)) return false
+      return table.rows.length > 0
+    }),
   }
 }

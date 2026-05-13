@@ -55,6 +55,7 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/02-design/architecture",
     "docs/artifacts/02-design/function",
     "docs/artifacts/02-design/program",
+    "docs/artifacts/02-design/api",
     "docs/artifacts/02-design/screen",
     "docs/artifacts/02-design/screen/images",
     "docs/artifacts/02-design/data",
@@ -78,6 +79,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
     ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
     ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md"),
+    ("docs/templates/API_SPEC_TEMPLATE.md", "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md"),
     ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
     ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
     ("docs/templates/DATABASE_SPEC_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md"),
@@ -591,12 +593,233 @@ def compute_stats(project_dir="."):
             "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
         }
 
+    try:
+        implementation_stats = compute_implementation_progress(project_dir)
+    except Exception:
+        implementation_stats = {
+            "requirements": {"total": 0, "implemented": 0, "pending": 0, "completed_ids": []},
+            "waves": {"total": 0, "completed": 0, "current": "", "items": []},
+        }
+
     return {
         "requirements": requirements_stats,
+        "implementation": implementation_stats,
         "tests":        tests_stats,
         "docs":         docs_stats,
         "backlog":      backlog_stats,
         "updated_at":   date.today().isoformat(),
+    }
+
+
+WAVE_DONE_STATUSES = {"Implemented", "Verified", "Completed", "Done"}
+WAVE_ACTIVE_STATUSES = {"In Progress", "Running", "Review Requested"}
+WAVE_KNOWN_STATUSES = WAVE_DONE_STATUSES | WAVE_ACTIVE_STATUSES | {"Planned", "Blocked", "Rolled Back"}
+
+
+def find_run_files(project_dir="."):
+    runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
+    if not os.path.isdir(runs_dir):
+        return []
+    return [
+        os.path.join(runs_dir, name)
+        for name in sorted(os.listdir(runs_dir))
+        if name.lower().endswith(".md")
+    ]
+
+
+def find_wave_run_file(project_dir, bw_id):
+    pattern = re.compile(rf"\b{re.escape(bw_id)}\b", re.IGNORECASE)
+    for path in find_run_files(project_dir):
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        if pattern.search(content) or pattern.search(os.path.basename(path)):
+            return path
+    return None
+
+
+def parse_simple_yaml_block(content):
+    match = re.search(r"```yaml\s*(.*?)```", content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return {}
+    result = {}
+    for raw_line in match.group(1).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        result[key.strip()] = value.strip().strip('"').strip("'")
+    return result
+
+
+def collect_build_wave_records(project_dir="."):
+    records = {}
+
+    for path in find_run_files(project_dir):
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+
+        rel_path = os.path.relpath(path, project_dir)
+        metadata = parse_simple_yaml_block(content)
+        ids = set(re.findall(r"\bBW-\d{3}\b", content))
+        if metadata.get("bw_id"):
+            ids.add(metadata["bw_id"])
+
+        for bw_id in sorted(ids):
+            record = records.setdefault(
+                bw_id,
+                {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
+            )
+            if not record.get("run") and "build-wave" in content.lower():
+                record["run"] = rel_path
+
+            if metadata.get("bw_id") == bw_id or bw_id in os.path.basename(path):
+                status = metadata.get("status")
+                if status in WAVE_KNOWN_STATUSES:
+                    record["status"] = status
+                    record["run"] = rel_path
+
+            related = re.findall(
+                r"\b(?:REQ|AC|FUNC|SCR|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
+                content,
+            )
+            record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
+
+        for line in content.splitlines():
+            if not line.strip().startswith("|"):
+                continue
+            cols = [c.strip() for c in line.strip().strip("|").split("|")]
+            if not cols or re.fullmatch(r"[-: ]+", cols[0] or ""):
+                continue
+            bw_cols = [c for c in cols if re.fullmatch(r"BW-\d{3}", c)]
+            if not bw_cols:
+                continue
+            bw_id = bw_cols[0]
+            record = records.setdefault(
+                bw_id,
+                {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
+            )
+            if not record.get("run"):
+                record["run"] = rel_path
+            for col in cols:
+                if col in WAVE_KNOWN_STATUSES:
+                    record["status"] = col
+                    break
+            related = [
+                item
+                for col in cols
+                for item in re.findall(
+                    r"\b(?:REQ|AC|FUNC|SCR|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
+                    col,
+                )
+            ]
+            record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
+
+    return [records[key] for key in sorted(records)]
+
+
+def merge_session_wave_records(session, discovered):
+    merged = {item["id"]: dict(item) for item in discovered}
+    session_impl = session.get("implementation", {}) if session else {}
+    session_waves = session_impl.get("waves", {}) if isinstance(session_impl, dict) else {}
+    for item in session_waves.get("items", []) if isinstance(session_waves, dict) else []:
+        bw_id = item.get("id")
+        if not bw_id:
+            continue
+        base = merged.setdefault(
+            bw_id,
+            {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
+        )
+        for key in ("status", "run"):
+            if item.get(key):
+                base[key] = item[key]
+        base["related_ids"] = sorted(set(base.get("related_ids", []) + item.get("related_ids", [])))
+    return [merged[key] for key in sorted(merged)]
+
+
+def update_wave_run_status(project_dir, bw_id, status):
+    path = find_wave_run_file(project_dir, bw_id)
+    if not path:
+        return ""
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return ""
+
+    def replace_status(match):
+        block = match.group(1)
+        if not re.search(rf"^\s*bw_id:\s*{re.escape(bw_id)}\s*$", block, re.MULTILINE):
+            return match.group(0)
+        if re.search(r"^\s*status:\s*.+$", block, re.MULTILINE):
+            block = re.sub(r"^(\s*status:\s*).+$", rf"\1{status}", block, count=1, flags=re.MULTILINE)
+        else:
+            block = block.rstrip() + f"\nstatus: {status}\n"
+        return f"```yaml\n{block}```"
+
+    updated = re.sub(r"```yaml\s*(.*?)```", replace_status, content, count=1, flags=re.DOTALL | re.IGNORECASE)
+    if updated != content:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(updated)
+    return os.path.relpath(path, project_dir)
+
+
+def compute_implementation_progress(project_dir=".", session=None):
+    try:
+        _group_reqs, detail_reqs, _defined_acs, _ac_delegates = parse_requirements(project_dir)
+    except Exception:
+        detail_reqs = set()
+
+    try:
+        traceability = parse_traceability(project_dir)
+    except Exception:
+        traceability = {}
+
+    completed_ids = {
+        req_id
+        for req_id, info in traceability.items()
+        if re.fullmatch(r"REQ-\d{3}-\d{2}", req_id)
+        and info.get("status") in ("구현완료", "완료", "Implemented", "Verified", "Done")
+    }
+
+    if session:
+        session_impl = session.get("implementation", {})
+        reqs = session_impl.get("requirements", {}) if isinstance(session_impl, dict) else {}
+        completed_ids.update(reqs.get("completed_ids", []))
+
+    wave_records = merge_session_wave_records(session or {}, collect_build_wave_records(project_dir))
+    current = ""
+    for item in wave_records:
+        if item.get("status") in WAVE_ACTIVE_STATUSES:
+            current = item["id"]
+            break
+    if session:
+        session_current = (
+            session.get("implementation", {})
+            .get("waves", {})
+            .get("current", "")
+        )
+        if session_current:
+            current = session_current
+
+    return {
+        "requirements": {
+            "total": len(detail_reqs),
+            "implemented": len(completed_ids),
+            "pending": max(len(detail_reqs) - len(completed_ids), 0),
+            "completed_ids": sorted(completed_ids),
+        },
+        "waves": {
+            "total": len(wave_records),
+            "completed": sum(1 for item in wave_records if item.get("status") in WAVE_DONE_STATUSES),
+            "current": current,
+            "items": wave_records,
+        },
     }
 
 
@@ -807,6 +1030,28 @@ def find_development_standard_file(project_dir="."):
     ])
 
 
+def find_program_spec_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "program"),
+        r"(program.*spec|프로그램.*명세).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "program-spec.md"),
+        os.path.join("docs", "02-design", "Program-Spec.md"),
+    ])
+
+
+def find_api_spec_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "api"),
+        r"(api.*spec|api.*정의).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "api-spec.md"),
+        os.path.join("docs", "02-design", "API-Spec.md"),
+    ])
+
+
 def find_security_guide_file(project_dir="."):
     return find_artifact_file(
         project_dir,
@@ -815,6 +1060,28 @@ def find_security_guide_file(project_dir="."):
     ) or find_first_existing(project_dir, [
         os.path.join("docs", "02-design", "security-guide.md"),
         os.path.join("docs", "02-design", "Security-Guide.md"),
+    ])
+
+
+def find_screen_spec_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "screen"),
+        r"(screen.*spec|화면.*설계).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "screen-spec.md"),
+        os.path.join("docs", "02-design", "Screen-Spec.md"),
+    ])
+
+
+def find_risk_assumption_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "00-discovery"),
+        r"(risk.*assumption|위험.*가정).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "00-discovery", "risk-and-assumption.md"),
+        os.path.join("docs", "00-discovery", "Risk-And-Assumption.md"),
     ])
 
 
@@ -876,6 +1143,67 @@ def validate_development_standard(project_dir="."):
     return [rel_path], issues
 
 
+def program_spec_requires_api_spec(project_dir="."):
+    path = find_program_spec_file(project_dir)
+    if not path:
+        return False, None
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    effective_lines = [
+        line for line in content.splitlines()
+        if not re.search(r"API\s*/\s*Batch\s*/\s*Module|REST\s*/\s*GraphQL|GET\s*/\s*POST|API가 없으면|API 관련 칸", line, re.IGNORECASE)
+    ]
+    effective_content = "\n".join(effective_lines)
+
+    api_patterns = [
+        r"\|\s*PGM-\d{3}\s*\|[^|\n]*\|\s*(?:API|REST|GraphQL)\b",
+        r"\|\s*호출 방식\s*\|\s*(?:REST|GraphQL)\s*\|",
+        r"\|\s*Method\s*\|\s*(?:GET|POST|PUT|PATCH|DELETE)\s*\|",
+        r"`/api/[^`]+`",
+        r"\|\s*[^|\n]*/api/[^|\n]*\|",
+    ]
+    return any(re.search(pattern, effective_content, re.IGNORECASE) for pattern in api_patterns), path
+
+
+def validate_api_spec(project_dir="."):
+    issues = []
+    required, program_path = program_spec_requires_api_spec(project_dir)
+    if not required:
+        return [], issues
+
+    path = find_api_spec_file(project_dir)
+    program_rel = os.path.relpath(program_path, project_dir) if program_path else "프로그램명세서"
+    if not path:
+        return [], [f"{program_rel}에 API가 정의되어 있으나 API 정의서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("API-ID", r"API-\d{3}"),
+        ("Method/Path", r"\b(GET|POST|PUT|PATCH|DELETE)\b.*(/|Path)|Path.*\b(GET|POST|PUT|PATCH|DELETE)\b"),
+        ("Request", r"Request|요청|Body|Query|Path|Header"),
+        ("Response", r"Response|응답|상태코드|HTTP Status"),
+        ("Error", r"Error|오류|error\.code|ERR-"),
+        ("인증/권한", r"인증|권한|401|403|SEC-"),
+        ("예시", r"요청 예시|응답 예시|```json"),
+        ("테스트 연결", r"UT-|IT-|테스트 ID|검증"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    return [rel_path], issues
+
+
 def validate_security_guide(project_dir="."):
     issues = []
     path = find_security_guide_file(project_dir)
@@ -903,6 +1231,170 @@ def validate_security_guide(project_dir="."):
             issues.append(f"{rel_path}에 {label} 기준 없음")
 
     return [rel_path], issues
+
+
+def validate_screen_spec(project_dir="."):
+    issues = []
+    path = find_screen_spec_file(project_dir)
+    if not path:
+        return [], ["화면설계서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    has_screen = bool(re.search(r"SCR-\d{3}", content))
+    has_uiref = bool(re.search(r"UIREF-\d{3}", content))
+    has_ui_test = bool(re.search(r"UI-\d{3}", content))
+    has_viewport = bool(re.search(r"Desktop\s+\d+x\d+|Mobile\s+\d+x\d+|viewport", content, re.IGNORECASE))
+    has_visual_evidence = bool(re.search(
+        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/images/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
+        content,
+        re.IGNORECASE,
+    ))
+
+    if has_screen and not has_uiref:
+        issues.append(f"{rel_path}에 UIREF 기준 시안/와이어프레임 ID 없음")
+    if has_screen and not has_ui_test:
+        issues.append(f"{rel_path}에 UI 테스트 ID 없음")
+    if has_screen and not has_viewport:
+        issues.append(f"{rel_path}에 기준 viewport 없음")
+    if has_screen and not has_visual_evidence:
+        issues.append(f"{rel_path}에 실제 화면 구조 증적 없음(Text Wireframe fenced block, Mermaid, HTML mockup, 이미지/Figma 등)")
+
+    text_wireframe_rows = [
+        line for line in content.splitlines()
+        if "Text Wireframe" in line and re.search(r"UIREF-\d{3}", line)
+    ]
+    if text_wireframe_rows and not re.search(r"```(?:text|mermaid|html)", content, re.IGNORECASE):
+        issues.append(f"{rel_path}에 Text Wireframe 표기는 있으나 실제 와이어프레임 코드 블록 없음")
+
+    if re.search(r"UI 기준선 판정\s*\|\s*Minimal", content) and not has_visual_evidence:
+        issues.append(f"{rel_path} UI 기준선이 Minimal인데 보강 가능한 화면 구조 증적 없음")
+
+    return [rel_path], issues
+
+
+def is_resolved_discovery_status(status):
+    normalized = (status or "").strip().lower()
+    return normalized in {
+        "closed", "resolved", "confirmed", "accepted", "done", "n/a", "na",
+        "완료", "확정", "해결", "수용", "해당없음",
+    }
+
+
+def detect_due_gate(text):
+    value = text or ""
+    if re.search(r"Gate\s*1|게이트\s*1|G1", value, re.IGNORECASE):
+        return "gate1"
+    if re.search(r"Gate\s*2|게이트\s*2|G2", value, re.IGNORECASE):
+        return "gate2"
+    if re.search(r"Gate\s*3|게이트\s*3|G3", value, re.IGNORECASE):
+        return "gate3"
+    if re.search(r"구현|impl|Gate\s*4|게이트\s*4|G4", value, re.IGNORECASE):
+        return "impl"
+    return None
+
+
+def is_empty_table_value(value):
+    normalized = (value or "").strip()
+    return normalized in {"", "-", "미정", "확인필요", "TBD", "TODO"}
+
+
+def find_header_index(headers, candidates):
+    for idx, header in enumerate(headers):
+        normalized = header.replace(" ", "").lower()
+        for candidate in candidates:
+            if candidate.replace(" ", "").lower() in normalized:
+                return idx
+    return None
+
+
+def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
+    issues = []
+    path = find_risk_assumption_file(project_dir)
+    if not path:
+        return issues
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    current_idx = GATE_ORDER.index(current_gate) if current_gate in GATE_ORDER else 0
+
+    section = ""
+    headers = []
+    for line in content.splitlines():
+        section_match = re.match(r"^#{2,}\s*(.+?)\s*$", line.strip())
+        if section_match:
+            section = section_match.group(1)
+            headers = []
+            continue
+
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cols = [c.strip() for c in stripped.strip("|").split("|")]
+        if not cols:
+            continue
+        if cols[0] in {"---", ":---", "---:"} or all(re.match(r"^:?-{3,}:?$", col) for col in cols):
+            continue
+        if cols[0] in {"RISK-ID", "ASM-ID", "Q-ID"}:
+            headers = cols
+            continue
+
+        item_id = cols[0]
+        if not re.match(r"^(RISK|ASM|Q)-\d{3}$", item_id):
+            continue
+
+        status_idx = find_header_index(headers, ["상태"]) if headers else None
+        status = cols[status_idx] if status_idx is not None and status_idx < len(cols) else cols[-1]
+
+        due_idx = None
+        if item_id.startswith("Q-"):
+            due_idx = find_header_index(headers, ["기한"]) if headers else None
+        elif item_id.startswith("ASM-"):
+            due_idx = find_header_index(headers, ["확인 방법", "확인방법"]) if headers else None
+        elif item_id.startswith("RISK-"):
+            due_idx = find_header_index(headers, ["대응 방향", "대응방향"]) if headers else None
+        if due_idx is None:
+            due_idx = 4 if len(cols) > 4 else None
+        due_source = cols[due_idx] if due_idx is not None and due_idx < len(cols) else ""
+
+        due_gate = detect_due_gate(due_source)
+        due_idx_order = GATE_ORDER.index(due_gate) if due_gate in GATE_ORDER else None
+
+        if is_resolved_discovery_status(status):
+            if due_idx_order is None or current_idx < due_idx_order:
+                continue
+            result_idx = find_header_index(headers, [
+                "결정/처리 결과", "확인/처리 결과", "답변/결정 내용", "처리 결과", "결정 내용",
+            ]) if headers else None
+            basis_idx = find_header_index(headers, ["결정 근거", "연결 ID", "연결ID"]) if headers else None
+            decided_at_idx = find_header_index(headers, ["결정일시", "결정 일시", "변경일시", "변경 일시"]) if headers else None
+            decider_idx = find_header_index(headers, ["결정자", "확인자"]) if headers else None
+            required_resolution_fields = [
+                ("결정/처리 결과", result_idx),
+                ("결정 근거/연결 ID", basis_idx),
+                ("결정일시", decided_at_idx),
+                ("결정자", decider_idx),
+            ]
+            for label, idx in required_resolution_fields:
+                if idx is None or idx >= len(cols) or is_empty_table_value(cols[idx]):
+                    issues.append(f"  X {rel_path}의 {item_id}는 상태가 {status}이지만 {label}가 비어 있습니다")
+            continue
+
+        if due_idx_order is not None and current_idx >= due_idx_order:
+            issues.append(
+                f"  X {rel_path}의 {item_id}가 {due_source}까지 정리되어야 하지만 상태가 {status or '미정'}입니다"
+            )
+
+    return issues
 
 
 def has_completed_run(project_dir=".", gate=None, skill=None, persona=None):
@@ -1082,6 +1574,28 @@ def check_trace(project_dir="."):
     else:
         print("  문서 내용 경계 검사: OK")
 
+    discovery_issues = validate_discovery_open_items(project_dir, current_gate)
+    if discovery_issues:
+        print("  Phase 0 미결 항목 검사: 위반 감지")
+        issues.extend(discovery_issues)
+    else:
+        print("  Phase 0 미결 항목 검사: OK")
+
+    if current_gate in ("gate3", "impl", "gate4", "gate5"):
+        print("  Gate 2 산출물 유지 검사")
+        prior_design_checks = [
+            ("보안가이드", validate_security_guide),
+            ("화면설계서", validate_screen_spec),
+            ("API 정의서", validate_api_spec),
+            ("개발표준정의서", validate_development_standard),
+        ]
+        for label, validator in prior_design_checks:
+            _files, prior_issues = validator(project_dir)
+            if prior_issues:
+                issues.extend(f"  X {issue}" for issue in prior_issues)
+            else:
+                print(f"  O {label} 확인")
+
     group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
 
     # 증분 Rollback: rollback_scope가 있으면 scope 내 REQ만 검증 대상
@@ -1195,6 +1709,22 @@ def check_trace(project_dir="."):
         if security_guide_files and not security_guide_issues:
             print(f"  O 보안가이드 확인 ({', '.join(security_guide_files)})")
         for issue in security_guide_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: 화면설계 기준 증적 여부")
+        screen_spec_files, screen_spec_issues = validate_screen_spec(project_dir)
+        if screen_spec_files and not screen_spec_issues:
+            print(f"  O 화면설계서 기준 증적 확인 ({', '.join(screen_spec_files)})")
+        for issue in screen_spec_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: API 정의서 상세 여부")
+        api_spec_files, api_spec_issues = validate_api_spec(project_dir)
+        if api_spec_files and not api_spec_issues:
+            print(f"  O API 정의서 확인 ({', '.join(api_spec_files)})")
+        elif not api_spec_files and not api_spec_issues:
+            print("  - API 정의서 검사 제외 (프로그램명세서에 API 없음)")
+        for issue in api_spec_issues:
             issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: Gate 3 진입 전 설계 검수 Run 완료 여부")
@@ -1886,6 +2416,193 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
         commit_msg += f" ({feature_label})"
     git_commit(commit_msg, project_dir, paths=["session.json"])
     git_push(project_dir)
+
+
+def sync_session(project_dir="."):
+    session = load_session(project_dir)
+    session["implementation"] = compute_implementation_progress(project_dir, session=session)
+    session["stats"] = compute_stats(project_dir)
+    session["stats"]["implementation"] = session["implementation"]
+    save_session(session, project_dir)
+    return session
+
+
+def cmd_sync_session(project_dir="."):
+    session = sync_session(project_dir)
+    impl = session.get("implementation", {})
+    reqs = impl.get("requirements", {})
+    waves = impl.get("waves", {})
+    print("  session.json 동기화 완료")
+    print(f"  요구사항 구현률: {reqs.get('implemented', 0)}/{reqs.get('total', 0)}")
+    print(f"  Build Wave: {waves.get('completed', 0)}/{waves.get('total', 0)} 완료")
+    if waves.get("current"):
+        print(f"  현재 Wave: {waves.get('current')}")
+
+
+def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
+    if not re.fullmatch(r"BW-\d{3}", bw_id):
+        print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
+        print("  예: BW-001")
+        sys.exit(1)
+
+    session = sync_session(project_dir)
+    current_gate = session.get("current_gate")
+    if current_gate != "impl":
+        print(f"오류: Build Wave는 impl 단계에서만 시작할 수 있습니다. 현재 Gate: {current_gate}")
+        sys.exit(1)
+
+    impl = session.setdefault("implementation", {})
+    waves = impl.setdefault("waves", {})
+    current = waves.get("current")
+    items = waves.setdefault("items", [])
+    if current and current != bw_id:
+        current_item = next((item for item in items if item.get("id") == current), {})
+        if current_item.get("status") not in WAVE_DONE_STATUSES:
+            print(f"오류: 이미 active Build Wave가 있습니다: {current}")
+            print("  먼저 wave-complete 또는 sync-session으로 현재 Wave를 정리하세요.")
+            sys.exit(1)
+
+    existing = next((item for item in items if item.get("id") == bw_id), None)
+    ids = split_csv(related_ids)
+    run_path = find_wave_run_file(project_dir, bw_id)
+    if not run_path:
+        run_id = next_run_id(project_dir)
+        run_title = title or f"Build Wave {bw_id}"
+        rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_build-wave-{bw_id}_{slugify(run_title)}_v0.1.md")
+        skill_path = RUN_SKILLS["build-wave"]
+        content = f"""# {run_id} Build Wave {bw_id} - {run_title}
+
+```yaml
+run_id: {run_id}
+adapter: codex-gpt
+gate: impl
+persona: build
+skill: build-wave
+skill_path: {skill_path}
+bw_id: {bw_id}
+status: In Progress
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Wave 작업지시
+
+{run_title}
+
+## 2. 관련 ID
+
+{format_yaml_list(ids)}
+
+## 3. Orchestrator 지시
+
+- 이 Run은 `{bw_id}` 하나만 수행한다.
+- 다른 Build Wave의 코드 수정은 하지 않는다.
+- subagent를 병렬 실행하더라도 이 Wave의 수정 허용 범위 안에서만 작업한다.
+- 구현 결과는 Orchestrator가 검토하고 통합한다.
+- 완료 시 테스트, 추적표, Run 기록을 갱신하고 `python vulcan.py wave-complete {bw_id}`를 실행한다.
+
+## 4. 수정 범위
+
+| 항목 | 내용 |
+| --- | --- |
+| 수정 허용 | TBD |
+| 읽기 전용 | 요구사항, 설계, 테스트케이스, 개발표준 |
+| 제외 | 다른 Wave 범위, 승인되지 않은 리팩터링, `docs/ref-docs/` |
+
+## 5. 검증 계획
+
+TBD
+
+## 6. 결과 기록
+
+### 변경 파일
+
+TBD
+
+### 검증 결과
+
+TBD
+
+### 추적표 갱신
+
+TBD
+
+### 후속 조치
+
+TBD
+"""
+        write_file(project_dir, rel_path, content)
+        run_path = os.path.join(project_dir, rel_path)
+
+    rel_run = os.path.relpath(run_path, project_dir)
+    if existing:
+        existing["status"] = "In Progress"
+        existing["run"] = rel_run
+        existing["related_ids"] = sorted(set(existing.get("related_ids", []) + ids))
+    else:
+        items.append({"id": bw_id, "status": "In Progress", "run": rel_run, "related_ids": ids})
+
+    waves["current"] = bw_id
+    session["implementation"] = compute_implementation_progress(project_dir, session=session)
+    session["implementation"]["waves"]["current"] = bw_id
+    save_session(session, project_dir)
+    print(f"  Build Wave 시작: {bw_id}")
+    print(f"  Run 문서: {rel_run}")
+
+
+def cmd_wave_complete(bw_id, status="Verified", req_ids="", project_dir="."):
+    if not re.fullmatch(r"BW-\d{3}", bw_id):
+        print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
+        sys.exit(1)
+    if status not in WAVE_KNOWN_STATUSES:
+        print(f"오류: 지원하지 않는 Wave 상태입니다: {status}")
+        print(f"  사용 가능: {', '.join(sorted(WAVE_KNOWN_STATUSES))}")
+        sys.exit(1)
+
+    session = sync_session(project_dir)
+    impl = session.setdefault("implementation", {})
+    waves = impl.setdefault("waves", {})
+    items = waves.setdefault("items", [])
+    item = next((entry for entry in items if entry.get("id") == bw_id), None)
+    if not item:
+        item = {"id": bw_id, "status": status, "run": "", "related_ids": []}
+        items.append(item)
+    item["status"] = status
+
+    completed_reqs = split_csv(req_ids)
+    if completed_reqs:
+        reqs = impl.setdefault("requirements", {})
+        current_ids = set(reqs.get("completed_ids", []))
+        current_ids.update(completed_reqs)
+        reqs["completed_ids"] = sorted(current_ids)
+        item["related_ids"] = sorted(set(item.get("related_ids", []) + completed_reqs))
+
+    if waves.get("current") == bw_id and status in WAVE_DONE_STATUSES:
+        waves["current"] = ""
+
+    rel_run = update_wave_run_status(project_dir, bw_id, status)
+    if rel_run:
+        item["run"] = rel_run
+
+    session["implementation"] = compute_implementation_progress(project_dir, session=session)
+    if waves.get("current") and status not in WAVE_DONE_STATUSES:
+        session["implementation"]["waves"]["current"] = waves.get("current")
+    session["stats"] = compute_stats(project_dir)
+    session["stats"]["implementation"] = session["implementation"]
+    save_session(session, project_dir)
+
+    impl = session.get("implementation", {})
+    req_stats = impl.get("requirements", {})
+    wave_stats = impl.get("waves", {})
+    print(f"  Build Wave 갱신: {bw_id} → {status}")
+    print(f"  요구사항 구현률: {req_stats.get('implemented', 0)}/{req_stats.get('total', 0)}")
+    print(f"  Build Wave: {wave_stats.get('completed', 0)}/{wave_stats.get('total', 0)} 완료")
 
 
 # ── export ────────────────────────────────────────────────────────────────
@@ -2759,6 +3476,9 @@ def main():
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
+  sync-session session.json 대시보드 상태 캐시 동기화
+  wave-start   Build Wave 시작 및 작업지시 Run 생성
+  wave-complete Build Wave 완료/상태 갱신
   rollback     특정 Gate부터 재시작 (해당 Gate 이후 모두 pending 리셋)
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
   upgrade      프레임워크 파일 최신화 (프로젝트 디렉토리에서 실행)
@@ -2771,6 +3491,9 @@ def main():
   python vulcan.py check-trace
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
+  python vulcan.py sync-session
+  python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
+  python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
   python vulcan.py rollback --gate gate2 --reason "요구사항 추가"
   python vulcan.py export
   python vulcan.py upgrade
@@ -2795,6 +3518,18 @@ def main():
     p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
     p_session.add_argument("--status", required=True, choices=["done", "pending"], help="상태")
     p_session.add_argument("--feature", default="", help="작업 기능명")
+
+    subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
+
+    p_wave_start = subparsers.add_parser("wave-start", help="Build Wave 시작 및 작업지시 Run 생성")
+    p_wave_start.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
+    p_wave_start.add_argument("--title", default="", help="Wave 제목")
+    p_wave_start.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+
+    p_wave_complete = subparsers.add_parser("wave-complete", help="Build Wave 완료/상태 갱신")
+    p_wave_complete.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
+    p_wave_complete.add_argument("--status", default="Verified", choices=sorted(WAVE_KNOWN_STATUSES), help="Wave 상태")
+    p_wave_complete.add_argument("--req", default="", help="구현 완료 처리할 REQ-ID 콤마 구분")
 
     p_rollback = subparsers.add_parser("rollback", help="특정 Gate부터 재시작 (이후 Gate 모두 pending 리셋)")
     p_rollback.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="재시작할 Gate")
@@ -2873,6 +3608,12 @@ def main():
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
         cmd_session(gate=args.gate, status=args.status, feature=args.feature)
+    elif args.command == "sync-session":
+        cmd_sync_session()
+    elif args.command == "wave-start":
+        cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
+    elif args.command == "wave-complete":
+        cmd_wave_complete(bw_id=args.bw_id, status=args.status, req_ids=args.req)
     elif args.command == "rollback":
         cmd_rollback(gate=args.gate, reason=args.reason, scope=args.scope or None)
     elif args.command == "run-new":

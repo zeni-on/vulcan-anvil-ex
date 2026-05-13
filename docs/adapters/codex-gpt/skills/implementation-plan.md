@@ -31,6 +31,7 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 5. subagent 위임이 가능한 Wave와 메인 Orchestrator가 직접 통합해야 할 Wave를 구분한다.
 6. Wave 간 순서, 병렬 가능성, 중단 조건을 기록한다.
 7. 구현 시작 전 필요한 사용자 승인 또는 미해결 질문을 남긴다.
+8. 구현 실행 시에는 한 번에 하나의 Wave만 active 상태로 둘 것을 명시한다.
 
 ## Build Wave 작성 기준
 
@@ -44,6 +45,16 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 | 추적표 갱신 | 상태, 증적, 테스트 결과 갱신 항목을 적는다. |
 | 커밋 후보 | Wave 완료 후 사용할 커밋 메시지 후보를 적는다. |
 | 위임 | subagent 위임 여부와 책임 범위를 적는다. |
+
+## 실행 운영 기준
+
+- Implementation Plan은 전체 구현 지도이고, 실제 구현 지시는 Wave별 `build-wave` Run으로 만든다.
+- Wave 수가 4개이면 보통 `implementation-plan` Run 1개와 `build-wave` Run 4개가 생긴다.
+- Orchestrator는 현재 Wave의 작업지시서를 만들고, subagent에게 해당 Wave 범위만 전달한다.
+- 동시에 active 상태인 Wave는 하나만 허용한다.
+- 하나의 Wave 안에서는 파일 책임이 분리된 경우에만 subagent 병렬 실행을 허용한다.
+- 다음 Wave의 읽기 전용 조사나 질문 정리는 가능하지만 코드 수정은 현재 Wave 완료 후 시작한다.
+- Wave 상태와 구현 진행률은 `session.json`을 직접 수정하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
 
 ## 권장 Wave 예시
 
@@ -62,6 +73,7 @@ BW-005 테스트 결과, 화면 증적, 추적표 정리
 - 각 Wave에 테스트와 추적표 갱신 기준이 있다.
 - subagent 위임 가능 범위와 충돌 가능 파일이 식별되어 있다.
 - 사용자 승인 또는 미해결 질문이 명시되어 있다.
+- Wave별 실행 Run 생성 기준과 한 번에 하나의 active Wave 원칙이 명시되어 있다.
 
 ## 출력
 
@@ -76,4 +88,3 @@ BW-005 테스트 결과, 화면 증적, 추적표 정리
 - subagent 위임 계획
 - 중단 조건
 - 다음 `build-wave` Run 제안
-

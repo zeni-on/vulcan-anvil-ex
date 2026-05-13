@@ -100,6 +100,10 @@ docs/adapters/codex-gpt/skills/
 - 현재 Gate 안에서 허용된 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
 - 구현 파일, 테스트 코드, 테스트 결과서, 화면 증적은 `impl` 또는 `gate4` 범위가 승인된 뒤 작성한다. 단, 사용자가 명시적으로 프로토타입을 요청하면 산출물에 `ISSUE` 또는 `DEC`로 예외 범위를 기록한다.
 - 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 Run 구현은 Wave를 생략할 수 있지만, 구현 Run에 생략 이유와 검증 범위를 남긴다.
+- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 구현은 `build` persona 또는 subagent가 수행하고, Orchestrator는 작업지시, 결과 검토, 통합, 검증, 추적성 갱신을 책임진다.
+- 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
+- Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent에게 전달할 최소 입력 계약이 된다.
+- Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계

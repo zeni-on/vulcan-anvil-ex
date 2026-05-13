@@ -122,12 +122,39 @@ export interface BacklogStats {
   }
 }
 
+export interface ImplementationRequirementStats {
+  total: number
+  implemented: number
+  pending: number
+  completed_ids: string[]
+}
+
+export interface BuildWaveStatsItem {
+  id: string
+  status: string
+  run?: string
+  related_ids?: string[]
+}
+
+export interface BuildWaveStats {
+  total: number
+  completed: number
+  current?: string
+  items: BuildWaveStatsItem[]
+}
+
+export interface ImplementationStats {
+  requirements: ImplementationRequirementStats
+  waves: BuildWaveStats
+}
+
 /**
  * session.json stats 필드 전체 타입.
  * check-trace 실행 시 한 번 계산되어 session.json에 기록된다.
  */
 export interface ProjectStats {
   requirements: RequirementsStats
+  implementation?: ImplementationStats
   tests: TestStats
   docs: DocsStats
   backlog?: BacklogStats

@@ -8,3 +8,4 @@ __pycache__/
 pytest-cache-files*/
 dashboard/projects.json
 docs/ref-docs/
+.claude/worktrees/

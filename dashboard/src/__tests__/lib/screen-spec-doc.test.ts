@@ -51,6 +51,18 @@ updated_at: 2026-05-13
 \`\`\`
 
 상태: 기본 상태, 오류 상태를 가진다.
+
+#### 4.2 화면 구성
+
+| 영역 | 구성요소 | 설명 | 표시 조건 |
+| --- | --- | --- | --- |
+| 인증 폼 | 이메일, 비밀번호 | 로그인 정보 입력 | 기본 |
+
+## 5. UI 테스트 및 증적 기준
+
+| UI-ID | 대상 SCR | 사용자 흐름 | 기준 시안 | Viewport | 캡처 경로 | 비교 기준 | 관련 AC/SEC |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| UI-001 | SCR-001 | 로그인 | UIREF-001 | Desktop 1280x720 | docs/artifacts/04-review/evidence/ui/UI-001.png | 폼 배치 | AC-001-01 |
 `
 
 describe('screenSpecDoc parser', () => {
@@ -67,5 +79,8 @@ describe('screenSpecDoc parser', () => {
     expect(model.details[0].scrId).toBe('SCR-001')
     expect(model.details[0].wireframe).toContain('[Email____]')
     expect(model.details[0].stateText).toContain('오류 상태')
+    expect(model.details[0].tables[0].title).toBe('4.2 화면 구성')
+    expect(model.details[0].tables[0].rows[0]).toContain('인증 폼')
+    expect(model.extraTables[0].title).toBe('5. UI 테스트 및 증적 기준')
   })
 })

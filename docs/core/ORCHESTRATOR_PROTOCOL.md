@@ -74,6 +74,31 @@ Orchestrator는 `AGENT_PERSONAS.md`의 persona를 사용한다.
 
 Orchestrator가 직접 해도 되는 일은 작은 탐색, 짧은 문서 보정, 검증 명령 실행, 결과 통합이다. 범위가 커지거나 관점 분리가 필요하면 persona Run으로 나눈다.
 
+구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 구현은 `build` persona 또는 subagent가 수행하고, Orchestrator는 작업지시, 결과 검토, 통합, 검증, 추적성 갱신을 책임진다. 단, subagent를 사용할 수 없거나 충돌 해결이 필요한 경우에는 최소한의 연결 수정, 문서 갱신, 테스트 보정만 직접 수행할 수 있으며 Run 기록에 그 이유를 남긴다.
+
+## 5.1 Build Wave 오케스트레이션
+
+구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
+
+- Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다.
+- 실제 구현은 Wave마다 별도의 `Build Wave Run`을 만든 뒤 진행한다.
+- 하나의 Wave 안에서는 여러 subagent를 병렬로 사용할 수 있다.
+- 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
+- 다음 Wave의 분석, 읽기 전용 검토, 질문 정리는 허용할 수 있지만 코드 수정은 금지한다.
+- Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
+
+권장 흐름:
+
+```text
+Implementation Plan Run
+→ vulcan.py wave-start BW-001
+→ BW-001 Build Wave Run을 subagent 작업지시서로 전달
+→ subagent 결과 검토와 통합
+→ 테스트, 추적표, Run 기록 갱신
+→ vulcan.py wave-complete BW-001
+→ vulcan.py wave-start BW-002
+```
+
 ## 6. Orchestrator Plan 계약
 
 `vulcan.py orchestrator-plan`은 Orchestrator가 다음 작업을 잊지 않도록 `docs/runs/`에 실행 계획 Run을 만든다.

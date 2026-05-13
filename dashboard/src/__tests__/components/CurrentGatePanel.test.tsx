@@ -50,6 +50,34 @@ const mockStats: ProjectStats = {
     ac_defined:  10,
     ac_missing:  2,
   },
+  implementation: {
+    requirements: {
+      total: 12,
+      implemented: 8,
+      pending: 4,
+      completed_ids: [
+        'REQ-001-01',
+        'REQ-001-02',
+        'REQ-002-01',
+        'REQ-002-02',
+        'REQ-003-01',
+        'REQ-003-02',
+        'REQ-004-01',
+        'REQ-004-02',
+      ],
+    },
+    waves: {
+      total: 4,
+      completed: 1,
+      current: 'BW-002',
+      items: [
+        { id: 'BW-001', status: 'Verified', run: 'docs/runs/RUN-010_build-wave-BW-001.md' },
+        { id: 'BW-002', status: 'In Progress', run: 'docs/runs/RUN-011_build-wave-BW-002.md' },
+        { id: 'BW-003', status: 'Planned' },
+        { id: 'BW-004', status: 'Planned' },
+      ],
+    },
+  },
   tests: {
     total:   20,
     passed:  14,
@@ -163,20 +191,28 @@ describe('UT-011-16: current_gate === "impl"', () => {
     expect(screen.getByTestId('gate-content-impl')).toBeInTheDocument()
   })
 
-  it('role="progressbar"인 요소가 렌더링된다', () => {
+  it('요구사항 구현률 progressbar가 렌더링된다', () => {
     render(<CurrentGatePanel session={makeSession('impl')} stats={mockStats} docs={mockDocs} />)
-    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.getByLabelText('요구사항 구현률')).toBeInTheDocument()
   })
 
-  it('구현 진행률 텍스트(구현 진행률)가 표시된다', () => {
+  it('요구사항 구현률 텍스트가 표시된다', () => {
     render(<CurrentGatePanel session={makeSession('impl')} stats={mockStats} docs={mockDocs} />)
-    expect(screen.getByText('구현 진행률')).toBeInTheDocument()
+    expect(screen.getByText('요구사항 구현률')).toBeInTheDocument()
   })
 
   it('진행률 값 텍스트(8 / 12)가 표시된다', () => {
     render(<CurrentGatePanel session={makeSession('impl')} stats={mockStats} docs={mockDocs} />)
     // "8 / 12 (67%)" 형태로 출력됨
     expect(screen.getByText(/8 \/ 12/)).toBeInTheDocument()
+  })
+
+  it('Build Wave 진행률과 현재 Wave가 표시된다', () => {
+    render(<CurrentGatePanel session={makeSession('impl')} stats={mockStats} docs={mockDocs} />)
+    expect(screen.getByTestId('build-wave-progress')).toBeInTheDocument()
+    expect(screen.getByText('Build Wave')).toBeInTheDocument()
+    expect(screen.getByText(/1 \/ 4/)).toBeInTheDocument()
+    expect(screen.getByText('현재 Wave: BW-002')).toBeInTheDocument()
   })
 })
 

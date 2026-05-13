@@ -6,7 +6,16 @@ import {
   ScreenEvidenceRow,
   ScreenListRow,
   ScreenSpecDocModel,
+  ScreenTable,
 } from '@/lib/screenSpecDoc'
+
+function encodeDocPath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/')
+}
+
+function imageUrl(projectId: string, path: string) {
+  return `/api/projects/${encodeURIComponent(projectId)}/raw/${encodeDocPath(path)}`
+}
 
 function EmptyValue({ children }: { children?: string }) {
   return children ? <>{children}</> : <span className="text-slate-400">-</span>
@@ -89,12 +98,38 @@ function renderScreenRows(rows: ScreenListRow[]) {
   ])
 }
 
-function renderEvidenceRows(rows: ScreenEvidenceRow[]) {
+function DesignTable({ table }: { table: ScreenTable }) {
+  return (
+    <div>
+      <div className="mb-1 text-[11px] font-semibold text-slate-600">{table.title}</div>
+      <SmallTable headers={table.headers} rows={table.rows} />
+    </div>
+  )
+}
+
+function EvidencePreview({ row, projectId }: { row: ScreenEvidenceRow; projectId: string }) {
+  const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(row.file)
+  if (!isImage) return <span className="break-all">{row.file || '-'}</span>
+
+  return (
+    <div className="space-y-1">
+      <span className="break-all font-mono text-[11px] text-slate-600">{row.file}</span>
+      <img
+        src={imageUrl(projectId, row.file)}
+        alt={`${row.refId} ${row.scrId}`}
+        className="max-h-28 rounded border border-slate-200 bg-white object-contain"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
+function renderEvidenceRows(rows: ScreenEvidenceRow[], projectId: string) {
   return rows.map((row) => [
     <IdText key="scr" value={row.scrId} />,
     <IdText key="ref" value={row.refId} tone="green" />,
     row.source || '-',
-    row.file || '-',
+    <EvidencePreview key="file" row={row} projectId={projectId} />,
     row.viewport || '-',
     row.criteria || '-',
     row.status || '-',
@@ -152,11 +187,25 @@ function ScreenCard({ detail }: { detail: ScreenDetail }) {
           {detail.stateText}
         </div>
       )}
+
+      {detail.tables.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {detail.tables.map((table, index) => (
+            <DesignTable key={`${detail.scrId}-${table.title}-${index}`} table={table} />
+          ))}
+        </div>
+      )}
     </article>
   )
 }
 
-export default function ScreenSpecDocView({ model }: { model: ScreenSpecDocModel }) {
+export default function ScreenSpecDocView({
+  model,
+  projectId,
+}: {
+  model: ScreenSpecDocModel
+  projectId: string
+}) {
   return (
     <div
       className="space-y-6 rounded-md bg-slate-100 p-4 text-sm text-slate-800"
@@ -189,7 +238,7 @@ export default function ScreenSpecDocView({ model }: { model: ScreenSpecDocModel
         <Section title="화면 시안 및 기준 증적">
           <SmallTable
             headers={['SCR', 'UIREF', '출처', '파일/URL', 'Viewport', '비교 기준', '상태']}
-            rows={renderEvidenceRows(model.evidences)}
+            rows={renderEvidenceRows(model.evidences, projectId)}
           />
         </Section>
       )}
@@ -201,6 +250,16 @@ export default function ScreenSpecDocView({ model }: { model: ScreenSpecDocModel
           ))}
         </div>
       </Section>
+
+      {model.extraTables.length > 0 && (
+        <Section title="추가 설계 표">
+          <div className="space-y-3">
+            {model.extraTables.map((table, index) => (
+              <DesignTable key={`${table.title}-${index}`} table={table} />
+            ))}
+          </div>
+        </Section>
+      )}
     </div>
   )
 }

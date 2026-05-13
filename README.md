@@ -124,6 +124,16 @@ Implementation Plan
 
 각 `Build Wave`는 하나의 검증 가능한 구현 배치입니다. Wave가 끝나면 코드, 테스트, 추적표/Run 기록, 검증 결과, 커밋 후보가 함께 남아야 합니다. Wave 단위는 subagent 위임, 커밋, 실패 시 재작업 범위의 기본 단위가 됩니다.
 
+Orchestrator는 동시에 하나의 Wave만 active 상태로 둡니다. 하나의 Wave 안에서는 여러 subagent에게 일을 나눌 수 있지만, 다른 Wave의 코드 수정은 현재 Wave가 완료된 뒤 시작합니다. `Implementation Plan`은 전체 지도이고, Wave별 `build-wave` Run은 subagent에게 전달하는 작업지시서이자 결과보고서입니다.
+
+```powershell
+python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
+python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01
+python vulcan.py sync-session
+```
+
+대시보드용 구현 진행률은 `session.json`에 캐시되지만, 원본 판단 근거는 Run 문서, 요구사항추적표, 테스트 결과입니다. 따라서 에이전트는 `session.json`을 직접 편집하지 않고 `vulcan.py` 명령으로 상태를 갱신합니다.
+
 Build Wave를 생략할 수는 있지만, 구현 Run에는 생략 이유, 단일 Run 범위, 관련 ID, 실행할 테스트, 추적표 갱신 기준, 커밋 메시지 후보를 남깁니다.
 
 ## 핵심 개념
