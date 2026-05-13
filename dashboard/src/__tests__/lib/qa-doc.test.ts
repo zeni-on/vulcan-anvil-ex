@@ -96,8 +96,7 @@ updated_at: 2026-05-13
 `)
 
     expect(model.documentKind).toBe('finding')
-    expect(model.findings[0].id).toBe('해당없음')
-    expect(model.findings[0].status).toBe('Closed')
+    expect(model.findings).toHaveLength(0)
     expect(model.evidences).toHaveLength(2)
     expect(model.evidences[0].id).toBe('EV-UI-001')
     expect(model.judgement).toContain('Open FIND 없음')

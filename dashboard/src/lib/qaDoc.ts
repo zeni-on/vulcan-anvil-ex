@@ -176,6 +176,19 @@ function splitRelatedIds(value: string): string[] {
     .filter(Boolean)
 }
 
+function isEmptyFindingId(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  return (
+    !normalized ||
+    normalized === '-' ||
+    normalized === 'n/a' ||
+    normalized === 'na' ||
+    normalized === 'none' ||
+    normalized === '해당없음' ||
+    normalized === '없음'
+  )
+}
+
 function evidenceMatchesRelatedIds(evidence: QaEvidenceRow, relatedIds: Set<string>): boolean {
   for (const relatedId of relatedIds) {
     if (evidence.id === relatedId || evidence.id.startsWith(`${relatedId}-`)) return true
@@ -237,15 +250,17 @@ export function parseQaDoc(content: string): QaDocModel {
     }))
   })
 
-  const tableFindings = (findingTable?.rows ?? []).map((row) => ({
-    id: getCell(row, ['FIND-ID']),
-    title: getCell(row, ['제목']),
-    severity: getCell(row, ['심각도']),
-    status: getCell(row, ['상태']),
-    crRequired: getCell(row, ['CR 필요 여부']),
-    relatedIds: getCell(row, ['관련 ID']),
-  }))
-  const overviewFinding = findingOverview['FIND-ID']
+  const tableFindings = (findingTable?.rows ?? [])
+    .map((row) => ({
+      id: getCell(row, ['FIND-ID']),
+      title: getCell(row, ['제목']),
+      severity: getCell(row, ['심각도']),
+      status: getCell(row, ['상태']),
+      crRequired: getCell(row, ['CR 필요 여부']),
+      relatedIds: getCell(row, ['관련 ID']),
+    }))
+    .filter((finding) => !isEmptyFindingId(finding.id))
+  const overviewFinding = findingOverview['FIND-ID'] && !isEmptyFindingId(findingOverview['FIND-ID'])
     ? [{
         id: findingOverview['FIND-ID'],
         title: findingOverview['제목'] ?? '',
