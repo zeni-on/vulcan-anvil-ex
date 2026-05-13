@@ -2,7 +2,7 @@
 
 ```yaml
 ---
-document_id: DOC-QA-G4-004
+document_id: DOC-QA-G4-001
 title: QA Finding
 title_ko: QA 발견사항
 project:

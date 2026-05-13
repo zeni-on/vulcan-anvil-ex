@@ -1,16 +1,17 @@
 ---
 name: security-baseline
-description: "OWASP Top 10 기반 보안 체크리스트와 SEC-ID 작성·검증 기준을 제공하는 스킬. Use when architect가 Gate 2 설계 산출물에 보안 요건(SEC-ID)을 정의·문서화할 때. Use when qa가 Gate 4 리뷰의 Blocker 항목 D(보안 점검)를 수행할 때. Use when 사용자가 '보안 점검', 'OWASP', '취약점 체크', '보안 설계 검토', 'SEC-ID 작성'을 요청할 때. Use when 인증/인가/암호화/입력 검증/세션 관리 등 보안 민감 영역을 설계하거나 리뷰할 때. NOT for 침투 테스트(pentest) 실행, 외부 보안 인증 심사(ISMS·SOC2 등), 보안 사고 대응(인시던트 핸들링), 위협 모델링 워크숍 진행."
+description: "OWASP Top 10 기반 보안 체크리스트와 SEC-ID 작성·검증 기준을 제공하는 스킬. Use when design이 Gate 2 설계 산출물에 보안 요건(SEC-ID)을 정의·문서화할 때. Use when security-review가 보안 검토를 수행할 때. Use when review가 Gate 4 리뷰의 Blocker 항목 D(보안 점검)를 수행할 때. Use when 사용자가 '보안 점검', 'OWASP', '취약점 체크', '보안 설계 검토', 'SEC-ID 작성'을 요청할 때. Use when 인증/인가/암호화/입력 검증/세션 관리 등 보안 민감 영역을 설계하거나 리뷰할 때. NOT for 침투 테스트(pentest) 실행, 외부 보안 인증 심사(ISMS·SOC2 등), 보안 사고 대응(인시던트 핸들링), 위협 모델링 워크숍 진행."
 ---
 
 # Security Baseline — OWASP Top 10 보안 체크리스트
 
-architect와 qa 에이전트가 보안 설계 및 검증 시 참조하는 보안 기준선.
+design, security-review, review 에이전트가 보안 설계 및 검증 시 참조하는 보안 기준선.
 
 ## 대상 에이전트
 
-- `architect` — Gate 2에서 SEC-ID 작성 시 참조
-- `qa` — Gate 4에서 Blocker 항목 D(보안 점검) 수행 시 참조
+- `design` — Gate 2에서 SEC-ID 작성 시 참조
+- `security-review` — 보안 검토 수행 시 참조
+- `review` — Gate 4에서 Blocker 항목 D(보안 점검) 수행 시 참조
 
 ## OWASP Top 10 체크리스트
 
@@ -86,8 +87,8 @@ Gate 4 Blocker 항목 D 평가 시:
 
 1. 설계 문서의 SEC-ID 목록을 확인한다
 2. 각 SEC-ID의 대응 방안이 코드에 구현되었는지 검증한다
-3. `docs/05-security/baseline.md`의 OWASP 체크리스트를 대조한다
-4. 프로젝트별 추가 보안 요건은 `docs/05-security/compliance/`를 확인한다
+3. `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md`의 OWASP/KISA 체크리스트를 대조한다 (`docs/core/SECURITY_BASELINE.md`, `docs/core/KISA_SECURITY_RULES.md`를 기준으로 함)
+4. 프로젝트별 추가 보안 요건은 `docs/seed-docs/reference-standards/`와 `docs/ref-docs/`(민감)를 확인한다
 
 ### 판정 기준
 - **Pass**: 모든 SEC-ID 대응 완료 + OWASP 체크리스트 Critical/High 항목 충족

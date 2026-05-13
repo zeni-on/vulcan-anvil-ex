@@ -1,11 +1,33 @@
-# Vulcan-Anvil 핵심 원칙
+# Vulcan-Anvil Ex 핵심 원칙
+
+이 규칙은 **항상 로드**된다. 모든 작업의 공통 전제다.
+
+## 원칙
 
 - 플래너는 코드를 쓰지 않는다. 실행자는 계획만 따른다.
 - Gate 문서 없이 구현을 시작하지 않는다.
 - 각 Gate는 사용자 승인 후 전환한다.
-- session.json으로 Gate 상태를 추적한다.
-- 에이전트가 명령어를 사용자에게 안내하는 것이 아니라 직접 실행한다.
-- check-trace 실패 상태에서 Gate 전환 금지.
-- **Gate 4 Blocker/Major 이슈는 백로그 이월 금지** — 현 Gate 내에서 해결한다 (`docs/06-backlog/PROCESS.md` §6).
-- **증분 Gate Rollback을 우선** — 🟡/🔴 백로그 처리 시 `vulcan.py rollback --scope REQ-XXX`로 영향 범위를 명시한다. 전체 rollback은 scope를 특정할 수 없을 때만 사용한다.
-- **Trivial 기준은 "문서 영향 없음"** — 시간이 짧아도 설계 문서에 반영할 결정을 포함하면 🟡이다.
+- 작업 단위는 **Run**이다. 의미 있는 모든 변경은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `API`, `DB`, `SEC`, `UT`, `IT`, `PT`, `UI`, `FIND`, `CR` 같은 ID와 연결한다.
+- `session.json`으로 Gate 상태를 추적한다. `session.json.current_gate`보다 앞선 산출물·구현·테스트·증적을 임의로 만들지 않는다.
+- 에이전트가 명령어를 사용자에게 안내하는 것이 아니라 **직접 실행**한다 (`python vulcan.py ...`).
+- `check-trace` 실패 상태에서 Gate 전환 금지.
+- 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다. `not_run` / `failed` / `partial`을 명시한다.
+
+## 변경 분류 (`docs/core/CHANGE_CONTROL_PROCESS.md`)
+
+- **FIND** — 승인 범위 안의 결함. Gate 4 QA Fix Loop로 처리.
+- **CR** — 요구사항/인수기준/설계/보안기준선/데이터설계/릴리즈 범위 변경. Gate 재진입.
+- **ISSUE** — 결론이 어려운 질문/위험/보류. Backlog로 남김.
+- **Gate 4 Blocker/Major는 백로그 이월 금지** — 현 Gate 내에서 해결한다.
+
+## 증분 Gate Rollback
+
+🟡/🔴 백로그 처리 시 `python vulcan.py rollback --scope REQ-XXX,...` 형태로 영향 범위를 명시한다. 전체 rollback은 scope를 특정할 수 없을 때만 사용한다.
+
+## Build Wave (`docs/core/AGENT_RUN_PROTOCOL.md` §5.1)
+
+구현 규모가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run을 만들어 Build Wave(`BW-NNN`)로 분할한다. active Wave는 하나만 둔다.
+
+## 운영 상태와 업무 내용의 분리
+
+`session.json.current_gate`, 현재 Run 번호, `check-trace` 통과 여부 같은 운영 상태는 프로젝트 제약/요구사항/성공 기준에 적지 않는다. `session.json`, `docs/runs/`, 완료 보고에만 남긴다.

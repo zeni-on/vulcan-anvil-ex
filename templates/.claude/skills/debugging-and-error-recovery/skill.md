@@ -19,7 +19,7 @@ Systematic debugging with structured triage. When something breaks, stop adding 
 - A bug report arrives
 - An error appears in logs or console
 - Something worked before and stopped working
-- **Vulcan integration**: 구현 단계(frontend-dev / backend-dev)에서 발생한 오류는 이 스킬을 따른다. Gate 4(QA 리뷰) 도중 발견된 결함도 동일. Gate 진입을 막고 root cause를 먼저 해결한다.
+- **Vulcan integration**: 구현 단계(build-frontend / build-backend)에서 발생한 오류는 이 스킬을 따른다. Gate 4(QA 리뷰) 도중 발견된 결함도 동일. Gate 진입을 막고 root cause를 먼저 해결한다.
 
 ## The Stop-the-Line Rule
 
