@@ -12,14 +12,22 @@
  * @see docs/02-design/ui-design.md §DocDrawer (REQ-010)
  */
 
-import { Children, isValidElement, useEffect, useRef, type ReactNode } from 'react'
+import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import { X, AlertCircle } from 'lucide-react'
+import { X, AlertCircle, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
+import { isQaDoc, parseQaDoc } from '@/lib/qaDoc'
+import { isRequirementsDoc, parseRequirementsDoc } from '@/lib/requirementsDoc'
+import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
+import { isTraceabilityDoc, parseTraceabilityDoc } from '@/lib/traceabilityDoc'
 import MermaidBlock from './MermaidBlock'
+import QaDocView from './QaDocView'
+import RequirementsDocView from './RequirementsDocView'
+import ScreenSpecDocView from './ScreenSpecDocView'
+import TraceabilityDocView from './TraceabilityDocView'
 
 // rehype-sanitize 기본 스키마는 <code>의 className을 제거한다. mermaid 코드 블록을
 // 식별하려면 language-* 클래스가 보존되어야 하므로 code의 className을 허용한다.
@@ -46,6 +54,40 @@ function extractText(node: ReactNode): string {
     return Children.toArray(children).map(extractText).join('')
   }
   return ''
+}
+
+interface DocumentMetadata {
+  title?: string
+  titleKo?: string
+  project?: string
+  status?: string
+  updatedAt?: string
+}
+
+function parseMetadataBlock(block: string): DocumentMetadata {
+  const metadata: DocumentMetadata = {}
+  for (const line of block.split(/\r?\n/)) {
+    const match = line.match(/^([A-Za-z_]+):\s*(.+)$/)
+    if (!match) continue
+    const [, key, value] = match
+    const cleanValue = value.trim()
+    if (key === 'title') metadata.title = cleanValue
+    else if (key === 'title_ko') metadata.titleKo = cleanValue
+    else if (key === 'project') metadata.project = cleanValue
+    else if (key === 'status') metadata.status = cleanValue
+    else if (key === 'updated_at') metadata.updatedAt = cleanValue
+  }
+  return metadata
+}
+
+function splitDocumentMetadata(content: string): { metadata: DocumentMetadata; body: string; raw?: string } {
+  const match = content.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/i)
+  if (!match) return { metadata: {}, body: content }
+  return {
+    metadata: parseMetadataBlock(match[1]),
+    body: content.replace(match[0], '').trimStart(),
+    raw: match[1].trim(),
+  }
 }
 
 // react-markdown의 code 렌더러를 가로채 ```mermaid 블록을 SVG로 변환한다.
@@ -85,6 +127,8 @@ function LoadingSkeleton() {
 
 function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) {
   const { content, isLoading, error } = useDocContent(projectId, doc)
+  const [showMetadata, setShowMetadata] = useState(false)
+  const genericDoc = splitDocumentMetadata(content ?? '')
 
   if (isLoading) return <LoadingSkeleton />
 
@@ -107,30 +151,81 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       data-drawer-scroll
       className="p-6 overflow-y-auto flex-1 focus:outline-none"
     >
-      <div className="prose prose-invert prose-sm max-w-none
-        prose-headings:text-zinc-100
-        prose-p:text-zinc-300
-        prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-        prose-code:bg-zinc-800 prose-code:text-zinc-200 prose-code:px-1 prose-code:rounded prose-code:text-xs
-        prose-pre:bg-zinc-800 prose-pre:border prose-pre:border-zinc-700
-        prose-blockquote:border-zinc-600 prose-blockquote:text-zinc-400
-        prose-th:text-zinc-200 prose-td:text-zinc-300
-        prose-hr:border-zinc-700
-        prose-strong:text-zinc-200
-        prose-li:text-zinc-300
-        prose-table:w-full prose-table:table-auto
-        prose-th:break-words prose-td:break-words prose-td:align-top
-        [&_table]:w-full [&_table]:border-collapse
-        [&_td]:py-1.5 [&_td]:px-2 [&_td]:border [&_td]:border-zinc-700 [&_td]:text-xs [&_td]:align-top [&_td]:break-words
-        [&_th]:py-1.5 [&_th]:px-2 [&_th]:border [&_th]:border-zinc-700 [&_th]:text-xs [&_th]:bg-zinc-800">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
-          components={markdownComponents}
-        >
-          {content ?? ''}
-        </ReactMarkdown>
-      </div>
+      {content && isRequirementsDoc(doc, content) ? (
+        <RequirementsDocView model={parseRequirementsDoc(content)} />
+      ) : content && isTraceabilityDoc(doc, content) ? (
+        <TraceabilityDocView model={parseTraceabilityDoc(content)} />
+      ) : content && isScreenSpecDoc(doc, content) ? (
+        <ScreenSpecDocView model={parseScreenSpecDoc(content)} />
+      ) : content && isQaDoc(doc, content) ? (
+        <QaDocView model={parseQaDoc(content)} projectId={projectId} />
+      ) : (
+        <div className="rounded-md bg-slate-100 p-4 text-slate-800">
+          {(genericDoc.metadata.titleKo || genericDoc.metadata.title) && (
+            <header className="mb-4 rounded-md border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-4 shadow-sm">
+              <div className="text-xs font-medium text-blue-700">
+                {genericDoc.metadata.title ?? 'Document'}
+              </div>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">
+                {genericDoc.metadata.titleKo ?? genericDoc.metadata.title}
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                {genericDoc.metadata.project && <span>프로젝트: {genericDoc.metadata.project}</span>}
+                {genericDoc.metadata.status && <span>상태: {genericDoc.metadata.status}</span>}
+                {genericDoc.metadata.updatedAt && <span>수정일: {genericDoc.metadata.updatedAt}</span>}
+              </div>
+              {genericDoc.raw && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowMetadata((value) => !value)}
+                    className="inline-flex items-center gap-1 rounded border border-blue-200 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                    aria-expanded={showMetadata}
+                  >
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform ${showMetadata ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                    메타데이터 보기
+                  </button>
+                  {showMetadata && (
+                    <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-xs text-slate-100">
+                      <code>{genericDoc.raw}</code>
+                    </pre>
+                  )}
+                </div>
+              )}
+            </header>
+          )}
+          <div className="prose prose-slate prose-sm max-w-none rounded-md bg-white p-5 shadow-sm
+            prose-headings:text-slate-950
+            prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-3
+            prose-h2:mt-8 prose-h2:border-l-4 prose-h2:border-blue-500 prose-h2:pl-2
+            prose-p:text-slate-700
+            prose-a:text-blue-700 prose-a:no-underline hover:prose-a:underline
+            prose-code:bg-slate-100 prose-code:text-slate-900 prose-code:px-1 prose-code:rounded prose-code:text-xs
+            prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800
+            prose-blockquote:border-blue-300 prose-blockquote:bg-blue-50 prose-blockquote:px-3 prose-blockquote:py-1 prose-blockquote:text-slate-700
+            prose-th:text-blue-950 prose-td:text-slate-700
+            prose-hr:border-slate-200
+            prose-strong:text-slate-950
+            prose-li:text-slate-700
+            prose-table:w-full prose-table:table-auto
+            prose-th:break-words prose-td:break-words prose-td:align-top
+            [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-md
+            [&_td]:border [&_td]:border-slate-200 [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_td]:text-xs [&_td]:break-words
+            [&_th]:border [&_th]:border-blue-300 [&_th]:bg-blue-100 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-xs [&_th]:font-semibold
+            [&_tbody_tr:nth-child(even)]:bg-slate-50">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+              components={markdownComponents}
+            >
+              {genericDoc.body}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -151,9 +246,14 @@ function getFocusable(container: HTMLElement): HTMLElement[] {
 export default function DocDrawer({ projectId, doc, onClose }: DocDrawerProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
   // Drawer가 열릴 때 직전 포커스를 저장 → 닫힐 때 복원하기 위함
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const isOpen = doc !== null
+
+  useEffect(() => {
+    if (!isOpen) setIsExpanded(false)
+  }, [isOpen])
 
   // ESC 닫기 + Tab 포커스 트랩 + PageUp/Down 스크롤 위임
   useEffect(() => {
@@ -275,9 +375,10 @@ export default function DocDrawer({ projectId, doc, onClose }: DocDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label={doc?.name ?? '문서 뷰어'}
-        className={`fixed right-0 top-0 h-full w-[60vw] max-w-none min-w-[480px] z-50 flex flex-col
+        className={`fixed right-0 top-0 h-full max-w-none z-50 flex flex-col
           bg-zinc-900 border-l border-zinc-700
           transition-transform duration-300 ease-out
+          ${isExpanded ? 'w-[92vw] min-w-0' : 'w-[60vw] min-w-[480px]'}
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {/* 헤더 */}
@@ -285,14 +386,29 @@ export default function DocDrawer({ projectId, doc, onClose }: DocDrawerProps) {
           <h2 className="text-sm font-semibold text-zinc-100 truncate pr-4 font-mono">
             {doc?.name ?? ''}
           </h2>
-          <button
-            ref={closeBtnRef}
-            onClick={onClose}
-            aria-label="닫기"
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            <X className="w-4 h-4" aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((value) => !value)}
+              aria-label={isExpanded ? '기본 폭으로 보기' : '넓게 보기'}
+              title={isExpanded ? '기본 폭으로 보기' : '넓게 보기'}
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <Maximize2 className="w-4 h-4" aria-hidden="true" />
+              )}
+            </button>
+            <button
+              ref={closeBtnRef}
+              onClick={onClose}
+              aria-label="닫기"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
         {/* 콘텐츠 */}

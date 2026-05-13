@@ -81,6 +81,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
     ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
     ("docs/templates/DATABASE_SPEC_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md"),
+    ("docs/templates/SECURITY_GUIDE_TEMPLATE.md", "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md"),
     ("docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md", "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md"),
     ("docs/templates/TEST_CASE_TEMPLATE.md", "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md"),
     ("docs/templates/QA_FINDING_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"),
@@ -806,6 +807,17 @@ def find_development_standard_file(project_dir="."):
     ])
 
 
+def find_security_guide_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "security"),
+        r"(security.*guide|보안.*가이드).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "security-guide.md"),
+        os.path.join("docs", "02-design", "Security-Guide.md"),
+    ])
+
+
 def split_trace_values(value):
     return [
         item.strip().strip("`")
@@ -846,7 +858,7 @@ def validate_development_standard(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD", content):
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
         issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
 
     required_terms = [
@@ -856,6 +868,35 @@ def validate_development_standard(project_dir="."):
         ("주석/코딩 컨벤션", r"주석|코드 컨벤션|네이밍"),
         ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|go test|cargo test|dotnet test"),
         ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    return [rel_path], issues
+
+
+def validate_security_guide(project_dir="."):
+    issues = []
+    path = find_security_guide_file(project_dir)
+    if not path:
+        return [], ["보안가이드 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("SEC-ID", r"SEC-\d{3}|SEC-[A-Z]+"),
+        ("참조 표준", r"KISA|SR\d+-\d+|OWASP|CWE"),
+        ("구현 규격", r"구현 규격|값 또는 규칙|적용 위치"),
+        ("화면/프로그램/DB 반영 기준", r"화면설계서|프로그램명세서|DB명세서|Screen Spec|Program Spec|Database Spec"),
+        ("검증 ID", r"UT-|IT-|PT-|UI-|검증 ID|테스트 ID"),
     ]
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
@@ -1148,6 +1189,13 @@ def check_trace(project_dir="."):
                     print(f"  O {group} - {filename} 확인")
                 else:
                     issues.append(f"  X {group} - docs/02-design/{filename} 없음")
+
+        print("\n  Gate 2 검사: 보안가이드 확정 여부")
+        security_guide_files, security_guide_issues = validate_security_guide(project_dir)
+        if security_guide_files and not security_guide_issues:
+            print(f"  O 보안가이드 확인 ({', '.join(security_guide_files)})")
+        for issue in security_guide_issues:
+            issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: Gate 3 진입 전 설계 검수 Run 완료 여부")
         required_review_runs = [
@@ -2885,3 +2933,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

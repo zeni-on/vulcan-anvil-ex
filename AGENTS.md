@@ -31,6 +31,7 @@
 - `docs/core/DOCUMENT_METADATA.md`
 - `docs/core/REFERENCE_STANDARDS.md`
 - `docs/core/SECURITY_BASELINE.md`
+- `docs/core/KISA_SECURITY_RULES.md`
 - `docs/core/DATA_STANDARD_RULES.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`

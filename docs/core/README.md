@@ -10,6 +10,7 @@
 - `DOCUMENT_METADATA.md`: 공식 문서에 공통으로 들어갈 메타데이터 필드
 - `REFERENCE_STANDARDS.md`: 보안 가이드와 공공데이터 표준 참조 및 준용 규칙
 - `SECURITY_BASELINE.md`: KISA/SR, OWASP, CWE를 연결한 보안 요구사항/설계/테스트 기준선
+- `KISA_SECURITY_RULES.md`: KISA 개발보안 가이드의 반복 사용 항목을 설계/구현 규격 작성용으로 정리한 근거 기준표
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전, 용어, 도메인, 데이터 항목명 관리 규칙
 - `AGENT_PERSONAS.md`: 단계별 에이전트 persona와 subagent 위임 규칙
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
