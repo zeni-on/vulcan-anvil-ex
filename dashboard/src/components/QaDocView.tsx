@@ -244,10 +244,16 @@ export default function QaDocView({
   const evidencesById = useMemo(() => {
     const map = new Map<string, QaEvidenceRow[]>()
     for (const evidence of model.evidences) {
-      const key = evidence.id.split('-').slice(0, 2).join('-')
-      const existing = map.get(key) ?? []
-      existing.push(evidence)
-      map.set(key, existing)
+      const keys = new Set<string>([evidence.id])
+      const uiMatch = evidence.id.match(/^(UI-\d{3})/)
+      const reqMatch = evidence.id.match(/^(REQ-\d{3}-\d{2})/)
+      if (uiMatch) keys.add(uiMatch[1])
+      if (reqMatch) keys.add(reqMatch[1])
+      for (const key of keys) {
+        const existing = map.get(key) ?? []
+        existing.push(evidence)
+        map.set(key, existing)
+      }
     }
     return map
   }, [model.evidences])

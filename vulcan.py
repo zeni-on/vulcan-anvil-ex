@@ -87,6 +87,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md", "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md"),
     ("docs/templates/TEST_CASE_TEMPLATE.md", "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md"),
     ("docs/templates/QA_FINDING_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"),
+    ("docs/templates/TEST_RESULT_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"),
     ("docs/templates/CHANGE_REQUEST_TEMPLATE.md", "docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md"),
 ]
 PROJECT_ROOT_FILES = [
