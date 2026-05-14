@@ -9,6 +9,7 @@ paths:
 
 | 영역 | 경로 | 템플릿 | 대표 ID |
 | --- | --- | --- | --- |
+| **SW 아키텍처** (먼저 작성) | `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md` | `SW_ARCHITECTURE_TEMPLATE.md` | `CNT`, `CMP`, `FLOW`, `ADR` |
 | 기능 명세 | `docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md` | `FUNCTION_SPEC_TEMPLATE.md` | `FUNC` |
 | 프로그램 명세 | `docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md` | `PROGRAM_SPEC_TEMPLATE.md` | `PGM` |
 | API 명세 | `docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md` | `API_SPEC_TEMPLATE.md` | `API` |
@@ -20,6 +21,7 @@ paths:
 
 ## 원칙
 
+- **SW 아키텍처를 먼저 잡고 상세 설계로 넘어간다.** 기능/프로그램/API/DB/보안/화면 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`과 일관성을 유지해야 한다. 상세 설계가 아키텍처 결정과 충돌하면 아키텍처 정의서를 먼저 갱신한다.
 - 설계 문서는 **인터페이스와 제약조건**을 정의한다. 구현 코드를 작성하지 않는다.
 - 각 설계 요소에 단위테스트 `UT-NNN`을 사전 배정한다.
 - 보안 통제는 `SEC-NNN`으로 식별하고 `docs/core/SECURITY_BASELINE.md` / `KISA_SECURITY_RULES.md`와 매핑한다.

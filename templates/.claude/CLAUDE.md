@@ -116,6 +116,7 @@ Discovery    →   요구사항  →   설계          →   테스트설계 →
 | | `docs/artifacts/00-discovery/DOC-CORE-P0-003_As-Is-To-Be_v0.1.md` |
 | | `docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md` |
 | **G1 Requirements** | `docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md` |
+| **G2 Architecture** | `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md` (먼저 작성, CNT/CMP/FLOW/ADR 베이스라인) |
 | **G2 Design** | `docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md` |
 | | `docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md` |
 | | `docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md` |

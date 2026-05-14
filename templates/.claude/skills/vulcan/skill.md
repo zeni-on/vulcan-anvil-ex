@@ -49,7 +49,7 @@ subagent를 투입할 때는 agent 이름뿐 아니라 `persona`, `related_ids`,
 | 에이전트 | 파일 | 역할 |
 |---------|------|------|
 | requirements | `.claude/agents/requirements.md` | G1 요구사항, AC, 기술스택 정의 |
-| design | `.claude/agents/design.md` | G2 기능/프로그램/API/DB/보안 설계, UT-ID 할당 |
+| design | `.claude/agents/design.md` | G2 SW 아키텍처(C1/C2/C3, CNT/CMP/FLOW/ADR) + 기능/프로그램/API/DB/보안 설계, UT-ID 할당 |
 | screen-design | `.claude/agents/screen-design.md` | G2 화면 구조, 와이어프레임, 디자인 토큰 |
 | security-review | `.claude/agents/security-review.md` | G1/G2/G3/G4 보안 검토, FIND/CR 발행 |
 | screen-review | `.claude/agents/screen-review.md` | G2/G3/G4 화면 누락/상태/증적 기준 검토 |
@@ -117,8 +117,9 @@ subagent를 투입할 때는 agent 이름뿐 아니라 `persona`, `related_ids`,
 | Gate | 담당 | 비고 |
 |------|------|------|
 | Gate 1 | requirements | |
-| Gate 2a | design | 기능/프로그램/API/DB/보안 설계 |
-| Gate 2b | screen-design | design 완료 후 |
+| Gate 2a | design (SW 아키텍처) | C1/C2/C3, CNT/CMP/FLOW/ADR 베이스라인 먼저 작성 |
+| Gate 2b | design (상세 설계) | 기능/프로그램/API/DB/보안. 아키텍처 결정과 일관 |
+| Gate 2c | screen-design | design 완료 후 |
 | Gate 2 검수 | security-review, screen-review, ui-review, development-review | 병렬 가능 |
 | Gate 3 | test-design | |
 | 구현 계획 | build-planning | |
@@ -164,7 +165,7 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 |------|----------|
 | Phase 0 | 배경/제약/참조문서 파악, 질문·가정·위험 기록 (`docs/artifacts/00-discovery/`) |
 | Gate 1 | 모든 `REQ-NNN`과 `NREQ-NNN`에 `AC-NNN` 매핑, 추적표 반영 |
-| Gate 2 | `FUNC/SCR/PGM/API/DB/IF/SEC`와 개발표준이 정의되고, 보안/화면/UI 품질/개발표준 검수가 Failed 없이 통과 |
+| Gate 2 | SW 아키텍처(`CNT/CMP/FLOW/ADR`)와 `FUNC/SCR/PGM/API/DB/IF/SEC`/개발표준이 정의되고, 보안/화면/UI 품질/개발표준 검수가 Failed 없이 통과 |
 | Gate 3 | 모든 `AC`와 보안항목이 `UT/IT/PT/UI` 중 하나 이상에 연결 |
 | 구현 | Build Wave별 코드+테스트+추적표+증적이 갱신되고 단위 테스트 Pass |
 | Gate 4 | Blocker(A~D) 전원 Pass, FIND/CR/ISSUE가 명시적으로 처리됨 |
@@ -188,7 +189,7 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 |-----------|-------------|
 | "상위설계 시작", "Discovery 시작", "프로젝트 시작" | discovery |
 | "Gate 1 시작", "요구사항 정의" | requirements |
-| "Gate 2 시작", "설계 시작" | design → screen-design (순차), security-review/ui-review/development-review (병렬 검수) |
+| "Gate 2 시작", "설계 시작" | design(SW 아키텍처 → 상세 설계) → screen-design (순차), security-review/ui-review/development-review (병렬 검수) |
 | "Gate 3 시작", "테스트 계획" | test-design |
 | "구현 계획", "Build Wave 분할" | build-planning |
 | "구현 시작", "코딩 시작" | build-frontend + build-backend (Wave별) |
