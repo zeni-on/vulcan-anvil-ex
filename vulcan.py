@@ -1327,6 +1327,17 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
 
     rel_path = os.path.relpath(path, project_dir)
     current_idx = GATE_ORDER.index(current_gate) if current_gate in GATE_ORDER else 0
+    registry_counts = {"RISK": 0, "ASM": 0, "Q": 0}
+    registry_labels = {
+        "RISK": "위험 목록",
+        "ASM": "가정 목록",
+        "Q": "미결 질문",
+    }
+    registry_content_headers = {
+        "RISK": ["위험 내용"],
+        "ASM": ["가정 내용"],
+        "Q": ["질문"],
+    }
 
     section = ""
     headers = []
@@ -1353,8 +1364,21 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
         if not re.match(r"^(RISK|ASM|Q)-\d{3}$", item_id):
             continue
 
+        item_type = item_id.split("-", 1)[0]
+        content_idx = find_header_index(headers, registry_content_headers[item_type]) if headers else None
+        content_value = cols[content_idx] if content_idx is not None and content_idx < len(cols) else ""
         status_idx = find_header_index(headers, ["상태"]) if headers else None
         status = cols[status_idx] if status_idx is not None and status_idx < len(cols) else cols[-1]
+
+        if is_empty_table_value(content_value):
+            if current_idx >= GATE_ORDER.index("gate1"):
+                issues.append(
+                    f"  X {rel_path}의 {item_id}는 ID만 있고 내용이 비어 있습니다 "
+                    "(삭제하거나 실제 내용/해당없음 사유를 작성)"
+                )
+                continue
+        else:
+            registry_counts[item_type] += 1
 
         due_idx = None
         if item_id.startswith("Q-"):
@@ -1394,6 +1418,14 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
             issues.append(
                 f"  X {rel_path}의 {item_id}가 {due_source}까지 정리되어야 하지만 상태가 {status or '미정'}입니다"
             )
+
+    if current_idx >= GATE_ORDER.index("gate1"):
+        for item_type, count in registry_counts.items():
+            if count == 0:
+                issues.append(
+                    f"  X {rel_path}의 {registry_labels[item_type]}에 유효한 {item_type} 행이 없습니다 "
+                    f"(최소 1건 작성하거나 {item_type}-001에 해당없음 사유를 명시)"
+                )
 
     return issues
 
@@ -1575,7 +1607,8 @@ def check_trace(project_dir="."):
     else:
         print("  문서 내용 경계 검사: OK")
 
-    discovery_issues = validate_discovery_open_items(project_dir, current_gate)
+    discovery_validation_gate = "gate1" if current_gate == "phase0" else current_gate
+    discovery_issues = validate_discovery_open_items(project_dir, discovery_validation_gate)
     if discovery_issues:
         print("  Phase 0 미결 항목 검사: 위반 감지")
         issues.extend(discovery_issues)
@@ -1943,6 +1976,32 @@ def check_trace(project_dir="."):
         sys.exit(1)
     else:
         print("이슈 0건 - Gate 완료 가능합니다.")
+
+
+# ── gate preflight ─────────────────────────────────────────────────────────
+
+def validate_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
+    """Gate 전환 직전에 이전 단계의 완료 조건만 검사한다."""
+    if target_gate not in GATE_ORDER:
+        return []
+
+    issues = []
+    target_idx = GATE_ORDER.index(target_gate)
+    if target_idx >= GATE_ORDER.index("gate1"):
+        issues.extend(validate_discovery_open_items(project_dir, current_gate="gate1"))
+    return issues
+
+
+def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
+    issues = validate_gate_start_prerequisites(project_dir, target_gate)
+    if not issues:
+        return
+
+    print(f"\n[gate-start] {target_gate} 진입 전 완료 조건 위반:\n")
+    for issue in issues:
+        print(f"  {issue}")
+    print("\n이슈를 정리한 뒤 다시 Gate 전환을 실행하세요.")
+    sys.exit(1)
 
 
 # ── rollback ──────────────────────────────────────────────────────────────
@@ -2362,15 +2421,21 @@ def cmd_session(gate, status, feature, project_dir="."):
     if feature:
         session["feature"] = feature
 
-    session["gate_status"][gate] = status
-
     gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
+    next_gate = None
     if status == "done":
         current_idx = gate_order.index(gate)
         if current_idx + 1 < len(gate_order):
-            session["current_gate"] = gate_order[current_idx + 1]
+            next_gate = gate_order[current_idx + 1]
         else:
-            session["current_gate"] = "completed"
+            next_gate = "completed"
+        if next_gate != "completed":
+            require_gate_start_prerequisites(project_dir, next_gate)
+
+    session["gate_status"][gate] = status
+
+    if status == "done":
+        session["current_gate"] = next_gate
 
         entry = f"{GATE_LABELS[gate]} - {session.get('feature', '')}"
         if entry not in session.get("completed", []):
@@ -2405,6 +2470,8 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
 
     if feature:
         session["feature"] = feature
+
+    require_gate_start_prerequisites(project_dir, gate)
 
     session["current_gate"] = gate
     session.setdefault("gate_status", {})[gate] = "pending"
