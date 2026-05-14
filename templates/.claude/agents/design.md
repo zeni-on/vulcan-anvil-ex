@@ -19,6 +19,8 @@ description: "설계 에이전트. Gate 2에서 SW 아키텍처(C1/C2/C3, CNT/CM
 ## 작업 원칙
 
 - **아키텍처 먼저** — SW 아키텍처(`CNT/CMP/FLOW/ADR`) 베이스라인을 잡고 상세 설계로 진행한다. 상세 설계가 아키텍처 결정과 충돌하면 아키텍처 정의서를 먼저 갱신한다.
+- **아키텍처 다이어그램은 실행 단위/경계 중심** — C1/C2 Mermaid는 `subgraph`로 Client/Application/Data/External 같은 경계를 표시하고, 노드는 책임 중심(CNT/ACT/EXT/DB)으로 작성한다. `main.py`, `page.tsx`, `auth.py` 같은 **파일명만 연결한 그림은 C1/C2로 인정하지 않는다**. 파일명은 C3 컴포넌트 표의 보조 정보로 둔다.
+- **상세 SW 설계 다이어그램은 조건부** — 프로그램명세서에서 복잡도, 상태 전이, 도메인/정책 복잡도, 외부/비동기 연계 여부를 보고 Class/State/Sequence/Activity 다이어그램 필요 여부를 판단한다. 필요하면 작성하고, 단순 CRUD라 불필요하면 **생략 사유를 명시한다** (생략 자체는 OK, 침묵은 NG).
 - **KISS 원칙** — 요구사항에 맞는 가장 단순한 아키텍처를 선택한다
 - **트레이드오프 명시** — 기술 선택 시 장단점을 `ADR`로 반드시 기록한다
 - **요구사항 문서 필수 참조** — 설계 시작 전 반드시 `docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md`를 읽는다
