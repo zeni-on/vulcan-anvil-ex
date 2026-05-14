@@ -202,14 +202,39 @@ function renderFindingRows(rows: QaFindingRow[]) {
   ])
 }
 
-function renderResultRows(rows: QaResultRow[], evidencesById: Map<string, QaEvidenceRow[]>, onPreview: (evidence: QaEvidenceRow) => void) {
-  return rows.map((row) => [
-    <span key="id" className="font-mono font-semibold text-blue-700">{row.id}</span>,
-    row.target || '-',
-    row.method || '-',
-    <StatusBadge key="result" value={row.result} />,
-    <div key="evidence" className="space-y-1">
-      {(evidencesById.get(row.id) ?? []).map((evidence) => (
+function fileName(value: string): string {
+  return value.replace(/\\/g, '/').split('/').pop()?.toLowerCase() ?? value.toLowerCase()
+}
+
+function evidencesForRow(row: QaResultRow, evidencesById: Map<string, QaEvidenceRow[]>, evidences: QaEvidenceRow[]) {
+  const byId = evidencesById.get(row.id) ?? []
+  if (byId.length > 0) return byId
+
+  const evidenceFiles = row.evidence
+    .split(/[,，\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map(fileName)
+
+  if (evidenceFiles.length === 0) return []
+  return evidences.filter((evidence) => evidenceFiles.includes(fileName(evidence.path)))
+}
+
+function EvidenceCell({
+  row,
+  evidencesById,
+  evidences,
+  onPreview,
+}: {
+  row: QaResultRow
+  evidencesById: Map<string, QaEvidenceRow[]>
+  evidences: QaEvidenceRow[]
+  onPreview: (evidence: QaEvidenceRow) => void
+}) {
+  const matched = evidencesForRow(row, evidencesById, evidences)
+  return (
+    <div className="space-y-1">
+      {matched.map((evidence) => (
         <button
           key={evidence.path}
           type="button"
@@ -219,10 +244,40 @@ function renderResultRows(rows: QaResultRow[], evidencesById: Map<string, QaEvid
           {evidence.path}
         </button>
       ))}
-      {(evidencesById.get(row.id) ?? []).length === 0 && (
+      {matched.length === 0 && (
         <span className="font-mono text-[11px] text-slate-500">{row.evidence || '-'}</span>
       )}
-    </div>,
+    </div>
+  )
+}
+
+function renderResultRows(
+  rows: QaResultRow[],
+  evidencesById: Map<string, QaEvidenceRow[]>,
+  evidences: QaEvidenceRow[],
+  onPreview: (evidence: QaEvidenceRow) => void,
+) {
+  return rows.map((row) => [
+    <span key="id" className="font-mono font-semibold text-blue-700">{row.id}</span>,
+    row.target || '-',
+    row.method || '-',
+    <StatusBadge key="result" value={row.result} />,
+    <EvidenceCell key="evidence" row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
+  ])
+}
+
+function renderRequirementResultRows(
+  rows: QaResultRow[],
+  evidencesById: Map<string, QaEvidenceRow[]>,
+  evidences: QaEvidenceRow[],
+  onPreview: (evidence: QaEvidenceRow) => void,
+) {
+  return rows.map((row) => [
+    <span key="id" className="font-mono font-semibold text-blue-700">{row.id}</span>,
+    row.method || '-',
+    row.target || '-',
+    <StatusBadge key="result" value={row.result} />,
+    <EvidenceCell key="evidence" row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
   ])
 }
 
@@ -236,6 +291,8 @@ export default function QaDocView({
   const [preview, setPreview] = useState<QaEvidenceRow | null>(null)
   const [showAllEvidence, setShowAllEvidence] = useState(false)
   const failedCount = model.results.filter((row) => row.result.toLowerCase().includes('fail')).length
+  const requirementResults = model.results.filter((row) => row.kind === 'requirement')
+  const executionResults = model.results.filter((row) => row.kind !== 'requirement')
   const openFindingCount = model.findings.filter((row) => row.status.toLowerCase() === 'open').length
   const visibleEvidenceLimit = 6
   const visibleEvidences = showAllEvidence ? model.evidences : model.evidences.slice(0, visibleEvidenceLimit)
@@ -296,11 +353,20 @@ export default function QaDocView({
         </Section>
       )}
 
-      {model.results.length > 0 && (
+      {requirementResults.length > 0 && (
+        <Section title="요구사항 검증 요약">
+          <SmallTable
+            headers={['REQ-ID', '검증 항목', '관련 테스트', '결과', '증적']}
+            rows={renderRequirementResultRows(requirementResults, evidencesById, model.evidences, setPreview)}
+          />
+        </Section>
+      )}
+
+      {executionResults.length > 0 && (
         <Section title={`테스트 실행 결과${failedCount > 0 ? ` (실패 ${failedCount}건)` : ''}`}>
           <SmallTable
             headers={['테스트 ID', '관련 REQ', '명령/방법', '결과', '증적']}
-            rows={renderResultRows(model.results, evidencesById, setPreview)}
+            rows={renderResultRows(executionResults, evidencesById, model.evidences, setPreview)}
           />
         </Section>
       )}

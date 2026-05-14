@@ -12,6 +12,7 @@ export interface QaResultRow {
   method: string
   result: string
   evidence: string
+  kind?: 'requirement' | 'execution'
 }
 
 export interface QaFindingRow {
@@ -169,6 +170,18 @@ function resolveEvidencePath(value: string, knownEvidences: QaEvidenceRow[]): st
   return `docs/artifacts/04-review/evidence/ui/${value}`
 }
 
+function dedupeEvidencesByPath(evidences: QaEvidenceRow[]): QaEvidenceRow[] {
+  const seen = new Set<string>()
+  const result: QaEvidenceRow[] = []
+  for (const evidence of evidences) {
+    const key = evidence.path.replace(/\\/g, '/').toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(evidence)
+  }
+  return result
+}
+
 function splitRelatedIds(value: string): string[] {
   return value
     .split(',')
@@ -212,9 +225,10 @@ export function parseQaDoc(content: string): QaDocModel {
   const tables = extractTables(content)
   const findingTable = firstTable(tables, ['FIND-ID', '제목', '심각도', '상태'])
   const findingOverview = keyValueFromTable(tableAfterHeading(content, /^##\s+1\.\s+발견사항\s+개요.*$/m))
-  const resultTable = firstTable(tables, ['테스트 ID', '관련 REQ', '명령/방법', '결과', '증적'])
-    ?? firstTable(tables, ['REQ-ID', '검증 항목', '관련 테스트', '결과', '증적'])
-    ?? firstTable(tables, ['검증 ID', '명령/방법', '결과', '요약'])
+  const testResultTable = firstTable(tables, ['테스트 ID', '관련 REQ', '명령/방법', '결과', '증적'])
+  const requirementResultTable = firstTable(tables, ['REQ-ID', '검증 항목', '관련 테스트', '결과', '증적'])
+  const executionResultTable = firstTable(tables, ['검증 ID', '명령/방법', '결과', '요약'])
+  const resultTable = testResultTable ?? requirementResultTable ?? executionResultTable
   const reviewEvidenceTable = firstTable(tables, ['UI-ID', '설명', '캡처 경로'])
   const resultEvidenceTable = firstTable(tables, ['증적 ID', '화면', '경로'])
     ?? firstTable(tables, ['증적 ID', '관련 UI', '파일', '설명'])
@@ -241,7 +255,11 @@ export function parseQaDoc(content: string): QaDocModel {
     })),
   ].filter((row) => isImagePath(row.path))
 
-  const resultEvidences = (resultTable?.rows ?? []).flatMap((row) => {
+  const evidenceRows = [
+    ...(testResultTable?.rows ?? []),
+    ...(requirementResultTable?.rows ?? []),
+  ]
+  const resultEvidences = evidenceRows.flatMap((row) => {
     const rowId = getCell(row, ['테스트 ID', 'REQ-ID', '검증 ID'])
     return splitEvidencePaths(getCell(row, ['증적'])).map((path, index) => ({
       id: index === 0 ? rowId : `${rowId}-${index + 1}`,
@@ -274,7 +292,7 @@ export function parseQaDoc(content: string): QaDocModel {
       }]
     : []
   const findings = tableFindings.length > 0 ? tableFindings : overviewFinding
-  const allEvidences = [...tableEvidences, ...resultEvidences]
+  const allEvidences = dedupeEvidencesByPath([...tableEvidences, ...resultEvidences])
   const relatedEvidenceIds = new Set(
     findings
       .flatMap((finding) => splitRelatedIds(finding.relatedIds))
@@ -294,13 +312,32 @@ export function parseQaDoc(content: string): QaDocModel {
     status: extractMetadata(content, 'status'),
     updatedAt: extractMetadata(content, 'updated_at'),
     findings,
-    results: (resultTable?.rows ?? []).map((row) => ({
-      id: getCell(row, ['테스트 ID', 'REQ-ID', '검증 ID']),
-      target: getCell(row, ['관련 REQ', 'REQ-ID']),
-      method: getCell(row, ['명령/방법']),
-      result: getCell(row, ['결과']),
-      evidence: getCell(row, ['증적', '요약']),
-    })),
+    results: [
+      ...(testResultTable?.rows ?? []).map((row) => ({
+        id: getCell(row, ['테스트 ID']),
+        target: getCell(row, ['관련 REQ']),
+        method: getCell(row, ['명령/방법']),
+        result: getCell(row, ['결과']),
+        evidence: getCell(row, ['증적']),
+        kind: 'execution' as const,
+      })),
+      ...(requirementResultTable?.rows ?? []).map((row) => ({
+        id: getCell(row, ['REQ-ID']),
+        target: getCell(row, ['관련 테스트']),
+        method: getCell(row, ['검증 항목']),
+        result: getCell(row, ['결과']),
+        evidence: getCell(row, ['증적']),
+        kind: 'requirement' as const,
+      })),
+      ...(executionResultTable?.rows ?? []).map((row) => ({
+        id: getCell(row, ['검증 ID']),
+        target: '-',
+        method: getCell(row, ['명령/방법']),
+        result: getCell(row, ['결과']),
+        evidence: getCell(row, ['요약']),
+        kind: 'execution' as const,
+      })),
+    ],
     evidences,
     judgement: extractJudgement(content),
   }

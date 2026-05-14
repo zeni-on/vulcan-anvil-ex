@@ -121,6 +121,7 @@ updated_at: 2026-05-13
 | REQ-ID | 검증 항목 | 관련 테스트 | 결과 | 증적 |
 | --- | --- | --- | --- | --- |
 | REQ-001-01 | 로그인 성공/실패 | UT-001, IT-001, UI-001 | Pass | UI-001_login.png |
+| REQ-001-02 | 비로그인 보호 | UT-002, IT-002, UI-005 | Pass | UI-001_login.png |
 
 ## 4. 화면 증적
 
@@ -131,11 +132,14 @@ updated_at: 2026-05-13
 
     expect(model.documentKind).toBe('result')
     expect(model.results[0].id).toBe('REQ-001-01')
-    expect(model.results[0].target).toBe('REQ-001-01')
+    expect(model.results[0].kind).toBe('requirement')
+    expect(model.results[0].target).toBe('UT-001, IT-001, UI-001')
+    expect(model.results[0].method).toBe('로그인 성공/실패')
     expect(model.results[0].result).toBe('Pass')
     expect(model.evidences.some((evidence) =>
       evidence.path === 'docs/artifacts/04-review/evidence/ui/UI-001_login.png',
     )).toBe(true)
+    expect(model.evidences).toHaveLength(1)
     expect(model.evidences.every((evidence) => evidence.path.includes('docs/artifacts/04-review/evidence/ui/'))).toBe(true)
   })
 })
