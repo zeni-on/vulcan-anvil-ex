@@ -22,6 +22,7 @@ paths:
 ## 원칙
 
 - **SW 아키텍처를 먼저 잡고 상세 설계로 넘어간다.** 기능/프로그램/API/DB/보안/화면 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`과 일관성을 유지해야 한다. 상세 설계가 아키텍처 결정과 충돌하면 아키텍처 정의서를 먼저 갱신한다.
+- **SW 아키텍처 성숙도 모델.** `Draft`(C1/C2 + 주요 CNT/ADR 후보 + Pending 항목) → `Baseline Candidate` → `Baseline`. 한 번에 완성하지 말고 단계적으로 진화시킨다. 모르는 부분은 `Pending`/`Open`/`질문`/`ADR 후보`/`상세설계 후 보강`으로 명시하고 추측하지 않는다. Gate 2 초반에는 `python vulcan.py check-architecture --level draft`, Gate 3 진입 전에는 `--level baseline` 또는 `check-trace`로 검증한다.
 - **아키텍처 다이어그램(C1/C2)은 실행 단위와 경계 중심.** `subgraph`로 Client/Application/Data/External 경계를 표시하고 노드는 책임 중심(CNT/ACT/EXT/DB)으로 작성한다. 파일명(`main.py`, `page.tsx` 등)만 연결한 그림은 C1/C2로 인정하지 않는다.
 - **상세 SW 설계 다이어그램(Class/State/Sequence/Activity)은 조건부.** 프로그램명세서에서 복잡도, 상태 전이, 도메인/정책 복잡도, 외부/비동기 연계 여부를 보고 판단한다. 필요하면 작성, 불필요하면 **생략 사유를 명시**한다.
 - 설계 문서는 **인터페이스와 제약조건**을 정의한다. 구현 코드를 작성하지 않는다.
