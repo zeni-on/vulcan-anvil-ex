@@ -97,6 +97,10 @@ Gate Prompt는 단독으로 쓰지 않는다.
 - 구현 코드를 작성하지 않는 것이 기본이다.
 - 먼저 `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md`에 C1/C2/C3, `CNT`, `CMP`, `FLOW`, `ADR` 기준을 잡는다.
 - 상세 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`와 충돌하면 안 된다.
+- 아키텍처 다이어그램은 파일명 나열이 아니라 실행 단위와 경계 중심으로 작성한다. C1/C2 Mermaid는 `subgraph`로 Client/Application/Data/External 같은 경계를 표시한다.
+- `main.py`, `page.tsx`, `auth.py` 같은 파일명만 연결한 그림은 C1/C2로 인정하지 않는다. 파일명은 C3 컴포넌트 표의 보조 정보로 둔다.
+- 프로그램명세서에는 복잡도, 상태 전이, 도메인/정책 복잡도, 외부/비동기 연계 여부를 보고 상세 SW 설계 다이어그램 필요 여부를 판단한다.
+- Class/State/Sequence/Activity 다이어그램이 필요하면 작성하고, 단순 CRUD라 불필요하면 생략 사유를 명시한다.
 - 보안가이드는 단순히 SEC-ID를 나열하지 않는다. 구체 값, 정책, 오류 메시지, 적용 위치, 검증 ID를 명시한다.
 - Gate 2 검수(security-review, screen-review, ui-review, development-review)가 모두 통과해야 Gate 3로 진행한다.
 - Gate 3으로 넘어가려면 사용자 승인 또는 python vulcan.py session --gate gate2 --status done이 필요하다.

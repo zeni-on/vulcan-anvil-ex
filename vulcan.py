@@ -1157,6 +1157,54 @@ def validate_development_standard(project_dir="."):
     return [rel_path], issues
 
 
+def validate_program_spec(project_dir="."):
+    issues = []
+    path = find_program_spec_file(project_dir)
+    if not path:
+        return [], ["프로그램명세서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("PGM-ID", r"PGM-\d{3}"),
+        ("인터페이스", r"호출 방식|엔드포인트|함수명|API 정의서"),
+        ("입력/출력", r"입력 파라미터|출력 항목|TERM-"),
+        ("처리 흐름", r"처리 흐름|처리 내용"),
+        ("예외/오류", r"ERR-\d{3}|오류 ID|예외"),
+        ("데이터 접근", r"DB-\d{3}|데이터 접근|트랜잭션"),
+        ("보안 설계", r"SEC-\d{3}|보안 설계|KISA|SR-"),
+        ("단위테스트 연결", r"UT-\d{3}|단위테스트|AC-|NREQ-"),
+        ("상세 SW 설계 다이어그램 판단", r"상세 SW 설계 다이어그램|복잡도|상태 전이|생략 사유"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    diagram_markers = [
+        r"```mermaid\s*\n\s*classDiagram",
+        r"```mermaid\s*\n\s*stateDiagram",
+        r"```mermaid\s*\n\s*sequenceDiagram",
+        r"```mermaid\s*\n\s*flowchart",
+        r"```mermaid\s*\n\s*graph",
+    ]
+    has_detail_diagram = any(re.search(pattern, content, re.IGNORECASE) for pattern in diagram_markers)
+    has_skip_reason = bool(re.search(r"생략 사유\s*\|[^\n]*\S|불필요\s*\|[^\n]*\S", content))
+    has_need_marker = bool(re.search(r"\|\s*PGM-\d{3}\s*\|[^\n]*\|\s*필요\s*\|", content))
+    if has_need_marker and not has_detail_diagram:
+        issues.append(f"{rel_path}에 상세 SW 설계 다이어그램 필요 표시가 있으나 Mermaid 다이어그램 없음")
+    if not has_detail_diagram and not has_skip_reason:
+        issues.append(f"{rel_path}에 상세 SW 설계 다이어그램 또는 생략 사유 없음")
+
+    return [rel_path], issues
+
+
 def program_spec_requires_api_spec(project_dir="."):
     path = find_program_spec_file(project_dir)
     if not path:
@@ -1234,18 +1282,57 @@ def validate_architecture_spec(project_dir="."):
         issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
 
     required_terms = [
-        ("C1 시스템 컨텍스트", r"C1|시스템 컨텍스트|ACT-\d{3}|EXT-\d{3}"),
-        ("C2 컨테이너 구조", r"C2|컨테이너|CNT-\d{3}"),
-        ("C3 컴포넌트 구조", r"C3|컴포넌트|CMP-\d{3}"),
-        ("처리 흐름", r"FLOW-\d{3}|sequenceDiagram|flowchart"),
+        ("아키텍처 개요", r"아키텍처 개요|시스템 목적|주요 사용자|아키텍처 범위"),
+        ("논리 아키텍처", r"논리 아키텍처|프론트엔드|백엔드|인증/권한|배치/비동기"),
+        ("물리 아키텍처", r"물리 아키텍처|PHY-\d{3}|서버|네트워크|배포 단위|런타임"),
+        ("모듈/컴포넌트 구조", r"모듈/컴포넌트 구조|C3|컴포넌트|CMP-\d{3}"),
+        ("데이터 흐름", r"데이터 흐름|FLOW-\d{3}|sequenceDiagram|오류 처리 흐름"),
+        ("보안 아키텍처", r"SEC-\d{3}|보안 아키텍처|인증|인가|세션|암호화|KISA|OWASP|CWE"),
         ("품질속성", r"NREQ-\d{3}|QA-\d{3}|품질속성"),
-        ("보안 아키텍처", r"SEC-\d{3}|보안 아키텍처|KISA|OWASP|CWE"),
+        ("기술 스택 및 선택 근거", r"기술 스택|선택 근거|언어|프레임워크|DB|배포 방식"),
         ("아키텍처 결정", r"ADR-\d{3}|아키텍처 결정|Architecture Decision"),
-        ("상세 설계 연결", r"프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
+        ("추적성 및 상세 설계 연결", r"추적성|상세 설계 연결|프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
     ]
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
             issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, re.IGNORECASE | re.DOTALL)
+    flow_blocks = [
+        block for block in mermaid_blocks
+        if re.search(r"^\s*(?:flowchart|graph)\s+", block, re.IGNORECASE | re.MULTILINE)
+    ]
+    c1_c2_blocks = flow_blocks[:2]
+    missing_boundary_count = sum(
+        1 for block in c1_c2_blocks
+        if not re.search(r"\bsubgraph\b", block, re.IGNORECASE)
+    )
+    if c1_c2_blocks and missing_boundary_count:
+        issues.append(f"{rel_path}의 C1/C2 아키텍처 다이어그램에 subgraph 경계 표현 없음")
+
+    file_name_node_count = 0
+    for block in flow_blocks:
+        file_name_node_count += len(re.findall(r"\b[\w.-]+\.(?:py|ts|tsx|js|jsx|java|kt|go|cs|php|rb)\b", block, re.IGNORECASE))
+    if file_name_node_count >= 3:
+        issues.append(
+            f"{rel_path}의 아키텍처 다이어그램이 파일명 나열 중심입니다 "
+            "(C1/C2는 CNT/CMP/FLOW와 실행 경계 중심으로 작성)"
+        )
+
+    required_link_targets = [
+        "DOC-CORE-G2-001",
+        "DOC-CORE-G2-002",
+        "DOC-API-G2-001",
+        "DOC-DATA-G2-002",
+        "DOC-CORE-G2-003",
+        "DOC-SEC-G2-001",
+        "DOC-DEV-G2-001",
+        "DOC-QA-G3-001",
+        "DOC-CORE-G4-001",
+    ]
+    missing_links = [target for target in required_link_targets if target not in content]
+    if missing_links:
+        issues.append(f"{rel_path}의 상세 설계/추적 연결 문서 누락: {', '.join(missing_links)}")
 
     return [rel_path], issues
 
@@ -1664,6 +1751,7 @@ def check_trace(project_dir="."):
         print("  Gate 2 산출물 유지 검사")
         prior_design_checks = [
             ("SW 아키텍처 정의서", validate_architecture_spec),
+            ("프로그램명세서", validate_program_spec),
             ("보안가이드", validate_security_guide),
             ("화면설계서", validate_screen_spec),
             ("API 정의서", validate_api_spec),
@@ -1796,6 +1884,13 @@ def check_trace(project_dir="."):
         if security_guide_files and not security_guide_issues:
             print(f"  O 보안가이드 확인 ({', '.join(security_guide_files)})")
         for issue in security_guide_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: 프로그램명세서 상세 SW 설계 여부")
+        program_spec_files, program_spec_issues = validate_program_spec(project_dir)
+        if program_spec_files and not program_spec_issues:
+            print(f"  O 프로그램명세서 확인 ({', '.join(program_spec_files)})")
+        for issue in program_spec_issues:
             issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: 화면설계 기준 증적 여부")
