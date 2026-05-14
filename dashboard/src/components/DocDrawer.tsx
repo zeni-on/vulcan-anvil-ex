@@ -253,7 +253,7 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
             [&_th]:border [&_th]:border-blue-300 [&_th]:bg-blue-100 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-xs [&_th]:font-semibold
             [&_tbody_tr:nth-child(even)]:bg-slate-50">
             <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
+              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
               rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
               components={markdownComponents}
             >

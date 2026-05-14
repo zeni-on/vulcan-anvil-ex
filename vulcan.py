@@ -77,6 +77,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/RISK_ASSUMPTION_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md"),
     ("docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md", "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"),
     ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
+    ("docs/templates/SW_ARCHITECTURE_TEMPLATE.md", "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md"),
     ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
     ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md"),
     ("docs/templates/API_SPEC_TEMPLATE.md", "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md"),
@@ -1075,6 +1076,18 @@ def find_screen_spec_file(project_dir="."):
     ])
 
 
+def find_architecture_spec_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "architecture"),
+        r"(sw.*architecture|architecture|아키텍처).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "architecture.md"),
+        os.path.join("docs", "02-design", "Architecture.md"),
+        os.path.join("docs", "02-design", "SW-Architecture.md"),
+    ])
+
+
 def find_risk_assumption_file(project_dir="."):
     return find_artifact_file(
         project_dir,
@@ -1197,6 +1210,38 @@ def validate_api_spec(project_dir="."):
         ("인증/권한", r"인증|권한|401|403|SEC-"),
         ("예시", r"요청 예시|응답 예시|```json"),
         ("테스트 연결", r"UT-|IT-|테스트 ID|검증"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    return [rel_path], issues
+
+
+def validate_architecture_spec(project_dir="."):
+    issues = []
+    path = find_architecture_spec_file(project_dir)
+    if not path:
+        return [], ["SW 아키텍처 정의서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("C1 시스템 컨텍스트", r"C1|시스템 컨텍스트|ACT-\d{3}|EXT-\d{3}"),
+        ("C2 컨테이너 구조", r"C2|컨테이너|CNT-\d{3}"),
+        ("C3 컴포넌트 구조", r"C3|컴포넌트|CMP-\d{3}"),
+        ("처리 흐름", r"FLOW-\d{3}|sequenceDiagram|flowchart"),
+        ("품질속성", r"NREQ-\d{3}|QA-\d{3}|품질속성"),
+        ("보안 아키텍처", r"SEC-\d{3}|보안 아키텍처|KISA|OWASP|CWE"),
+        ("아키텍처 결정", r"ADR-\d{3}|아키텍처 결정|Architecture Decision"),
+        ("상세 설계 연결", r"프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
     ]
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
@@ -1618,6 +1663,7 @@ def check_trace(project_dir="."):
     if current_gate in ("gate3", "impl", "gate4", "gate5"):
         print("  Gate 2 산출물 유지 검사")
         prior_design_checks = [
+            ("SW 아키텍처 정의서", validate_architecture_spec),
             ("보안가이드", validate_security_guide),
             ("화면설계서", validate_screen_spec),
             ("API 정의서", validate_api_spec),
@@ -1737,6 +1783,13 @@ def check_trace(project_dir="."):
                     print(f"  O {group} - {filename} 확인")
                 else:
                     issues.append(f"  X {group} - docs/02-design/{filename} 없음")
+
+        print("\n  Gate 2 검사: SW 아키텍처 정의서 확정 여부")
+        architecture_files, architecture_issues = validate_architecture_spec(project_dir)
+        if architecture_files and not architecture_issues:
+            print(f"  O SW 아키텍처 정의서 확인 ({', '.join(architecture_files)})")
+        for issue in architecture_issues:
+            issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: 보안가이드 확정 여부")
         security_guide_files, security_guide_issues = validate_security_guide(project_dir)

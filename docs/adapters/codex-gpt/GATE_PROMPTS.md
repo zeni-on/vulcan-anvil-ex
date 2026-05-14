@@ -94,17 +94,19 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 작업:
 1. 관련 REQ, AC, FUNC를 확인한다.
-2. 필요한 SCR, PGM, DB, SEC 항목을 작성하거나 갱신한다.
-3. `docs/core/SECURITY_BASELINE.md`를 기준으로 보안항목 누락 여부를 확인한다.
-4. `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md`에 프로젝트별 보안가이드를 확정한다.
-5. 화면이 있으면 화면 목록, 화면 상태, 와이어프레임/시안, UI 증적 기준을 작성한다.
-6. 외부 시안, imagegen 시안, Figma 캡처, 기존 화면 캡처가 있으면 출처와 파일 경로를 `SCR-ID`에 연결한다.
-7. 구현 전에 개발표준정의서를 확정한다.
-8. 데이터 항목은 프로젝트 단어사전/DB명세와 연결한다.
+2. `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md`에 C1/C2/C3, `CNT`, `CMP`, `FLOW`, `ADR` 기준을 먼저 잡는다.
+3. 필요한 SCR, PGM, DB, API, IF, SEC 항목을 작성하거나 갱신한다.
+4. `docs/core/SECURITY_BASELINE.md`를 기준으로 보안항목 누락 여부를 확인한다.
+5. `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md`에 프로젝트별 보안가이드를 확정한다.
+6. 화면이 있으면 화면 목록, 화면 상태, 와이어프레임/시안, UI 증적 기준을 작성한다.
+7. 외부 시안, imagegen 시안, Figma 캡처, 기존 화면 캡처가 있으면 출처와 파일 경로를 `SCR-ID`에 연결한다.
+8. 구현 전에 개발표준정의서를 확정한다.
+9. 데이터 항목은 프로젝트 단어사전/DB명세와 연결한다.
 
 주의:
 - 구현 코드를 작성하지 않는 것이 기본이다.
 - 단, 사용자가 "프로토타입 구현을 승인한다" 또는 "Gate 4 구현까지 진행한다"처럼 명시하면 좁은 샘플 구현까지 진행할 수 있다.
+- 상세 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`와 충돌하면 안 된다.
 - 보안항목은 `KISA/SR`, `OWASP`, `CWE`를 함께 연결한다.
 - 보안가이드는 단순히 `SEC-ID`를 나열하지 않는다. 구현에 필요한 구체 값, 정책, 오류 메시지, 적용 위치, 검증 ID를 명시한다.
 - 화면설계서, 프로그램명세서, DB명세서의 보안 관련 값은 보안가이드와 불일치하면 안 된다.
@@ -114,6 +116,7 @@ Gate Prompt는 단독으로 쓰지 않는다.
 - Gate 3 테스트 설계로 넘어가려면 사용자 승인 또는 `vulcan.py session --gate gate2 --status done`이 필요하다.
 
 완료 조건:
+- SW 아키텍처 정의서 갱신
 - 설계 산출물 갱신
 - 관련 ID 연결
 - 보안/화면/개발표준 검수 결과 기록

@@ -95,6 +95,8 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 주의:
 - 구현 코드를 작성하지 않는 것이 기본이다.
+- 먼저 `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md`에 C1/C2/C3, `CNT`, `CMP`, `FLOW`, `ADR` 기준을 잡는다.
+- 상세 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`와 충돌하면 안 된다.
 - 보안가이드는 단순히 SEC-ID를 나열하지 않는다. 구체 값, 정책, 오류 메시지, 적용 위치, 검증 ID를 명시한다.
 - Gate 2 검수(security-review, screen-review, ui-review, development-review)가 모두 통과해야 Gate 3로 진행한다.
 - Gate 3으로 넘어가려면 사용자 승인 또는 python vulcan.py session --gate gate2 --status done이 필요하다.
