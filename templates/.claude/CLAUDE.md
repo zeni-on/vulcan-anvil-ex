@@ -96,6 +96,37 @@ Discovery    →   요구사항  →   설계          →   테스트설계 →
 - 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run을 만들어 **Build Wave(BW-NNN)**로 분할한 뒤 진행한다(`docs/core/AGENT_RUN_PROTOCOL.md` §5.1).
 - subagent 또는 다른 환경의 결과는 최종 사실로 즉시 확정하지 않고 Orchestrator가 재검증한다.
 - 구현자가 자기 구현을 단독으로 최종 승인하지 않는다. `review` persona로 별도 검수를 둔다.
+- **산출물 파일을 임의로 만들지 않는다.** `vulcan.py init`이 모든 Gate의 표준 템플릿을 `docs/artifacts/` 하위에 빈 상태로 미리 생성한다(아래 표). 페르소나는 작업 시작 전 반드시 해당 Gate 디렉터리를 `Glob` 또는 `LS`로 확인하고, **이미 존재하는 빈 템플릿을 채운다**. `DOC-{AREA}-{GATE}-{NNN}_{Title}_v{버전}.md` 형식을 벗어난 임의 ID(예: `DIS-`, `OVERVIEW-`, `PROJECT-`) 파일을 새로 만들지 않는다. 표준 prefix는 `docs/core/ID_SYSTEM.md`를 따른다.
+
+### init이 미리 생성하는 빈 산출물 템플릿
+
+| Gate | 경로 / 파일 |
+| --- | --- |
+| **P0 Discovery** | `docs/artifacts/00-discovery/DOC-CORE-P0-001_Project-Brief_v0.1.md` |
+| | `docs/artifacts/00-discovery/DOC-CORE-P0-002_Stakeholder-And-Scope_v0.1.md` |
+| | `docs/artifacts/00-discovery/DOC-CORE-P0-003_As-Is-To-Be_v0.1.md` |
+| | `docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md` |
+| **G1 Requirements** | `docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md` |
+| **G2 Design** | `docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md` |
+| | `docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md` |
+| | `docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md` |
+| | `docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md` |
+| | `docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md` |
+| | `docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md` |
+| | `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md` |
+| | `docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md` |
+| **G2 추적** | `docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md` |
+| **G3 Test** | `docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md` |
+| **G4 Review** | `docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md` |
+| | `docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md` |
+| **G5 Change** | `docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md` |
+
+페르소나 작업 절차:
+
+1. `Glob` 또는 `LS`로 해당 Gate 디렉터리 확인
+2. 위 표에 매칭되는 빈 템플릿을 **Read**로 읽기
+3. 템플릿의 메타데이터/표 구조를 유지한 채 내용 **Edit**
+4. 새 파일이 필요한 경우(예: 추가 Run 기록)에만 표준 ID 형식으로 생성
 
 ## 6. 변경 분류 (FIND / CR / ISSUE)
 
