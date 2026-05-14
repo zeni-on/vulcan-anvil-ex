@@ -40,6 +40,30 @@ change_reason: 최초 초안 작성
 - 품질속성은 `NREQ-ID`, 보안 관심사는 `SEC-ID`와 연결한다.
 - 단순 샘플, 예시, 설명용 ID를 남기지 않는다. 실제 프로젝트 기준으로 작성한다.
 - 확정되지 않은 항목은 `Draft` 또는 `Open`으로 두되, Gate 3 진입 전 검토 Run에서 보완한다.
+- SW 아키텍처는 한 번에 완성하지 않는다. Gate 2 안에서 `Draft` -> `Baseline Candidate` -> `Baseline`으로 성숙시킨다.
+- 아직 확정되지 않은 내용은 추측해서 채우지 않는다. `Pending`, `Open`, `질문`, `ADR 후보`, `상세설계 후 보강`으로 명시한다.
+- Gate 3 진입 전에는 구현과 테스트에 영향을 주는 `Pending`을 닫거나 `RISK`, `ASM`, `Q`, `ISSUE`, `CR` 중 하나로 분류한다.
+
+### 2.1 아키텍처 성숙도 관리
+
+| 성숙도 | 시점 | 필수 내용 | 허용되는 미완성 | 검증 |
+| --- | --- | --- | --- | --- |
+| Draft | Gate 2 시작 직후 | 시스템 목적, 주요 사용자, C1/C2, 주요 CNT, 주요 ADR 후보, Pending 항목 | 물리 아키텍처, 품질속성, 상세 설계 연결 일부 | `python vulcan.py check-architecture --level draft` |
+| Baseline Candidate | 상세 설계 작성 후 | CMP, FLOW, 보안 아키텍처, 품질속성, 기술 스택 근거, 상세 설계 연결 초안 | 비차단 운영/배포 세부값 | `python vulcan.py check-architecture --level baseline` |
+| Baseline | Gate 3 진입 전 | 상세 설계 문서 연결, 품질속성 검증 기준, ADR 상태, Gate 3 테스트로 넘길 기준 | Gate 3 이후로 명시 이월된 비차단 항목만 | `python vulcan.py check-trace` |
+
+| 영역 | 상태 | 비고/후속 조치 |
+| --- | --- | --- |
+| 아키텍처 개요 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 논리 아키텍처 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 물리 아키텍처 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 모듈/컴포넌트 구조 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 데이터 흐름 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 보안 아키텍처 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 품질속성 설계 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 기술 스택 및 선택 근거 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 아키텍처 결정사항 | Draft / Baseline Candidate / Baseline / Pending |  |
+| 추적성 및 상세 설계 연결 | Draft / Baseline Candidate / Baseline / Pending |  |
 
 ## 3. 다이어그램 작성 규칙
 
@@ -85,7 +109,7 @@ flowchart LR
 
 아래처럼 파일명만 연결한 그림은 아키텍처 품질이 낮은 다이어그램으로 본다.
 
-```mermaid
+```text
 flowchart TD
   MAIN["main.py"] --> AUTH["auth.py"]
   AUTH --> DB["database.py"]

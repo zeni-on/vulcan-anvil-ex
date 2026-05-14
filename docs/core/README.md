@@ -16,4 +16,8 @@
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
 - `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 증분 Gate 재진입 프로세스
 
+관련 운영 참고 문서:
+
+- `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`: 작업용 Markdown 원천 문서와 제출용 DOCX/XLSX/HWPX 합본 문서의 생성 전략
+
 이 문서들은 특정 프로젝트의 감리 문서관리 규칙보다 의도적으로 단순하게 유지한다. 프로젝트 Adapter는 고객사나 SI 프로젝트에 필요한 더 엄격한 규칙을 추가할 수 있지만, Core는 Claude, Codex, Cursor, Copilot, 사람의 작업 흐름 모두에서 사용할 수 있도록 이식성을 우선한다.

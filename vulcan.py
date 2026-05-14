@@ -1266,7 +1266,7 @@ def validate_api_spec(project_dir="."):
     return [rel_path], issues
 
 
-def validate_architecture_spec(project_dir="."):
+def validate_architecture_spec(project_dir=".", level="baseline"):
     issues = []
     path = find_architecture_spec_file(project_dir)
     if not path:
@@ -1276,14 +1276,23 @@ def validate_architecture_spec(project_dir="."):
         content = f.read()
 
     rel_path = os.path.relpath(path, project_dir)
-    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+    normalized_level = (level or "baseline").lower()
+    if normalized_level not in {"draft", "baseline"}:
+        normalized_level = "baseline"
+
+    if normalized_level == "baseline" and re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
     if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
         issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
 
-    required_terms = [
+    draft_required_terms = [
+        ("아키텍처 성숙도", r"성숙도|Draft|Baseline Candidate|Baseline|Pending"),
         ("아키텍처 개요", r"아키텍처 개요|시스템 목적|주요 사용자|아키텍처 범위"),
         ("논리 아키텍처", r"논리 아키텍처|프론트엔드|백엔드|인증/권한|배치/비동기"),
+        ("C1/C2 구조", r"C1|C2|시스템 컨텍스트|컨테이너|CNT-\d{3}"),
+        ("아키텍처 결정 후보", r"ADR-\d{3}|아키텍처 결정|ADR 후보|Architecture Decision"),
+    ]
+    baseline_required_terms = [
         ("물리 아키텍처", r"물리 아키텍처|PHY-\d{3}|서버|네트워크|배포 단위|런타임"),
         ("모듈/컴포넌트 구조", r"모듈/컴포넌트 구조|C3|컴포넌트|CMP-\d{3}"),
         ("데이터 흐름", r"데이터 흐름|FLOW-\d{3}|sequenceDiagram|오류 처리 흐름"),
@@ -1293,6 +1302,9 @@ def validate_architecture_spec(project_dir="."):
         ("아키텍처 결정", r"ADR-\d{3}|아키텍처 결정|Architecture Decision"),
         ("추적성 및 상세 설계 연결", r"추적성|상세 설계 연결|프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
     ]
+    required_terms = draft_required_terms
+    if normalized_level == "baseline":
+        required_terms += baseline_required_terms
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
             issues.append(f"{rel_path}에 {label} 기준 없음")
@@ -1319,20 +1331,21 @@ def validate_architecture_spec(project_dir="."):
             "(C1/C2는 CNT/CMP/FLOW와 실행 경계 중심으로 작성)"
         )
 
-    required_link_targets = [
-        "DOC-CORE-G2-001",
-        "DOC-CORE-G2-002",
-        "DOC-API-G2-001",
-        "DOC-DATA-G2-002",
-        "DOC-CORE-G2-003",
-        "DOC-SEC-G2-001",
-        "DOC-DEV-G2-001",
-        "DOC-QA-G3-001",
-        "DOC-CORE-G4-001",
-    ]
-    missing_links = [target for target in required_link_targets if target not in content]
-    if missing_links:
-        issues.append(f"{rel_path}의 상세 설계/추적 연결 문서 누락: {', '.join(missing_links)}")
+    if normalized_level == "baseline":
+        required_link_targets = [
+            "DOC-CORE-G2-001",
+            "DOC-CORE-G2-002",
+            "DOC-API-G2-001",
+            "DOC-DATA-G2-002",
+            "DOC-CORE-G2-003",
+            "DOC-SEC-G2-001",
+            "DOC-DEV-G2-001",
+            "DOC-QA-G3-001",
+            "DOC-CORE-G4-001",
+        ]
+        missing_links = [target for target in required_link_targets if target not in content]
+        if missing_links:
+            issues.append(f"{rel_path}의 상세 설계/추적 연결 문서 누락: {', '.join(missing_links)}")
 
     return [rel_path], issues
 
@@ -2124,6 +2137,28 @@ def check_trace(project_dir="."):
         sys.exit(1)
     else:
         print("이슈 0건 - Gate 완료 가능합니다.")
+
+
+# ── architecture check ─────────────────────────────────────────────────────
+
+def cmd_check_architecture(level="baseline", project_dir="."):
+    files, issues = validate_architecture_spec(project_dir, level=level)
+    label = "Draft" if level == "draft" else "Baseline"
+
+    print(f"\n[check-architecture] SW 아키텍처 {label} 검사\n")
+    if files:
+        for rel_path in files:
+            print(f"  대상: {rel_path}")
+    else:
+        print("  대상: 없음")
+
+    if issues:
+        print(f"\n이슈 {len(issues)}건 발견:\n")
+        for issue in issues:
+            print(f"  X {issue}")
+        sys.exit(1)
+
+    print("\n이슈 0건 - SW 아키텍처 기준을 만족합니다.")
 
 
 # ── gate preflight ─────────────────────────────────────────────────────────
@@ -3731,6 +3766,9 @@ def main():
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
 
+    p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
+    p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
+
     p_gate_start = subparsers.add_parser("gate-start", help="현재 진행 Gate 전환")
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
     p_gate_start.add_argument("--feature", default="", help="작업 기능명")
@@ -3825,6 +3863,8 @@ def main():
         )
     elif args.command == "check-trace":
         check_trace()
+    elif args.command == "check-architecture":
+        cmd_check_architecture(level=args.level)
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":

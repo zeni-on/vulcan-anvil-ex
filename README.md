@@ -336,6 +336,8 @@ my-project/
 
 템플릿은 Markdown으로 관리하지만, 향후 감리 제출용으로 Excel, Word, HWPX 등 일반 문서 형식으로 변환하는 흐름을 붙일 수 있도록 설계합니다.
 
+작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본 문서의 관계는 `docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 합니다. 원칙은 작업 중에는 원천 문서를 나누어 관리하고, 제출 시점에는 DOCX 템플릿과 생성 코드를 통해 필요한 내용을 합성하는 방식입니다.
+
 ## 샘플 프로젝트
 
 `docs/examples/board-with-login/`에는 로그인 기능이 있는 게시판 샘플이 들어 있습니다.

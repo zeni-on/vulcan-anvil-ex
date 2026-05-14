@@ -94,7 +94,7 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 작업:
 1. 관련 REQ, AC, FUNC를 확인한다.
-2. `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md`에 C1/C2/C3, `CNT`, `CMP`, `FLOW`, `ADR` 기준을 먼저 잡는다.
+2. `docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md`를 먼저 Draft로 작성한다. Draft는 C1/C2, 주요 `CNT`, 주요 `ADR` 후보, Pending 항목을 명시하면 된다.
 3. 필요한 SCR, PGM, DB, API, IF, SEC 항목을 작성하거나 갱신한다.
 4. `docs/core/SECURITY_BASELINE.md`를 기준으로 보안항목 누락 여부를 확인한다.
 5. `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md`에 프로젝트별 보안가이드를 확정한다.
@@ -106,6 +106,8 @@ Gate Prompt는 단독으로 쓰지 않는다.
 주의:
 - 구현 코드를 작성하지 않는 것이 기본이다.
 - 단, 사용자가 "프로토타입 구현을 승인한다" 또는 "Gate 4 구현까지 진행한다"처럼 명시하면 좁은 샘플 구현까지 진행할 수 있다.
+- SW 아키텍처를 한 번에 완성하려고 추측하지 않는다. 모르면 `Pending`, `Open`, `질문`, `ADR 후보`, `상세설계 후 보강`으로 남긴다.
+- Gate 2 초반에는 `python vulcan.py check-architecture --level draft`를 사용하고, Gate 3 진입 전에는 `python vulcan.py check-architecture --level baseline` 또는 `python vulcan.py check-trace`를 사용한다.
 - 상세 설계는 SW 아키텍처의 `CNT`, `CMP`, `FLOW`, `ADR`와 충돌하면 안 된다.
 - 아키텍처 다이어그램은 파일명 나열이 아니라 실행 단위와 경계 중심으로 작성한다. C1/C2 Mermaid는 `subgraph`로 Client/Application/Data/External 같은 경계를 표시한다.
 - `main.py`, `page.tsx`, `auth.py` 같은 파일명만 연결한 그림은 C1/C2로 인정하지 않는다. 파일명은 C3 컴포넌트 표의 보조 정보로 둔다.

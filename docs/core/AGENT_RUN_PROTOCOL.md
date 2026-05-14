@@ -225,6 +225,14 @@ Build Wave를 생략하는 경우 구현 Run은 다음을 남긴다.
 
 Gate 2에서 Gate 3로 넘어가기 전에는 다음 검수가 완료되어야 한다.
 
+SW 아키텍처는 Gate 2 안에서 점진적으로 성숙시킨다.
+
+| 시점 | Orchestrator 책임 | 권장 검증 |
+| --- | --- | --- |
+| Gate 2 시작 | Architecture Draft를 만들고 C1/C2, 주요 CNT, 주요 ADR 후보, Pending 항목을 드러낸다 | `python vulcan.py check-architecture --level draft` |
+| 상세 설계 작성 후 | 기능/프로그램/API/DB/화면/보안가이드 내용을 아키텍처의 CMP/FLOW/품질속성/상세 설계 연결로 되돌려 반영한다 | `python vulcan.py check-architecture --level baseline` |
+| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py check-trace` |
+
 | 검수 | 책임 Persona | 최소 확인 |
 | --- | --- | --- |
 | 요구사항 대비 설계 검수 | `review` 또는 `design` | 모든 `REQ/AC`가 `FUNC/SCR/PGM/DB/SEC` 중 필요한 산출물과 연결됨 |
