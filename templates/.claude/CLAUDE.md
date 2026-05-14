@@ -91,7 +91,16 @@ Discovery    →   요구사항  →   설계          →   테스트설계 →
 
 - 사용자가 인사하거나 방향을 묻는 첫 메시지는 **탐색 응답**으로 짧게 안내하고 코딩/문서 작성을 바로 시작하지 않는다. `discovery` agent를 투입하거나 직접 응답한다.
 - 항상 `session.json.current_gate`를 먼저 확인하고, 현재 Gate보다 앞선 산출물·Run·코드·테스트를 만들지 않는다(`docs/core/AGENT_RUN_PROTOCOL.md` §5).
-- Gate 전환은 문서의 `gate:` 값만으로 완료되지 않는다. `python vulcan.py check-trace`, `python vulcan.py session`(또는 `gate-start`)로 상태를 확인·갱신한다.
+- **Gate 전환은 반드시 다음 순서로만 한다**:
+
+  ```
+  run-new (RUN 기록) → 산출물 작성 → 사용자 승인 → check-trace 통과 → session --status done
+  ```
+
+  이 순서 위반은 룰 위반이다. 구체적으로:
+  - RUN 문서(`docs/runs/RUN-NNN_*.md`) 없이 작업 시작 금지
+  - `check-trace` 통과 확인 없이 `session --status done` 호출 금지
+  - 빈 표준 템플릿이 남아 있는 상태로 Gate 완료 처리 금지
 - 사용자가 "앱을 만들어줘", "기능을 구현해줘"처럼 end-to-end 목표를 말해도, 현재 Gate가 `phase0` 또는 `gate1`이면 요구사항/질문/승인 지점까지만 정리하고 멈춘다.
 - 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run을 만들어 **Build Wave(BW-NNN)**로 분할한 뒤 진행한다(`docs/core/AGENT_RUN_PROTOCOL.md` §5.1).
 - subagent 또는 다른 환경의 결과는 최종 사실로 즉시 확정하지 않고 Orchestrator가 재검증한다.
