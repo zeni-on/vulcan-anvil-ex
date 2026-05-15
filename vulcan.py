@@ -71,7 +71,6 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/04-review/evidence",
     "docs/artifacts/04-review/evidence/ui",
     "docs/artifacts/05-change",
-    "docs/artifacts/06-security",
     "docs/artifacts/07-release",
     "docs/runs",
     "docs/ref-docs",
@@ -484,10 +483,6 @@ def count_docs(project_dir="."):
         "review": [
             os.path.join(project_dir, "docs", "artifacts", "04-review"),
             os.path.join(project_dir, "docs", "04-review"),
-        ],
-        "security": [
-            os.path.join(project_dir, "docs", "artifacts", "06-security"),
-            os.path.join(project_dir, "docs", "05-security"),
         ],
         "release": [
             os.path.join(project_dir, "docs", "artifacts", "07-release"),

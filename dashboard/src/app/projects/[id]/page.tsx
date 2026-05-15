@@ -21,6 +21,7 @@ import DocDrawer from '@/components/DocDrawer'
 import RefreshButton from '@/components/RefreshButton'
 import LayoutToggle from '@/components/LayoutToggle'
 import LayoutA from '@/components/LayoutA'
+import LayoutA2 from '@/components/LayoutA2'
 import LayoutB from '@/components/LayoutB'
 import { useProjectSession } from '@/hooks/useProjectSession'
 import { useProjectDocs } from '@/hooks/useProjectDocs'
@@ -115,7 +116,7 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-[#030712]">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 border-b border-[#374151] bg-[#030712]/90 backdrop-blur-sm">
-        <div className="max-w-[80vw] mx-auto px-6 h-14 flex items-center gap-2.5">
+        <div className="max-w-[92vw] mx-auto px-6 h-14 flex items-center gap-2.5">
           <AnvilIcon className="w-6 h-6 text-blue-400" />
           <span className="text-sm font-semibold text-[#F9FAFB] tracking-tight">
             Vulcan Anvil
@@ -123,7 +124,7 @@ export default function ProjectDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-[80vw] mx-auto px-6 py-6 h-[calc(100vh-56px)] flex flex-col overflow-hidden">
+      <main className="max-w-[92vw] mx-auto px-6 py-6 h-[calc(100vh-56px)] flex flex-col overflow-hidden">
         {/* 브레드크럼 + LayoutToggle + 새로고침 버튼 (REQ-012-03) */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <Link
@@ -167,10 +168,12 @@ export default function ProjectDetailPage() {
           )}
         </div>
 
-        {/* 콘텐츠 영역 — template 값에 따라 LayoutA 또는 LayoutB 조건부 렌더링 (REQ-012-01, REQ-012-02) */}
+        {/* 콘텐츠 영역 — template 값에 따라 LayoutA, LayoutA2 또는 LayoutB 조건부 렌더링 (REQ-012) */}
         <div className="flex-1 overflow-hidden">
           {template === 'A' ? (
             <LayoutA {...layoutProps} />
+          ) : template === 'A2' ? (
+            <LayoutA2 {...layoutProps} />
           ) : (
             <LayoutB {...layoutProps} />
           )}

@@ -49,7 +49,6 @@ function resolveCategory(path: string): DocEntry['category'] {
   if (normalizedPath.includes('docs/artifacts/03-test/')) return 'test-plan'
   if (normalizedPath.includes('docs/artifacts/04-review/')) return 'review'
   if (normalizedPath.includes('docs/artifacts/05-change/')) return 'backlog'
-  if (normalizedPath.includes('docs/artifacts/06-security/')) return 'security'
   if (normalizedPath.includes('docs/artifacts/07-release/')) return 'release'
   if (normalizedPath.includes('docs/00-discovery/')) return 'discovery'
   if (normalizedPath.includes('docs/01-requirements/')) return 'requirements'

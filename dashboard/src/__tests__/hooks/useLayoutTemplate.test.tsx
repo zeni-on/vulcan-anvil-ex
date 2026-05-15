@@ -6,8 +6,8 @@
  * - UT-012-01: localStorage 값 없을 때 기본값 'A' 반환
  * - UT-012-02: localStorage 값이 'B'일 때 'B' 반환
  * - UT-012-03: localStorage 값이 유효하지 않은 문자열일 때 'A' 폴백
- * - UT-012-04: toggle() 호출 시 'A' → 'B' 전환되고 localStorage에 저장됨
- * - UT-012-05: toggle() 호출 시 'B' → 'A' 전환되고 localStorage에 저장됨
+ * - UT-012-04: toggle() 호출 시 'A' → 'A2' 전환되고 localStorage에 저장됨
+ * - UT-012-05: toggle() 호출 시 'A2' → 'B' → 'A' 순환되고 localStorage에 저장됨
  * - UT-012-06: SSR 환경(window undefined)에서 'A' 반환 (에러 없음)
  *
  * @see docs/02-design/req-012-design.md §useLayoutTemplate
@@ -60,6 +60,14 @@ describe('UT-012-02: localStorage 값이 B일 때 B 반환', () => {
   })
 })
 
+describe('UT-012-02A: localStorage 값이 A2일 때 A2 반환', () => {
+  it("localStorage에 'A2'가 저장되어 있으면 template은 A2이다", () => {
+    localStorageMock.setItem(STORAGE_KEY, 'A2')
+    const { result } = renderHook(() => useLayoutTemplate())
+    expect(result.current.template).toBe('A2')
+  })
+})
+
 // ── UT-012-03 ─────────────────────────────────────────────────────────────────
 
 describe('UT-012-03: localStorage 값이 유효하지 않을 때 A 폴백', () => {
@@ -84,8 +92,8 @@ describe('UT-012-03: localStorage 값이 유효하지 않을 때 A 폴백', () =
 
 // ── UT-012-04 ─────────────────────────────────────────────────────────────────
 
-describe('UT-012-04: toggle() 호출 시 A → B 전환 및 localStorage 저장', () => {
-  it('초기 A 상태에서 toggle() 호출 후 template이 B가 된다', () => {
+describe('UT-012-04: toggle() 호출 시 A → A2 전환 및 localStorage 저장', () => {
+  it('초기 A 상태에서 toggle() 호출 후 template이 A2가 된다', () => {
     const { result } = renderHook(() => useLayoutTemplate())
     expect(result.current.template).toBe('A')
 
@@ -93,43 +101,44 @@ describe('UT-012-04: toggle() 호출 시 A → B 전환 및 localStorage 저장'
       result.current.toggle()
     })
 
-    expect(result.current.template).toBe('B')
+    expect(result.current.template).toBe('A2')
   })
 
-  it('toggle() 호출 후 localStorage에 B가 저장된다', () => {
+  it('toggle() 호출 후 localStorage에 A2가 저장된다', () => {
     const { result } = renderHook(() => useLayoutTemplate())
 
     act(() => {
       result.current.toggle()
     })
 
-    expect(localStorageMock.getItem(STORAGE_KEY)).toBe('B')
+    expect(localStorageMock.getItem(STORAGE_KEY)).toBe('A2')
   })
 })
 
 // ── UT-012-05 ─────────────────────────────────────────────────────────────────
 
-describe('UT-012-05: toggle() 호출 시 B → A 전환 및 localStorage 저장', () => {
-  it('B 상태에서 toggle() 호출 후 template이 A가 된다', () => {
+describe('UT-012-05: toggle() 호출 시 A2 → B → A 순환 및 localStorage 저장', () => {
+  it('A2 상태에서 toggle() 호출 후 template이 B가 된다', () => {
+    localStorageMock.setItem(STORAGE_KEY, 'A2')
+    const { result } = renderHook(() => useLayoutTemplate())
+    expect(result.current.template).toBe('A2')
+
+    act(() => {
+      result.current.toggle()
+    })
+
+    expect(result.current.template).toBe('B')
+  })
+
+  it('B 상태에서 toggle() 호출 후 template이 A가 되고 localStorage에 저장된다', () => {
     localStorageMock.setItem(STORAGE_KEY, 'B')
     const { result } = renderHook(() => useLayoutTemplate())
-    expect(result.current.template).toBe('B')
 
     act(() => {
       result.current.toggle()
     })
 
     expect(result.current.template).toBe('A')
-  })
-
-  it('B → toggle() 호출 후 localStorage에 A가 저장된다', () => {
-    localStorageMock.setItem(STORAGE_KEY, 'B')
-    const { result } = renderHook(() => useLayoutTemplate())
-
-    act(() => {
-      result.current.toggle()
-    })
-
     expect(localStorageMock.getItem(STORAGE_KEY)).toBe('A')
   })
 })
@@ -149,7 +158,7 @@ describe('UT-012-06: SSR 환경(window undefined)에서 A 반환', () => {
       function readStoredTemplate() {
         if (typeof window === 'undefined') return 'A'
         const stored = localStorage.getItem('vulcan-dashboard-layout')
-        if (stored === 'A' || stored === 'B') return stored
+        if (stored === 'A' || stored === 'A2' || stored === 'B') return stored
         return 'A'
       }
       return { readStoredTemplate }

@@ -92,7 +92,6 @@ export interface DocsStats {
   design: number
   test_plan: number
   review: number
-  security?: number
   release?: number
   backlog?: number
   runs?: number
@@ -245,7 +244,6 @@ export interface DocEntry {
     | 'design'
     | 'test-plan'
     | 'review'
-    | 'security'
     | 'release'
     | 'backlog'
     | 'standards'

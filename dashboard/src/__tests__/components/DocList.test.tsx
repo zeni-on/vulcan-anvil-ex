@@ -89,9 +89,12 @@ describe('DocList', () => {
       { name: 'DOC-DATA-G2-002_Database-Spec_v0.1', path: 'docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md', category: 'design' },
     ]
     render(<DocList docs={dataOnly} />)
+    expect(screen.getByTestId('doc-subfolder-data')).toHaveTextContent('data')
+    expect(screen.getByTestId('doc-subfolder-data/erd')).toHaveTextContent('erd')
     expect(screen.getByTestId('doc-subfolder-data/erd/logical')).toBeInTheDocument()
     expect(screen.getByTestId('doc-subfolder-data/erd/physical')).toBeInTheDocument()
     expect(screen.getByTestId('doc-subfolder-data/erd/exports')).toBeInTheDocument()
+    expect(screen.queryByText('data/erd/logical')).not.toBeInTheDocument()
   })
 
   it('dbml 파일을 산출물 문서로 표시한다', () => {
@@ -141,8 +144,8 @@ describe('DocList', () => {
     render(<DocList docs={reqOnly} />)
     expect(screen.getByTestId('doc-category-design')).toBeInTheDocument()
     expect(screen.getByTestId('doc-category-review')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-category-toggle-design')).toHaveTextContent('(0)')
-    expect(screen.getByTestId('doc-category-toggle-review')).toHaveTextContent('(0)')
+    expect(screen.getByTestId('doc-category-toggle-design')).toHaveTextContent('0')
+    expect(screen.getByTestId('doc-category-toggle-review')).toHaveTextContent('0')
   })
 
   it('카테고리 토글 버튼이 렌더링된다', () => {

@@ -192,9 +192,9 @@ export default function StatsCards({ stats }: StatsCardsProps) {
           />
           <StatCard
             icon={<FileText className="w-5 h-5" />}
-            label="Security 문서"
-            value={docs.security ?? 0}
-            color={(docs.security ?? 0) > 0 ? 'blue' : 'default'}
+            label="Release 문서"
+            value={docs.release ?? 0}
+            color={(docs.release ?? 0) > 0 ? 'blue' : 'default'}
           />
           <StatCard
             icon={<BookOpen className="w-5 h-5" />}

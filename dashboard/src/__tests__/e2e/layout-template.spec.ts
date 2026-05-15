@@ -3,7 +3,8 @@
  * @description REQ-012 레이아웃 템플릿 시스템 E2E / Security 테스트
  *
  * TST-012-01: 템플릿 A 기본 렌더링 (E2E)
- * TST-012-02: 템플릿 B 렌더링 (E2E)
+ * TST-012-02: 템플릿 A2 렌더링 (E2E)
+ * TST-012-02B: 템플릿 B 렌더링 (E2E)
  * TST-012-03: 토글 버튼으로 즉시 전환 (E2E)
  * TST-012-04: localStorage 영속성 — 새로고침 후 복원 (E2E)
  * TST-012-05: localStorage 유효하지 않은 값 폴백 (Integration via E2E)
@@ -47,10 +48,31 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
   })
 
   /**
-   * TST-012-02: localStorage에 "vulcan-dashboard-layout": "B"가 설정된 상태에서 접속
+   * TST-012-02: localStorage에 "vulcan-dashboard-layout": "A2"가 설정된 상태에서 접속
+   * 기대: 템플릿 A2 레이아웃이 렌더링됨
+   */
+  test('TST-012-02: localStorage에 A2가 설정된 상태에서 템플릿 A2 렌더링', async ({ page }) => {
+    await page.goto(PROJECT_URL)
+    await page.evaluate((key) => localStorage.setItem(key, 'A2'), STORAGE_KEY)
+    await page.reload()
+
+    await page.waitForSelector('[data-testid="layout-a2"]', { timeout: 10000 })
+    await expect(page.locator('[data-testid="layout-a2"]')).toBeVisible()
+    await expect(page.locator('[data-testid="layout-a"]')).not.toBeVisible()
+    await expect(page.locator('[data-testid="layout-b"]')).not.toBeVisible()
+
+    await expect(page.locator('[data-testid="layout-a2-docs"]')).toBeVisible()
+    await expect(page.locator('[data-testid="layout-a2-center"]')).toBeVisible()
+    await expect(page.locator('[data-testid="layout-a2-side"]')).toBeVisible()
+
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-02-templateA2-렌더링.png') })
+  })
+
+  /**
+   * TST-012-02B: localStorage에 "vulcan-dashboard-layout": "B"가 설정된 상태에서 접속
    * 기대: 템플릿 B (상단 stats + 하단 2컬럼) 레이아웃이 렌더링됨
    */
-  test('TST-012-02: localStorage에 B가 설정된 상태에서 템플릿 B 렌더링', async ({ page }) => {
+  test('TST-012-02B: localStorage에 B가 설정된 상태에서 템플릿 B 렌더링', async ({ page }) => {
     await page.goto(PROJECT_URL)
     // localStorage에 B 설정 후 새로고침
     await page.evaluate((key) => localStorage.setItem(key, 'B'), STORAGE_KEY)
@@ -72,7 +94,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
 
   /**
    * TST-012-03: 프로젝트 상세 페이지에서 우측 상단 레이아웃 토글 버튼 클릭
-   * 기대: 페이지 새로고침 없이 레이아웃이 A ↔ B로 즉시 전환됨
+   * 기대: 페이지 새로고침 없이 레이아웃이 A → A2 → B → A로 즉시 전환됨
    */
   test('TST-012-03: 토글 버튼 클릭 시 레이아웃 즉시 전환 (페이지 리로드 없음)', async ({ page }) => {
     // localStorage 초기화 후 A 상태로 시작
@@ -89,15 +111,25 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-A상태.png') })
 
-    // 클릭 — A → B 전환
+    // 클릭 — A → A2 전환
     await toggleBtn.click()
 
     // 페이지 URL이 변경되지 않아야 함 (SPA 전환)
     await expect(page).toHaveURL(new RegExp(PROJECT_ID))
 
-    // layout-b 렌더링 확인
-    await expect(page.locator('[data-testid="layout-b"]')).toBeVisible()
+    // layout-a2 렌더링 확인
+    await expect(page.locator('[data-testid="layout-a2"]')).toBeVisible()
     await expect(page.locator('[data-testid="layout-a"]')).not.toBeVisible()
+
+    // 아이콘이 PanelLeft로 전환됨
+    await expect(page.locator('[data-testid="icon-panel-left"]')).toBeVisible()
+
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-A2전환후.png') })
+
+    // A2 → B 전환
+    await toggleBtn.click()
+    await expect(page.locator('[data-testid="layout-b"]')).toBeVisible()
+    await expect(page.locator('[data-testid="layout-a2"]')).not.toBeVisible()
 
     // 아이콘이 LayoutGrid로 전환됨
     await expect(page.locator('[data-testid="icon-layout-grid"]')).toBeVisible()
@@ -124,7 +156,9 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
 
     await page.waitForSelector('[data-testid="layout-a"]', { timeout: 10000 })
 
-    // A → B 전환
+    // A → A2 → B 전환
+    await page.locator('[data-testid="layout-toggle"]').click()
+    await expect(page.locator('[data-testid="layout-a2"]')).toBeVisible()
     await page.locator('[data-testid="layout-toggle"]').click()
     await expect(page.locator('[data-testid="layout-b"]')).toBeVisible()
 
