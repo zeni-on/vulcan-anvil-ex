@@ -58,7 +58,12 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/02-design/api",
     "docs/artifacts/02-design/screen",
     "docs/artifacts/02-design/screen/images",
+    "docs/artifacts/02-design/screen/prototypes",
     "docs/artifacts/02-design/data",
+    "docs/artifacts/02-design/data/erd",
+    "docs/artifacts/02-design/data/erd/logical",
+    "docs/artifacts/02-design/data/erd/physical",
+    "docs/artifacts/02-design/data/erd/exports",
     "docs/artifacts/02-design/security",
     "docs/artifacts/02-design/development-standard",
     "docs/artifacts/03-test",
@@ -85,6 +90,8 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
     ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
     ("docs/templates/DATABASE_SPEC_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md"),
+    ("docs/templates/LOGICAL_ERD_DBML_TEMPLATE.dbml", "docs/artifacts/02-design/data/erd/logical/logical-erd.dbml"),
+    ("docs/templates/PHYSICAL_ERD_DBML_TEMPLATE.dbml", "docs/artifacts/02-design/data/erd/physical/physical-erd.dbml"),
     ("docs/templates/SECURITY_GUIDE_TEMPLATE.md", "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md"),
     ("docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md", "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md"),
     ("docs/templates/TEST_CASE_TEMPLATE.md", "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md"),
@@ -1458,7 +1465,7 @@ def validate_screen_spec(project_dir="."):
     has_ui_test = bool(re.search(r"UI-\d{3}", content))
     has_viewport = bool(re.search(r"Desktop\s+\d+x\d+|Mobile\s+\d+x\d+|viewport", content, re.IGNORECASE))
     has_visual_evidence = bool(re.search(
-        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/images/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
+        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/(?:images|prototypes)/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
         content,
         re.IGNORECASE,
     ))

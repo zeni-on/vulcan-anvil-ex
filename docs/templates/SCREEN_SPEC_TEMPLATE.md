@@ -36,6 +36,7 @@ change_reason: 최초 초안 작성
 - 보안 민감 화면은 `SEC`와 외부 보안 기준 `SR`을 함께 기록한다.
 - 외부 시안, Figma 캡처, 이미지 생성 시안, 손그림, 기존 화면 캡처는 출처와 파일 경로를 기록하고 `SCR-ID`와 연결한다.
 - 외부 시안이 없더라도 `Text Wireframe`, `HTML Mockup`, `Mermaid`, 이미지 중 하나 이상의 화면 구조 증적을 작성한다.
+- 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 두고, HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/`에 둔다.
 - `Text Wireframe`을 사용하는 경우 `UIREF-ID`별로 별도 절과 fenced code block을 작성한다. 단순 화면 구성 표만으로는 와이어프레임으로 보지 않는다.
 - 구현 후 비교가 가능하도록 기준 viewport와 주요 비교 항목을 작성한다.
 
@@ -49,7 +50,7 @@ change_reason: 최초 초안 작성
 
 | SCR-ID | 시안/와이어프레임 ID | 출처 | 파일/URL | 기준 Viewport | 비교 기준 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- |
-| SCR-001 | UIREF-001 | Figma / imagegen / 외부 이미지 / 손그림 / 기존 시스템 캡처 | docs/artifacts/02-design/screen/images/UIREF-001_example.png | Desktop 1280x720, Mobile 390x844 | 레이아웃, 입력항목, 메시지 위치, 버튼 상태 | Draft |
+| SCR-001 | UIREF-001 | Figma / imagegen / 외부 이미지 / 손그림 / 기존 시스템 캡처 / HTML Mockup | docs/artifacts/02-design/screen/images/UIREF-001_example.png 또는 docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | Desktop 1280x720, Mobile 390x844 | 레이아웃, 입력항목, 메시지 위치, 버튼 상태 | Draft |
 
 ### 4.1 UIREF-001 Text Wireframe
 

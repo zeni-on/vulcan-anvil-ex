@@ -68,8 +68,38 @@ describe('DocList', () => {
     render(<DocList docs={mockDocs} />)
     expect(screen.getByTestId('doc-subfolder-function')).toBeInTheDocument()
     expect(screen.getByTestId('doc-subfolder-screen')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-screen/images')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-screen/prototypes')).toBeInTheDocument()
     expect(screen.getByText('function-spec')).toBeInTheDocument()
     expect(screen.getByText('screen-spec')).toBeInTheDocument()
+  })
+
+  it('screen 하위 images/prototypes 폴더는 파일이 없어도 표시한다', () => {
+    const screenOnly: DocEntry[] = [
+      { name: 'screen-spec', path: 'docs/artifacts/02-design/screen/screen-spec.md', category: 'design' },
+    ]
+    render(<DocList docs={screenOnly} />)
+    expect(screen.getByTestId('doc-subfolder-screen/images')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-screen/prototypes')).toBeInTheDocument()
+    expect(screen.getAllByText('비어 있음')).toHaveLength(5)
+  })
+
+  it('data ERD 하위 logical/physical/exports 폴더는 파일이 없어도 표시한다', () => {
+    const dataOnly: DocEntry[] = [
+      { name: 'DOC-DATA-G2-002_Database-Spec_v0.1', path: 'docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md', category: 'design' },
+    ]
+    render(<DocList docs={dataOnly} />)
+    expect(screen.getByTestId('doc-subfolder-data/erd/logical')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-data/erd/physical')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-data/erd/exports')).toBeInTheDocument()
+  })
+
+  it('dbml 파일을 산출물 문서로 표시한다', () => {
+    const dbmlDocs: DocEntry[] = [
+      { name: 'logical-erd.dbml', path: 'docs/artifacts/02-design/data/erd/logical/logical-erd.dbml', category: 'design', kind: 'external', ext: 'dbml' },
+    ]
+    render(<DocList docs={dbmlDocs} />)
+    expect(screen.getByText('logical-erd.dbml')).toBeInTheDocument()
   })
 
   it('총 5개의 doc-item을 렌더링한다', () => {

@@ -285,6 +285,8 @@ export const EXTERNAL_DOC_EXTENSIONS = [
   'jpeg',
   'webp',
   'gif',
+  'svg',
+  'dbml',
 ] as const
 
 export type ExternalDocExt = (typeof EXTERNAL_DOC_EXTENSIONS)[number]

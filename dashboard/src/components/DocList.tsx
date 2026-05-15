@@ -102,6 +102,16 @@ const CATEGORY_PREFIX: Partial<Record<DocEntry['category'], string>> = {
   runs: 'docs/runs/',
 }
 
+const EXPECTED_EMPTY_SUBFOLDERS: Partial<Record<DocEntry['category'], string[]>> = {
+  design: [
+    'screen/images',
+    'screen/prototypes',
+    'data/erd/logical',
+    'data/erd/physical',
+    'data/erd/exports',
+  ],
+}
+
 function DocSectionGroup({
   title,
   children,
@@ -165,7 +175,10 @@ function ExtensionIcon({ ext, className }: { ext: string; className?: string }) 
     case 'jpeg':
     case 'webp':
     case 'gif':
+    case 'svg':
       return <Image className={`${cn} text-violet-500`} aria-hidden="true" />
+    case 'dbml':
+      return <FileText className={`${cn} text-cyan-500`} aria-hidden="true" />
     default:
       return <FileText className={`${cn} text-gray-500`} aria-hidden="true" />
   }
@@ -329,15 +342,19 @@ function CollapsibleSubfolderGroup({
               </button>
               {isOpen && (
                 <ul className="space-y-0.5 pl-3">
-                  {items.map((doc) => (
-                    <DocItem
-                      key={doc.path}
-                      doc={doc}
-                      onDocSelect={onDocSelect}
-                      onExternalOpen={onExternalOpen}
-                      externalDisabled={externalDisabled}
-                    />
-                  ))}
+                  {items.length === 0 ? (
+                    <li className="py-1 text-[11px] text-[#4B5563]">비어 있음</li>
+                  ) : (
+                    items.map((doc) => (
+                      <DocItem
+                        key={doc.path}
+                        doc={doc}
+                        onDocSelect={onDocSelect}
+                        onExternalOpen={onExternalOpen}
+                        externalDisabled={externalDisabled}
+                      />
+                    ))
+                  )}
                 </ul>
               )}
             </div>
@@ -388,6 +405,9 @@ function CategorySection({
       const arr = subGroups.get(subPath) ?? []
       arr.push(doc)
       subGroups.set(subPath, arr)
+    }
+    for (const subPath of EXPECTED_EMPTY_SUBFOLDERS[category] ?? []) {
+      if (!subGroups.has(subPath)) subGroups.set(subPath, [])
     }
     // 루트 직속 파일을 먼저, 그 뒤 하위폴더는 알파벳순
     const sortedKeys = Array.from(subGroups.keys()).sort((a, b) => {
@@ -471,6 +491,7 @@ export default function DocList({
       templates: [],
       agent: [],
       reference: [],
+      release: [],
       runs: [],
       other: [],
     },
