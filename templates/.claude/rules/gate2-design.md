@@ -16,6 +16,7 @@ paths:
 | 화면 명세 | `docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md` | `SCREEN_SPEC_TEMPLATE.md` | `SCR` |
 | 단어사전 | `docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md` | `PROJECT_GLOSSARY_TEMPLATE.md` | — |
 | DB 명세 | `docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md` | `DATABASE_SPEC_TEMPLATE.md` | `DB`, `IF` |
+| ERD (DBML) | `docs/artifacts/02-design/data/erd/{logical/logical-erd.dbml, physical/physical-erd.dbml}` (PNG/SVG/PDF는 `erd/exports/`) | `LOGICAL_ERD_DBML_TEMPLATE.dbml`, `PHYSICAL_ERD_DBML_TEMPLATE.dbml` | — |
 | 보안 가이드 | `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md` | `SECURITY_GUIDE_TEMPLATE.md` | `SEC` |
 | 개발 표준 | `docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md` | `DEVELOPMENT_STANDARD_TEMPLATE.md` | — |
 

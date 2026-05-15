@@ -47,6 +47,7 @@ description: "설계 에이전트. Gate 2에서 SW 아키텍처(C1/C2/C3, CNT/CM
 - 프로그램 명세: `docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md`
 - API 명세: `docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md`
 - DB 명세: `docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md` (DB가 있는 경우)
+- ERD (DBML 정식): `docs/artifacts/02-design/data/erd/logical/logical-erd.dbml`, `physical/physical-erd.dbml`. PNG/SVG/PDF 변환물은 `erd/exports/`. DB 명세서와 일관성 유지.
 - 보안 가이드: `docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md`
 - 개발 표준: `docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md`
 
