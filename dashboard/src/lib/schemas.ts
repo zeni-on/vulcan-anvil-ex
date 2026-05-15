@@ -84,6 +84,7 @@ export const DocsStatsSchema = z.object({
   test_plan:    z.number().int().min(0),
   review:       z.number().int().min(0),
   security:     z.number().int().min(0).optional(),
+  release:      z.number().int().min(0).optional(),
   backlog:      z.number().int().min(0).optional(),
   runs:         z.number().int().min(0).optional(),
   total:        z.number().int().min(0),

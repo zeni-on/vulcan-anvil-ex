@@ -20,7 +20,9 @@
 - `TEST_CASE_TEMPLATE.md`: 테스트케이스 정의서
 - `TEST_RESULT_TEMPLATE.md`: Gate 4 QA 테스트 결과서
 - `DEVELOPMENT_STANDARD_TEMPLATE.md`: 개발표준정의서
-- `CHANGE_REQUEST_TEMPLATE.md`: 변경요청서
+- `CHANGE_REQUEST_TEMPLATE.md`: 변경요청 관리대장
+- `CHANGE_REQUEST_DETAIL_TEMPLATE.md`: 개별 변경요청 상세서
+- `RELEASE_APPROVAL_TEMPLATE.md`: 릴리즈 승인서
 - `QA_FINDING_TEMPLATE.md`: QA 발견사항
 
 템플릿 작성 기준:

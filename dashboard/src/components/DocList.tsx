@@ -34,6 +34,7 @@ const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
   'test-plan':  '테스트 계획',
   review:       '리뷰',
   security:     '보안',
+  release:      '승인/릴리즈',
   backlog:      '백로그',
   standards:    '표준/참고',
   templates:    '템플릿',
@@ -52,6 +53,7 @@ const CATEGORY_ORDER: DocEntry['category'][] = [
   'test-plan',
   'review',
   'security',
+  'release',
   'backlog',
   'standards',
   'templates',
@@ -69,6 +71,7 @@ const ARTIFACT_CATEGORY_ORDER: DocEntry['category'][] = [
   'test-plan',
   'review',
   'security',
+  'release',
   'backlog',
 ]
 
@@ -91,6 +94,7 @@ const CATEGORY_PREFIX: Partial<Record<DocEntry['category'], string>> = {
   review: 'docs/artifacts/04-review/',
   backlog: 'docs/artifacts/05-change/',
   security: 'docs/artifacts/06-security/',
+  release: 'docs/artifacts/07-release/',
   standards: 'docs/seed-docs/',
   templates: 'docs/templates/',
   agent: 'docs/adapters/',

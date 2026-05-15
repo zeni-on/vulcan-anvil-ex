@@ -316,7 +316,7 @@ my-project/
 
 `docs/seed-docs/`는 공개 표준 문서를 프로젝트에 주입하는 영역입니다. 현재는 공공데이터 공통표준과 소프트웨어 개발보안 관련 공개 문서를 기준 자료로 둡니다.
 
-`docs/backlog/`는 Phase 0 아이디어, FIND, CR, ISSUE, 기술부채를 다음 Run 또는 재진입 Gate로 연결하는 백로그 영역입니다.
+`docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`는 Phase 0 아이디어, FIND, CR, ISSUE, 기술부채를 다음 Run 또는 재진입 Gate로 연결하는 백로그 산출문서입니다.
 
 ## 문서 템플릿
 

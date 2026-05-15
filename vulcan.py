@@ -67,6 +67,7 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/04-review/evidence/ui",
     "docs/artifacts/05-change",
     "docs/artifacts/06-security",
+    "docs/artifacts/07-release",
     "docs/runs",
     "docs/ref-docs",
 ]
@@ -90,6 +91,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/QA_FINDING_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"),
     ("docs/templates/TEST_RESULT_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"),
     ("docs/templates/CHANGE_REQUEST_TEMPLATE.md", "docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md"),
+    ("docs/templates/RELEASE_APPROVAL_TEMPLATE.md", "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"),
 ]
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
@@ -480,6 +482,9 @@ def count_docs(project_dir="."):
             os.path.join(project_dir, "docs", "artifacts", "06-security"),
             os.path.join(project_dir, "docs", "05-security"),
         ],
+        "release": [
+            os.path.join(project_dir, "docs", "artifacts", "07-release"),
+        ],
         "backlog": [
             os.path.join(project_dir, "docs", "artifacts", "05-change"),
             os.path.join(project_dir, "docs", "backlog"),
@@ -616,6 +621,18 @@ def compute_stats(project_dir="."):
 WAVE_DONE_STATUSES = {"Implemented", "Verified", "Completed", "Done"}
 WAVE_ACTIVE_STATUSES = {"In Progress", "Running", "Review Requested"}
 WAVE_KNOWN_STATUSES = WAVE_DONE_STATUSES | WAVE_ACTIVE_STATUSES | {"Planned", "Blocked", "Rolled Back"}
+WAVE_STATUS_RANK = {
+    "Planned": 0,
+    "In Progress": 1,
+    "Running": 1,
+    "Review Requested": 2,
+    "Blocked": 2,
+    "Implemented": 3,
+    "Verified": 4,
+    "Completed": 4,
+    "Done": 4,
+    "Rolled Back": 4,
+}
 
 
 def find_run_files(project_dir="."):
@@ -631,6 +648,10 @@ def find_run_files(project_dir="."):
 
 def find_wave_run_file(project_dir, bw_id):
     pattern = re.compile(rf"\b{re.escape(bw_id)}\b", re.IGNORECASE)
+    for path in find_run_files(project_dir):
+        if pattern.search(os.path.basename(path)):
+            return path
+
     for path in find_run_files(project_dir):
         try:
             with open(path, encoding="utf-8") as f:
@@ -648,6 +669,8 @@ def parse_simple_yaml_block(content):
         return {}
     result = {}
     for raw_line in match.group(1).splitlines():
+        if raw_line.startswith((" ", "\t", "-")):
+            continue
         line = raw_line.strip()
         if not line or line.startswith("#") or ":" not in line:
             continue
@@ -680,7 +703,7 @@ def collect_build_wave_records(project_dir="."):
             if not record.get("run") and "build-wave" in content.lower():
                 record["run"] = rel_path
 
-            if metadata.get("bw_id") == bw_id or bw_id in os.path.basename(path):
+            if metadata.get("bw_id") == bw_id or bw_id.lower() in os.path.basename(path).lower():
                 status = metadata.get("status")
                 if status in WAVE_KNOWN_STATUSES:
                     record["status"] = status
@@ -737,9 +760,16 @@ def merge_session_wave_records(session, discovered):
             bw_id,
             {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
         )
-        for key in ("status", "run"):
-            if item.get(key):
-                base[key] = item[key]
+        session_status = item.get("status")
+        base_status = base.get("status")
+        session_rank = WAVE_STATUS_RANK.get(session_status, -1)
+        base_rank = WAVE_STATUS_RANK.get(base_status, -1)
+        if session_status and session_rank >= base_rank:
+            base["status"] = session_status
+            if item.get("run"):
+                base["run"] = item["run"]
+        elif not base.get("run") and item.get("run"):
+            base["run"] = item["run"]
         base["related_ids"] = sorted(set(base.get("related_ids", []) + item.get("related_ids", [])))
     return [merged[key] for key in sorted(merged)]
 
@@ -908,37 +938,66 @@ def parse_traceability(project_dir="."):
     if not path:
         return {}
     result = {}
+    headers = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             if not line.strip().startswith('|'):
                 continue
-            cols = [c.strip() for c in line.split('|')]
-            if len(cols) < 6:
+            cols = [c.strip() for c in line.strip().strip('|').split('|')]
+            if len(cols) < 5:
                 continue
-            req_id = cols[1]
+            if "REQ-ID" in cols:
+                headers = cols
+                continue
+            if all(re.fullmatch(r"[-: ]+", c or "") for c in cols):
+                continue
+
+            header_idx = {name: idx for idx, name in enumerate(headers)}
+
+            def cell(name, default=""):
+                idx = header_idx.get(name)
+                if idx is None or idx >= len(cols):
+                    return default
+                return cols[idx]
+
+            req_id = cell("REQ-ID", cols[0])
             if not re.match(r'REQ-\d{3}(?:-\d{2})?$', req_id):
                 continue
-            is_ex_matrix_row = (
-                len(cols) >= 17
-                and re.match(r'AC-\d{3}-\d{2}$', cols[3] if len(cols) > 3 else "")
-            )
+            ac_value = cell("AC-ID", cols[1] if len(cols) > 1 else "")
+            is_ex_matrix_row = bool(headers) and re.match(r'AC-\d{3}-\d{2}$', ac_value)
             if is_ex_matrix_row:
-                design = ", ".join(c for c in cols[4:9] if c and c not in ("-", "미정", "해당없음"))
+                design = ", ".join(
+                    c
+                    for c in [
+                        cell("FUNC-ID"),
+                        cell("SCR-ID"),
+                        cell("PGM-ID"),
+                        cell("DB-ID"),
+                        cell("IF-ID"),
+                        cell("API-ID"),
+                        cell("SEC-ID"),
+                    ]
+                    if c and c not in ("-", "미정", "해당없음")
+                )
                 test_columns = {
-                    "UT-ID": cols[11] if len(cols) > 11 else "",
-                    "IT-ID": cols[12] if len(cols) > 12 else "",
-                    "PT-ID": cols[13] if len(cols) > 13 else "",
+                    "UT-ID": cell("UT-ID"),
+                    "IT-ID": cell("IT-ID"),
+                    "PT-ID": cell("PT-ID"),
                 }
-                tst_raw = ", ".join(c for c in cols[11:14] if c and c not in ("-", "미정", "해당없음"))
-                review = cols[15] if len(cols) > 15 and cols[15] not in ("-", "미정", "해당없음") else ""
-                status = cols[14] if len(cols) > 14 else ""
+                if "UI-ID" in header_idx:
+                    test_columns["UI-ID"] = cell("UI-ID")
+                tst_raw = ", ".join(c for c in test_columns.values() if c and c not in ("-", "미정", "해당없음"))
+                review = cell("증적") or cell("검토")
+                if review in ("-", "미정", "해당없음"):
+                    review = ""
+                status = cell("상태")
             elif req_id in result:
                 continue
             else:
-                design  = cols[2] if cols[2] != '-' else ''
-                tst_raw = cols[3] if cols[3] != '-' else ''
-                review  = cols[4] if cols[4] != '-' else ''
-                status  = cols[5] if len(cols) > 5 else ''
+                design  = cols[1] if len(cols) > 1 and cols[1] != '-' else ''
+                tst_raw = cols[2] if len(cols) > 2 and cols[2] != '-' else ''
+                review  = cols[3] if len(cols) > 3 and cols[3] != '-' else ''
+                status  = cols[4] if len(cols) > 4 else ''
                 test_columns = {"TST-ID": tst_raw}
             tst_ids = [t.strip() for t in tst_raw.split(',') if t.strip() and t.strip() != '-']
             result[req_id] = {
@@ -2258,7 +2317,18 @@ def cmd_rollback(gate, reason="", scope=None, project_dir="."):
 
 # ── backlog ────────────────────────────────────────────────────────────────
 
-BACKLOG_PATH = "docs/backlog/BACKLOG.md"
+BACKLOG_PATH = "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md"
+LEGACY_BACKLOG_PATH = "docs/backlog/BACKLOG.md"
+
+
+def get_backlog_path(project_dir="."):
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if os.path.exists(path):
+        return path
+    legacy_path = os.path.join(project_dir, LEGACY_BACKLOG_PATH)
+    if os.path.exists(legacy_path):
+        return legacy_path
+    return path
 
 
 def _parse_backlog_items(content):
@@ -2301,7 +2371,7 @@ def _parse_backlog_items(content):
 
 def compute_backlog_stats(project_dir="."):
     """BACKLOG.md에서 Active/Done/Rejected 건수와 레벨·우선순위별 카운트를 계산한다."""
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         return {
             "active": 0, "done": 0, "rejected": 0,
@@ -2358,6 +2428,63 @@ def compute_backlog_stats(project_dir="."):
     }
 
 
+def _count_backlog_section(content, section_header):
+    count = 0
+    in_section = False
+    for line in content.splitlines():
+        if line.startswith(f"## {section_header}"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## ") and not line.startswith(f"## {section_header}"):
+            break
+        if in_section and re.match(r"^\|\s*BL-\d{3}\s*\|", line):
+            count += 1
+    return count
+
+
+def _refresh_backlog_summary(content):
+    stats = {
+        "Active": len(_parse_backlog_items(content)),
+        "Done": _count_backlog_section(content, "Done"),
+        "Rejected": _count_backlog_section(content, "Rejected"),
+        "Deferred": _count_backlog_section(content, "Deferred"),
+    }
+    lines = content.splitlines()
+    out = []
+    in_stats = False
+    wrote = False
+    for line in lines:
+        if line.startswith("## 통계"):
+            in_stats = True
+            wrote = True
+            out.append(line)
+            out.append("")
+            for key, value in stats.items():
+                out.append(f"- **{key}**: {value}건")
+            continue
+        if in_stats and line.startswith("## "):
+            in_stats = False
+            out.append(line)
+            continue
+        if in_stats:
+            continue
+        out.append(line)
+
+    if not wrote:
+        if out and out[-1].strip():
+            out.append("")
+        out.extend([
+            "## 통계",
+            "",
+            f"- **Active**: {stats['Active']}건",
+            f"- **Done**: {stats['Done']}건",
+            f"- **Rejected**: {stats['Rejected']}건",
+            f"- **Deferred**: {stats['Deferred']}건",
+        ])
+
+    return "\n".join(out) + ("\n" if content.endswith("\n") else "")
+
+
 def _next_backlog_id(content):
     ids = re.findall(r'\bBL-(\d{3})\b', content)
     next_num = max([int(i) for i in ids], default=0) + 1
@@ -2365,7 +2492,7 @@ def _next_backlog_id(content):
 
 
 def cmd_backlog_list(project_dir="."):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음. 프로젝트가 Vulcan-Anvil Ex 구조인지 확인하세요.")
         sys.exit(1)
@@ -2403,7 +2530,7 @@ def cmd_backlog_add(
     run="",
     project_dir=".",
 ):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2448,15 +2575,16 @@ def cmd_backlog_add(
         print("오류: BACKLOG.md Active 섹션을 찾지 못했습니다.")
         sys.exit(1)
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  추가: {new_id} - {title}")
     print(f"  다음 단계: Triage (레벨/우선순위 결정) 후 상태 → Triaged")
 
 
 def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
     """BL 항목을 Done으로 이동시킨다. Active에서 제거 후 Done 섹션에 기록."""
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2524,13 +2652,14 @@ def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
         out = new_out
         done_inserted = appended
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  완료: {bl_id} → Done ({commit_hash or 'commit 미지정'})")
 
 
 def cmd_backlog_reject(bl_id, reason="", project_dir="."):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2586,8 +2715,9 @@ def cmd_backlog_reject(bl_id, reason="", project_dir="."):
             new_out.append(line)
         out = new_out
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  반려: {bl_id} → Rejected ({reason or '사유 미지정'})")
 
 
@@ -3146,17 +3276,23 @@ def cmd_upgrade(project_dir="."):
         shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
         print(f"  업데이트: vulcan.py")
 
-    # v1.1+: BACKLOG.md가 없으면 생성 (있으면 사용자 데이터 보존)
+    # v1.1+: Backlog 공식 문서가 없으면 생성하고, legacy BACKLOG.md는 보존한다.
     backlog_dst = os.path.join(project_dir, BACKLOG_PATH)
     if not os.path.exists(backlog_dst):
-        tpl = os.path.join(src_templates, "docs/backlog/BACKLOG.md")
-        if os.path.exists(tpl):
-            with open(tpl, encoding="utf-8") as f:
-                content = render(f.read(), variables)
+        legacy_backlog = os.path.join(project_dir, LEGACY_BACKLOG_PATH)
+        if os.path.exists(legacy_backlog):
             os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
-            with open(backlog_dst, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"  생성 (Ex 신규): docs/backlog/BACKLOG.md")
+            shutil.copy2(legacy_backlog, backlog_dst)
+            print(f"  마이그레이션: {LEGACY_BACKLOG_PATH} → {BACKLOG_PATH}")
+        else:
+            tpl = os.path.join(src_templates, "docs/backlog/BACKLOG.md")
+            if os.path.exists(tpl):
+                with open(tpl, encoding="utf-8") as f:
+                    content = render(f.read(), variables)
+                os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
+                with open(backlog_dst, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"  생성 (Ex 신규): {BACKLOG_PATH}")
 
     # v1.2+: 설계·리뷰 템플릿이 없으면 생성 (있으면 사용자 작업 보존)
     for tpl_rel, label in [
@@ -3649,7 +3785,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
     # docs/backlog/
     content = render(read_template("docs/backlog/BACKLOG.md"), variables)
-    write_file(target_dir, "docs/backlog/BACKLOG.md", content)
+    write_file(target_dir, BACKLOG_PATH, content)
     copy_file(target_dir, "docs/backlog/PROCESS.md", "docs/backlog/PROCESS.md")
 
     # audit and agent coding document framework
