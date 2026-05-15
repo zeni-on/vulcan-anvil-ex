@@ -210,12 +210,14 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 작업:
 1. Gate 1~4 산출물의 상태와 미해결 이슈를 확인한다.
-2. 승인 대상 문서와 버전을 정리한다.
-3. 릴리즈 또는 인수인계 증적을 정리한다.
+2. `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md`(init이 미리 생성)을 채운다. 승인 대상 문서/버전, 릴리즈 범위, 인수인계 항목을 명시한다.
+3. 변경요청은 `docs/artifacts/05-change/`에서 관리한다. CR Register(`DOC-PM-G0-001_Change-Request`)에 항목을 기록하고, 베이스라인 변경이 필요한 개별 CR은 `DOC-PM-CR-NNN` 상세 파일을 별도로 생성한다.
+4. Release Approval과 CR을 혼동하지 않는다. CR = 변경 의사결정, Release Approval = 릴리즈 승인.
 
 주의:
 - 미해결 Open 이슈가 있으면 승인 완료로 선언하지 않는다.
+- Release Approval 산출물에 CR detail 본문을 그대로 옮겨 적지 않는다. CR detail은 `05-change/DOC-PM-CR-NNN`으로 두고 Release Approval은 링크만 둔다.
 
 완료 조건:
-- 승인 후보 목록, 릴리즈/인수인계 증적, 남은 승인 질문
+- Release Approval 산출물 작성, CR Register/Detail 정리, 릴리즈/인수인계 증적, 남은 승인 질문
 ```

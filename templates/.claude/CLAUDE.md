@@ -82,7 +82,7 @@ Discovery    →   요구사항  →   설계          →   테스트설계 →
 | Gate 3 | 테스트 설계 | `docs/artifacts/03-test/` | UT, IT, PT, UI |
 | 구현 | Build Wave 단위 구현 | `src/`, `docs/runs/` | BW, RUN |
 | Gate 4 | QA 검수 | `docs/artifacts/04-review/` | FIND, ISSUE |
-| Gate 5 | 최종 승인 | `docs/artifacts/05-change/`, `docs/runs/` | CR |
+| Gate 5 | 최종 승인 / 릴리즈 | `docs/artifacts/07-release/`, `docs/runs/` | CR(register/detail), Release Approval |
 | Backlog | IDEA/FIND/CR/ISSUE/DEBT 대기열 | `docs/backlog/` | — |
 
 세부 ID 체계는 `docs/core/ID_SYSTEM.md`, Gate 전환 조건은 `GATE_GUIDE.md`와 `docs/core/AGENT_RUN_PROTOCOL.md` §5를 본다.
@@ -129,7 +129,8 @@ Discovery    →   요구사항  →   설계          →   테스트설계 →
 | **G3 Test** | `docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md` |
 | **G4 Review** | `docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md` |
 | | `docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md` |
-| **G5 Change** | `docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md` |
+| **CR Register** | `docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md` (변경요청 목록. 개별 CR 상세는 `DOC-PM-CR-NNN`을 별도 생성) |
+| **G5 Release Approval** | `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md` (Gate 5 승인 산출물) |
 
 페르소나 작업 절차:
 

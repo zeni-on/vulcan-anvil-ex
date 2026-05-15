@@ -127,7 +127,7 @@ subagent를 투입할 때는 agent 이름뿐 아니라 `persona`, `related_ids`,
 | 구현 | build-frontend + build-backend | Wave별 병렬 |
 | UI 증적 | evidence | |
 | Gate 4 | review | |
-| Gate 5 | release (Orchestrator 직접) | |
+| Gate 5 | release (Orchestrator 직접) | `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval` 작성. 변경요청은 `05-change/`(register + DOC-PM-CR-NNN detail) |
 
 ### 작업 분할 전략 (컨텍스트 보호)
 
@@ -170,7 +170,7 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 | Gate 3 | 모든 `AC`와 보안항목이 `UT/IT/PT/UI` 중 하나 이상에 연결 |
 | 구현 | Build Wave별 코드+테스트+추적표+증적이 갱신되고 단위 테스트 Pass |
 | Gate 4 | Blocker(A~D) 전원 Pass, FIND/CR/ISSUE가 명시적으로 처리됨 |
-| Gate 5 | 승인본/변경이력/릴리즈 증적 정리, 사용자 최종 승인 |
+| Gate 5 | `07-release/DOC-PM-G5-001_Release-Approval` 작성, 미해결 CR/ISSUE 처리, 승인본/변경이력/릴리즈 증적 정리, 사용자 최종 승인 |
 
 ### 긴급 절차 (Hotfix)
 
