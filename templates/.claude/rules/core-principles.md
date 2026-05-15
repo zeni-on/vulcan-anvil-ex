@@ -20,9 +20,9 @@
 - **ISSUE** — 결론이 어려운 질문/위험/보류. Backlog로 남김.
 - **Gate 4 Blocker/Major는 백로그 이월 금지** — 현 Gate 내에서 해결한다.
 
-## 증분 Gate Rollback
+## 승인된 CR의 Gate 재진행
 
-🟡/🔴 백로그 처리 시 `python vulcan.py rollback --scope REQ-XXX,...` 형태로 영향 범위를 명시한다. 전체 rollback은 scope를 특정할 수 없을 때만 사용한다.
+승인된 변경요청(CR)은 `python vulcan.py gate-start <gate>`로 필요한 Gate를 다시 진행 상태로 전환한다. 별도 rollback 명령은 없다. 영향 범위는 **CR 상세서**(`docs/artifacts/05-change/DOC-PM-CR-NNN`)와 **Run 문서**의 scope로 관리한다. Run 문서에는 관련 `CR-ID`, 영향받는 ID(REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI), 갱신할 산출물 범위, 실행할 테스트 기준을 기록한다.
 
 ## Build Wave (`docs/core/AGENT_RUN_PROTOCOL.md` §5.1)
 

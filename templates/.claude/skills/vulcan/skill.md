@@ -178,11 +178,18 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 2. 설계 문서는 생략 가능 (사용자 명시적 허용 시)
 3. **Gate 4 QA 리뷰는 절대 생략 불가**
 
-### 롤백
+### CR 처리 / Gate 재진행
 
-사용자가 "요구사항 추가", "Gate N부터 다시", "롤백" 요청 시:
-1. `python vulcan.py rollback --gate gateN --reason "사유"` 직접 실행
-2. 해당 Gate 에이전트 즉시 투입 (롤백 요청 = 승인)
+사용자가 "요구사항 추가", "Gate N부터 다시", "변경요청 처리", "CR 처리" 등을 요청 시:
+1. CR 상세서 작성 (`docs/artifacts/05-change/DOC-PM-CR-NNN`) — 변경 내용, 영향 ID, 다시 진행할 Gate 명시
+2. CR Register(`DOC-PM-G0-001_Change-Request`)에 항목 등록
+3. 사용자 승인 확인
+4. `python vulcan.py gate-start <gate>` 직접 실행 — 해당 Gate를 다시 진행 상태로 전환
+5. **필수 Run 문서 작성** — 관련 CR-ID, 영향 범위(REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI), 갱신할 산출물, 실행할 테스트 기준 기록
+6. 해당 Gate 에이전트 즉시 투입, scope 안에서 산출물 갱신
+7. 완료 후 추적표/CR 상세서/CR Register 갱신
+
+별도 `rollback` 명령은 제거됨. 영향 범위는 CR 상세서와 Run 문서의 scope로 관리한다.
 
 ## Gate별 실행 모드
 
@@ -197,7 +204,7 @@ REQ 그룹 1~2개면 분할 없이 한 번에 투입한다.
 | "UI 증적", "화면 캡처" | evidence |
 | "Gate 4 시작", "리뷰 시작" | review |
 | "상태 확인" | (오케스트레이터 직접) |
-| "롤백해줘" | (오케스트레이터 직접) |
+| "변경요청 처리", "Gate N부터 다시", "CR 처리" | (오케스트레이터 직접: CR 상세서 → gate-start → Run) |
 
 ## 에스컬레이션 프로토콜
 
