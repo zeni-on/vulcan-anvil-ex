@@ -21,30 +21,34 @@
 
 `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/` 같은 Claude 런타임 파일이 같은 저장소에 있을 수 있다. 다만 이 파일들은 Codex 런타임 계약이 아니다. 사용자가 명시적으로 요청하거나 adapter 비교가 필요할 때만 참고 자료로 사용한다.
 
-## 3. 필수 핵심 문서
+## 3. 문서 읽기 규칙
 
-간단하지 않은 Run을 시작하기 전에는 다음 문서의 관련 부분을 읽는다.
+모든 Core/Adapter 문서를 매번 전부 읽지 않는다. 먼저 현재 Gate와 작업 유형을 확인하고, 필요한 문서만 읽는다.
 
-- `docs/core/ID_SYSTEM.md`
-- `docs/core/TRACEABILITY_RULES.md`
+항상 먼저 확인한다.
+
+- `session.json`
+- 사용자 요청
+- 관련 산출물 또는 변경 파일
+
+간단하지 않은 Run에서는 다음 문서를 우선 확인한다.
+
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
-- `docs/core/DOCUMENT_METADATA.md`
-- `docs/core/REFERENCE_STANDARDS.md`
-- `docs/core/SECURITY_BASELINE.md`
-- `docs/core/KISA_SECURITY_RULES.md`
-- `docs/core/DATA_STANDARD_RULES.md`
-- `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
-- `docs/core/CHANGE_CONTROL_PROCESS.md`
-
-Codex/GPT 전용 실행에는 다음 문서도 함께 읽는다.
-
-- `docs/adapters/codex-gpt/README.md`
-- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
+- `docs/core/TRACEABILITY_RULES.md`
 - `docs/adapters/codex-gpt/GATE_PROMPTS.md`
-- `docs/adapters/codex-gpt/LIMITATIONS.md`
+
+작업 유형별로 추가 확인한다.
+
+| 작업 | 추가 문서 |
+| --- | --- |
+| ID/메타데이터 | `docs/core/ID_SYSTEM.md`, `docs/core/DOCUMENT_METADATA.md` |
+| 요구사항/추적성 | `docs/core/TRACEABILITY_RULES.md`, 요구사항정의서, 추적표 |
+| 보안 | `docs/core/SECURITY_BASELINE.md`, `docs/core/KISA_SECURITY_RULES.md`, 보안가이드 |
+| 데이터/DB | `docs/core/DATA_STANDARD_RULES.md`, 단어사전, DB명세 |
+| 변경요청/백로그 | `docs/core/CHANGE_CONTROL_PROCESS.md`, CR 관리대장, Backlog |
+| Codex Run 입출력 | `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`, `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md` |
+| persona/subagent | `docs/core/AGENT_PERSONAS.md`, `docs/adapters/codex-gpt/PERSONA_DELEGATION.md` |
 
 ## 4. Orchestrator 규칙
 
