@@ -127,7 +127,7 @@ RUN_PERSONAS = {
     "evidence": "테스트 결과, 화면 캡처, 로그 등 증적을 만든다.",
     "review": "추적성, 보안, 품질, 설계 준수 여부를 검토한다.",
     "release": "승인 후보, 릴리즈 범위, 인수인계 항목을 정리한다.",
-    "change-control": "변경요청 영향도와 재진입 Gate를 판단한다.",
+    "change-control": "변경요청 영향도와 다시 진행할 Gate를 판단한다.",
     "documentation": "용어, 문서 버전, 산출물 일관성을 정리한다.",
 }
 RUN_SKILL_DEFAULT_PERSONAS = {
@@ -1838,24 +1838,6 @@ def check_trace(project_dir="."):
 
     group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
 
-    # 증분 Rollback: rollback_scope가 있으면 scope 내 REQ만 검증 대상
-    rollback_scope = session.get("rollback_scope")
-    if rollback_scope and rollback_scope.get("req_ids"):
-        scope_set = set()
-        for rid in rollback_scope["req_ids"]:
-            # REQ-NNN 형식이면 해당 그룹의 REQ-NNN-NN 전부 포함
-            if re.match(r'^(REQ|NREQ)-\d{3}$', rid):
-                prefix = rid + "-"
-                for r in detail_reqs:
-                    if r.startswith(prefix):
-                        scope_set.add(r)
-            else:
-                scope_set.add(rid)
-        original_count = len(detail_reqs)
-        detail_reqs = {r for r in detail_reqs if r in scope_set}
-        print(f"  [증분 Rollback 모드] scope: {', '.join(sorted(rollback_scope['req_ids']))}")
-        print(f"  scope 내 REQ: {len(detail_reqs)}/{original_count} (나머지는 이미 통과로 간주)\n")
-
     # ── Gate 1: REQ-ID별 AC 존재 여부 + TRACEABILITY.md 행 등록 여부
     if current_gate == "gate1":
         print("  Gate 1 검사 (1): 인수 기준(AC) 정의 여부")
@@ -2244,75 +2226,6 @@ def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
         print(f"  {issue}")
     print("\n이슈를 정리한 뒤 다시 Gate 전환을 실행하세요.")
     sys.exit(1)
-
-
-# ── rollback ──────────────────────────────────────────────────────────────
-
-def cmd_rollback(gate, reason="", scope=None, project_dir="."):
-    """Gate 상태를 되돌린다. --scope가 있으면 증분 Rollback 모드로 작동한다.
-
-    증분 모드에서는 session.json에 rollback_scope를 기록하여 check-trace가
-    scope 내 REQ-ID만 재검증 대상으로 삼도록 한다. 기존 문서/코드는 보존된다.
-    scope 생략 시 기존 전체 rollback 동작과 호환된다.
-    """
-    session = load_session(project_dir)
-
-    if gate not in GATE_LABELS:
-        print(f"오류: 유효하지 않은 gate - {gate}")
-        print(f"  사용 가능: {', '.join(GATE_LABELS.keys())}")
-        sys.exit(1)
-
-    gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
-    rollback_idx = gate_order.index(gate)
-
-    # 대상 gate 및 이후 모든 gate를 pending으로 리셋
-    for g in gate_order[rollback_idx:]:
-        session["gate_status"][g] = "pending"
-
-    session["current_gate"] = gate
-
-    # completed 목록에서 rollback 대상 gate 이후 항목 제거
-    labels_to_remove = {GATE_LABELS[g] for g in gate_order[rollback_idx:]}
-    session["completed"] = [
-        c for c in session.get("completed", [])
-        if not any(c.startswith(label) for label in labels_to_remove)
-    ]
-
-    # 증분 rollback: scope 기록
-    scope_list = []
-    if scope:
-        scope_list = [s.strip() for s in scope.split(",") if s.strip()]
-        session["rollback_scope"] = {
-            "gate": gate,
-            "req_ids": scope_list,
-            "reason": reason,
-        }
-    elif "rollback_scope" in session:
-        # 전체 rollback이면 기존 scope 제거
-        del session["rollback_scope"]
-
-    if reason:
-        session.setdefault("blocked", [])
-        scope_tag = f" scope={','.join(scope_list)}" if scope_list else ""
-        note = f"[rollback to {gate}{scope_tag}] {reason}"
-        if note not in session["blocked"]:
-            session["blocked"].append(note)
-
-    save_session(session, project_dir)
-
-    if scope_list:
-        print(f"  증분 rollback: {gate} ({GATE_LABELS[gate]}) — scope: {', '.join(scope_list)}")
-        print(f"  scope 내 REQ만 재검증 대상. 다른 REQ는 이미 통과로 간주.")
-    else:
-        print(f"  rollback 완료: {gate} ({GATE_LABELS[gate]}) 부터 재시작")
-    print(f"  리셋된 Gate: {', '.join(gate_order[rollback_idx:])}")
-
-    commit_msg = f"rollback: {gate}부터 재시작 - {GATE_LABELS[gate]}"
-    if scope_list:
-        commit_msg = f"rollback(scope={','.join(scope_list)}): {gate} - {GATE_LABELS[gate]}"
-    if reason:
-        commit_msg += f" ({reason})"
-    git_commit(commit_msg, project_dir, include_source=False)
 
 
 # ── backlog ────────────────────────────────────────────────────────────────
@@ -3871,7 +3784,6 @@ def main():
   sync-session session.json 대시보드 상태 캐시 동기화
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
-  rollback     특정 Gate부터 재시작 (해당 Gate 이후 모두 pending 리셋)
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
   upgrade      프레임워크 파일 최신화 (프로젝트 디렉토리에서 실행)
   version      현재 프레임워크 버전 확인
@@ -3886,7 +3798,6 @@ def main():
   python vulcan.py sync-session
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
-  python vulcan.py rollback --gate gate2 --reason "요구사항 추가"
   python vulcan.py export
   python vulcan.py upgrade
         """
@@ -3926,11 +3837,6 @@ def main():
     p_wave_complete.add_argument("--status", default="Verified", choices=sorted(WAVE_KNOWN_STATUSES), help="Wave 상태")
     p_wave_complete.add_argument("--req", default="", help="구현 완료 처리할 REQ-ID 콤마 구분")
 
-    p_rollback = subparsers.add_parser("rollback", help="특정 Gate부터 재시작 (이후 Gate 모두 pending 리셋)")
-    p_rollback.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="재시작할 Gate")
-    p_rollback.add_argument("--reason", default="", help="롤백 사유 (선택)")
-    p_rollback.add_argument("--scope", default="", help="증분 rollback scope (REQ-ID 콤마 구분, 예: REQ-003,NREQ-005)")
-
     p_run_new = subparsers.add_parser("run-new", help="Codex/GPT Run 초안 생성")
     p_run_new.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
     p_run_new.add_argument("--gate", default="gate1", choices=list(GATE_LABELS.keys()), help="Gate 이름")
@@ -3969,7 +3875,7 @@ def main():
     bl_add.add_argument("--source", default="")
     bl_add.add_argument("--note", default="")
     bl_add.add_argument("--type", dest="item_type", default="IDEA", choices=["IDEA", "FIND", "CR", "ISSUE", "DEBT"])
-    bl_add.add_argument("--backlog-gate", dest="backlog_gate", default="phase0", help="재진입 Gate 후보")
+    bl_add.add_argument("--backlog-gate", dest="backlog_gate", default="phase0", help="다시 진행할 Gate 후보")
     bl_add.add_argument("--run", default="", help="관련 Run ID 또는 파일")
     bl_done = backlog_sub.add_parser("done", help="백로그 항목 완료 처리")
     bl_done.add_argument("--id", dest="bl_id", required=True)
@@ -4011,8 +3917,6 @@ def main():
         cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
     elif args.command == "wave-complete":
         cmd_wave_complete(bw_id=args.bw_id, status=args.status, req_ids=args.req)
-    elif args.command == "rollback":
-        cmd_rollback(gate=args.gate, reason=args.reason, scope=args.scope or None)
     elif args.command == "run-new":
         cmd_run_new(
             adapter=args.adapter,

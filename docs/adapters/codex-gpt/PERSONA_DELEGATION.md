@@ -29,7 +29,7 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 | 화면 캡처/테스트 증적 | `evidence` | 구현 완료 후 별도 Run으로 실행 |
 | 보안/추적성/품질 검토 | `review` | 구현과 분리된 읽기 중심 Run으로 실행 |
 | QA 결함 수정 | `build` + `review` | build가 수정하고 review가 재검증 |
-| 변경요청 영향도 분석 | `change-control` | 먼저 분석 후 필요한 Gate persona로 재진입 |
+| 변경요청 영향도 분석 | `change-control` | 먼저 분석 후 필요한 Gate persona로 진행 |
 
 ## 4. Codex subagent 전달문 기본형
 

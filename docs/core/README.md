@@ -14,7 +14,7 @@
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전, 용어, 도메인, 데이터 항목명 관리 규칙
 - `AGENT_PERSONAS.md`: 단계별 에이전트 persona와 subagent 위임 규칙
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
-- `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 증분 Gate 재진입 프로세스
+- `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 승인된 CR의 Gate 진행 프로세스
 
 관련 운영 참고 문서:
 

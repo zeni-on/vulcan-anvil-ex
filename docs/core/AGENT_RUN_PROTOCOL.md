@@ -34,7 +34,7 @@ Run은 다음 중 하나의 목적을 가진다.
 | Evidence Run | 화면 캡처, 로그, 결과 파일 정리 | 증적 파일, 결과 문서 |
 | Review Run | 추적성, 보안, 품질 점검 | 이슈, 변경요청, 리뷰 결과 |
 | QA Fix Run | G4에서 발견된 기존 설계 범위 내 결함 수정 | `FIND`, 수정 코드, 재검증 결과 |
-| Change Impact Run | 변경요청 영향도 분석과 재진입 Gate 판단 | `CR`, 영향받는 ID, scope, 승인 판단 |
+| Change Impact Run | 변경요청 영향도 분석과 다시 진행할 Gate 판단 | `CR`, 영향받는 ID, scope, 승인 판단 |
 
 Run은 너무 크게 만들지 않는다.
 

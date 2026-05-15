@@ -9,13 +9,13 @@
 - **레벨**: Trivial / Small / Major
 - **우선순위**: P0 / P1 / P2 / P3
 - **상태**: Proposed / Triaged / Scheduled / In Progress / Done / Rejected / Deferred
-- **재진입 Gate**: phase0 / gate1 / gate2 / gate3 / impl / gate4 / gate5 / none
+- **다시 진행할 Gate**: phase0 / gate1 / gate2 / gate3 / impl / gate4 / gate5 / none
 
 ---
 
 ## Active
 
-| ID | 제목 | 유형 | 레벨 | 우선순위 | 상태 | 관련 ID | 재진입 Gate | 관련 Run | 출처 | 비고 |
+| ID | 제목 | 유형 | 레벨 | 우선순위 | 상태 | 관련 ID | 다시 진행할 Gate | 관련 Run | 출처 | 비고 |
 |----|------|------|------|---------|------|---------|-------------|----------|------|------|
 | — | (아직 없음) | — | — | — | — | — | — | — | — | — |
 

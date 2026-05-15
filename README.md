@@ -91,23 +91,25 @@ flowchart LR
 
 Phase 0은 무거운 절차가 아닙니다. 오히려 "아직 잘 모르겠다"는 상태에서 시작하기 위한 완충 구간입니다. 충분히 작고 명확한 일이면 Phase 0을 짧게 끝내고 바로 Gate 1로 넘어갈 수 있습니다.
 
-Phase 0의 결과가 모두 바로 요구사항이 되는 것은 아닙니다. 확정된 후보는 Gate 1로 넘기고, 아직 판단이 필요한 아이디어나 질문은 Backlog에 남겨 의사결정 후 Gate 1 또는 필요한 Gate로 재진입합니다.
+Phase 0의 결과가 모두 바로 요구사항이 되는 것은 아닙니다. 확정된 후보는 Gate 1로 넘기고, 아직 판단이 필요한 아이디어나 질문은 Backlog에 남겨 의사결정 후 Gate 1 또는 필요한 Gate를 다시 진행합니다.
 
-`FIND`는 승인된 요구사항과 설계 범위 안의 결함이므로 구현 또는 테스트 보완으로 되돌립니다. `CR`은 요구사항, 설계, 보안 기준선, 데이터 설계, 릴리즈 범위를 바꾸는 변경이므로 필요한 Gate로 재진입합니다. `ISSUE`는 즉시 결론 내기 어려운 질문, 위험, 보류 항목으로 남겨 의사결정 후 다시 검토합니다.
+`FIND`는 승인된 요구사항과 설계 범위 안의 결함이므로 구현 또는 테스트 보완으로 되돌립니다. `CR`은 요구사항, 설계, 보안 기준선, 데이터 설계, 릴리즈 범위를 바꾸는 변경이므로 필요한 Gate를 `gate-start`로 다시 진행합니다. `ISSUE`는 즉시 결론 내기 어려운 질문, 위험, 보류 항목으로 남겨 의사결정 후 다시 검토합니다.
 
 ## Backlog
 
-Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 나온 아이디어, QA에서 발견한 FIND, 요구/설계 변경이 필요한 CR, 판단이 필요한 ISSUE를 다음 Run 또는 재진입 Gate로 연결하는 대기열입니다.
+Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 나온 아이디어, QA에서 발견한 FIND, 요구/설계 변경이 필요한 CR, 판단이 필요한 ISSUE를 다음 Run 또는 필요한 Gate 진행으로 연결하는 대기열입니다.
 
 | 항목 유형 | 의미 | 대표 처리 |
 | --- | --- | --- |
 | `IDEA` | Phase 0에서 나온 미확정 아이디어나 질문 | 정리 후 Gate 1 후보 |
 | `FIND` | 승인 범위 안의 결함이지만 즉시 처리하지 않을 항목 | QA Fix Run 또는 다음 배치 |
-| `CR` | 요구사항, 설계, 보안, 데이터, 릴리즈 범위 변경 | 영향도 분석 후 Gate 재진입 |
+| `CR` | 요구사항, 설계, 보안, 데이터, 릴리즈 범위 변경 | 영향도 분석 후 필요한 Gate 진행 |
 | `ISSUE` | 결론 내기 어려운 질문, 위험, 보류 사항 | 의사결정 후 FIND/CR/IDEA로 전환 |
 | `DEBT` | 기술부채, 리팩터링, 운영 개선 | 우선순위에 따라 Run 생성 |
 
-Orchestrator는 Backlog 항목을 볼 때 우선순위만 보지 않고 관련 ID, 영향 범위, 재진입 Gate, 관련 Run을 함께 확인합니다. `vulcan.py backlog` 명령은 이 대기열을 등록, 조회, 완료, 반려하는 보조 도구입니다.
+Orchestrator는 Backlog 항목을 볼 때 우선순위만 보지 않고 관련 ID, 영향 범위, 다시 진행할 Gate, 관련 Run을 함께 확인합니다. `vulcan.py backlog` 명령은 이 대기열을 등록, 조회, 완료, 반려하는 보조 도구입니다.
+
+승인된 CR로 이전 Gate를 다시 진행할 때는 Run 문서를 반드시 작성합니다. 변경 범위는 별도 되돌림 명령으로 관리하지 않고, CR 상세서와 Run 문서의 scope에 기록합니다. 문서와 설계 검토는 scope 중심으로 좁히되, 자동화된 단위테스트는 원칙적으로 전체 실행하고 통합/API/UI 테스트는 영향받는 흐름 중심으로 실행합니다.
 
 ## Build Wave
 
@@ -147,7 +149,7 @@ Build Wave를 생략할 수는 있지만, 구현 Run에는 생략 이유, 단일
 - `ORCHESTRATOR_PROTOCOL.md`: 메인 에이전트의 계획, 위임, 검증 규칙
 - `AGENT_PERSONAS.md`: 단계별 persona와 subagent 위임 기준
 - `AGENT_RUN_PROTOCOL.md`: 에이전트 실행 단위인 Run 규칙
-- `CHANGE_CONTROL_PROCESS.md`: FIND, CR, ISSUE, 백로그, Gate 재진입 기준
+- `CHANGE_CONTROL_PROCESS.md`: FIND, CR, ISSUE, 백로그, 승인된 CR의 Gate 진행 기준
 - `REFERENCE_STANDARDS.md`: 보안/데이터 표준 참조 규칙
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전과 데이터 표준화 규칙
 
@@ -289,7 +291,6 @@ python vulcan.py check-trace
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `check-trace` | Gate별 추적성 검사 |
-| `rollback` | 특정 Gate부터 재진입 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | 대시보드용 snapshot 생성 |
 | `upgrade` | 기존 프로젝트에 최신 framework 문서 반영 |
@@ -316,7 +317,7 @@ my-project/
 
 `docs/seed-docs/`는 공개 표준 문서를 프로젝트에 주입하는 영역입니다. 현재는 공공데이터 공통표준과 소프트웨어 개발보안 관련 공개 문서를 기준 자료로 둡니다.
 
-`docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`는 Phase 0 아이디어, FIND, CR, ISSUE, 기술부채를 다음 Run 또는 재진입 Gate로 연결하는 백로그 산출문서입니다.
+`docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`는 Phase 0 아이디어, FIND, CR, ISSUE, 기술부채를 다음 Run 또는 필요한 Gate 진행으로 연결하는 백로그 산출문서입니다.
 
 ## 문서 템플릿
 
