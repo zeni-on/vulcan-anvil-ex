@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vulcan-Anvil - 5-Gate AI 협업 개발 프레임워크 (Claude Code 네이티브 하네스)
+Vulcan-Anvil Ex - 5-Gate AI 협업 개발 프레임워크
 
 대장장이 신 Vulcan처럼, 에이전트 팀을 단련하여 체계적으로 프로젝트를 완성합니다.
 Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude/) 구조로 재구현.
@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.1.0"
+VULCAN_VERSION = "0.2.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
@@ -3241,7 +3241,7 @@ def cmd_upgrade(project_dir="."):
 # ── version ───────────────────────────────────────────────────────────────
 
 def cmd_version(project_dir="."):
-    print(f"Vulcan-Anvil v{VULCAN_VERSION}")
+    print(f"Vulcan-Anvil Ex v{VULCAN_VERSION}")
     session_path = os.path.join(project_dir, "session.json")
     if os.path.exists(session_path):
         session = load_session(project_dir)
@@ -3775,7 +3775,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Vulcan-Anvil - 5-Gate AI 협업 개발 프레임워크",
+        description="Vulcan-Anvil Ex - 5-Gate AI 협업 개발 프레임워크",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 명령어:

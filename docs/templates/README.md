@@ -2,7 +2,7 @@
 
 이 디렉토리는 Vulcan-Anvil Ex Core 규칙을 따르는 공식 산출물 템플릿을 보관한다.
 
-현재 초안 템플릿:
+`0.2.0` 기준 공식 템플릿:
 
 - `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서
 - `STAKEHOLDER_SCOPE_TEMPLATE.md`: 이해관계자 및 범위 정의서
@@ -10,6 +10,7 @@
 - `RISK_ASSUMPTION_TEMPLATE.md`: 위험 및 가정 정의서
 - `REQUIREMENTS_SPEC_TEMPLATE.md`: 요구사항정의서
 - `TRACEABILITY_MATRIX_TEMPLATE.md`: 요구사항추적표
+- `SW_ARCHITECTURE_TEMPLATE.md`: SW 아키텍처 정의서
 - `FUNCTION_SPEC_TEMPLATE.md`: 기능명세서
 - `PROJECT_GLOSSARY_TEMPLATE.md`: 프로젝트 단어사전
 - `DATABASE_SPEC_TEMPLATE.md`: DB명세서

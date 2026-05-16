@@ -2,7 +2,7 @@
 
 이 디렉터리는 Vulcan-Anvil Ex의 모델 독립 Core 규칙을 정의한다.
 
-현재 초안 문서:
+`0.2.0` 기준 Core 문서:
 
 - `ID_SYSTEM.md`: ID Prefix, 문서 ID, 파일명, 버전 규칙
 - `TRACEABILITY_RULES.md`: 요구사항, 설계, 보안, 테스트, 증적 간 필수 연결 규칙
@@ -21,3 +21,11 @@
 - `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`: 작업용 Markdown 원천 문서와 제출용 DOCX/XLSX/HWPX 합본 문서의 생성 전략
 
 이 문서들은 특정 프로젝트의 감리 문서관리 규칙보다 의도적으로 단순하게 유지한다. 프로젝트 Adapter는 고객사나 SI 프로젝트에 필요한 더 엄격한 규칙을 추가할 수 있지만, Core는 Claude, Codex, Cursor, Copilot, 사람의 작업 흐름 모두에서 사용할 수 있도록 이식성을 우선한다.
+
+## 0.2.0 기준 핵심 변화
+
+- Codex와 Claude adapter가 같은 Core 규칙을 공유하도록 persona, Run, Gate 지침을 정리했다.
+- 구현 단계는 작은 Run과 Build Wave를 모두 허용하되, 중간 이상 작업은 Wave 단위로 작업지시/검증/상태 갱신을 남기도록 했다.
+- 변경관리는 rollback 대신 승인된 CR의 필요한 Gate 진행과 Run 기록으로 처리한다.
+- SW Architecture, DBML ERD, 보안가이드, 개발표준, 릴리즈 승인 산출물을 Gate 2~5 흐름에 연결했다.
+- 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
