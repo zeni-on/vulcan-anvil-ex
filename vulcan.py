@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.2.0"
+VULCAN_VERSION = "0.2.1"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
