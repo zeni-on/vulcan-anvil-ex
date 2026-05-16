@@ -216,7 +216,7 @@ python vulcan.py init ../my-project "My Project"
 GitHub 같은 원격 저장소와 함께 시작할 때는 `--remote`를 같이 지정합니다.
 
 ```powershell
-python vulcan.py init ../my-project "My Project" --remote https://github.com/julyinsung/my-project.git
+python vulcan.py init ../my-project "My Project" --remote https://github.com/<owner>/my-project.git
 ```
 
 `--remote`를 사용하면 생성된 프로젝트에 `origin` remote를 등록하고 초기 커밋을 원격 저장소로 push합니다. 단, 원격 저장소가 아직 없거나 권한 문제가 있으면 로컬 초기 커밋까지만 완료하고 경고를 출력합니다. 대시보드에서 GitHub 주소를 기준으로 프로젝트를 등록하거나, 다른 환경에서 같은 프로젝트를 이어서 작업할 때 이 방식이 좋습니다.
@@ -224,7 +224,7 @@ python vulcan.py init ../my-project "My Project" --remote https://github.com/jul
 원격 저장소 등록과 push가 반드시 성공해야 하는 프로젝트라면 `--require-remote`를 함께 사용합니다.
 
 ```powershell
-python vulcan.py init ../my-project "My Project" --remote https://github.com/julyinsung/my-project.git --require-remote
+python vulcan.py init ../my-project "My Project" --remote https://github.com/<owner>/my-project.git --require-remote
 ```
 
 `--require-remote`가 있으면 remote 등록 또는 push에 실패했을 때 초기화를 실패로 처리합니다. 원격 저장소가 아직 없거나 권한 문제가 있을 수 있으므로, 보통은 GitHub에서 빈 저장소를 먼저 만든 뒤 URL을 넣습니다.
