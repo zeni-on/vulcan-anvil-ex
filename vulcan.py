@@ -3106,7 +3106,6 @@ FRAMEWORK_FILES = [
     # docs & guides
     "commenting-standards.md",
     "GATE_GUIDE.md",
-    "docs/05-security/baseline.md",
     # backlog (v1.1+): PROCESS.md는 upgrade 시 덮어쓰기, BACKLOG.md는 보존
     "docs/backlog/PROCESS.md",
 ]
@@ -3208,23 +3207,6 @@ def cmd_upgrade(project_dir="."):
                 with open(backlog_dst, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"  생성 (Ex 신규): {BACKLOG_PATH}")
-
-    # v1.2+: 설계·리뷰 템플릿이 없으면 생성 (있으면 사용자 작업 보존)
-    for tpl_rel, label in [
-        ("docs/02-design/REQ-NNN-Design.md", "Gate 2 설계 템플릿"),
-        ("docs/04-review/UX-Review.md",       "UX 리뷰 템플릿"),
-        ("docs/04-review/REQ-NNN-Review.md",  "QA 리뷰 템플릿"),
-    ]:
-        dst = os.path.join(project_dir, tpl_rel)
-        if not os.path.exists(dst):
-            tpl = os.path.join(src_templates, tpl_rel)
-            if os.path.exists(tpl):
-                with open(tpl, encoding="utf-8") as f:
-                    content = render(f.read(), variables)
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                with open(dst, "w", encoding="utf-8") as f:
-                    f.write(content)
-                print(f"  생성 (v1.2 신규): {tpl_rel} ({label})")
 
     install_project_doc_framework(project_dir, variables, overwrite=True, source_root=vulcan_src)
     install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
