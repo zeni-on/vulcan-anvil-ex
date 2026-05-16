@@ -18,6 +18,8 @@
 - API 정의서 산출물
 - DBML 기반 논리/물리 ERD 초안
 - 보안가이드 산출물
+- Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기술스택 베이스라인 초안
+- 리팩토링의 DEBT/FIND/CR 분류와 문서 영향 판단 기준
 - 변경관리/릴리즈 산출물
 - Build Wave 운영 규칙
 - Upgrade와 Dashboard 운영 흐름

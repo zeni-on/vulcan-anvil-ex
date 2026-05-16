@@ -30,6 +30,8 @@ change_reason: 최초 초안 작성
 
 에이전트와 개발자는 구현 전에 본 문서와 관련 요구사항/설계/테스트 산출물을 함께 확인해야 한다.
 
+기술스택별 기본 규칙은 `docs/core/TECH_STACK_BASELINES.md`를 기준으로 한다. 본 문서는 해당 베이스라인을 프로젝트 상황에 맞게 구체화한 실행 기준이며, 구현 단계에서는 본 문서가 우선한다.
+
 ## 2. 적용 범위
 
 | 항목 | 내용 |
@@ -38,6 +40,7 @@ change_reason: 최초 초안 작성
 | 적용 모듈 |  |
 | 적용 언어 |  |
 | 적용 프레임워크 |  |
+| 적용 기술스택 베이스라인 | 예: Spring Boot + Spring Security + React |
 | 적용 테스트 도구 |  |
 | 제외 범위 |  |
 
@@ -53,6 +56,28 @@ change_reason: 최초 초안 작성
 | Test |  |  |  |  |
 | Build/Package |  |  |  |  |
 | Lint/Format |  |  |  |  |
+
+적용 베이스라인:
+
+| 영역 | 선택 | 참조 베이스라인 | 프로젝트 조정사항 |
+| --- | --- | --- | --- |
+| Backend |  | `TECH_STACK_BASELINES.md` §3 또는 §8 |  |
+| Backend Security |  | `TECH_STACK_BASELINES.md` §4 |  |
+| Frontend |  | `TECH_STACK_BASELINES.md` §5, §6 또는 §7 |  |
+| Test/E2E |  | `TECH_STACK_BASELINES.md` 각 스택 테스트 규칙 |  |
+
+Spring Boot를 사용하는 경우 다음 항목을 반드시 확정한다.
+
+| 항목 | 프로젝트 기준 |
+| --- | --- |
+| Base Package | 예: `com.example.todo` |
+| MVC 적용 방식 | 예: Controller -> Service -> Repository -> Entity |
+| 패키지 구조 기준 | 예: feature 우선 `domain/{domain}/...` |
+| JPA 사용 여부 | 예: Spring Data JPA + QueryDSL |
+| Entity/DTO 분리 | 예: Entity 직접 응답 금지, Response DTO 사용 |
+| Transaction 기준 | 예: Service 계층에서만 `@Transactional` |
+| Pagination/Sort 기준 | 예: page/size/sort 허용값과 최대 size |
+| Auditing 기준 | 예: createdAt/updatedAt/createdBy/updatedBy |
 
 ## 4. 아키텍처 및 패키지 구조
 
@@ -88,6 +113,41 @@ change_reason: 최초 초안 작성
 | Model/Entity | 데이터 구조 |  | 외부 API 호출 |
 | Schema/DTO | 입출력 데이터 검증 |  | 업무 로직 포함 |
 
+Spring Boot MVC/JPA 패키지 구조 예:
+
+```text
+src/main/java/{basePackage}/
+  config/
+  common/
+    error/
+    message/
+    response/
+  domain/{domainName}/
+    controller/
+    service/
+    repository/
+    entity/
+    dto/
+    mapper/
+  security/
+src/main/resources/
+  messages_ko.properties
+  application.yml
+src/test/java/{basePackage}/
+  domain/{domainName}/
+```
+
+JPA 기준:
+
+| 항목 | 규칙 | 예외 |
+| --- | --- | --- |
+| Entity 응답 노출 | 금지, Response DTO로 변환 | 내부 배치/테스트 전용은 사유 기록 |
+| Fetch 전략 | 기본 LAZY, 필요한 조회는 fetch join/EntityGraph/projection 사용 |  |
+| Cascade/orphanRemoval | 생명주기 종속 시에만 사용 | 사유 기록 |
+| Query 방식 | Spring Data JPA, JPQL, QueryDSL, native query 선택 기준 명시 | native query는 DB 종속성 기록 |
+| 트랜잭션 | Service 계층에서 관리 | Repository 직접 트랜잭션은 사유 기록 |
+| Auditing | 생성/수정 일시와 사용자 기준 명시 |  |
+
 ## 5. 코드 컨벤션
 
 | 항목 | 규칙 | 예외 |
@@ -99,6 +159,15 @@ change_reason: 최초 초안 작성
 | 로그 |  |  |
 | 설정값 |  |  |
 | 외부 의존성 |  |  |
+
+언어/프레임워크별 상세 기준:
+
+| 스택 | 적용 규칙 | 예외/조정 사유 |
+| --- | --- | --- |
+| Spring Boot |  |  |
+| Spring Security |  |  |
+| React/Next.js/Vue |  |  |
+| Python/FastAPI |  |  |
 
 ## 6. 주석 컨벤션
 
@@ -116,6 +185,14 @@ PGM: PGM-001
 SEC: SEC-001
 TEST: UT-001
 ```
+
+스택별 주석 기준:
+
+| 스택 | 기준 |
+| --- | --- |
+| Java/Spring | 보안 판단, 트랜잭션 경계, 복잡한 도메인 규칙에는 관련 `REQ/SEC/PGM`을 남길 수 있다. 단순 getter/setter, 단순 CRUD 위임에는 주석을 쓰지 않는다. |
+| TypeScript/React/Next/Vue | 복잡한 상태 전이, 권한 가드, API 오류 변환, 접근성 예외에는 관련 `REQ/SCR/SEC`을 남길 수 있다. JSX/Template이 그대로 설명하는 내용은 주석으로 반복하지 않는다. |
+| Python/FastAPI | 보안 dependency, 권한 판단, repository transaction, 복잡한 validation에는 관련 `REQ/SEC/PGM`을 남길 수 있다. |
 
 ## 7. API 및 오류 응답 규칙
 
@@ -217,15 +294,30 @@ test_IT_001_signup_then_login()
 
 ## 12. 빌드, 실행, 테스트 명령
 
-| 목적 | 명령 | 비고 |
-| --- | --- | --- |
-| 의존성 설치 |  |  |
-| 개발 서버 실행 |  |  |
-| 단위 테스트 |  |  |
-| 통합 테스트 |  |  |
-| 전체 테스트 |  |  |
-| 정적 검사 |  |  |
-| 포맷 |  |  |
+구현 및 QA 단계에서 실행해야 하는 명령을 정의한다. 에이전트는 필수 명령을 실행한 뒤 `docs/runs/`의 Run 문서와 `DOC-QA-G4-002_Test-Result_v0.1.md`에 결과를 기록한다.
+
+| 목적 | 명령 | 필수 여부 | 실행 시점 | 결과 기록 위치 | 비고 |
+| --- | --- | --- | --- | --- | --- |
+| 의존성 설치 |  | 필수/선택 | 최초 구현 또는 환경 갱신 | Run |  |
+| 개발 서버 실행 |  | 선택 | 화면 확인 또는 수동 QA | Run / Test Result |  |
+| 단위 테스트 |  | 필수 | Build Wave 완료 시, Gate 4 전 | Run / Test Result |  |
+| 통합 테스트 |  | 필수/선택 | Gate 4 전 또는 영향 범위 검증 | Run / Test Result |  |
+| E2E/UI 테스트 |  | 필수/선택 | 화면 기능 구현 후, Gate 4 | Run / Test Result / UI Evidence |  |
+| 정적 검사 |  | 필수/선택 | Build Wave 완료 시, Gate 4 전 | Run |  |
+| 빌드 |  | 필수/선택 | Gate 4 전, 릴리즈 후보 전 | Run / Test Result |  |
+| 포맷 |  | 선택 | 구현 중 또는 커밋 전 | Run |  |
+
+기술스택별 명령 예:
+
+| 스택 | 단위 테스트 | 정적 검사 | 빌드 | 비고 |
+| --- | --- | --- | --- | --- |
+| Spring Boot/Gradle | `./gradlew test` | `./gradlew check` | `./gradlew build` | Windows에서는 `.\gradlew.bat test` 형식 사용 가능 |
+| Spring Boot/Maven | `./mvnw test` | `./mvnw verify` | `./mvnw package` | Windows에서는 `.\mvnw.cmd test` 형식 사용 가능 |
+| React/Next.js | `npm test` | `npm run lint` | `npm run build` | 프로젝트 스크립트명에 맞게 조정 |
+| Vue.js | `npm run test:unit` | `npm run lint` | `npm run build` | Vitest/ESLint 기준 |
+| Python/FastAPI | `pytest` | `ruff check .` | 해당 시 작성 | 프로젝트 도구에 맞게 조정 |
+
+필수 명령을 실행하지 못한 경우에는 `Not Run` 또는 `Skipped`로 기록하고 사유, 영향 범위, 후속 조치를 남긴다. 실행하지 않은 명령을 `Pass`로 기록하지 않는다.
 
 ## 13. 에이전트 작업 규칙
 
@@ -233,7 +325,7 @@ test_IT_001_signup_then_login()
 
 1. 관련 요구사항정의서, 기능명세서, 프로그램명세서, 화면설계서, DB명세서, 테스트케이스를 확인한다.
 2. 구현 대상의 `REQ/FUNC/PGM/SCR/DB/SEC/UT/IT/PT` ID를 확인한다.
-3. 본 개발표준정의서의 패키지 구조와 코드 컨벤션을 따른다.
+3. 사용자가 선택한 기술스택에 맞는 `docs/core/TECH_STACK_BASELINES.md` 섹션과 본 개발표준정의서의 패키지 구조, 코드 컨벤션을 따른다.
 4. 문서에 없는 기능, API, DB 컬럼, 테스트를 임의로 추가하지 않는다.
 5. 필요한 변경이 있으면 먼저 `ISSUE` 또는 `CR` 후보로 기록한다.
 6. 사용자 노출 메시지를 코드에 직접 하드코딩하지 않고 메시지 리소스를 사용한다.

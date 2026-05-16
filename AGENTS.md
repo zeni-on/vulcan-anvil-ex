@@ -46,7 +46,9 @@
 | 요구사항/추적성 | `docs/core/TRACEABILITY_RULES.md`, 요구사항정의서, 추적표 |
 | 보안 | `docs/core/SECURITY_BASELINE.md`, `docs/core/KISA_SECURITY_RULES.md`, 보안가이드 |
 | 데이터/DB | `docs/core/DATA_STANDARD_RULES.md`, 단어사전, DB명세 |
+| 개발표준/기술스택 | `docs/core/TECH_STACK_BASELINES.md`, 개발표준정의서 |
 | 변경요청/백로그 | `docs/core/CHANGE_CONTROL_PROCESS.md`, CR 관리대장, Backlog |
+| 리팩토링/기술부채 | `docs/core/REFACTORING_PROCESS.md`, Backlog, 관련 설계문서 |
 | Codex Run 입출력 | `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`, `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md` |
 | persona/subagent | `docs/core/AGENT_PERSONAS.md`, `docs/adapters/codex-gpt/PERSONA_DELEGATION.md` |
 

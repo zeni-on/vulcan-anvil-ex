@@ -52,6 +52,8 @@ Backlog와 CR은 선후관계가 고정된 단계가 아니다. 발견 항목의
 | `DOC-PM-CR-NNN_*_v0.1.md` | 개별 CR의 요청 내용, 영향도, 승인, 반영 결과를 기록하는 상세서 | 기준선 변경이 필요하다고 판단될 때 |
 | `docs/runs/RUN-NNN_*_v0.1.md` | 승인된 CR을 실제 Gate 작업으로 수행한 기록 | CR 승인 후 Gate를 다시 진행할 때 반드시 작성 |
 
+리팩토링은 별도 기준을 따른다. 내부 품질 개선은 `DEBT` 또는 `FIND`로 처리할 수 있지만, API/DB/UI/보안/기술스택 같은 외부 계약이나 설계 기준선이 바뀌면 `CR`로 승격한다. 세부 기준은 `REFACTORING_PROCESS.md`를 따른다.
+
 ### 3.2 대표 분기
 
 | 상황 | 권장 흐름 |
@@ -61,6 +63,8 @@ Backlog와 CR은 선후관계가 고정된 단계가 아니다. 발견 항목의
 | 승인된 CR이지만 이번 배치에서 처리하지 않음 | CR 상세서 `Approved/Deferred` → Backlog `CR` 항목 연결 |
 | 기존 설계 범위 안의 결함 | FIND → G4 QA Fix Loop, CR/Backlog로 우회하지 않음 |
 | Minor 개선을 다음 배치로 미룸 | Backlog `FIND/DEBT/IDEA`, 필요 시 나중에 CR 승격 |
+| 기능 변경 없는 리팩토링 | Backlog `DEBT` 또는 Run으로 처리, 영향 문서와 테스트 결과 기록 |
+| 외부 계약을 바꾸는 리팩토링 | CR 상세서 작성 후 필요한 Gate 진행 |
 
 ## 4. G4 QA Fix Loop
 
