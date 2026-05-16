@@ -404,6 +404,9 @@ python -m pytest -p no:cacheprovider tests
 `0.2.0` 이후의 다음 초점은 다음입니다.
 
 - 실제 SI형 다중 프로젝트 구조 검토
+- Delivery Profile 도입: Audit/SI, Solution/Product, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절
+- Solution Profile 정의: 감리 제출보다 제품 로드맵, 릴리즈, 아키텍처 결정, 품질 기준을 중심으로 한 절차 정리
+- PoC/Lite Profile 정의: 빠른 검증을 위해 필수 ID, 핵심 요구사항, 최소 테스트, 짧은 Run 중심으로 운영
 - 감리 제출용 DOCX/XLSX/HWPX 변환 흐름 설계
 - Dashboard A2의 반응형 밀도와 검수 화면 개선
 - Codex/Claude adapter의 실제 Run 결과 비교와 규칙 보강

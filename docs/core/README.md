@@ -15,6 +15,7 @@
 - `AGENT_PERSONAS.md`: 단계별 에이전트 persona와 subagent 위임 규칙
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
 - `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 승인된 CR의 Gate 진행 프로세스
+- `DELIVERY_PROFILES.md`: Audit, Solution, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절 기준
 
 관련 운영 참고 문서:
 
@@ -29,3 +30,4 @@
 - 변경관리는 rollback 대신 승인된 CR의 필요한 Gate 진행과 Run 기록으로 처리한다.
 - SW Architecture, DBML ERD, 보안가이드, 개발표준, 릴리즈 승인 산출물을 Gate 2~5 흐름에 연결했다.
 - 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
+- 감리 대응, 솔루션 개발, PoC, 소규모 개발을 같은 무게로 다루지 않기 위해 Delivery Profile을 도입 방향으로 정의했다.
