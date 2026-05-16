@@ -213,13 +213,25 @@ python vulcan.py init ../my-project "My Project"
 
 초기화하면 Core 문서, 템플릿, adapter 문서, 공개 표준 참고자료, `AGENTS.md`가 프로젝트에 복사됩니다.
 
+`--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에만 프로젝트를 만들고, Git 저장소와 초기 커밋까지 생성합니다. 혼자 빠르게 실험하거나 아직 원격 저장소를 만들지 않은 경우에는 이 방식으로 시작해도 됩니다.
+
+```powershell
+python vulcan.py init ../my-local-project "My Local Project"
+```
+
 GitHub 같은 원격 저장소와 함께 시작할 때는 `--remote`를 같이 지정합니다.
 
 ```powershell
 python vulcan.py init ../my-project "My Project" --remote https://github.com/<owner>/my-project.git
 ```
 
-`--remote`를 사용하면 생성된 프로젝트에 `origin` remote를 등록하고 초기 커밋을 원격 저장소로 push합니다. 단, 원격 저장소가 아직 없거나 권한 문제가 있으면 로컬 초기 커밋까지만 완료하고 경고를 출력합니다. 대시보드에서 GitHub 주소를 기준으로 프로젝트를 등록하거나, 다른 환경에서 같은 프로젝트를 이어서 작업할 때 이 방식이 좋습니다.
+`--remote`를 사용하면 생성된 프로젝트에 `origin` remote를 등록하고 초기 커밋을 원격 저장소로 push합니다. 단, 원격 저장소가 아직 없거나 권한 문제가 있으면 로컬 초기 커밋까지만 완료하고 경고를 출력합니다.
+
+원격 저장소를 연결하면 다음 상황에서 특히 좋습니다.
+
+- 대시보드에 GitHub 저장소 URL로 프로젝트를 등록해 여러 사람이 같은 상태를 볼 수 있습니다.
+- 다른 PC나 다른 에이전트 세션이 clone해서 같은 문서, Run, 코드 기준으로 이어서 작업할 수 있습니다.
+- 커밋 이력과 PR을 기준으로 Gate 진행, QA 검수, 변경요청 반영 과정을 추적하기 쉽습니다.
 
 원격 저장소 등록과 push가 반드시 성공해야 하는 프로젝트라면 `--require-remote`를 함께 사용합니다.
 
