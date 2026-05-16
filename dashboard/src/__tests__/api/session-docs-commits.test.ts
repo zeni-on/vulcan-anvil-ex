@@ -394,6 +394,7 @@ status: Draft
         name: 'backlog',
         type: 'dir',
         children: [
+          { name: 'DOC-PM-OPS-001_Backlog_v0.1', type: 'file' },
           { name: 'BACKLOG', type: 'file' },
           { name: 'PROCESS', type: 'file' },
         ],
@@ -417,6 +418,11 @@ status: Draft
             type: 'dir',
             children: [{ name: 'DOC-PM-G0-001_Change-Request_v0.1', type: 'file' }],
           },
+          {
+            name: '07-release',
+            type: 'dir',
+            children: [{ name: 'DOC-PM-G5-001_Release-Approval_v0.1', type: 'file' }],
+          },
         ],
       },
     ])
@@ -435,6 +441,14 @@ status: Draft
       expect.objectContaining({
         path: 'docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md',
         category: 'backlog',
+      }),
+      expect.objectContaining({
+        path: 'docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md',
+        category: 'backlog',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md',
+        category: 'release',
       }),
     ]))
     expect(body.docs).not.toEqual(expect.arrayContaining([

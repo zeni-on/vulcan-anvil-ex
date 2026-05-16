@@ -24,6 +24,22 @@ function isUnsafeSegment(segment: string): boolean {
   return segment === '..' || segment === '.' || segment.includes('\0')
 }
 
+function fallbackEvidencePath(target: string): string | null {
+  const dir = path.dirname(target)
+  const requestedName = path.basename(target)
+  const idMatch = requestedName.match(/^(UI-\d{3})[-_]/i)
+  if (!idMatch || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return null
+
+  const prefix = idMatch[1].toLowerCase()
+  const fallback = fs
+    .readdirSync(dir)
+    .find((name) =>
+      name.toLowerCase().startsWith(`${prefix}_`) &&
+      contentTypeFor(name) !== null,
+    )
+  return fallback ? path.join(dir, fallback) : null
+}
+
 export async function GET(_req: Request, ctx: RouteContext) {
   const { id, path: segments } = await ctx.params
   const projects = readProjects()
@@ -50,11 +66,15 @@ export async function GET(_req: Request, ctx: RouteContext) {
     if (target !== projectRoot && !target.startsWith(rootWithSep)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
-    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+    const resolvedTarget = fs.existsSync(target) && fs.statSync(target).isFile()
+      ? target
+      : fallbackEvidencePath(target)
+
+    if (!resolvedTarget) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    const bytes = fs.readFileSync(target)
+    const bytes = fs.readFileSync(resolvedTarget)
     return new NextResponse(bytes, {
       headers: {
         'Content-Type': contentType,

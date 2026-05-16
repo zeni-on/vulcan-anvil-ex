@@ -33,7 +33,7 @@ const CATEGORY_LABEL: Record<DocEntry['category'], string> = {
   design:       '설계',
   'test-plan':  '테스트 계획',
   review:       '리뷰',
-  security:     '보안',
+  release:      '승인/릴리즈',
   backlog:      '백로그',
   standards:    '표준/참고',
   templates:    '템플릿',
@@ -51,7 +51,7 @@ const CATEGORY_ORDER: DocEntry['category'][] = [
   'design',
   'test-plan',
   'review',
-  'security',
+  'release',
   'backlog',
   'standards',
   'templates',
@@ -68,7 +68,7 @@ const ARTIFACT_CATEGORY_ORDER: DocEntry['category'][] = [
   'design',
   'test-plan',
   'review',
-  'security',
+  'release',
   'backlog',
 ]
 
@@ -90,12 +90,22 @@ const CATEGORY_PREFIX: Partial<Record<DocEntry['category'], string>> = {
   'test-plan': 'docs/artifacts/03-test/',
   review: 'docs/artifacts/04-review/',
   backlog: 'docs/artifacts/05-change/',
-  security: 'docs/artifacts/06-security/',
+  release: 'docs/artifacts/07-release/',
   standards: 'docs/seed-docs/',
   templates: 'docs/templates/',
   agent: 'docs/adapters/',
   reference: 'docs/core/',
   runs: 'docs/runs/',
+}
+
+const EXPECTED_EMPTY_SUBFOLDERS: Partial<Record<DocEntry['category'], string[]>> = {
+  design: [
+    'screen/images',
+    'screen/prototypes',
+    'data/erd/logical',
+    'data/erd/physical',
+    'data/erd/exports',
+  ],
 }
 
 function DocSectionGroup({
@@ -127,6 +137,50 @@ function extractSubPath(entry: DocEntry, prefix: string): string {
   const segments = rest.split('/')
   segments.pop() // 파일명 제거
   return segments.join('/')
+}
+
+interface DocFolderNode {
+  name: string
+  path: string
+  docs: DocEntry[]
+  children: DocFolderNode[]
+}
+
+function countDocs(node: DocFolderNode): number {
+  return node.docs.length + node.children.reduce((sum, child) => sum + countDocs(child), 0)
+}
+
+function buildFolderTree(docs: DocEntry[], expectedFolders: string[]): DocFolderNode {
+  const root: DocFolderNode = { name: '', path: '', docs: [], children: [] }
+  const folderMap = new Map<string, DocFolderNode>([['', root]])
+
+  const ensureFolder = (folderPath: string): DocFolderNode => {
+    if (folderMap.has(folderPath)) return folderMap.get(folderPath)!
+
+    const parts = folderPath.split('/').filter(Boolean)
+    const name = parts.at(-1) ?? ''
+    const parentPath = parts.slice(0, -1).join('/')
+    const parent = ensureFolder(parentPath)
+    const node: DocFolderNode = { name, path: folderPath, docs: [], children: [] }
+    parent.children.push(node)
+    folderMap.set(folderPath, node)
+    return node
+  }
+
+  for (const folderPath of expectedFolders) ensureFolder(folderPath)
+
+  for (const doc of docs) {
+    const prefix = CATEGORY_PREFIX[doc.category]
+    const subPath = prefix ? extractSubPath(doc, prefix) : ''
+    ensureFolder(subPath).docs.push(doc)
+  }
+
+  for (const node of folderMap.values()) {
+    node.children.sort((a, b) => a.name.localeCompare(b.name))
+    node.docs.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  return root
 }
 
 interface DocListProps {
@@ -161,7 +215,10 @@ function ExtensionIcon({ ext, className }: { ext: string; className?: string }) 
     case 'jpeg':
     case 'webp':
     case 'gif':
+    case 'svg':
       return <Image className={`${cn} text-violet-500`} aria-hidden="true" />
+    case 'dbml':
+      return <FileText className={`${cn} text-cyan-500`} aria-hidden="true" />
     default:
       return <FileText className={`${cn} text-gray-500`} aria-hidden="true" />
   }
@@ -258,74 +315,58 @@ function DocItem({
  * 각 하위폴더는 chevron 버튼으로 접고 펼칠 수 있다. 기본은 모두 펼쳐진 상태.
  * 루트 직속 파일은 헤더 없이 항상 보여준다.
  */
-function CollapsibleSubfolderGroup({
-  sortedKeys,
-  subGroups,
+function FolderTreeItem({
+  node,
+  depth,
   onDocSelect,
   onExternalOpen,
   externalDisabled,
 }: {
-  sortedKeys: string[]
-  subGroups: Map<string, DocEntry[]>
+  node: DocFolderNode
+  depth: number
   onDocSelect?: (doc: DocNode) => void
   onExternalOpen?: (doc: DocEntry) => void
   externalDisabled?: boolean
 }) {
-  // 접힌 폴더의 subPath 집합. 비어있으면 모두 펼침.
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-
-  const toggle = (subPath: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(subPath)) next.delete(subPath)
-      else next.add(subPath)
-      return next
-    })
-  }
+  const [isOpen, setIsOpen] = useState(true)
+  const total = countDocs(node)
+  const isTopLevel = depth === 0
 
   return (
-    <div className="mb-4">
-        {sortedKeys.map((subPath) => {
-          const isRoot = subPath === ''
-          const isOpen = !collapsed.has(subPath)
-          const items = subGroups.get(subPath)!
-
-          if (isRoot) {
-            return (
-              <ul key="__root__" className="space-y-0.5">
-                {items.map((doc) => (
-                  <DocItem
-                    key={doc.path}
-                    doc={doc}
-                    onDocSelect={onDocSelect}
-                    onExternalOpen={onExternalOpen}
-                    externalDisabled={externalDisabled}
-                  />
-                ))}
-              </ul>
-            )
-          }
-
-          return (
-            <div key={subPath} className="mt-2">
-              <button
-                type="button"
-                onClick={() => toggle(subPath)}
-                aria-expanded={isOpen}
-                data-testid={`doc-subfolder-toggle-${subPath}`}
-                className="flex items-center gap-1 w-full text-left text-xs font-semibold text-[#E5E7EB] font-mono mb-1 pl-0.5 py-1 rounded hover:bg-zinc-700/50 hover:text-white transition-colors"
-              >
-                {isOpen ? (
-                  <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-[#9CA3AF]" aria-hidden="true" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-[#9CA3AF]" aria-hidden="true" />
-                )}
-                <span data-testid={`doc-subfolder-${subPath}`}>{subPath}</span>
-                <span className="ml-1 text-[#6B7280] font-normal">({items.length})</span>
-              </button>
-              {isOpen && (
-                <ul className="space-y-0.5 pl-3">
-                  {items.map((doc) => (
+    <div
+      className={isTopLevel ? 'mt-1.5 pl-1' : 'mt-1'}
+      style={{ paddingLeft: isTopLevel ? undefined : depth * 5 }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        data-testid={`doc-subfolder-toggle-${node.path}`}
+        className={`flex items-center gap-1 w-full text-left font-mono mb-1 pl-0.5 py-1 rounded hover:bg-zinc-700/50 hover:text-white transition-colors ${
+          isTopLevel
+            ? 'text-[11px] font-semibold text-[#C8D0DA]'
+            : 'text-[11px] font-medium text-[#9CA3AF]'
+        }`}
+      >
+        {isOpen ? (
+          <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 ${isTopLevel ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}`} aria-hidden="true" />
+        ) : (
+          <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 ${isTopLevel ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}`} aria-hidden="true" />
+        )}
+        <span data-testid={`doc-subfolder-${node.path}`}>{node.name}</span>
+        <span className="ml-1 rounded border border-[#334155] bg-[#111827] px-1.5 py-0.5 text-[10px] font-semibold text-[#D1D5DB] tabular-nums">
+          {total}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="pl-1.5">
+          {node.docs.length === 0 && node.children.length === 0 ? (
+            <div className="py-1 text-[11px] text-[#4B5563]">비어 있음</div>
+          ) : (
+            <>
+              {node.docs.length > 0 && (
+                <ul className="space-y-0.5">
+                  {node.docs.map((doc) => (
                     <DocItem
                       key={doc.path}
                       doc={doc}
@@ -336,9 +377,60 @@ function CollapsibleSubfolderGroup({
                   ))}
                 </ul>
               )}
-            </div>
-          )
-        })}
+              {node.children.map((child) => (
+                <FolderTreeItem
+                  key={child.path}
+                  node={child}
+                  depth={depth + 1}
+                  onDocSelect={onDocSelect}
+                  onExternalOpen={onExternalOpen}
+                  externalDisabled={externalDisabled}
+                />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CollapsibleSubfolderGroup({
+  root,
+  onDocSelect,
+  onExternalOpen,
+  externalDisabled,
+}: {
+  root: DocFolderNode
+  onDocSelect?: (doc: DocNode) => void
+  onExternalOpen?: (doc: DocEntry) => void
+  externalDisabled?: boolean
+}) {
+  return (
+    <div className="mb-4">
+      {root.docs.length > 0 && (
+        <ul className="space-y-0.5">
+          {root.docs.map((doc) => (
+            <DocItem
+              key={doc.path}
+              doc={doc}
+              onDocSelect={onDocSelect}
+              onExternalOpen={onExternalOpen}
+              externalDisabled={externalDisabled}
+            />
+          ))}
+        </ul>
+      )}
+      {root.children.map((child) => (
+        <FolderTreeItem
+          key={child.path}
+          node={child}
+          depth={0}
+          onDocSelect={onDocSelect}
+          onExternalOpen={onExternalOpen}
+          externalDisabled={externalDisabled}
+        />
+      ))}
     </div>
   )
 }
@@ -378,23 +470,10 @@ function CategorySection({
       </div>
     )
   } else if (prefix) {
-    const subGroups = new Map<string, DocEntry[]>()
-    for (const doc of docs) {
-      const subPath = extractSubPath(doc, prefix)
-      const arr = subGroups.get(subPath) ?? []
-      arr.push(doc)
-      subGroups.set(subPath, arr)
-    }
-    // 루트 직속 파일을 먼저, 그 뒤 하위폴더는 알파벳순
-    const sortedKeys = Array.from(subGroups.keys()).sort((a, b) => {
-      if (a === '') return -1
-      if (b === '') return 1
-      return a.localeCompare(b)
-    })
+    const root = buildFolderTree(docs, EXPECTED_EMPTY_SUBFOLDERS[category] ?? [])
     content = (
       <CollapsibleSubfolderGroup
-        sortedKeys={sortedKeys}
-        subGroups={subGroups}
+        root={root}
         onDocSelect={onDocSelect}
         onExternalOpen={onExternalOpen}
         externalDisabled={externalDisabled}
@@ -423,15 +502,17 @@ function CategorySection({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         data-testid={`doc-category-toggle-${category}`}
-        className="flex items-center gap-1 w-full text-left text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest mb-1 py-0.5 rounded hover:text-white transition-colors"
+        className="flex items-center gap-1 w-full text-left text-[12px] font-bold text-[#F3F4F6] uppercase tracking-wider mb-1.5 py-1 rounded hover:text-white transition-colors"
       >
         {isOpen ? (
-          <ChevronDown className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+          <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-[#60A5FA]" aria-hidden="true" />
         ) : (
-          <ChevronRight className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+          <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-[#60A5FA]" aria-hidden="true" />
         )}
         {CATEGORY_LABEL[category]}
-        <span className="ml-1 font-normal normal-case tracking-normal text-[#6B7280]">({docs.length})</span>
+        <span className="ml-1 rounded border border-[#334155] bg-[#111827] px-1.5 py-0.5 text-[10px] font-semibold text-[#D1D5DB] tabular-nums">
+          {docs.length}
+        </span>
       </button>
       {isOpen && content}
     </div>
@@ -461,12 +542,12 @@ export default function DocList({
       design: [],
       'test-plan': [],
       review: [],
-      security: [],
       backlog: [],
       standards: [],
       templates: [],
       agent: [],
       reference: [],
+      release: [],
       runs: [],
       other: [],
     },

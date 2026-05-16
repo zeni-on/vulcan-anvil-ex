@@ -26,7 +26,7 @@ Run은 다음 중 하나의 목적을 가진다.
 | Run 유형 | 목적 | 대표 산출물 |
 | --- | --- | --- |
 | Discovery Run | 요구사항, 참조문서, 현행 코드 분석 | 분석 메모, 질문 목록, `DEC`, `RISK` |
-| Design Run | 요구사항을 설계 산출물로 전개 | 기능명세, 화면명세, 프로그램명세, DB명세 |
+| Design Run | 요구사항을 설계 산출물로 전개 | SW 아키텍처 정의서, 기능명세, 화면명세, 프로그램명세, DB명세 |
 | Screen Design Run | 화면 구조와 시안을 `SCR-ID`에 연결 | 화면설계서, 와이어프레임, 시안 이미지, 기준 viewport |
 | Design Review Run | Gate 3 진입 전 설계 완성도를 검수 | 보안 검토, 화면 검토, 개발표준 검토 |
 | Implementation Run | 승인된 설계를 코드로 구현 | 소스 코드, 설정, 리소스, 마이그레이션 |
@@ -34,7 +34,7 @@ Run은 다음 중 하나의 목적을 가진다.
 | Evidence Run | 화면 캡처, 로그, 결과 파일 정리 | 증적 파일, 결과 문서 |
 | Review Run | 추적성, 보안, 품질 점검 | 이슈, 변경요청, 리뷰 결과 |
 | QA Fix Run | G4에서 발견된 기존 설계 범위 내 결함 수정 | `FIND`, 수정 코드, 재검증 결과 |
-| Change Impact Run | 변경요청 영향도 분석과 재진입 Gate 판단 | `CR`, 영향받는 ID, scope, 승인 판단 |
+| Change Impact Run | 변경요청 영향도 분석과 다시 진행할 Gate 판단 | `CR`, 영향받는 ID, scope, 승인 판단 |
 
 Run은 너무 크게 만들지 않는다.
 
@@ -146,7 +146,7 @@ open_issues: []
 | --- | --- | --- |
 | P0 | 배경, 제약, 참조문서 파악 | 질문/가정/위험이 기록됨 |
 | G1 | 요구사항과 인수기준 정리 | `REQ`, `NREQ`, `AC`가 추적표에 반영됨 |
-| G2 | 기능, 화면, 프로그램, DB, 보안 설계 및 설계 검수 | `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, 개발표준 연결과 보안/화면/개발표준 검수 완료 |
+| G2 | SW 아키텍처, 기능, 화면, 프로그램, DB, 보안 설계 및 설계 검수 | `CNT`, `CMP`, `FLOW`, `ADR`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, 개발표준 연결과 보안/화면/개발표준 검수 완료 |
 | G3 | 테스트 계획 작성 | `UT`, `IT`, `PT`, `UI`가 `AC`/`SEC`와 연결됨 |
 | G4 | 구현, 테스트, 증적 생성 | 테스트 결과와 화면/로그 증적이 추적표에 연결됨 |
 | G5 | 승인, 릴리즈, 인수인계 | 승인본, 변경이력, 릴리즈 증적 정리 |
@@ -224,6 +224,14 @@ Build Wave를 생략하는 경우 구현 Run은 다음을 남긴다.
 | `Rolled Back` | 해당 Wave 변경을 되돌림 |
 
 Gate 2에서 Gate 3로 넘어가기 전에는 다음 검수가 완료되어야 한다.
+
+SW 아키텍처는 Gate 2 안에서 점진적으로 성숙시킨다.
+
+| 시점 | Orchestrator 책임 | 권장 검증 |
+| --- | --- | --- |
+| Gate 2 시작 | Architecture Draft를 만들고 C1/C2, 주요 CNT, 주요 ADR 후보, Pending 항목을 드러낸다 | `python vulcan.py check-architecture --level draft` |
+| 상세 설계 작성 후 | 기능/프로그램/API/DB/화면/보안가이드 내용을 아키텍처의 CMP/FLOW/품질속성/상세 설계 연결로 되돌려 반영한다 | `python vulcan.py check-architecture --level baseline` |
+| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py check-trace` |
 
 | 검수 | 책임 Persona | 최소 확인 |
 | --- | --- | --- |

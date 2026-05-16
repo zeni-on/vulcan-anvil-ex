@@ -75,6 +75,46 @@ const GATE_META: Record<string, {
 
 const GATE_ORDER = ['phase0', 'gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5']
 
+const WAVE_DONE_STATUSES = new Set(['Implemented', 'Verified', 'Completed', 'Done'])
+const WAVE_ACTIVE_STATUSES = new Set(['In Progress', 'Running', 'Review Requested'])
+
+function waveVisual(status: string, isCurrent: boolean) {
+  if (WAVE_DONE_STATUSES.has(status)) {
+    return {
+      label: '완료',
+      icon: 'check',
+      dot: 'bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.16)]',
+      box: 'border-emerald-500/45 bg-emerald-500/10 text-emerald-100',
+      sub: 'text-emerald-300',
+    }
+  }
+  if (WAVE_ACTIVE_STATUSES.has(status) || isCurrent) {
+    return {
+      label: '진행중',
+      icon: 'active',
+      dot: 'bg-cyan-300 shadow-[0_0_0_3px_rgba(103,232,249,0.16)]',
+      box: 'border-cyan-500/55 bg-cyan-500/10 text-cyan-100',
+      sub: 'text-cyan-300',
+    }
+  }
+  if (status === 'Blocked') {
+    return {
+      label: '차단',
+      icon: 'warn',
+      dot: 'bg-red-400 shadow-[0_0_0_3px_rgba(248,113,113,0.16)]',
+      box: 'border-red-500/55 bg-red-500/10 text-red-100',
+      sub: 'text-red-300',
+    }
+  }
+  return {
+    label: '대기',
+    icon: 'pending',
+    dot: 'bg-slate-500',
+    box: 'border-slate-700 bg-[#0B1120] text-slate-300',
+    sub: 'text-slate-500',
+  }
+}
+
 // ── CurrentGatePanel 컴포넌트 ─────────────────────────────────────────────────
 
 interface CurrentGatePanelProps {
@@ -261,20 +301,30 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
                 style={{ width: `${wavePct}%` }}
               />
             </div>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {waveStats.items.slice(0, 4).map(item => (
-                <div
-                  key={item.id}
-                  className={`rounded border px-2 py-1 text-xs ${
-                    item.id === waveStats.current
-                      ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200'
-                      : 'border-[#374151] bg-[#0B1120] text-[#9CA3AF]'
-                  }`}
-                >
-                  <span className="font-semibold">{item.id}</span>
-                  <span className="ml-2">{item.status}</span>
-                </div>
-              ))}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {waveStats.items.slice(0, 4).map(item => {
+                const isCurrent = item.id === waveStats.current
+                const visual = waveVisual(item.status, isCurrent)
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${visual.box}`}
+                    title={`${item.id} ${visual.label} (${item.status})`}
+                    aria-label={`${item.id} ${visual.label} ${item.status}`}
+                  >
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${visual.dot}`} aria-hidden="true" />
+                    {visual.icon === 'check' ? (
+                      <CheckCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    ) : visual.icon === 'warn' ? (
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-current opacity-60" aria-hidden="true" />
+                    )}
+                    <span className="min-w-0 flex-1 font-semibold">{item.id}</span>
+                    <span className={`shrink-0 font-medium ${visual.sub}`}>{visual.label}</span>
+                  </div>
+                )
+              })}
             </div>
             {waveStats.current && (
               <p className="text-xs text-cyan-300">현재 Wave: {waveStats.current}</p>

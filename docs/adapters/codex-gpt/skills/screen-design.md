@@ -22,11 +22,12 @@ Gate 2에서 화면이 있는 기능을 설계할 때 사용한다.
 2. 사용자 흐름을 기준으로 필요한 화면을 식별하고 `SCR-ID`를 부여한다.
 3. 각 화면의 기본, 오류, 빈 상태, 권한 제한 상태를 정의한다.
 4. 외부 시안이 있으면 출처, 파일/URL, 기준 viewport를 기록한다.
-5. 시안 이미지는 종류와 무관하게 `docs/artifacts/02-design/screen/images/`에 둔다. 유형, 출처, 용도는 화면설계서 표에서 구분한다.
-6. 시안이 없고 사용자가 허용하면 imagegen, HTML mockup, 간단 와이어프레임 중 적절한 방식으로 기준 시안을 만든다.
-7. 화면설계서에 입력 항목, 출력 항목, 이벤트, 메시지 위치, 보안 적용 방식을 작성한다.
-8. Gate 3에서 사용할 `UI-ID`, viewport, 캡처 경로, 비교 기준 후보를 작성한다.
-9. 요구사항추적표에 `SCR-ID`와 관련 `REQ/AC/FUNC/PGM/SEC` 연결을 반영한다.
+5. 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 둔다.
+6. HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/UIREF-NNN/` 하위에 둔다.
+7. 시안이 없고 사용자가 허용하면 imagegen, HTML mockup, 간단 와이어프레임 중 적절한 방식으로 기준 시안을 만든다.
+8. 화면설계서에 입력 항목, 출력 항목, 이벤트, 메시지 위치, 보안 적용 방식을 작성한다.
+9. Gate 3에서 사용할 `UI-ID`, viewport, 캡처 경로, 비교 기준 후보를 작성한다.
+10. 요구사항추적표에 `SCR-ID`와 관련 `REQ/AC/FUNC/PGM/SEC` 연결을 반영한다.
 
 ## 출력
 

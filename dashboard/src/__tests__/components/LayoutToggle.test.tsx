@@ -4,7 +4,8 @@
  *
  * 커버 항목:
  * - UT-012-07: template='A'일 때 Columns 아이콘(data-testid="icon-columns") 렌더링
- * - UT-012-08: template='B'일 때 LayoutGrid 아이콘(data-testid="icon-layout-grid") 렌더링
+ * - UT-012-08: template='A2'일 때 PanelLeft 아이콘(data-testid="icon-panel-left") 렌더링
+ * - UT-012-08B: template='B'일 때 LayoutGrid 아이콘(data-testid="icon-layout-grid") 렌더링
  * - UT-012-09: 버튼 클릭 시 onToggle 콜백 호출됨
  *
  * @see docs/02-design/req-012-design.md §LayoutToggle
@@ -36,7 +37,21 @@ describe('UT-012-07: template=A일 때 Columns 아이콘 렌더링', () => {
 
 // ── UT-012-08 ─────────────────────────────────────────────────────────────────
 
-describe('UT-012-08: template=B일 때 LayoutGrid 아이콘 렌더링', () => {
+describe('UT-012-08: template=A2일 때 PanelLeft 아이콘 렌더링', () => {
+  it('template이 A2이면 data-testid="icon-panel-left" 아이콘이 렌더링된다', () => {
+    render(<LayoutToggle template="A2" onToggle={() => {}} />)
+    expect(screen.getByTestId('icon-panel-left')).toBeInTheDocument()
+  })
+
+  it('template이 A2이면 "템플릿 A2" 텍스트가 포함된다', () => {
+    render(<LayoutToggle template="A2" onToggle={() => {}} />)
+    expect(screen.getByText('템플릿 A2')).toBeInTheDocument()
+  })
+})
+
+// ── UT-012-08B ────────────────────────────────────────────────────────────────
+
+describe('UT-012-08B: template=B일 때 LayoutGrid 아이콘 렌더링', () => {
   it('template이 B이면 data-testid="icon-layout-grid" 아이콘이 렌더링된다', () => {
     render(<LayoutToggle template="B" onToggle={() => {}} />)
     expect(screen.getByTestId('icon-layout-grid')).toBeInTheDocument()

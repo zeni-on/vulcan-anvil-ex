@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | `discovery.md` | `discovery` | P0 | 온보딩, 현행 분석, 위험/가정 정리 |
 | `requirements.md` | `requirements` | G1 | 요구사항, AC, 기술스택 |
-| `design.md` | `design` | G2 | 기능/프로그램/API/DB/보안 설계 |
+| `design.md` | `design` | G2 | SW 아키텍처, 기능/프로그램/API/DB/보안 설계 |
 | `screen-design.md` | `screen-design` | G2 | 화면 구조, 와이어프레임, 디자인 토큰 |
 | `security-review.md` | `security-review` | G1/G2/G3/G4 | 보안 요구사항·설계·구현 검토 |
 | `screen-review.md` | `screen-review` | G2/G3/G4 | 화면 누락·상태·증적 기준 검토 |

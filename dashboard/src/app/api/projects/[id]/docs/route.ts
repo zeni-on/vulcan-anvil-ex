@@ -49,7 +49,7 @@ function resolveCategory(path: string): DocEntry['category'] {
   if (normalizedPath.includes('docs/artifacts/03-test/')) return 'test-plan'
   if (normalizedPath.includes('docs/artifacts/04-review/')) return 'review'
   if (normalizedPath.includes('docs/artifacts/05-change/')) return 'backlog'
-  if (normalizedPath.includes('docs/artifacts/06-security/')) return 'security'
+  if (normalizedPath.includes('docs/artifacts/07-release/')) return 'release'
   if (normalizedPath.includes('docs/00-discovery/')) return 'discovery'
   if (normalizedPath.includes('docs/01-requirements/')) return 'requirements'
   if (normalizedPath.includes('docs/02-design/')) return 'design'
@@ -134,7 +134,8 @@ function parseRunMeta(content: string): Pick<DocEntry, 'runGate' | 'runPersona' 
   const yamlMatch = content.match(/```yaml\s*([\s\S]*?)```/)
   const yaml = yamlMatch?.[1] ?? content
   for (const line of yaml.split(/\r?\n/)) {
-    const match = line.match(/^\s*(gate|persona|status)\s*:\s*(.+?)\s*$/)
+    if (/^\s/.test(line) || line.trimStart().startsWith('-')) continue
+    const match = line.match(/^(gate|persona|status)\s*:\s*(.+?)\s*$/)
     if (!match) continue
     const value = match[2].replace(/^['"]|['"]$/g, '')
     if (match[1] === 'gate') meta.runGate = value

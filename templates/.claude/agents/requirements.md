@@ -80,7 +80,7 @@ Gate 1 완료 시 `docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-M
 Gate 5 완료 이후 새로 발생하는 요구사항은 `docs/backlog/BACKLOG.md`에서 관리된다.
 
 - **Triage 제안**: `docs/backlog/PROCESS.md` §3 체크리스트로 레벨(🟢/🟡/🔴) + 우선순위(P0~P3) 제안
-- **Gate Rollback 범위 결정**: 영향받는 REQ-ID를 식별하여 `vulcan.py rollback --scope REQ-XXX,...` scope 결정
+- **Gate 재진행 범위 결정**: 승인된 CR의 영향받는 REQ-ID를 식별하여 CR 상세서(`DOC-PM-CR-NNN`)와 Run 문서의 scope에 명시. `python vulcan.py gate-start <gate>`로 해당 Gate 재진행 (이전 `rollback` 명령은 제거됨)
 - **추적표 동기화**: 백로그 처리로 REQ 상태가 바뀌면 요구사항추적표 갱신
 
 **중요**: 🟢 Trivial은 "어떤 문서(REQUIREMENTS / Design / Test-Plan / Security baseline)도 수정할 필요 없음"이 기준이다.

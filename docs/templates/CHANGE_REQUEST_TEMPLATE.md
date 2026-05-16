@@ -1,105 +1,54 @@
-# 변경요청서
+# 변경요청 관리대장
 
 ```yaml
 ---
-document_id: DOC-PM-G1-001
-title: Change Request
-title_ko: 변경요청서
+document_id: DOC-PM-G0-001
+title: Change Request Register
+title_ko: 변경요청 관리대장
 project:
-gate: G1
+gate: G0
 status: Draft
 version: v0.1
-owner_role: Project Manager
+owner_role: Orchestrator
 author:
 reviewer:
 approver:
 created_at:
 updated_at:
-related_ids:
-  - CR-001
-change_reason: 최초 초안 작성
+related_ids: []
+change_reason: 변경요청 목록과 처리 상태 관리
 ---
 ```
 
-## 1. 변경요청 개요
+## 1. 변경요청 목록
 
-| 항목 | 내용 |
+| CR-ID | 제목 | 유형 | 우선순위 | 상태 | 다시 진행할 Gate | 상세 문서 | 관련 Backlog |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| — | (아직 없음) | — | — | — | — | — | — |
+
+## 2. 상태 기준
+
+| 상태 | 의미 |
 | --- | --- |
-| CR-ID | CR-001 |
-| 제목 |  |
-| 요청 출처 | 고객 / 감리 / QA / 개발 / 운영 / 내부 검토 |
-| 요청자 |  |
-| 요청일 |  |
-| 우선순위 | P0 / P1 / P2 / P3 |
-| 긴급도 | 긴급 / 일반 / 보류 가능 |
-| 상태 | Draft / Reviewing / Approved / Rejected / Deferred / Done |
+| Draft | 초안 작성 중 |
+| Reviewing | 영향도 검토 중 |
+| Pending Approval | 사용자 승인 대기 |
+| Approved | 승인됨 |
+| Rejected | 반려됨 |
+| Deferred | 보류됨 |
+| Done | 반영 및 검증 완료 |
 
-## 2. 요청 내용
+## 3. 운영 기준
 
-| 항목 | 내용 |
-| --- | --- |
-| 현재 기준 |  |
-| 변경 요청 |  |
-| 변경 사유 |  |
-| 기대 효과 |  |
-| 미반영 시 영향 |  |
+- 상세 변경요청은 `DOC-PM-CR-NNN_*_v0.1.md` 문서로 작성한다.
+- 상세 변경요청 문서는 `docs/templates/CHANGE_REQUEST_DETAIL_TEMPLATE.md`를 복사해 작성한다.
+- 승인된 CR은 영향받는 `REQ/AC/FUNC/SCR/PGM/DB/SEC/UT/IT/UI`와 연결한다.
+- 요구사항 또는 설계 기준선이 바뀌면 필요한 Gate를 `vulcan.py gate-start <gate>`로 다시 진행한다.
+- 승인된 CR로 Gate를 다시 진행할 때는 반드시 관련 Run 문서를 작성한다.
+- 즉시 반영하지 않는 CR은 백로그 항목과 연결한다.
+- 모든 변경 후보가 백로그를 먼저 거치는 것은 아니다. 기준선 변경이 명확하면 CR 상세서를 먼저 만들고, 승인 후 즉시 처리하지 않을 때만 백로그와 연결한다.
 
-## 3. 영향도 분석
-
-| 구분 | 영향받는 ID | 영향 내용 | 재진입 Gate |
-| --- | --- | --- | --- |
-| 요구사항 | REQ- / NREQ- / AC- |  | G1 |
-| 기능 | FUNC- |  | G2 |
-| 화면 | SCR- |  | G2 |
-| 프로그램 | PGM- |  | G2 |
-| 데이터 | DB- / TERM- |  | G2 |
-| 보안 | SEC- / KISA-SD-2021 SR- |  | G1/G2/G3 |
-| 테스트 | UT- / IT- / PT- / UI- |  | G3 |
-| 증적 |  |  | G4 |
-| 승인/릴리즈 |  |  | G5 |
-
-## 4. 분류
-
-| 항목 | 선택 |
-| --- | --- |
-| 변경 유형 | Patch / Minor CR / Major CR / Baseline CR |
-| 처리 방식 | 즉시 Run / Backlog 등록 / 반려 / 보류 |
-| 최소 재진입 Gate | G1 / G2 / G3 / G4 / G5 |
-| Scope | REQ-, AC-, FUNC-, SCR-, PGM-, DB-, SEC-, UT- |
-
-## 5. 승인 판단
-
-| 항목 | 내용 |
-| --- | --- |
-| 승인 여부 | Approved / Rejected / Deferred |
-| 승인자 |  |
-| 승인일 |  |
-| 판단 근거 |  |
-| 조건부 승인 조건 |  |
-
-## 6. 반영 계획
-
-| 작업 | 대상 | 담당 | 예정 Run | 상태 |
-| --- | --- | --- | --- | --- |
-| 요구사항 갱신 |  |  | RUN- | Pending |
-| 설계 갱신 |  |  | RUN- | Pending |
-| 테스트 갱신 |  |  | RUN- | Pending |
-| 구현/수정 |  |  | RUN- | Pending |
-| 검증/증적 |  |  | RUN- | Pending |
-
-## 7. 완료 확인
-
-| 항목 | 확인 |
-| --- | --- |
-| 영향받는 요구사항이 갱신되었는가 |  |
-| 설계 산출물이 갱신되었는가 |  |
-| 테스트케이스가 갱신되었는가 |  |
-| 구현과 테스트가 완료되었는가 |  |
-| 증적이 갱신되었는가 |  |
-| 요구사항추적표에 CR이 반영되었는가 |  |
-| 변경이력이 기록되었는가 |  |
-
-## 8. 변경이력
+## 4. 변경이력
 
 | 버전 | 일자 | 변경내용 | 작성자 | 검토자 | 승인자 |
 | --- | --- | --- | --- | --- | --- |

@@ -84,6 +84,9 @@ export default function GateStatusStepper({ session }: GateStatusStepperProps) {
       if (currentIndex > 0 || session.gate_status.gate1 !== 'pending') return 'done'
       return 'pending'
     }
+    if (session.current_gate === gate.key && session.gate_status[gate.key] === 'pending') {
+      return 'in-progress'
+    }
     return session.gate_status[gate.key] ?? 'pending'
   }
 

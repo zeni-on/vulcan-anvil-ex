@@ -58,7 +58,12 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/02-design/api",
     "docs/artifacts/02-design/screen",
     "docs/artifacts/02-design/screen/images",
+    "docs/artifacts/02-design/screen/prototypes",
     "docs/artifacts/02-design/data",
+    "docs/artifacts/02-design/data/erd",
+    "docs/artifacts/02-design/data/erd/logical",
+    "docs/artifacts/02-design/data/erd/physical",
+    "docs/artifacts/02-design/data/erd/exports",
     "docs/artifacts/02-design/security",
     "docs/artifacts/02-design/development-standard",
     "docs/artifacts/03-test",
@@ -66,7 +71,7 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/04-review/evidence",
     "docs/artifacts/04-review/evidence/ui",
     "docs/artifacts/05-change",
-    "docs/artifacts/06-security",
+    "docs/artifacts/07-release",
     "docs/runs",
     "docs/ref-docs",
 ]
@@ -77,18 +82,22 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/RISK_ASSUMPTION_TEMPLATE.md", "docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md"),
     ("docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md", "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"),
     ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
+    ("docs/templates/SW_ARCHITECTURE_TEMPLATE.md", "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md"),
     ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
     ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md"),
     ("docs/templates/API_SPEC_TEMPLATE.md", "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md"),
     ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
     ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
     ("docs/templates/DATABASE_SPEC_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md"),
+    ("docs/templates/LOGICAL_ERD_DBML_TEMPLATE.dbml", "docs/artifacts/02-design/data/erd/logical/logical-erd.dbml"),
+    ("docs/templates/PHYSICAL_ERD_DBML_TEMPLATE.dbml", "docs/artifacts/02-design/data/erd/physical/physical-erd.dbml"),
     ("docs/templates/SECURITY_GUIDE_TEMPLATE.md", "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md"),
     ("docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md", "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md"),
     ("docs/templates/TEST_CASE_TEMPLATE.md", "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md"),
     ("docs/templates/QA_FINDING_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"),
     ("docs/templates/TEST_RESULT_TEMPLATE.md", "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"),
     ("docs/templates/CHANGE_REQUEST_TEMPLATE.md", "docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md"),
+    ("docs/templates/RELEASE_APPROVAL_TEMPLATE.md", "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"),
 ]
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
@@ -124,7 +133,7 @@ RUN_PERSONAS = {
     "evidence": "테스트 결과, 화면 캡처, 로그 등 증적을 만든다.",
     "review": "추적성, 보안, 품질, 설계 준수 여부를 검토한다.",
     "release": "승인 후보, 릴리즈 범위, 인수인계 항목을 정리한다.",
-    "change-control": "변경요청 영향도와 재진입 Gate를 판단한다.",
+    "change-control": "변경요청 영향도와 다시 진행할 Gate를 판단한다.",
     "documentation": "용어, 문서 버전, 산출물 일관성을 정리한다.",
 }
 RUN_SKILL_DEFAULT_PERSONAS = {
@@ -475,9 +484,8 @@ def count_docs(project_dir="."):
             os.path.join(project_dir, "docs", "artifacts", "04-review"),
             os.path.join(project_dir, "docs", "04-review"),
         ],
-        "security": [
-            os.path.join(project_dir, "docs", "artifacts", "06-security"),
-            os.path.join(project_dir, "docs", "05-security"),
+        "release": [
+            os.path.join(project_dir, "docs", "artifacts", "07-release"),
         ],
         "backlog": [
             os.path.join(project_dir, "docs", "artifacts", "05-change"),
@@ -615,6 +623,18 @@ def compute_stats(project_dir="."):
 WAVE_DONE_STATUSES = {"Implemented", "Verified", "Completed", "Done"}
 WAVE_ACTIVE_STATUSES = {"In Progress", "Running", "Review Requested"}
 WAVE_KNOWN_STATUSES = WAVE_DONE_STATUSES | WAVE_ACTIVE_STATUSES | {"Planned", "Blocked", "Rolled Back"}
+WAVE_STATUS_RANK = {
+    "Planned": 0,
+    "In Progress": 1,
+    "Running": 1,
+    "Review Requested": 2,
+    "Blocked": 2,
+    "Implemented": 3,
+    "Verified": 4,
+    "Completed": 4,
+    "Done": 4,
+    "Rolled Back": 4,
+}
 
 
 def find_run_files(project_dir="."):
@@ -630,6 +650,10 @@ def find_run_files(project_dir="."):
 
 def find_wave_run_file(project_dir, bw_id):
     pattern = re.compile(rf"\b{re.escape(bw_id)}\b", re.IGNORECASE)
+    for path in find_run_files(project_dir):
+        if pattern.search(os.path.basename(path)):
+            return path
+
     for path in find_run_files(project_dir):
         try:
             with open(path, encoding="utf-8") as f:
@@ -647,6 +671,8 @@ def parse_simple_yaml_block(content):
         return {}
     result = {}
     for raw_line in match.group(1).splitlines():
+        if raw_line.startswith((" ", "\t", "-")):
+            continue
         line = raw_line.strip()
         if not line or line.startswith("#") or ":" not in line:
             continue
@@ -679,7 +705,7 @@ def collect_build_wave_records(project_dir="."):
             if not record.get("run") and "build-wave" in content.lower():
                 record["run"] = rel_path
 
-            if metadata.get("bw_id") == bw_id or bw_id in os.path.basename(path):
+            if metadata.get("bw_id") == bw_id or bw_id.lower() in os.path.basename(path).lower():
                 status = metadata.get("status")
                 if status in WAVE_KNOWN_STATUSES:
                     record["status"] = status
@@ -736,9 +762,16 @@ def merge_session_wave_records(session, discovered):
             bw_id,
             {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
         )
-        for key in ("status", "run"):
-            if item.get(key):
-                base[key] = item[key]
+        session_status = item.get("status")
+        base_status = base.get("status")
+        session_rank = WAVE_STATUS_RANK.get(session_status, -1)
+        base_rank = WAVE_STATUS_RANK.get(base_status, -1)
+        if session_status and session_rank >= base_rank:
+            base["status"] = session_status
+            if item.get("run"):
+                base["run"] = item["run"]
+        elif not base.get("run") and item.get("run"):
+            base["run"] = item["run"]
         base["related_ids"] = sorted(set(base.get("related_ids", []) + item.get("related_ids", [])))
     return [merged[key] for key in sorted(merged)]
 
@@ -907,37 +940,66 @@ def parse_traceability(project_dir="."):
     if not path:
         return {}
     result = {}
+    headers = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             if not line.strip().startswith('|'):
                 continue
-            cols = [c.strip() for c in line.split('|')]
-            if len(cols) < 6:
+            cols = [c.strip() for c in line.strip().strip('|').split('|')]
+            if len(cols) < 5:
                 continue
-            req_id = cols[1]
+            if "REQ-ID" in cols:
+                headers = cols
+                continue
+            if all(re.fullmatch(r"[-: ]+", c or "") for c in cols):
+                continue
+
+            header_idx = {name: idx for idx, name in enumerate(headers)}
+
+            def cell(name, default=""):
+                idx = header_idx.get(name)
+                if idx is None or idx >= len(cols):
+                    return default
+                return cols[idx]
+
+            req_id = cell("REQ-ID", cols[0])
             if not re.match(r'REQ-\d{3}(?:-\d{2})?$', req_id):
                 continue
-            is_ex_matrix_row = (
-                len(cols) >= 17
-                and re.match(r'AC-\d{3}-\d{2}$', cols[3] if len(cols) > 3 else "")
-            )
+            ac_value = cell("AC-ID", cols[1] if len(cols) > 1 else "")
+            is_ex_matrix_row = bool(headers) and re.match(r'AC-\d{3}-\d{2}$', ac_value)
             if is_ex_matrix_row:
-                design = ", ".join(c for c in cols[4:9] if c and c not in ("-", "미정", "해당없음"))
+                design = ", ".join(
+                    c
+                    for c in [
+                        cell("FUNC-ID"),
+                        cell("SCR-ID"),
+                        cell("PGM-ID"),
+                        cell("DB-ID"),
+                        cell("IF-ID"),
+                        cell("API-ID"),
+                        cell("SEC-ID"),
+                    ]
+                    if c and c not in ("-", "미정", "해당없음")
+                )
                 test_columns = {
-                    "UT-ID": cols[11] if len(cols) > 11 else "",
-                    "IT-ID": cols[12] if len(cols) > 12 else "",
-                    "PT-ID": cols[13] if len(cols) > 13 else "",
+                    "UT-ID": cell("UT-ID"),
+                    "IT-ID": cell("IT-ID"),
+                    "PT-ID": cell("PT-ID"),
                 }
-                tst_raw = ", ".join(c for c in cols[11:14] if c and c not in ("-", "미정", "해당없음"))
-                review = cols[15] if len(cols) > 15 and cols[15] not in ("-", "미정", "해당없음") else ""
-                status = cols[14] if len(cols) > 14 else ""
+                if "UI-ID" in header_idx:
+                    test_columns["UI-ID"] = cell("UI-ID")
+                tst_raw = ", ".join(c for c in test_columns.values() if c and c not in ("-", "미정", "해당없음"))
+                review = cell("증적") or cell("검토")
+                if review in ("-", "미정", "해당없음"):
+                    review = ""
+                status = cell("상태")
             elif req_id in result:
                 continue
             else:
-                design  = cols[2] if cols[2] != '-' else ''
-                tst_raw = cols[3] if cols[3] != '-' else ''
-                review  = cols[4] if cols[4] != '-' else ''
-                status  = cols[5] if len(cols) > 5 else ''
+                design  = cols[1] if len(cols) > 1 and cols[1] != '-' else ''
+                tst_raw = cols[2] if len(cols) > 2 and cols[2] != '-' else ''
+                review  = cols[3] if len(cols) > 3 and cols[3] != '-' else ''
+                status  = cols[4] if len(cols) > 4 else ''
                 test_columns = {"TST-ID": tst_raw}
             tst_ids = [t.strip() for t in tst_raw.split(',') if t.strip() and t.strip() != '-']
             result[req_id] = {
@@ -1075,6 +1137,18 @@ def find_screen_spec_file(project_dir="."):
     ])
 
 
+def find_architecture_spec_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "architecture"),
+        r"(sw.*architecture|architecture|아키텍처).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "architecture.md"),
+        os.path.join("docs", "02-design", "Architecture.md"),
+        os.path.join("docs", "02-design", "SW-Architecture.md"),
+    ])
+
+
 def find_risk_assumption_file(project_dir="."):
     return find_artifact_file(
         project_dir,
@@ -1144,6 +1218,54 @@ def validate_development_standard(project_dir="."):
     return [rel_path], issues
 
 
+def validate_program_spec(project_dir="."):
+    issues = []
+    path = find_program_spec_file(project_dir)
+    if not path:
+        return [], ["프로그램명세서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("PGM-ID", r"PGM-\d{3}"),
+        ("인터페이스", r"호출 방식|엔드포인트|함수명|API 정의서"),
+        ("입력/출력", r"입력 파라미터|출력 항목|TERM-"),
+        ("처리 흐름", r"처리 흐름|처리 내용"),
+        ("예외/오류", r"ERR-\d{3}|오류 ID|예외"),
+        ("데이터 접근", r"DB-\d{3}|데이터 접근|트랜잭션"),
+        ("보안 설계", r"SEC-\d{3}|보안 설계|KISA|SR-"),
+        ("단위테스트 연결", r"UT-\d{3}|단위테스트|AC-|NREQ-"),
+        ("상세 SW 설계 다이어그램 판단", r"상세 SW 설계 다이어그램|복잡도|상태 전이|생략 사유"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    diagram_markers = [
+        r"```mermaid\s*\n\s*classDiagram",
+        r"```mermaid\s*\n\s*stateDiagram",
+        r"```mermaid\s*\n\s*sequenceDiagram",
+        r"```mermaid\s*\n\s*flowchart",
+        r"```mermaid\s*\n\s*graph",
+    ]
+    has_detail_diagram = any(re.search(pattern, content, re.IGNORECASE) for pattern in diagram_markers)
+    has_skip_reason = bool(re.search(r"생략 사유\s*\|[^\n]*\S|불필요\s*\|[^\n]*\S", content))
+    has_need_marker = bool(re.search(r"\|\s*PGM-\d{3}\s*\|[^\n]*\|\s*필요\s*\|", content))
+    if has_need_marker and not has_detail_diagram:
+        issues.append(f"{rel_path}에 상세 SW 설계 다이어그램 필요 표시가 있으나 Mermaid 다이어그램 없음")
+    if not has_detail_diagram and not has_skip_reason:
+        issues.append(f"{rel_path}에 상세 SW 설계 다이어그램 또는 생략 사유 없음")
+
+    return [rel_path], issues
+
+
 def program_spec_requires_api_spec(project_dir="."):
     path = find_program_spec_file(project_dir)
     if not path:
@@ -1205,6 +1327,90 @@ def validate_api_spec(project_dir="."):
     return [rel_path], issues
 
 
+def validate_architecture_spec(project_dir=".", level="baseline"):
+    issues = []
+    path = find_architecture_spec_file(project_dir)
+    if not path:
+        return [], ["SW 아키텍처 정의서 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    normalized_level = (level or "baseline").lower()
+    if normalized_level not in {"draft", "baseline"}:
+        normalized_level = "baseline"
+
+    if normalized_level == "baseline" and re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    draft_required_terms = [
+        ("아키텍처 성숙도", r"성숙도|Draft|Baseline Candidate|Baseline|Pending"),
+        ("아키텍처 개요", r"아키텍처 개요|시스템 목적|주요 사용자|아키텍처 범위"),
+        ("논리 아키텍처", r"논리 아키텍처|프론트엔드|백엔드|인증/권한|배치/비동기"),
+        ("C1/C2 구조", r"C1|C2|시스템 컨텍스트|컨테이너|CNT-\d{3}"),
+        ("아키텍처 결정 후보", r"ADR-\d{3}|아키텍처 결정|ADR 후보|Architecture Decision"),
+    ]
+    baseline_required_terms = [
+        ("물리 아키텍처", r"물리 아키텍처|PHY-\d{3}|서버|네트워크|배포 단위|런타임"),
+        ("모듈/컴포넌트 구조", r"모듈/컴포넌트 구조|C3|컴포넌트|CMP-\d{3}"),
+        ("데이터 흐름", r"데이터 흐름|FLOW-\d{3}|sequenceDiagram|오류 처리 흐름"),
+        ("보안 아키텍처", r"SEC-\d{3}|보안 아키텍처|인증|인가|세션|암호화|KISA|OWASP|CWE"),
+        ("품질속성", r"NREQ-\d{3}|QA-\d{3}|품질속성"),
+        ("기술 스택 및 선택 근거", r"기술 스택|선택 근거|언어|프레임워크|DB|배포 방식"),
+        ("아키텍처 결정", r"ADR-\d{3}|아키텍처 결정|Architecture Decision"),
+        ("추적성 및 상세 설계 연결", r"추적성|상세 설계 연결|프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
+    ]
+    required_terms = draft_required_terms
+    if normalized_level == "baseline":
+        required_terms += baseline_required_terms
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, re.IGNORECASE | re.DOTALL)
+    flow_blocks = [
+        block for block in mermaid_blocks
+        if re.search(r"^\s*(?:flowchart|graph)\s+", block, re.IGNORECASE | re.MULTILINE)
+    ]
+    c1_c2_blocks = flow_blocks[:2]
+    missing_boundary_count = sum(
+        1 for block in c1_c2_blocks
+        if not re.search(r"\bsubgraph\b", block, re.IGNORECASE)
+    )
+    if c1_c2_blocks and missing_boundary_count:
+        issues.append(f"{rel_path}의 C1/C2 아키텍처 다이어그램에 subgraph 경계 표현 없음")
+
+    file_name_node_count = 0
+    for block in flow_blocks:
+        file_name_node_count += len(re.findall(r"\b[\w.-]+\.(?:py|ts|tsx|js|jsx|java|kt|go|cs|php|rb)\b", block, re.IGNORECASE))
+    if file_name_node_count >= 3:
+        issues.append(
+            f"{rel_path}의 아키텍처 다이어그램이 파일명 나열 중심입니다 "
+            "(C1/C2는 CNT/CMP/FLOW와 실행 경계 중심으로 작성)"
+        )
+
+    if normalized_level == "baseline":
+        required_link_targets = [
+            "DOC-CORE-G2-001",
+            "DOC-CORE-G2-002",
+            "DOC-API-G2-001",
+            "DOC-DATA-G2-002",
+            "DOC-CORE-G2-003",
+            "DOC-SEC-G2-001",
+            "DOC-DEV-G2-001",
+            "DOC-QA-G3-001",
+            "DOC-CORE-G4-001",
+        ]
+        missing_links = [target for target in required_link_targets if target not in content]
+        if missing_links:
+            issues.append(f"{rel_path}의 상세 설계/추적 연결 문서 누락: {', '.join(missing_links)}")
+
+    return [rel_path], issues
+
+
 def validate_security_guide(project_dir="."):
     issues = []
     path = find_security_guide_file(project_dir)
@@ -1254,7 +1460,7 @@ def validate_screen_spec(project_dir="."):
     has_ui_test = bool(re.search(r"UI-\d{3}", content))
     has_viewport = bool(re.search(r"Desktop\s+\d+x\d+|Mobile\s+\d+x\d+|viewport", content, re.IGNORECASE))
     has_visual_evidence = bool(re.search(
-        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/images/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
+        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/(?:images|prototypes)/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
         content,
         re.IGNORECASE,
     ))
@@ -1327,6 +1533,17 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
 
     rel_path = os.path.relpath(path, project_dir)
     current_idx = GATE_ORDER.index(current_gate) if current_gate in GATE_ORDER else 0
+    registry_counts = {"RISK": 0, "ASM": 0, "Q": 0}
+    registry_labels = {
+        "RISK": "위험 목록",
+        "ASM": "가정 목록",
+        "Q": "미결 질문",
+    }
+    registry_content_headers = {
+        "RISK": ["위험 내용"],
+        "ASM": ["가정 내용"],
+        "Q": ["질문"],
+    }
 
     section = ""
     headers = []
@@ -1353,8 +1570,21 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
         if not re.match(r"^(RISK|ASM|Q)-\d{3}$", item_id):
             continue
 
+        item_type = item_id.split("-", 1)[0]
+        content_idx = find_header_index(headers, registry_content_headers[item_type]) if headers else None
+        content_value = cols[content_idx] if content_idx is not None and content_idx < len(cols) else ""
         status_idx = find_header_index(headers, ["상태"]) if headers else None
         status = cols[status_idx] if status_idx is not None and status_idx < len(cols) else cols[-1]
+
+        if is_empty_table_value(content_value):
+            if current_idx >= GATE_ORDER.index("gate1"):
+                issues.append(
+                    f"  X {rel_path}의 {item_id}는 ID만 있고 내용이 비어 있습니다 "
+                    "(삭제하거나 실제 내용/해당없음 사유를 작성)"
+                )
+                continue
+        else:
+            registry_counts[item_type] += 1
 
         due_idx = None
         if item_id.startswith("Q-"):
@@ -1394,6 +1624,14 @@ def validate_discovery_open_items(project_dir=".", current_gate="phase0"):
             issues.append(
                 f"  X {rel_path}의 {item_id}가 {due_source}까지 정리되어야 하지만 상태가 {status or '미정'}입니다"
             )
+
+    if current_idx >= GATE_ORDER.index("gate1"):
+        for item_type, count in registry_counts.items():
+            if count == 0:
+                issues.append(
+                    f"  X {rel_path}의 {registry_labels[item_type]}에 유효한 {item_type} 행이 없습니다 "
+                    f"(최소 1건 작성하거나 {item_type}-001에 해당없음 사유를 명시)"
+                )
 
     return issues
 
@@ -1575,7 +1813,8 @@ def check_trace(project_dir="."):
     else:
         print("  문서 내용 경계 검사: OK")
 
-    discovery_issues = validate_discovery_open_items(project_dir, current_gate)
+    discovery_validation_gate = "gate1" if current_gate == "phase0" else current_gate
+    discovery_issues = validate_discovery_open_items(project_dir, discovery_validation_gate)
     if discovery_issues:
         print("  Phase 0 미결 항목 검사: 위반 감지")
         issues.extend(discovery_issues)
@@ -1585,6 +1824,8 @@ def check_trace(project_dir="."):
     if current_gate in ("gate3", "impl", "gate4", "gate5"):
         print("  Gate 2 산출물 유지 검사")
         prior_design_checks = [
+            ("SW 아키텍처 정의서", validate_architecture_spec),
+            ("프로그램명세서", validate_program_spec),
             ("보안가이드", validate_security_guide),
             ("화면설계서", validate_screen_spec),
             ("API 정의서", validate_api_spec),
@@ -1598,24 +1839,6 @@ def check_trace(project_dir="."):
                 print(f"  O {label} 확인")
 
     group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
-
-    # 증분 Rollback: rollback_scope가 있으면 scope 내 REQ만 검증 대상
-    rollback_scope = session.get("rollback_scope")
-    if rollback_scope and rollback_scope.get("req_ids"):
-        scope_set = set()
-        for rid in rollback_scope["req_ids"]:
-            # REQ-NNN 형식이면 해당 그룹의 REQ-NNN-NN 전부 포함
-            if re.match(r'^(REQ|NREQ)-\d{3}$', rid):
-                prefix = rid + "-"
-                for r in detail_reqs:
-                    if r.startswith(prefix):
-                        scope_set.add(r)
-            else:
-                scope_set.add(rid)
-        original_count = len(detail_reqs)
-        detail_reqs = {r for r in detail_reqs if r in scope_set}
-        print(f"  [증분 Rollback 모드] scope: {', '.join(sorted(rollback_scope['req_ids']))}")
-        print(f"  scope 내 REQ: {len(detail_reqs)}/{original_count} (나머지는 이미 통과로 간주)\n")
 
     # ── Gate 1: REQ-ID별 AC 존재 여부 + TRACEABILITY.md 행 등록 여부
     if current_gate == "gate1":
@@ -1705,11 +1928,25 @@ def check_trace(project_dir="."):
                 else:
                     issues.append(f"  X {group} - docs/02-design/{filename} 없음")
 
+        print("\n  Gate 2 검사: SW 아키텍처 정의서 확정 여부")
+        architecture_files, architecture_issues = validate_architecture_spec(project_dir)
+        if architecture_files and not architecture_issues:
+            print(f"  O SW 아키텍처 정의서 확인 ({', '.join(architecture_files)})")
+        for issue in architecture_issues:
+            issues.append(f"  X {issue}")
+
         print("\n  Gate 2 검사: 보안가이드 확정 여부")
         security_guide_files, security_guide_issues = validate_security_guide(project_dir)
         if security_guide_files and not security_guide_issues:
             print(f"  O 보안가이드 확인 ({', '.join(security_guide_files)})")
         for issue in security_guide_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: 프로그램명세서 상세 SW 설계 여부")
+        program_spec_files, program_spec_issues = validate_program_spec(project_dir)
+        if program_spec_files and not program_spec_issues:
+            print(f"  O 프로그램명세서 확인 ({', '.join(program_spec_files)})")
+        for issue in program_spec_issues:
             issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: 화면설계 기준 증적 여부")
@@ -1945,78 +2182,68 @@ def check_trace(project_dir="."):
         print("이슈 0건 - Gate 완료 가능합니다.")
 
 
-# ── rollback ──────────────────────────────────────────────────────────────
+# ── architecture check ─────────────────────────────────────────────────────
 
-def cmd_rollback(gate, reason="", scope=None, project_dir="."):
-    """Gate 상태를 되돌린다. --scope가 있으면 증분 Rollback 모드로 작동한다.
+def cmd_check_architecture(level="baseline", project_dir="."):
+    files, issues = validate_architecture_spec(project_dir, level=level)
+    label = "Draft" if level == "draft" else "Baseline"
 
-    증분 모드에서는 session.json에 rollback_scope를 기록하여 check-trace가
-    scope 내 REQ-ID만 재검증 대상으로 삼도록 한다. 기존 문서/코드는 보존된다.
-    scope 생략 시 기존 전체 rollback 동작과 호환된다.
-    """
-    session = load_session(project_dir)
+    print(f"\n[check-architecture] SW 아키텍처 {label} 검사\n")
+    if files:
+        for rel_path in files:
+            print(f"  대상: {rel_path}")
+    else:
+        print("  대상: 없음")
 
-    if gate not in GATE_LABELS:
-        print(f"오류: 유효하지 않은 gate - {gate}")
-        print(f"  사용 가능: {', '.join(GATE_LABELS.keys())}")
+    if issues:
+        print(f"\n이슈 {len(issues)}건 발견:\n")
+        for issue in issues:
+            print(f"  X {issue}")
         sys.exit(1)
 
-    gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
-    rollback_idx = gate_order.index(gate)
+    print("\n이슈 0건 - SW 아키텍처 기준을 만족합니다.")
 
-    # 대상 gate 및 이후 모든 gate를 pending으로 리셋
-    for g in gate_order[rollback_idx:]:
-        session["gate_status"][g] = "pending"
 
-    session["current_gate"] = gate
+# ── gate preflight ─────────────────────────────────────────────────────────
 
-    # completed 목록에서 rollback 대상 gate 이후 항목 제거
-    labels_to_remove = {GATE_LABELS[g] for g in gate_order[rollback_idx:]}
-    session["completed"] = [
-        c for c in session.get("completed", [])
-        if not any(c.startswith(label) for label in labels_to_remove)
-    ]
+def validate_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
+    """Gate 전환 직전에 이전 단계의 완료 조건만 검사한다."""
+    if target_gate not in GATE_ORDER:
+        return []
 
-    # 증분 rollback: scope 기록
-    scope_list = []
-    if scope:
-        scope_list = [s.strip() for s in scope.split(",") if s.strip()]
-        session["rollback_scope"] = {
-            "gate": gate,
-            "req_ids": scope_list,
-            "reason": reason,
-        }
-    elif "rollback_scope" in session:
-        # 전체 rollback이면 기존 scope 제거
-        del session["rollback_scope"]
+    issues = []
+    target_idx = GATE_ORDER.index(target_gate)
+    if target_idx >= GATE_ORDER.index("gate1"):
+        issues.extend(validate_discovery_open_items(project_dir, current_gate="gate1"))
+    return issues
 
-    if reason:
-        session.setdefault("blocked", [])
-        scope_tag = f" scope={','.join(scope_list)}" if scope_list else ""
-        note = f"[rollback to {gate}{scope_tag}] {reason}"
-        if note not in session["blocked"]:
-            session["blocked"].append(note)
 
-    save_session(session, project_dir)
+def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
+    issues = validate_gate_start_prerequisites(project_dir, target_gate)
+    if not issues:
+        return
 
-    if scope_list:
-        print(f"  증분 rollback: {gate} ({GATE_LABELS[gate]}) — scope: {', '.join(scope_list)}")
-        print(f"  scope 내 REQ만 재검증 대상. 다른 REQ는 이미 통과로 간주.")
-    else:
-        print(f"  rollback 완료: {gate} ({GATE_LABELS[gate]}) 부터 재시작")
-    print(f"  리셋된 Gate: {', '.join(gate_order[rollback_idx:])}")
-
-    commit_msg = f"rollback: {gate}부터 재시작 - {GATE_LABELS[gate]}"
-    if scope_list:
-        commit_msg = f"rollback(scope={','.join(scope_list)}): {gate} - {GATE_LABELS[gate]}"
-    if reason:
-        commit_msg += f" ({reason})"
-    git_commit(commit_msg, project_dir, include_source=False)
+    print(f"\n[gate-start] {target_gate} 진입 전 완료 조건 위반:\n")
+    for issue in issues:
+        print(f"  {issue}")
+    print("\n이슈를 정리한 뒤 다시 Gate 전환을 실행하세요.")
+    sys.exit(1)
 
 
 # ── backlog ────────────────────────────────────────────────────────────────
 
-BACKLOG_PATH = "docs/backlog/BACKLOG.md"
+BACKLOG_PATH = "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md"
+LEGACY_BACKLOG_PATH = "docs/backlog/BACKLOG.md"
+
+
+def get_backlog_path(project_dir="."):
+    path = os.path.join(project_dir, BACKLOG_PATH)
+    if os.path.exists(path):
+        return path
+    legacy_path = os.path.join(project_dir, LEGACY_BACKLOG_PATH)
+    if os.path.exists(legacy_path):
+        return legacy_path
+    return path
 
 
 def _parse_backlog_items(content):
@@ -2059,7 +2286,7 @@ def _parse_backlog_items(content):
 
 def compute_backlog_stats(project_dir="."):
     """BACKLOG.md에서 Active/Done/Rejected 건수와 레벨·우선순위별 카운트를 계산한다."""
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         return {
             "active": 0, "done": 0, "rejected": 0,
@@ -2116,6 +2343,63 @@ def compute_backlog_stats(project_dir="."):
     }
 
 
+def _count_backlog_section(content, section_header):
+    count = 0
+    in_section = False
+    for line in content.splitlines():
+        if line.startswith(f"## {section_header}"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## ") and not line.startswith(f"## {section_header}"):
+            break
+        if in_section and re.match(r"^\|\s*BL-\d{3}\s*\|", line):
+            count += 1
+    return count
+
+
+def _refresh_backlog_summary(content):
+    stats = {
+        "Active": len(_parse_backlog_items(content)),
+        "Done": _count_backlog_section(content, "Done"),
+        "Rejected": _count_backlog_section(content, "Rejected"),
+        "Deferred": _count_backlog_section(content, "Deferred"),
+    }
+    lines = content.splitlines()
+    out = []
+    in_stats = False
+    wrote = False
+    for line in lines:
+        if line.startswith("## 통계"):
+            in_stats = True
+            wrote = True
+            out.append(line)
+            out.append("")
+            for key, value in stats.items():
+                out.append(f"- **{key}**: {value}건")
+            continue
+        if in_stats and line.startswith("## "):
+            in_stats = False
+            out.append(line)
+            continue
+        if in_stats:
+            continue
+        out.append(line)
+
+    if not wrote:
+        if out and out[-1].strip():
+            out.append("")
+        out.extend([
+            "## 통계",
+            "",
+            f"- **Active**: {stats['Active']}건",
+            f"- **Done**: {stats['Done']}건",
+            f"- **Rejected**: {stats['Rejected']}건",
+            f"- **Deferred**: {stats['Deferred']}건",
+        ])
+
+    return "\n".join(out) + ("\n" if content.endswith("\n") else "")
+
+
 def _next_backlog_id(content):
     ids = re.findall(r'\bBL-(\d{3})\b', content)
     next_num = max([int(i) for i in ids], default=0) + 1
@@ -2123,7 +2407,7 @@ def _next_backlog_id(content):
 
 
 def cmd_backlog_list(project_dir="."):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음. 프로젝트가 Vulcan-Anvil Ex 구조인지 확인하세요.")
         sys.exit(1)
@@ -2161,7 +2445,7 @@ def cmd_backlog_add(
     run="",
     project_dir=".",
 ):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2206,15 +2490,16 @@ def cmd_backlog_add(
         print("오류: BACKLOG.md Active 섹션을 찾지 못했습니다.")
         sys.exit(1)
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  추가: {new_id} - {title}")
     print(f"  다음 단계: Triage (레벨/우선순위 결정) 후 상태 → Triaged")
 
 
 def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
     """BL 항목을 Done으로 이동시킨다. Active에서 제거 후 Done 섹션에 기록."""
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2282,13 +2567,14 @@ def cmd_backlog_done(bl_id, commit_hash="", project_dir="."):
         out = new_out
         done_inserted = appended
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  완료: {bl_id} → Done ({commit_hash or 'commit 미지정'})")
 
 
 def cmd_backlog_reject(bl_id, reason="", project_dir="."):
-    path = os.path.join(project_dir, BACKLOG_PATH)
+    path = get_backlog_path(project_dir)
     if not os.path.exists(path):
         print(f"오류: {BACKLOG_PATH} 없음.")
         sys.exit(1)
@@ -2344,8 +2630,9 @@ def cmd_backlog_reject(bl_id, reason="", project_dir="."):
             new_out.append(line)
         out = new_out
 
+    updated = _refresh_backlog_summary("\n".join(out) + ("\n" if content.endswith("\n") else ""))
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + ("\n" if content.endswith("\n") else ""))
+        f.write(updated)
     print(f"  반려: {bl_id} → Rejected ({reason or '사유 미지정'})")
 
 
@@ -2362,15 +2649,21 @@ def cmd_session(gate, status, feature, project_dir="."):
     if feature:
         session["feature"] = feature
 
-    session["gate_status"][gate] = status
-
     gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
+    next_gate = None
     if status == "done":
         current_idx = gate_order.index(gate)
         if current_idx + 1 < len(gate_order):
-            session["current_gate"] = gate_order[current_idx + 1]
+            next_gate = gate_order[current_idx + 1]
         else:
-            session["current_gate"] = "completed"
+            next_gate = "completed"
+        if next_gate != "completed":
+            require_gate_start_prerequisites(project_dir, next_gate)
+
+    session["gate_status"][gate] = status
+
+    if status == "done":
+        session["current_gate"] = next_gate
 
         entry = f"{GATE_LABELS[gate]} - {session.get('feature', '')}"
         if entry not in session.get("completed", []):
@@ -2405,6 +2698,8 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
 
     if feature:
         session["feature"] = feature
+
+    require_gate_start_prerequisites(project_dir, gate)
 
     session["current_gate"] = gate
     session.setdefault("gate_status", {})[gate] = "pending"
@@ -2896,17 +3191,23 @@ def cmd_upgrade(project_dir="."):
         shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
         print(f"  업데이트: vulcan.py")
 
-    # v1.1+: BACKLOG.md가 없으면 생성 (있으면 사용자 데이터 보존)
+    # v1.1+: Backlog 공식 문서가 없으면 생성하고, legacy BACKLOG.md는 보존한다.
     backlog_dst = os.path.join(project_dir, BACKLOG_PATH)
     if not os.path.exists(backlog_dst):
-        tpl = os.path.join(src_templates, "docs/backlog/BACKLOG.md")
-        if os.path.exists(tpl):
-            with open(tpl, encoding="utf-8") as f:
-                content = render(f.read(), variables)
+        legacy_backlog = os.path.join(project_dir, LEGACY_BACKLOG_PATH)
+        if os.path.exists(legacy_backlog):
             os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
-            with open(backlog_dst, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"  생성 (Ex 신규): docs/backlog/BACKLOG.md")
+            shutil.copy2(legacy_backlog, backlog_dst)
+            print(f"  마이그레이션: {LEGACY_BACKLOG_PATH} → {BACKLOG_PATH}")
+        else:
+            tpl = os.path.join(src_templates, "docs/backlog/BACKLOG.md")
+            if os.path.exists(tpl):
+                with open(tpl, encoding="utf-8") as f:
+                    content = render(f.read(), variables)
+                os.makedirs(os.path.dirname(backlog_dst), exist_ok=True)
+                with open(backlog_dst, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"  생성 (Ex 신규): {BACKLOG_PATH}")
 
     # v1.2+: 설계·리뷰 템플릿이 없으면 생성 (있으면 사용자 작업 보존)
     for tpl_rel, label in [
@@ -3399,7 +3700,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
     # docs/backlog/
     content = render(read_template("docs/backlog/BACKLOG.md"), variables)
-    write_file(target_dir, "docs/backlog/BACKLOG.md", content)
+    write_file(target_dir, BACKLOG_PATH, content)
     copy_file(target_dir, "docs/backlog/PROCESS.md", "docs/backlog/PROCESS.md")
 
     # audit and agent coding document framework
@@ -3485,7 +3786,6 @@ def main():
   sync-session session.json 대시보드 상태 캐시 동기화
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
-  rollback     특정 Gate부터 재시작 (해당 Gate 이후 모두 pending 리셋)
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
   upgrade      프레임워크 파일 최신화 (프로젝트 디렉토리에서 실행)
   version      현재 프레임워크 버전 확인
@@ -3500,7 +3800,6 @@ def main():
   python vulcan.py sync-session
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
-  python vulcan.py rollback --gate gate2 --reason "요구사항 추가"
   python vulcan.py export
   python vulcan.py upgrade
         """
@@ -3515,6 +3814,9 @@ def main():
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+
+    p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
+    p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
 
     p_gate_start = subparsers.add_parser("gate-start", help="현재 진행 Gate 전환")
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
@@ -3536,11 +3838,6 @@ def main():
     p_wave_complete.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
     p_wave_complete.add_argument("--status", default="Verified", choices=sorted(WAVE_KNOWN_STATUSES), help="Wave 상태")
     p_wave_complete.add_argument("--req", default="", help="구현 완료 처리할 REQ-ID 콤마 구분")
-
-    p_rollback = subparsers.add_parser("rollback", help="특정 Gate부터 재시작 (이후 Gate 모두 pending 리셋)")
-    p_rollback.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="재시작할 Gate")
-    p_rollback.add_argument("--reason", default="", help="롤백 사유 (선택)")
-    p_rollback.add_argument("--scope", default="", help="증분 rollback scope (REQ-ID 콤마 구분, 예: REQ-003,NREQ-005)")
 
     p_run_new = subparsers.add_parser("run-new", help="Codex/GPT Run 초안 생성")
     p_run_new.add_argument("--adapter", default="codex-gpt", help="Adapter 이름")
@@ -3580,7 +3877,7 @@ def main():
     bl_add.add_argument("--source", default="")
     bl_add.add_argument("--note", default="")
     bl_add.add_argument("--type", dest="item_type", default="IDEA", choices=["IDEA", "FIND", "CR", "ISSUE", "DEBT"])
-    bl_add.add_argument("--backlog-gate", dest="backlog_gate", default="phase0", help="재진입 Gate 후보")
+    bl_add.add_argument("--backlog-gate", dest="backlog_gate", default="phase0", help="다시 진행할 Gate 후보")
     bl_add.add_argument("--run", default="", help="관련 Run ID 또는 파일")
     bl_done = backlog_sub.add_parser("done", help="백로그 항목 완료 처리")
     bl_done.add_argument("--id", dest="bl_id", required=True)
@@ -3610,6 +3907,8 @@ def main():
         )
     elif args.command == "check-trace":
         check_trace()
+    elif args.command == "check-architecture":
+        cmd_check_architecture(level=args.level)
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
@@ -3620,8 +3919,6 @@ def main():
         cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
     elif args.command == "wave-complete":
         cmd_wave_complete(bw_id=args.bw_id, status=args.status, req_ids=args.req)
-    elif args.command == "rollback":
-        cmd_rollback(gate=args.gate, reason=args.reason, scope=args.scope or None)
     elif args.command == "run-new":
         cmd_run_new(
             adapter=args.adapter,

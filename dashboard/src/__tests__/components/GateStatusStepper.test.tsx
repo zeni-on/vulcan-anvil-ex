@@ -3,7 +3,7 @@
  * @description GateStatusStepper 컴포넌트 렌더링 테스트
  *
  * 커버 항목:
- * - Gate 1~5 + 구현 스텝 렌더링 (6개 스텝)
+ * - Phase 0 + Gate 1~5 + 구현 스텝 렌더링 (7개 스텝)
  * - 각 Gate 상태별 aria-label 확인 (done, in-progress, pending, blocked)
  * - done 상태 → "완료" 레이블
  * - blocked 상태 → "블로커" 레이블
@@ -76,14 +76,19 @@ describe('GateStatusStepper', () => {
     expect(screen.getByLabelText('구현: 대기')).toBeInTheDocument()
   })
 
+  it('current_gate가 pending 상태이면 "진행중"으로 표시한다', () => {
+    render(<GateStatusStepper session={{ ...mockSession, current_gate: 'impl' }} />)
+    expect(screen.getByLabelText('구현: 진행중')).toBeInTheDocument()
+  })
+
   it('blocked 상태 Gate는 "블로커" 레이블을 표시한다', () => {
     render(<GateStatusStepper session={mockSession} />)
     expect(screen.getByLabelText('Gate 5: 블로커')).toBeInTheDocument()
   })
 
-  it('모든 6개 스텝(listitem)을 렌더링한다', () => {
+  it('모든 7개 스텝(listitem)을 렌더링한다', () => {
     render(<GateStatusStepper session={mockSession} />)
-    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    expect(screen.getAllByRole('listitem')).toHaveLength(7)
   })
 
   it('gate1 done → 체크 아이콘(✓) 텍스트를 표시한다', () => {
@@ -108,6 +113,7 @@ describe('GateStatusStepper', () => {
       gate5: 'pending',
     })
     expect(screen.getByTestId('gate-status-stepper')).toBeInTheDocument()
-    expect(screen.getAllByText('대기')).toHaveLength(6)
+    expect(screen.getAllByText('대기')).toHaveLength(5)
+    expect(screen.getByLabelText('Gate 3: 진행중')).toBeInTheDocument()
   })
 })

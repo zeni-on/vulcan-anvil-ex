@@ -92,7 +92,7 @@ export interface DocsStats {
   design: number
   test_plan: number
   review: number
-  security?: number
+  release?: number
   backlog?: number
   runs?: number
   total: number
@@ -244,7 +244,7 @@ export interface DocEntry {
     | 'design'
     | 'test-plan'
     | 'review'
-    | 'security'
+    | 'release'
     | 'backlog'
     | 'standards'
     | 'templates'
@@ -283,6 +283,8 @@ export const EXTERNAL_DOC_EXTENSIONS = [
   'jpeg',
   'webp',
   'gif',
+  'svg',
+  'dbml',
 ] as const
 
 export type ExternalDocExt = (typeof EXTERNAL_DOC_EXTENSIONS)[number]
