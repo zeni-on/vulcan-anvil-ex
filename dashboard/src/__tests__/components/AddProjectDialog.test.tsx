@@ -65,21 +65,19 @@ describe('AddProjectDialog', () => {
     expect(screen.getByTestId('input-branch')).toBeInTheDocument()
   })
 
-  it('이름 필드 미입력 시 오류 메시지가 표시된다', async () => {
+  it('GitHub repo 미입력 시 오류 메시지가 표시된다', async () => {
     render(<AddProjectDialog {...defaultProps} />)
 
-    // 이름을 비우고 제출
     fireEvent.click(screen.getByTestId('dialog-submit-button'))
 
     await waitFor(() => {
-      expect(screen.getByText('프로젝트 이름을 입력하세요.')).toBeInTheDocument()
+      expect(screen.getByText('GitHub 저장소를 입력하세요.')).toBeInTheDocument()
     })
   })
 
   it('GitHub repo 형식 오류 시 오류 메시지가 표시된다', async () => {
     render(<AddProjectDialog {...defaultProps} />)
 
-    fireEvent.change(screen.getByTestId('input-name'), { target: { value: 'Test' } })
     fireEvent.change(screen.getByTestId('input-repo'), { target: { value: 'invalid-format' } })
     fireEvent.click(screen.getByTestId('dialog-submit-button'))
 
@@ -92,7 +90,6 @@ describe('AddProjectDialog', () => {
     render(<AddProjectDialog {...defaultProps} />)
 
     fireEvent.click(screen.getByTestId('tab-local'))
-    fireEvent.change(screen.getByTestId('input-name'), { target: { value: 'Test' } })
     fireEvent.change(screen.getByTestId('input-path'), { target: { value: 'relative/path' } })
     fireEvent.click(screen.getByTestId('dialog-submit-button'))
 
@@ -120,7 +117,6 @@ describe('AddProjectDialog', () => {
 
     render(<AddProjectDialog {...defaultProps} onSuccess={onSuccess} onOpenChange={onOpenChange} />)
 
-    fireEvent.change(screen.getByTestId('input-name'), { target: { value: 'New Project' } })
     fireEvent.change(screen.getByTestId('input-repo'), { target: { value: 'owner/repo' } })
     fireEvent.click(screen.getByTestId('dialog-submit-button'))
 
@@ -139,7 +135,6 @@ describe('AddProjectDialog', () => {
 
     render(<AddProjectDialog {...defaultProps} />)
 
-    fireEvent.change(screen.getByTestId('input-name'), { target: { value: 'Test' } })
     fireEvent.change(screen.getByTestId('input-repo'), { target: { value: 'owner/repo' } })
     fireEvent.click(screen.getByTestId('dialog-submit-button'))
 

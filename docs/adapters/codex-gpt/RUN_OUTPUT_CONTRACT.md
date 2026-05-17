@@ -47,10 +47,10 @@ summary:
     - "비로그인 사용자의 작성 요청은 차단된다."
 
 changed_files:
-  - path: docs/examples/board-with-login/sample-app/app/api/posts.py
+  - path: app/api/work_items.py
     change_type: modified
     related_ids: [PGM-005, REQ-005, SEC-002]
-  - path: docs/examples/board-with-login/sample-app/tests/unit/test_post_service.py
+  - path: tests/unit/test_work_item_service.py
     change_type: modified
     related_ids: [UT-007, UT-008]
 
@@ -76,12 +76,12 @@ verification_results:
 
 evidence:
   documents:
-    - docs/examples/board-with-login/DOC-QA-G4-002_Test-Result_v0.1.md
+    - docs/artifacts/04-results/DOC-QA-G4-002_Test-Result_v0.1.md
   files: []
   commit: null
 
 traceability_updates:
-  - document: docs/examples/board-with-login/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+  - document: docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
     update: "REQ-005 관련 상태와 증적을 최신 테스트 결과로 갱신"
 
 open_issues: []
@@ -179,9 +179,9 @@ verification_results:
 ```yaml
 evidence:
   documents:
-    - docs/examples/board-with-login/DOC-QA-G4-003_UI-Test-Result_v0.1.md
+    - docs/artifacts/04-results/DOC-QA-G4-003_UI-Test-Result_v0.1.md
   files:
-    - docs/examples/board-with-login/evidence/ui/SCR-003_posts/desktop.png
+    - docs/artifacts/04-results/evidence/ui/SCR-003_work-items/desktop.png
 ```
 
 나쁜 예:

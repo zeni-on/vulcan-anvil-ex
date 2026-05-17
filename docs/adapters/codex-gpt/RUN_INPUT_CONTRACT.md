@@ -50,9 +50,9 @@ agent_role: implementation-agent
 run_type: Implementation
 gate: G4
 project:
-  name: Board With Login Sample
-  root: docs/examples/board-with-login
-goal: "PGM-005 게시글 작성 기능을 구현하고 관련 테스트를 통과시킨다."
+  name: Project Name
+  root: .
+goal: "PGM-005 업무 기능을 구현하고 관련 테스트를 통과시킨다."
 
 related_ids:
   req: [REQ-005]
@@ -70,21 +70,21 @@ source_documents:
     - docs/core/ID_SYSTEM.md
     - docs/core/TRACEABILITY_RULES.md
     - docs/core/AGENT_RUN_PROTOCOL.md
-    - docs/examples/board-with-login/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
-    - docs/examples/board-with-login/DOC-CORE-G2-002_Program-Spec_v0.1.md
-    - docs/examples/board-with-login/DOC-DEV-G2-001_Development-Standard_v0.1.md
-    - docs/examples/board-with-login/DOC-QA-G3-001_Test-Cases_v0.1.md
+    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+    - docs/artifacts/02-design/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/02-design/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
   optional:
-    - docs/examples/board-with-login/DOC-CORE-G2-001_Function-Spec_v0.1.md
-    - docs/examples/board-with-login/DOC-CORE-G2-003_Screen-Spec_v0.1.md
+    - docs/artifacts/02-design/DOC-CORE-G2-001_Function-Spec_v0.1.md
+    - docs/artifacts/02-design/DOC-CORE-G2-003_Screen-Spec_v0.1.md
 
 scope:
   writable:
-    - docs/examples/board-with-login/sample-app/app/api/posts.py
-    - docs/examples/board-with-login/sample-app/app/services/post_service.py
-    - docs/examples/board-with-login/sample-app/tests/
-    - docs/examples/board-with-login/DOC-QA-G4-002_Test-Result_v0.1.md
-    - docs/examples/board-with-login/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+    - app/api/work_items.py
+    - app/services/work_item_service.py
+    - tests/
+    - docs/artifacts/04-results/DOC-QA-G4-002_Test-Result_v0.1.md
+    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   readonly:
     - docs/core/
     - docs/templates/
@@ -108,7 +108,7 @@ verification:
   evidence:
     required: true
     target_documents:
-      - docs/examples/board-with-login/DOC-QA-G4-002_Test-Result_v0.1.md
+      - docs/artifacts/04-results/DOC-QA-G4-002_Test-Result_v0.1.md
 
 output_requirements:
   format: "RUN_OUTPUT_CONTRACT.md"

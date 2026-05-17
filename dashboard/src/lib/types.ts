@@ -244,6 +244,7 @@ export interface DocEntry {
     | 'design'
     | 'test-plan'
     | 'review'
+    | 'security'
     | 'release'
     | 'backlog'
     | 'standards'

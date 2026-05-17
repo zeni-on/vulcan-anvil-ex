@@ -116,7 +116,7 @@ describe('POST /api/projects', () => {
    * UT-004-01: GitHub 타입 정상 추가 → 201 및 id 포함 반환
    */
   it('UT-004-01: GitHub 타입 정상 Body → 201, id/type/repo 포함 Project 반환', async () => {
-    const req = makeRequest({ type: 'github', name: 'My App', repo: 'owner/repo', branch: 'main' })
+    const req = makeRequest({ type: 'github', repo: 'owner/repo', branch: 'main' })
     const res = await POST(req)
     const body = await res.json()
 
@@ -134,7 +134,7 @@ describe('POST /api/projects', () => {
    * UT-004-02: 로컬 타입 정상 추가 → 201 및 id 포함 반환
    */
   it('UT-004-02: 로컬 타입 정상 Body → 201, id/type/path 포함 Project 반환', async () => {
-    const req = makeRequest({ type: 'local', name: 'Local App', path: '/home/user/projects/app' })
+    const req = makeRequest({ type: 'local', path: '/home/user/projects/app' })
     const res = await POST(req)
     const body = await res.json()
 
@@ -148,8 +148,8 @@ describe('POST /api/projects', () => {
   /**
    * UT-004-03: 필수 필드 누락 → 400 반환
    */
-  it('UT-004-03: name 누락 → 400 반환', async () => {
-    const req = makeRequest({ type: 'github', repo: 'owner/repo', branch: 'main' })
+  it('UT-004-03: GitHub 타입에서 branch 누락 → 400 반환', async () => {
+    const req = makeRequest({ type: 'github', repo: 'owner/repo' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
@@ -157,21 +157,21 @@ describe('POST /api/projects', () => {
   })
 
   it('UT-004-03: type 누락 → 400 반환', async () => {
-    const req = makeRequest({ name: 'App', repo: 'owner/repo', branch: 'main' })
+    const req = makeRequest({ repo: 'owner/repo', branch: 'main' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
   })
 
   it('UT-004-03: GitHub 타입에서 repo 누락 → 400 반환', async () => {
-    const req = makeRequest({ type: 'github', name: 'App', branch: 'main' })
+    const req = makeRequest({ type: 'github', branch: 'main' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
   })
 
   it('UT-004-03: 로컬 타입에서 path 누락 → 400 반환', async () => {
-    const req = makeRequest({ type: 'local', name: 'App' })
+    const req = makeRequest({ type: 'local' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
@@ -182,7 +182,7 @@ describe('POST /api/projects', () => {
    * 보안: 클라이언트가 상대경로를 보내더라도 등록 불가 (SEC-001-02)
    */
   it('UT-004-04: 로컬 타입 상대경로 → 400 반환', async () => {
-    const req = makeRequest({ type: 'local', name: 'App', path: 'relative/path/to/project' })
+    const req = makeRequest({ type: 'local', path: 'relative/path/to/project' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
@@ -192,14 +192,14 @@ describe('POST /api/projects', () => {
   })
 
   it('UT-004-04: 로컬 타입 ./ 시작 경로 → 400 반환', async () => {
-    const req = makeRequest({ type: 'local', name: 'App', path: './local/project' })
+    const req = makeRequest({ type: 'local', path: './local/project' })
     const res = await POST(req)
 
     expect(res.status).toBe(400)
   })
 
   it('UT-004-04: Windows 절대경로(C:\\)는 200으로 허용한다', async () => {
-    const req = makeRequest({ type: 'local', name: 'App', path: 'C:\\Users\\user\\project' })
+    const req = makeRequest({ type: 'local', path: 'C:\\Users\\user\\project' })
     const res = await POST(req)
 
     expect(res.status).toBe(201)
@@ -216,7 +216,7 @@ describe('POST /api/projects', () => {
     }
     mockReadProjects.mockReturnValue([existing])
 
-    const req = makeRequest({ type: 'github', name: 'Duplicate', repo: 'owner/repo', branch: 'main' })
+    const req = makeRequest({ type: 'github', repo: 'owner/repo', branch: 'main' })
     const res = await POST(req)
 
     expect(res.status).toBe(409)

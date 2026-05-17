@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 pytest-cache-files*/
+*.tsbuildinfo
+dashboard/test-results/
 dashboard/projects.json
 docs/ref-docs/
+docs/examples/
 .claude/worktrees/
