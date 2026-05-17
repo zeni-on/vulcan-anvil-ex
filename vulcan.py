@@ -1247,6 +1247,25 @@ def git_push(project_dir="."):
         sys.exit(1)
 
 
+def has_git_remote(project_dir=".", remote="origin"):
+    result = subprocess.run(
+        ["git", "remote", "get-url", remote],
+        cwd=project_dir,
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
+def version_run_document(rel_path, message, project_dir="."):
+    committed = git_commit(message, project_dir, paths=[rel_path])
+    if not committed:
+        return
+    if has_git_remote(project_dir):
+        git_push(project_dir)
+    else:
+        print("  푸시 생략: git remote origin 없음")
+
+
 # ── check-trace ────────────────────────────────────────────────────────────
 
 def count_docs(project_dir="."):
@@ -4217,6 +4236,7 @@ Draft 상태. 작업 완료 후 후속 조치나 다음 Run 제안을 기록한�
 """
     write_file(project_dir, rel_path, content)
     print(f"\nRun 초안 생성 완료: {rel_path}")
+    version_run_document(rel_path, f"run: create {run_id} - {title}", project_dir)
     print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
 
 
@@ -4319,6 +4339,7 @@ TBD
 """
     write_file(project_dir, rel_path, content)
     print(f"\nOrchestrator 계획 생성 완료: {rel_path}")
+    version_run_document(rel_path, f"run: create {run_id} - orchestrator plan", project_dir)
     print("다음 단계: 계획을 검토한 뒤 필요한 persona Run 또는 handoff를 생성합니다.")
 
 
@@ -4423,6 +4444,7 @@ TBD
 """
     write_file(project_dir, rel_path, content)
     print(f"\nHandoff 문서 생성 완료: {rel_path}")
+    version_run_document(rel_path, f"run: create {run_id} - handoff {target}", project_dir)
     print("다음 단계: 대상 환경에서 검증한 뒤 이 Run 파일을 갱신합니다.")
 
 
