@@ -153,6 +153,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "handoff": "review",
 }
 GATE_DEFAULT_PERSONAS = {
+    "phase0": "discovery",
     "gate1": "requirements",
     "gate2": "design",
     "gate3": "test-design",
@@ -1260,10 +1261,15 @@ def version_run_document(rel_path, message, project_dir="."):
     committed = git_commit(message, project_dir, paths=[rel_path])
     if not committed:
         return
+    git_push_if_remote(project_dir)
+
+
+def git_push_if_remote(project_dir="."):
     if has_git_remote(project_dir):
         git_push(project_dir)
-    else:
-        print("  푸시 생략: git remote origin 없음")
+        return True
+    print("  푸시 생략: git remote origin 없음")
+    return False
 
 
 # ── check-trace ────────────────────────────────────────────────────────────
@@ -2570,6 +2576,16 @@ def collect_run_gate_records(project_dir="."):
     return records
 
 
+def has_open_run_for_gate(project_dir=".", gate=None):
+    open_statuses = {"draft", "inprogress", "in progress", "running"}
+    for record in collect_run_gate_records(project_dir):
+        if gate and record["gate"] != gate:
+            continue
+        if record["status"].strip().lower() in open_statuses:
+            return True
+    return False
+
+
 def detect_early_implementation_files(project_dir="."):
     candidates = [
         "app",
@@ -3576,9 +3592,8 @@ def cmd_session(gate, status, feature, project_dir="."):
     # 구현(impl), Gate 4(QA리뷰), Gate 5(최종승인): 소스코드 포함 커밋
     include_source = gate in ("impl", "gate4", "gate5")
     committed = git_commit(commit_msg, project_dir, include_source=include_source)
-    # git push: commit 성공 직후 실행. 실패 시 sys.exit(1) (REQ-006-01, REQ-006-02)
     if committed:
-        git_push(project_dir)
+        git_push_if_remote(project_dir)
 
 
 def cmd_gate_start(gate, feature=None, project_dir="."):
@@ -3610,7 +3625,17 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
         commit_msg += f" ({feature_label})"
     committed = git_commit(commit_msg, project_dir, paths=["session.json"])
     if committed:
-        git_push(project_dir)
+        git_push_if_remote(project_dir)
+
+    if has_open_run_for_gate(project_dir, gate):
+        print(f"  Run 초안 생략: {gate}에 진행 중인 Run이 이미 있습니다.")
+        return
+
+    goal = f"{GATE_LABELS[gate]} 시작 계획"
+    if feature_label:
+        goal = f"{feature_label} - {goal}"
+    print(f"  Run 초안 자동 생성: {gate} Orchestrator Plan")
+    cmd_orchestrator_plan(goal=goal, gate=gate, related_ids="", project_dir=project_dir)
 
 
 def sync_session(project_dir="."):

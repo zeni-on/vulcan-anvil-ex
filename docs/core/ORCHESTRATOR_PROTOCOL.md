@@ -101,6 +101,8 @@ Implementation Plan Run
 
 ## 6. Orchestrator Plan 계약
 
+`vulcan.py gate-start`는 Gate 상태를 갱신한 뒤 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 같은 Gate에 열린 Run이 있으면 중복 생성하지 않는다.
+
 `vulcan.py orchestrator-plan`은 Orchestrator가 다음 작업을 잊지 않도록 `docs/runs/`에 실행 계획 Run을 만든다.
 
 계획에는 다음 항목이 있어야 한다.

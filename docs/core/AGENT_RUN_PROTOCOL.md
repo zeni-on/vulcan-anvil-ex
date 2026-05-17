@@ -63,6 +63,10 @@ CR-001 게시글 첨부파일 요청 영향도 분석
 
 Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한다.
 
+Gate 작업은 Run 문서 생성 뒤에 시작한다. `vulcan.py gate-start`는 Gate 상태를 갱신한 뒤 해당 Gate의 기본 `orchestrator-plan` Run 초안을 자동 생성한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
+
+이 기본 Run은 Gate 작업의 시작 계약이다. 에이전트는 이 Run을 읽고 필요한 세부 persona Run을 제안하거나 `run-new`로 추가 생성한 뒤 산출물 작성, 구현, 테스트, QA를 진행한다. Gate 종료 시에는 시작 시 만든 Run 또는 세부 Run을 완료 보고 형식으로 갱신한다.
+
 | 입력 | 필수 여부 | 설명 |
 | --- | --- | --- |
 | Run ID | 필수 | 에이전트 실행 단위 ID. 예: `RUN-001` |
