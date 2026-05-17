@@ -144,6 +144,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "security-review": "review",
     "screen-review": "screen-review",
     "ui-review": "ui-review",
+    "development-standard-review": "development-review",
     "implementation-plan": "build-planning",
     "build-wave": "build",
     "data-standard-review": "review",
@@ -184,6 +185,508 @@ GATE_LABELS = {
 }
 
 GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
+DEFAULT_DELIVERY_PROFILE = "audit"
+
+RUN_TYPES_BY_GATE = {
+    "phase0": "Discovery",
+    "gate1": "Requirements",
+    "gate2": "Design",
+    "gate3": "Test",
+    "impl": "Implementation",
+    "gate4": "Review",
+    "gate5": "Approval",
+}
+
+AUDIT_COMMON_READ_FIRST_DOCS = [
+    "AGENTS.md",
+    "session.json",
+    "docs/core/TRACEABILITY_RULES.md",
+    "docs/adapters/codex-gpt/GATE_PROMPTS.md",
+]
+
+AUDIT_GATE_READ_FIRST_DOCS = {
+    "gate2": [
+        "docs/core/GATE2_DESIGN_SEQUENCE.md",
+    ],
+}
+
+AUDIT_COMMON_REFERENCE_DOCS = [
+    "docs/core/ID_SYSTEM.md",
+    "docs/core/ORCHESTRATOR_PROTOCOL.md",
+    "docs/core/AGENT_PERSONAS.md",
+    "docs/core/AGENT_RUN_PROTOCOL.md",
+    "docs/core/DELIVERY_PROFILES.md",
+    "docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md",
+    "docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md",
+]
+
+AUDIT_COMMON_READONLY_DOCS = [
+    "docs/core/",
+    "docs/templates/",
+    "docs/seed-docs/reference-standards/",
+]
+
+AUDIT_COMMON_EXCLUDED_PATHS = [
+    "docs/ref-docs/",
+    "**/*.db",
+    "**/__pycache__/",
+    "**/.ruff_cache/",
+]
+
+AUDIT_GATE_ANCHOR_DOCS = {
+    "gate1": [
+        "docs/artifacts/00-discovery/DOC-CORE-P0-001_Project-Brief_v0.1.md",
+        "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+    ],
+    "gate2": [
+        "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+    ],
+    "gate3": [
+        "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+    ],
+    "impl": [
+        "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+    ],
+    "gate4": [
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+    ],
+    "gate5": [
+        "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+        "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+    ],
+}
+
+AUDIT_GATE_EXIT_POLICY = {
+    "stop_required": True,
+    "next_gate_requires_user_approval": True,
+    "approval_evidence_required": True,
+    "allowed_next_action": "현재 Gate 산출물 요약, 미해결 항목, 다음 Gate 진행 승인 질문을 남기고 대기한다.",
+    "forbidden_actions": [
+        "사용자의 명시 승인 없이 다음 Gate 산출물을 작성하지 않는다.",
+        "사용자의 명시 승인 없이 구현, 테스트 실행, QA 승인, 릴리즈 승인을 선언하지 않는다.",
+        "대화상 승인 없이 Run 또는 릴리즈 승인서에 User Approved로 기록하지 않는다.",
+    ],
+}
+
+AUDIT_UI_EVIDENCE_POLICY = {
+    "state_level_required": True,
+    "id_pattern": "UI-001-01",
+    "minimum_fields": [
+        "UI-ID",
+        "관련 SCR",
+        "상태/시나리오",
+        "입력값",
+        "기대 화면",
+        "실제 확인",
+        "증적 파일",
+        "결과",
+    ],
+    "examples": [
+        "UI-001-01 회원가입 기본 화면",
+        "UI-001-02 약한 비밀번호 오류",
+        "UI-001-03 비밀번호 확인 불일치",
+        "UI-001-04 중복 이메일 오류",
+        "UI-001-05 회원가입 성공 메시지",
+        "UI-001-06 성공 후 로그인 연계",
+    ],
+}
+
+AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY = {
+    "required_when": "화면설계서에 UIREF, 이미지 시안, HTML mockup, Figma, 기존 화면 캡처, prototypes 경로가 있는 경우",
+    "gate2_required_fields": [
+        "기준 파일 또는 URL",
+        "기준 CSS 또는 디자인 토큰",
+        "필수 유지 요소",
+        "변경 허용 항목",
+        "변경 금지 항목",
+        "구현 비교 방식",
+        "차이 발생 시 FIND/CR 판정 기준",
+    ],
+    "impl_checklist": [
+        "구현 전 관련 SCR의 UI Implementation Contract를 확인한다.",
+        "prototype CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다.",
+        "보안가이드 때문에 바꾼 문구, 필드, 흐름은 DEC/ISSUE/FIND/CR 중 하나로 기록한다.",
+        "기본/오류/성공/전환 상태가 Gate 3 UI-ID와 연결되어 있는지 확인한다.",
+        "구현 결과 screenshot이 기준 UIREF와 비교 가능한 위치에 저장되는지 확인한다.",
+    ],
+    "gate4_required_evidence": [
+        "기준 UIREF screenshot 또는 prototype 경로",
+        "구현 screenshot",
+        "차이 목록",
+        "허용된 차이 여부",
+        "미허용 차이의 FIND 또는 CR",
+    ],
+}
+
+AUDIT_GATE2_DESIGN_SEQUENCE = [
+    "G2-01 Kickoff / 설계 범위 고정: Gate 1 요구사항, AC, 미결 질문, 보류 항목을 확인한다.",
+    "G2-02 SW Architecture Draft: 전체 구조, 주요 CNT, ADR 후보, 보안/데이터/배포 경계, Pending을 먼저 잡는다.",
+    "G2-03 Screen / User Flow: SCR, UIREF, 화면 상태, 메시지 위치, 사용자 흐름을 확정한다.",
+    "G2-04 Function Spec: 화면과 요구사항을 FUNC, 기능 흐름, 예외 흐름으로 전개한다.",
+    "G2-05 Program / API Spec: FUNC를 PGM, API, DTO, 오류코드, 서비스 흐름으로 내린다.",
+    "G2-06 Data / DB Spec: TERM, WORD, DOMAIN, DB, ERD/DBML, 제약조건을 확정한다.",
+    "G2-07 Security Guide: SEC별 정책값, 적용 위치, 오류 메시지, 검증 후보를 확정한다.",
+    "G2-08 Development Standard: 패키지 구조, 레이어 규칙, DTO/Entity, 빌드/테스트 명령을 확정한다.",
+    "G2-09 SW Architecture Baseline 보강: 상세 설계 결정을 CMP, FLOW, 품질속성, ADR 상태로 되돌려 반영한다.",
+    "G2-10 Design Review / Gate 3 승인 대기: 설계 검수 결과, FIND/ISSUE/CR, Gate 3 승인 질문을 남긴다.",
+]
+
+AUDIT_GATE_PRESETS = {
+    "phase0": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/phase0-discovery.sample.md",
+        "required": [
+            "docs/templates/PROJECT_BRIEF_TEMPLATE.md",
+            "docs/templates/STAKEHOLDER_SCOPE_TEMPLATE.md",
+            "docs/templates/AS_IS_TO_BE_TEMPLATE.md",
+            "docs/templates/RISK_ASSUMPTION_TEMPLATE.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-001_Project-Brief_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-002_Stakeholder-And-Scope_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-003_As-Is-To-Be_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/00-discovery/",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "프로젝트 목적, 사용자, 범위, 비목표가 실제 프로젝트 값으로 정리되어 있다.",
+            "이해관계자와 승인자, 주요 제약, 참고문서 출처가 식별되어 있다.",
+            "As-Is/To-Be와 주요 리스크/가정이 Gate 1 질문으로 이어진다.",
+            "Phase 0에서 구현, 테스트 코드, 화면 증적을 만들지 않는다.",
+        ],
+    },
+    "gate1": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate1-requirements-review.sample.md",
+        "required": [
+            "docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md",
+            "docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-001_Project-Brief_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-002_Stakeholder-And-Scope_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-003_As-Is-To-Be_v0.1.md",
+            "docs/artifacts/00-discovery/DOC-CORE-P0-004_Risk-And-Assumption_v0.1.md",
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "REQ, NREQ, AC가 실제 기능/품질 요구로 작성되어 있다.",
+            "각 요구사항에 출처, 우선순위, 승인 상태, 관련 리스크가 연결되어 있다.",
+            "보안, 데이터, 화면, 인터페이스 후보가 Gate 2 설계 입력으로 넘어간다.",
+            "요구사항과 인수기준이 추적표에 연결되어 있다.",
+        ],
+    },
+    "gate2": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-design-review.sample.md",
+        "required": [
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+            "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "REQ/AC가 FUNC, SCR, PGM, API, DB, SEC 설계 ID로 전개되어 있다.",
+            "설계 산출물 간 화면, API, 프로그램, 데이터, 보안 연결이 모순되지 않는다.",
+            "Gate 2 산출 순서와 현재 Run 위치가 Run 기록에 남아 있다.",
+            "SW 아키텍처 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다.",
+            "프로토타입 또는 외부 시안이 있으면 UI Implementation Contract로 기준 파일, 필수 유지, 변경 허용/금지, 비교 방식을 확정한다.",
+            "개발표준과 아키텍처 기준이 구현자가 사용할 수 있을 만큼 구체적이다.",
+            "Gate 3 테스트 설계에 넘길 검증 후보가 식별되어 있다.",
+        ],
+        "design_sequence": AUDIT_GATE2_DESIGN_SEQUENCE,
+    },
+    "gate3": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate3-test-design.sample.md",
+        "required": [
+            "docs/templates/TEST_CASE_TEMPLATE.md",
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "AC, SEC, NREQ가 UT, IT, UI, PT 후보로 전개되어 있다.",
+            "각 테스트케이스에 입력, 절차, 기대결과, 증적 방식이 있다.",
+            "UI 테스트는 화면 단위가 아니라 상태/시나리오 단위로 UI-001-01처럼 분리되어 있다.",
+            "각 UI 테스트는 기대 화면, 실제 확인 방법, 캡처 증적 파일 경로가 1:1로 연결되어 있다.",
+            "프로토타입 기반 화면은 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 테스트 기대결과에 반영한다.",
+            "자동화 가능 테스트와 수동 검수 테스트가 구분되어 있다.",
+            "구현 전에 필요한 테스트 데이터와 환경 제약이 식별되어 있다.",
+        ],
+    },
+    "impl": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/impl-build-wave.sample.md",
+        "required": [
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
+        "writable": [
+            "docs/runs/",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/04-review/evidence/",
+        ],
+        "completion_criteria": [
+            "승인된 Gate 2/3 범위 안에서만 구현 또는 구현 계획을 작성한다.",
+            "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다.",
+            "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다.",
+            "구현 변경은 테스트 코드, 테스트 결과, 추적표 갱신과 연결된다.",
+            "동시에 active 상태인 Build Wave가 하나만 유지된다.",
+        ],
+        "verification_commands": [
+            "python vulcan.py sync-session",
+        ],
+    },
+    "gate4": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate4-qa-review.sample.md",
+        "required": [
+            "docs/templates/QA_FINDING_TEMPLATE.md",
+            "docs/templates/TEST_RESULT_TEMPLATE.md",
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            "docs/artifacts/04-review/evidence/",
+        ],
+        "writable": [
+            "docs/artifacts/04-review/",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "실행한 테스트 명령과 결과가 테스트 결과서에 기록되어 있다.",
+            "화면/UI 증적 또는 로그 증적이 관련 UI/UT/IT/PT ID와 1:1로 연결되어 있다.",
+            "회원가입, 로그인, TODO 같은 UI 흐름은 기본/오류/성공/전환 상태별 캡처가 분리되어 있다.",
+            "프로토타입 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다.",
+            "증적 파일이 기대 화면을 실제로 보여주지 못하면 Pass가 아니라 Fail 또는 Not Run으로 기록되어 있다.",
+            "결함은 FIND로 기록하고, 범위 변경은 CR로 승격한다.",
+            "수정 완료 결함은 qa-fix-loop Run과 재검증 결과가 연결되어 있다.",
+        ],
+        "verification_commands": [
+            "python vulcan.py sync-session",
+        ],
+    },
+    "gate5": {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate5-release-approval.sample.md",
+        "required": [
+            "docs/templates/RELEASE_APPROVAL_TEMPLATE.md",
+            "docs/templates/CHANGE_REQUEST_TEMPLATE.md",
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            "docs/artifacts/05-change/",
+            "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+            "docs/artifacts/05-change/",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "릴리즈 범위, 제외 범위, 승인자, 잔여 리스크가 명확하다.",
+            "미해결 FIND/CR/ISSUE의 처리 상태와 승인 조건이 기록되어 있다.",
+            "요구사항, 테스트 결과, 증적, 릴리즈 승인서가 추적표로 연결되어 있다.",
+            "인수인계와 운영/롤백 고려사항이 남아 있다.",
+        ],
+    },
+}
+
+AUDIT_GATE_SKILL_PRESETS = {
+    ("gate2", "data-standard-review"): {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-data-standard-review.sample.md",
+        "required": [
+            "docs/core/DATA_STANDARD_RULES.md",
+            "docs/core/REFERENCE_STANDARDS.md",
+            "docs/templates/PROJECT_GLOSSARY_TEMPLATE.md",
+            "docs/templates/DATABASE_SPEC_TEMPLATE.md",
+            "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md",
+            "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+            "docs/artifacts/02-design/data/erd/logical/logical-erd.dbml",
+            "docs/artifacts/02-design/data/erd/physical/physical-erd.dbml",
+            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md",
+            "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+            "docs/artifacts/02-design/data/erd/logical/logical-erd.dbml",
+            "docs/artifacts/02-design/data/erd/physical/physical-erd.dbml",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "프로젝트 단어사전에 TERM, WORD, DOMAIN 섹션이 실제 프로젝트 값으로 채워져 있다.",
+            "공공데이터 공통표준 또는 프로젝트 신규 용어 여부와 등록 사유가 기록되어 있다.",
+            "화면 항목명, API 필드명, DB 컬럼명, DOMAIN-ID 매핑이 작성되어 있다.",
+            "개인정보/인증정보/시스템정보 등 보안 분류와 관련 SEC-ID가 연결되어 있다.",
+            "DB명세서와 논리/물리 DBML의 테이블, 컬럼, PK/FK, 코드 도메인이 일치한다.",
+            "미정 또는 작성 전 상태의 placeholder가 남아 있지 않다.",
+        ],
+    },
+    ("gate2", "development-standard-review"): {
+        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-development-standard-review.sample.md",
+        "required": [
+            "docs/core/TECH_STACK_BASELINES.md",
+            "docs/core/SECURITY_BASELINE.md",
+            "docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md",
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "언어, 런타임, 프레임워크, DB, 빌드, 테스트 도구와 선택 근거가 작성되어 있다.",
+            "TECH_STACK_BASELINES.md 중 어떤 기준을 준용하고 어떤 점을 프로젝트에 맞게 조정했는지 기록되어 있다.",
+            "패키지 구조, 계층 책임, 금지 의존성, DTO/Entity 분리, 트랜잭션 기준이 구현자가 따를 수 있을 만큼 구체적이다.",
+            "메시지, 예외, 로그, 설정값, 외부 의존성, 주석/추적 ID 표기 규칙이 있다.",
+            "보안 구현 기준이 SECURITY_BASELINE과 SEC-ID에 연결되어 있다.",
+            "필수 검증 명령과 증적 위치가 Gate 3/구현 단계로 전달 가능하다.",
+        ],
+    },
+    ("gate2", "security-review"): {
+        "required": [
+            "docs/core/SECURITY_BASELINE.md",
+            "docs/core/KISA_SECURITY_RULES.md",
+            "docs/templates/SECURITY_GUIDE_TEMPLATE.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+            "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "SEC-ID별 정책값, 적용 위치, 구현 규칙, 오류 메시지, 검증 방향이 작성되어 있다.",
+            "KISA/SR, OWASP, CWE 근거가 필요한 보안 항목에 연결되어 있다.",
+            "비밀번호, 토큰, 접근제어, 입력검증, 정보노출 제한이 프로그램/API/DB/화면 설계와 모순되지 않는다.",
+            "Gate 3에서 UT/IT/UI로 전개할 보안 검증 후보가 식별되어 있다.",
+        ],
+    },
+    ("gate2", "screen-review"): {
+        "required": [
+            "docs/templates/SCREEN_SPEC_TEMPLATE.md",
+            "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "필수 화면과 상태가 SCR-ID로 식별되어 있다.",
+            "각 화면에 입력 항목, 이벤트, 메시지, 호출 API/프로그램, 관련 SEC-ID가 연결되어 있다.",
+            "와이어프레임, 이미지, HTML mockup, 또는 동등한 화면 구조 증적이 있다.",
+            "UIREF가 참고자료인지 구현 기준인지 구분되고, 구현 기준이면 필수 유지/변경 허용/금지 항목이 정의되어 있다.",
+            "Gate 3 UI 테스트와 Gate 4 캡처 증적 기준이 작성되어 있다.",
+        ],
+    },
+    ("gate2", "ui-review"): {
+        "required": [
+            "docs/templates/SCREEN_SPEC_TEMPLATE.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/prototypes/",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
+        "writable": [
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            "docs/runs/",
+        ],
+        "completion_criteria": [
+            "구현자가 화면 밀도, 레이아웃, 상태, 메시지, 반응형 기준을 판단할 수 있다.",
+            "desktop/mobile viewport와 비교 기준이 명시되어 있다.",
+            "프로토타입 또는 외부 시안이 구현 계약으로 전환되어 필수 유지 요소와 허용 차이가 명확하다.",
+            "빈 상태, 오류 상태, 인증 필요 상태, 성공 상태의 UI 기준이 상태/시나리오별 UI-ID로 분리되어 있다.",
+            "실제 캡처 증적 경로와 UI-ID 후보가 Gate 3/4로 1:1 전달된다.",
+        ],
+    },
+    ("impl", "implementation-plan"): {
+        "writable": [
+            "docs/runs/",
+            "session.json",
+        ],
+        "completion_criteria": [
+            "Build Wave 후보와 각 Wave의 소유 파일, 관련 ID, 검증 명령이 나뉘어 있다.",
+            "화면 구현 Wave는 UI Implementation Contract 준수 체크와 screenshot 비교 증적 위치가 정의되어 있다.",
+            "구현 착수 전 사용자 승인 또는 명시적인 진행 지시가 필요한 항목이 식별되어 있다.",
+        ],
+    },
+    ("impl", "build-wave"): {
+        "writable": [
+            "docs/runs/",
+            "docs/artifacts/04-review/evidence/",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        ],
+        "completion_criteria": [
+            "Wave 하나의 범위만 수정하고 다른 Wave 범위는 건드리지 않는다.",
+            "화면 구현은 UI Implementation Contract의 필수 유지 요소, 허용 변경, 금지 변경을 준수한다.",
+            "구현 결과, 테스트 결과, 증적, 추적표 갱신이 같은 Run에 기록되어 있다.",
+        ],
+    },
+    ("gate4", "qa-fix-loop"): {
+        "required": [
+            "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
+        ],
+        "completion_criteria": [
+            "승인된 설계 범위 안의 결함만 FIND로 수정한다.",
+            "요구사항 또는 범위 변경이 필요한 항목은 CR로 승격한다.",
+            "재검증 명령과 결과가 테스트 결과서에 반영되어 있다.",
+        ],
+    },
+    ("gate5", "change-impact-analysis"): {
+        "completion_criteria": [
+            "릴리즈 전 변경요청의 영향 Gate, 영향 산출물, 승인 조건이 정리되어 있다.",
+            "릴리즈 보류/승인/조건부 승인 판단 근거가 남아 있다.",
+        ],
+    },
+}
 
 
 # ── 공통 유틸 ──────────────────────────────────────────────────────────────
@@ -373,6 +876,291 @@ def format_yaml_list(items):
     if not items:
         return "[]"
     return "[" + ", ".join(items) + "]"
+
+
+def format_yaml_scalar(value):
+    return json.dumps(value, ensure_ascii=False)
+
+
+def format_yaml_sequence(items, indent=0):
+    spaces = " " * indent
+    if not items:
+        return f"{spaces}[]"
+    return "\n".join(f"{spaces}- {format_yaml_scalar(item)}" for item in items)
+
+
+def merge_unique(*item_lists):
+    merged = []
+    seen = set()
+    for items in item_lists:
+        for item in items or []:
+            if item not in seen:
+                merged.append(item)
+                seen.add(item)
+    return merged
+
+
+def is_working_document(path):
+    normalized = path.replace("\\", "/")
+    return normalized.startswith("docs/artifacts/")
+
+
+def split_working_and_reference(paths):
+    working = []
+    reference = []
+    for path in paths:
+        if is_working_document(path):
+            working.append(path)
+        else:
+            reference.append(path)
+    return working, reference
+
+
+def load_delivery_profile(project_dir="."):
+    path = os.path.join(project_dir, "session.json")
+    if not os.path.exists(path):
+        return DEFAULT_DELIVERY_PROFILE
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            session = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return DEFAULT_DELIVERY_PROFILE
+
+    profile = session.get("profile") or session.get("delivery_profile") or DEFAULT_DELIVERY_PROFILE
+    return str(profile).strip().lower() or DEFAULT_DELIVERY_PROFILE
+
+
+def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
+    if profile != "audit":
+        return None
+
+    gate_preset = AUDIT_GATE_PRESETS.get(gate)
+    if not gate_preset:
+        return None
+
+    skill_preset = AUDIT_GATE_SKILL_PRESETS.get((gate, skill), {})
+    gate_sample = gate_preset.get("sample")
+    skill_sample = skill_preset.get("sample")
+    skill_required = skill_preset.get("required", [])
+    skill_has_working_docs = any(is_working_document(path) for path in skill_required)
+    if skill_has_working_docs:
+        source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
+    else:
+        source_candidates = merge_unique(gate_preset.get("required", []), skill_required)
+    working_documents, reference_documents = split_working_and_reference(source_candidates)
+    source_read_first = merge_unique(
+        AUDIT_COMMON_READ_FIRST_DOCS,
+        AUDIT_GATE_READ_FIRST_DOCS.get(gate, []),
+        [skill_path],
+    )
+    source_reference = merge_unique(
+        AUDIT_COMMON_REFERENCE_DOCS,
+        [gate_sample] if gate_sample else [],
+        [skill_sample] if skill_sample else [],
+        reference_documents,
+    )
+    source_reference = [path for path in source_reference if path not in source_read_first]
+    run_rel_path = run_rel_path.replace("\\", "/")
+    verification_commands = merge_unique(
+        [f"python vulcan.py run-check {run_rel_path}", "python vulcan.py check-trace"],
+        gate_preset.get("verification_commands", []),
+        skill_preset.get("verification_commands", []),
+    )
+    evidence_targets = merge_unique(
+        [run_rel_path, "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"],
+        gate_preset.get("evidence_targets", []),
+        skill_preset.get("evidence_targets", []),
+    )
+    writable_scope = skill_preset.get("writable") or gate_preset.get("writable", [])
+    completion_criteria = (
+        skill_preset.get("completion_criteria", [])
+        if skill_has_working_docs and skill_preset.get("completion_criteria")
+        else merge_unique(gate_preset.get("completion_criteria", []), skill_preset.get("completion_criteria", []))
+    )
+    return {
+        "profile": profile,
+        "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
+        "source_documents": {
+            "read_first": source_read_first,
+            "working_documents": working_documents,
+            "reference_on_demand": source_reference,
+            "optional": merge_unique(gate_preset.get("optional", []), skill_preset.get("optional", [])),
+        },
+        "scope": {
+            "writable": merge_unique(writable_scope),
+            "readonly": merge_unique(AUDIT_COMMON_READONLY_DOCS, gate_preset.get("readonly", []), skill_preset.get("readonly", [])),
+            "excluded": merge_unique(AUDIT_COMMON_EXCLUDED_PATHS, gate_preset.get("excluded", []), skill_preset.get("excluded", [])),
+        },
+        "completion_criteria": completion_criteria,
+        "design_sequence": merge_unique(gate_preset.get("design_sequence", []), skill_preset.get("design_sequence", [])),
+        "verification": {
+            "commands": verification_commands,
+            "evidence": {
+                "required": True,
+                "target_documents": evidence_targets,
+            },
+        },
+        "gate_exit_policy": AUDIT_GATE_EXIT_POLICY,
+        "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
+        "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
+        "output_requirements": {
+            "format": "RUN_OUTPUT_CONTRACT.md",
+            "include": [
+                "changed_files",
+                "related_ids",
+                "verification_results",
+                "evidence",
+                "traceability_updates",
+                "gate_exit_summary",
+                "approval_request",
+                "open_issues",
+                "next_run_suggestion",
+            ],
+        },
+        "question_policy": {
+            "ask_when": [
+                "요구사항, 설계문서, 기준 문서가 서로 충돌한다.",
+                "scope.writable 밖의 파일 수정이 필요하다.",
+                "프로젝트 도메인 정보가 부족해 실제 값을 채울 수 없다.",
+                "보안 또는 감리 기준을 낮추는 선택이 필요하다.",
+            ],
+        },
+        "security_policy": {
+            "forbidden_paths": ["docs/ref-docs/"],
+            "allowed_reference_paths": ["docs/seed-docs/reference-standards/"],
+            "forbidden_actions": [
+                "민감문서 내용을 출력에 원문 인용하지 않는다.",
+                "토큰, 비밀번호, 개인식별정보를 커밋하지 않는다.",
+                "승인 없이 외부 네트워크로 프로젝트 파일을 전송하지 않는다.",
+            ],
+        },
+    }
+
+
+def render_run_input_preset(preset, ids, persona, gate):
+    source = preset["source_documents"]
+    scope = preset["scope"]
+    verification = preset["verification"]
+    evidence = verification["evidence"]
+    output = preset["output_requirements"]
+    question = preset["question_policy"]
+    security = preset["security_policy"]
+    gate_exit = preset["gate_exit_policy"]
+    ui_evidence = preset["ui_evidence_policy"]
+    ui_contract = preset["ui_implementation_contract_policy"]
+    design_sequence = preset.get("design_sequence", [])
+    design_sequence_block = ""
+    design_sequence_instruction = ""
+    if design_sequence:
+        design_sequence_block = f"""
+design_sequence:
+{format_yaml_sequence(design_sequence, 2)}"""
+        design_sequence_instruction = """
+   - Gate 2 Run이면 `design_sequence`에서 현재 위치를 확인하고, 필요한 이전 단계 누락과 다음 Gate 2 Run 제안을 기록한다."""
+
+    read_first_docs = source.get("read_first", [])
+    working_docs = source.get("working_documents", [])
+    reference_docs = source.get("reference_on_demand", [])
+    optional_docs = source.get("optional", [])
+    return f"""## 3. Run 입력 계약
+
+```yaml
+profile: {format_yaml_scalar(preset["profile"])}
+run_type: {format_yaml_scalar(preset["run_type"])}
+gate: {format_yaml_scalar(gate)}
+related_ids: {format_yaml_list(ids)}
+persona: {format_yaml_scalar(persona)}
+source_documents:
+  read_first:
+{format_yaml_sequence(read_first_docs, 4)}
+  working_documents:
+{format_yaml_sequence(working_docs, 4)}
+  reference_on_demand:
+{format_yaml_sequence(reference_docs, 4)}
+  optional:
+{format_yaml_sequence(optional_docs, 4)}{design_sequence_block}
+scope:
+  writable:
+{format_yaml_sequence(scope["writable"], 4)}
+  readonly:
+{format_yaml_sequence(scope["readonly"], 4)}
+  excluded:
+{format_yaml_sequence(scope["excluded"], 4)}
+completion_criteria:
+{format_yaml_sequence(preset["completion_criteria"], 2)}
+verification:
+  commands:
+{format_yaml_sequence(verification["commands"], 4)}
+  evidence:
+    required: {str(evidence["required"]).lower()}
+    target_documents:
+{format_yaml_sequence(evidence["target_documents"], 6)}
+gate_exit_policy:
+  stop_required: {str(gate_exit["stop_required"]).lower()}
+  next_gate_requires_user_approval: {str(gate_exit["next_gate_requires_user_approval"]).lower()}
+  approval_evidence_required: {str(gate_exit["approval_evidence_required"]).lower()}
+  allowed_next_action: {format_yaml_scalar(gate_exit["allowed_next_action"])}
+  forbidden_actions:
+{format_yaml_sequence(gate_exit["forbidden_actions"], 4)}
+ui_evidence_policy:
+  state_level_required: {str(ui_evidence["state_level_required"]).lower()}
+  id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
+  minimum_fields:
+{format_yaml_sequence(ui_evidence["minimum_fields"], 4)}
+  examples:
+{format_yaml_sequence(ui_evidence["examples"], 4)}
+ui_implementation_contract_policy:
+  required_when: {format_yaml_scalar(ui_contract["required_when"])}
+  gate2_required_fields:
+{format_yaml_sequence(ui_contract["gate2_required_fields"], 4)}
+  impl_checklist:
+{format_yaml_sequence(ui_contract["impl_checklist"], 4)}
+  gate4_required_evidence:
+{format_yaml_sequence(ui_contract["gate4_required_evidence"], 4)}
+output_requirements:
+  format: {format_yaml_scalar(output["format"])}
+  include:
+{format_yaml_sequence(output["include"], 4)}
+question_policy:
+  ask_when:
+{format_yaml_sequence(question["ask_when"], 4)}
+security_policy:
+  forbidden_paths:
+{format_yaml_sequence(security["forbidden_paths"], 4)}
+  allowed_reference_paths:
+{format_yaml_sequence(security["allowed_reference_paths"], 4)}
+  forbidden_actions:
+{format_yaml_sequence(security["forbidden_actions"], 4)}
+```
+
+## 4. 수행 지시
+
+1. `source_documents.read_first`만 먼저 읽고 현재 Gate, skill, 관련 ID를 확인한다.
+2. `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
+3. `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
+4. `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
+5. `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다.
+6. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
+7. `verification.commands`를 실행하고 결과를 이 Run 기록에 남긴다.
+8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
+9. UIREF, prototype, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
+10. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
+11. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다.
+
+## 5. Gate 종료 및 승인 대기
+
+Run을 완료할 때 다음 항목을 반드시 남긴다.
+
+| 항목 | 작성 기준 |
+| --- | --- |
+| 현재 Gate 산출물 요약 | 이번 Gate에서 작성/수정한 산출물과 관련 ID |
+| 미해결 항목 | `open_issues`, `findings`, `change_requests` |
+| 다음 Gate 제안 | 다음 Gate에서 수행할 Run 후보 |
+| 사용자 승인 질문 | "다음 Gate로 진행해도 되는지"를 명시적으로 질문 |
+| 승인 증적 | 대화에서 사용자가 명시 승인한 문구 또는 승인 보류 사유 |
+
+사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
 
 
 def default_persona_for_run(gate, skill):
@@ -712,7 +1500,7 @@ def collect_build_wave_records(project_dir="."):
                     record["run"] = rel_path
 
             related = re.findall(
-                r"\b(?:REQ|AC|FUNC|SCR|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
+                r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
                 content,
             )
             record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
@@ -741,7 +1529,7 @@ def collect_build_wave_records(project_dir="."):
                 item
                 for col in cols
                 for item in re.findall(
-                    r"\b(?:REQ|AC|FUNC|SCR|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
+                    r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
                     col,
                 )
             ]
@@ -1093,6 +1881,18 @@ def find_development_standard_file(project_dir="."):
     ])
 
 
+def find_project_glossary_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "data"),
+        r"(project.*glossary|glossary|단어.*사전|용어.*사전).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "project-glossary.md"),
+        os.path.join("docs", "02-design", "Project-Glossary.md"),
+        os.path.join("docs", "02-design", "glossary.md"),
+    ])
+
+
 def find_program_spec_file(project_dir="."):
     return find_artifact_file(
         project_dir,
@@ -1204,12 +2004,46 @@ def validate_development_standard(project_dir="."):
         issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
 
     required_terms = [
-        ("언어/런타임", r"Language|Runtime|적용 언어|적용 프레임워크"),
+        ("언어/런타임", r"Language|Runtime|적용 언어|적용 프레임워크|Java|TypeScript|Python|Node|Vue|React|Spring Boot"),
         ("패키지 구조", r"패키지 구조|app/|src/"),
+        ("기술 선택 근거", r"선정 사유|선택 근거|선정 근거"),
+        ("기술스택 베이스라인 조정 근거", r"TECH_STACK_BASELINES|참조 베이스라인|프로젝트 조정사항"),
         ("메시지 관리", r"메시지|message"),
         ("주석/코딩 컨벤션", r"주석|코드 컨벤션|네이밍"),
-        ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|go test|cargo test|dotnet test"),
-        ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역"),
+        ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|gradlew test|go test|cargo test|dotnet test"),
+        ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역|Spring Security|SEC-\d{3}|JWT"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    return [rel_path], issues
+
+
+def validate_project_glossary(project_dir="."):
+    issues = []
+    path = find_project_glossary_file(project_dir)
+    if not path:
+        return [], ["프로젝트 단어사전 없음"]
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    if re.search(r"(?m)^status:\s*Draft\s*$", content):
+        issues.append(f"{rel_path} 상태가 Draft")
+    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
+        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+
+    required_terms = [
+        ("참조 표준", r"PUBLIC-DATA-STD|공공데이터 공통표준|reference-standards"),
+        ("용어 ID", r"TERM-\d{3}"),
+        ("단어 ID", r"WORD-\d{3}"),
+        ("도메인 ID", r"DOMAIN-\d{3}"),
+        ("표준 준용 상태", r"표준 준용 상태|표준 검토|표준 후보|프로젝트 신규|프로젝트 정의"),
+        ("등록 사유", r"등록 사유|등록사유|사유"),
+        ("화면/API/DB 항목 매핑", r"화면/API/DB|화면 항목명|API 필드명|DB 컬럼명"),
+        ("보안/개인정보 분류", r"보안 분류|개인정보|인증정보|민감정보|로그 출력"),
     ]
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
@@ -1393,6 +2227,9 @@ def validate_architecture_spec(project_dir=".", level="baseline"):
         )
 
     if normalized_level == "baseline":
+        if len(flow_blocks) < 2:
+            issues.append(f"{rel_path}에 C1/C2 Mermaid 경계 다이어그램이 부족함")
+
         required_link_targets = [
             "DOC-CORE-G2-001",
             "DOC-CORE-G2-002",
@@ -1464,6 +2301,16 @@ def validate_screen_spec(project_dir="."):
         content,
         re.IGNORECASE,
     ))
+    has_prototype_or_external_design = bool(re.search(
+        r"docs/artifacts/02-design/screen/(?:images|prototypes)/|figma|imagegen|html mockup|외부 시안|기존 시스템 캡처|UIREF-\d{3}",
+        content,
+        re.IGNORECASE,
+    ))
+    has_ui_contract = bool(re.search(
+        r"UI Implementation Contract|구현 계약|필수 유지|변경 허용|변경 금지|허용 차이|비교 방식",
+        content,
+        re.IGNORECASE,
+    ))
 
     if has_screen and not has_uiref:
         issues.append(f"{rel_path}에 UIREF 기준 시안/와이어프레임 ID 없음")
@@ -1473,6 +2320,8 @@ def validate_screen_spec(project_dir="."):
         issues.append(f"{rel_path}에 기준 viewport 없음")
     if has_screen and not has_visual_evidence:
         issues.append(f"{rel_path}에 실제 화면 구조 증적 없음(Text Wireframe fenced block, Mermaid, HTML mockup, 이미지/Figma 등)")
+    if has_screen and has_prototype_or_external_design and not has_ui_contract:
+        issues.append(f"{rel_path}에 UIREF/prototype을 구현 계약으로 전환한 UI Implementation Contract 없음")
 
     text_wireframe_rows = [
         line for line in content.splitlines()
@@ -1656,6 +2505,9 @@ def has_completed_run(project_dir=".", gate=None, skill=None, persona=None):
             if persona and not re.search(rf'(?m)^persona:\s*{re.escape(persona)}\s*$', content):
                 continue
             if re.search(r'(?m)^status:\s*(Completed|Verified)\s*$', content):
+                run_issues, _warnings = check_run_file(path)
+                if run_issues:
+                    continue
                 return True
     return False
 
@@ -1830,6 +2682,7 @@ def check_trace(project_dir="."):
             ("화면설계서", validate_screen_spec),
             ("API 정의서", validate_api_spec),
             ("개발표준정의서", validate_development_standard),
+            ("프로젝트 단어사전", validate_project_glossary),
         ]
         for label, validator in prior_design_checks:
             _files, prior_issues = validator(project_dir)
@@ -1963,6 +2816,20 @@ def check_trace(project_dir="."):
         elif not api_spec_files and not api_spec_issues:
             print("  - API 정의서 검사 제외 (프로그램명세서에 API 없음)")
         for issue in api_spec_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: 개발표준정의서 근거 여부")
+        dev_standard_files, dev_standard_issues = validate_development_standard(project_dir)
+        if dev_standard_files and not dev_standard_issues:
+            print(f"  O 개발표준정의서 확인 ({', '.join(dev_standard_files)})")
+        for issue in dev_standard_issues:
+            issues.append(f"  X {issue}")
+
+        print("\n  Gate 2 검사: 프로젝트 단어사전/도메인 여부")
+        glossary_files, glossary_issues = validate_project_glossary(project_dir)
+        if glossary_files and not glossary_issues:
+            print(f"  O 프로젝트 단어사전 확인 ({', '.join(glossary_files)})")
+        for issue in glossary_issues:
             issues.append(f"  X {issue}")
 
         print("\n  Gate 2 검사: Gate 3 진입 전 설계 검수 Run 완료 여부")
@@ -3253,6 +4120,35 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
     rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
     ids = split_csv(related_ids)
     skill_path = RUN_SKILLS[skill]
+    profile = load_delivery_profile(project_dir)
+    preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
+    run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
+    completion_section_number = "6" if preset else "5"
+    first_read_docs = preset["source_documents"]["read_first"] if preset else [
+        "AGENTS.md",
+        "session.json",
+        "docs/core/TRACEABILITY_RULES.md",
+        skill_path,
+    ]
+    first_read_section = "\n".join(f"- `{path}`" for path in first_read_docs)
+    input_sections = render_run_input_preset(preset, ids, persona, gate) if preset else f"""## 3. 입력 범위
+
+| 항목 | 내용 |
+| --- | --- |
+| 관련 ID | `{format_yaml_list(ids)}` |
+| Persona | `{persona}` |
+| 대상 문서 | 실행 전 Run 작성자가 구체 경로를 기입 |
+| 대상 코드 | 실행 전 Run 작성자가 구체 경로를 기입 |
+| 제외 범위 | `docs/ref-docs/`, 비밀/토큰/개인정보, 관련 없는 리팩터링 |
+
+## 4. 수행 지시
+
+1. 관련 문서와 코드를 확인한다.
+2. `{persona}` persona의 책임과 금지사항을 확인한다.
+3. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
+4. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
+5. 검증 명령을 실행하고 결과를 기록한다.
+6. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다."""
 
     content = f"""# {run_id} {title}
 
@@ -3263,6 +4159,8 @@ gate: {gate}
 persona: {persona}
 skill: {skill}
 skill_path: {skill_path}
+profile: {profile}
+run_type: {run_type}
 status: Draft
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
@@ -3280,54 +4178,29 @@ open_issues: []
 
 ## 2. 에이전트가 먼저 읽을 문서
 
-- `AGENTS.md`
-- `docs/core/ID_SYSTEM.md`
-- `docs/core/TRACEABILITY_RULES.md`
-- `docs/core/ORCHESTRATOR_PROTOCOL.md`
-- `docs/core/AGENT_PERSONAS.md`
-- `docs/core/AGENT_RUN_PROTOCOL.md`
-- `docs/core/CHANGE_CONTROL_PROCESS.md`
-- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
-- `{skill_path}`
+{first_read_section}
 
-## 3. 입력 범위
+나머지 기준 문서는 `source_documents.reference_on_demand`에 있을 때만 필요 시 참고한다.
 
-| 항목 | 내용 |
-| --- | --- |
-| 관련 ID | `{format_yaml_list(ids)}` |
-| Persona | `{persona}` |
-| 대상 문서 | TBD |
-| 대상 코드 | TBD |
-| 제외 범위 | TBD |
+{input_sections}
 
-## 4. 수행 지시
-
-1. 관련 문서와 코드를 확인한다.
-2. `{persona}` persona의 책임과 금지사항을 확인한다.
-3. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
-4. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
-5. 검증 명령을 실행하고 결과를 기록한다.
-6. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다.
-
-## 5. 완료 보고
+## {completion_section_number}. 완료 보고
 
 ### 요약
 
-TBD
+Draft 상태. 작업 완료 후 `RUN_OUTPUT_CONTRACT.md`에 맞춰 요약한다.
 
 ### 변경 파일
 
-TBD
+Draft 상태. 작업 완료 후 변경 파일을 기록한다.
 
 ### 검증 결과
 
-TBD
+Draft 상태. 작업 완료 후 실제 실행한 검증 명령과 결과를 기록한다.
 
 ### 후속 조치
 
-TBD
+Draft 상태. 작업 완료 후 후속 조치나 다음 Run 제안을 기록한다.
 """
     write_file(project_dir, rel_path, content)
     print(f"\nRun 초안 생성 완료: {rel_path}")
@@ -3554,13 +4427,14 @@ def check_run_file(path):
         if not re.search(rf"^\s*{re.escape(key)}\s*:", content, re.MULTILINE):
             issues.append(f"필수 필드 누락: {key}")
 
-    if not re.search(r"\b(REQ|NREQ|AC|FUNC|SCR|PGM|DB|IF|SEC|UT|IT|PT|UI|FIND|CR|ISSUE|RUN)-\d+\b", content):
+    if not re.search(r"\b(REQ|NREQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|IF|SEC|UT|IT|PT|UI|FIND|CR|ISSUE|RUN)-\d+\b", content):
         issues.append("관련 추적 ID가 없습니다.")
 
+    status = ""
     status_match = re.search(r"^\s*status\s*:\s*(.+)$", content, re.MULTILINE)
     if status_match:
         status = status_match.group(1).strip()
-        if status not in {"Draft", "InProgress", "Completed", "Blocked", "Failed", "CompletedWithIssues"}:
+        if status not in {"Draft", "InProgress", "Completed", "Verified", "Blocked", "Failed", "CompletedWithIssues"}:
             issues.append(f"허용되지 않은 status 값: {status}")
 
     skill_match = re.search(r"^\s*skill\s*:\s*(.+)$", content, re.MULTILINE)
@@ -3584,6 +4458,23 @@ def check_run_file(path):
     if re.search(r"status\s*:\s*Completed", content) and re.search(r"traceability_updates\s*:\s*\[\]", content):
         warnings.append("Completed 상태이지만 traceability_updates가 비어 있습니다.")
 
+    if status in {"Completed", "Verified", "CompletedWithIssues"}:
+        body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
+        if re.search(r"(?im)(^|\|)\s*(TBD|확정필요|작성필요)\s*(\||$)", body_without_yaml):
+            issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
+
+        is_audit_run = bool(re.search(r"^\s*profile\s*:\s*audit\s*$", content, re.MULTILINE))
+        if is_audit_run:
+            if not re.search(r"gate_exit_summary\s*:", content):
+                issues.append("Audit Run 완료 상태이지만 gate_exit_summary가 없습니다.")
+            if not re.search(r"approval_request\s*:", content):
+                issues.append("Audit Run 완료 상태이지만 다음 Gate 승인 질문(approval_request)이 없습니다.")
+
+        has_ui_reference = bool(re.search(r"\bUI-\d{3}\b", content))
+        has_state_level_ui = bool(re.search(r"\bUI-\d{3}-\d{2}\b", content))
+        if has_ui_reference and not has_state_level_ui and re.search(r"ui|화면|캡처|증적", content, re.IGNORECASE):
+            issues.append("UI 증적이 포함된 완료 Run이지만 상태/시나리오 단위 UI-ID(UI-001-01)가 없습니다.")
+
     return issues, warnings
 
 
@@ -3603,11 +4494,12 @@ def cmd_run_check(run_file):
     print("Run 검증 통과")
 
 
-def create_session_json(target_dir, project_name):
+def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFILE):
     session = {
         "project": project_name,
         "vulcan_src": VULCAN_DIR,
         "vulcan_version": VULCAN_VERSION,
+        "profile": profile,
         "current_gate": "phase0",
         "gate_status": {
             "phase0": "pending",
@@ -3627,11 +4519,12 @@ def create_session_json(target_dir, project_name):
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
-def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False):
+def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE):
     import shutil
     print(f"\nVulcan-Anvil 초기화")
     print(f"  프로젝트: {project_name}")
-    print(f"  대상 폴더: {target_dir}\n")
+    print(f"  대상 폴더: {target_dir}")
+    print(f"  Delivery Profile: {profile}\n")
 
     if require_remote and not remote_url:
         print("오류: --require-remote가 지정되었지만 --remote가 없습니다.")
@@ -3690,7 +4583,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     install_project_artifacts(target_dir, variables, overwrite=False)
 
     # session.json
-    create_session_json(target_dir, project_name)
+    create_session_json(target_dir, project_name, profile)
 
     # vulcan.py 자신을 프로젝트에 복사
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
@@ -3794,6 +4687,7 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
+    p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=["audit", "solution", "poc", "lite"], help="Delivery Profile")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
 
@@ -3886,6 +4780,7 @@ def main():
             agent_name=args.agent_name,
             remote_url=args.remote or None,
             require_remote=args.require_remote,
+            profile=args.profile,
         )
     elif args.command == "check-trace":
         check_trace()

@@ -35,7 +35,9 @@ change_reason: 최초 초안 작성
 - 성능테스트는 `PT-001` 형식으로 부여한다.
 - 각 테스트는 관련 `AC`, `SEC`, `NREQ` 중 하나 이상과 연결한다.
 - 보안 테스트는 가능한 경우 외부 보안 기준 `SR`을 함께 기록한다.
-- 화면 테스트는 `UI-001` 형식으로 부여하고 관련 `SCR-ID`, 기준 시안, viewport, 캡처 경로를 기록한다.
+- 화면 테스트는 상태/시나리오 단위로 `UI-001-01` 형식까지 세분화하고 관련 `SCR-ID`, 기준 시안, viewport, 기대 화면, 캡처 경로를 기록한다.
+- 하나의 화면 흐름에 기본/오류/성공/전환 상태가 있으면 각각 별도 UI 테스트와 증적을 둔다.
+- 기준 시안이 UI Implementation Contract를 가지면 UI 테스트의 기대 화면과 비교 방식에 필수 유지, 변경 허용, 변경 금지 항목을 반영한다.
 - 테스트 결과와 증적은 Gate 4에서 테스트결과서와 요구사항추적표에 반영한다.
 
 ## 3. 테스트 범위
@@ -53,7 +55,7 @@ change_reason: 최초 초안 작성
 | 테스트 ID | 유형 | 테스트명 | 대상 | 관련 REQ | 관련 AC | 관련 SEC/SR | 우선순위 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | UT-001 | Unit |  | PGM-001 | REQ- | AC- | SEC- / KISA-SD-2021 SR- | Must | Draft |
-| UI-001 | UI |  | SCR-001 | REQ- | AC- | SEC- / KISA-SD-2021 SR- | Must | Draft |
+| UI-001-01 | UI |  | SCR-001 | REQ- | AC- | SEC- / KISA-SD-2021 SR- | Must | Draft |
 
 ## 5. 테스트 케이스 상세
 
@@ -129,9 +131,19 @@ change_reason: 최초 초안 작성
 
 ## 8. 화면/UI 테스트 기준
 
-| UI-ID | 관련 SCR | 기준 시안 | Viewport | 사용자 흐름 | 기대 화면 | 캡처 경로 | 비교 방식 | 상태 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| UI-001 | SCR-001 | UIREF-001 | Desktop 1280x720 / Mobile 390x844 |  |  | docs/artifacts/04-review/evidence/ui/UI-001_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 | Draft |
+화면/UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
+회원가입, 로그인, TODO처럼 사용 흐름이 있는 화면은 기본 화면, 오류 상태, 성공 상태, 다음 화면 전환을 별도 UI-ID로 분리한다.
+
+| UI-ID | 관련 SCR | 기준 시안 | 관련 Contract | Viewport | 상태/시나리오 | 입력값 | 기대 화면 | 캡처 경로 | 비교 방식 | 상태 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| UI-001-01 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 기본 화면 | 없음 | 이메일/비밀번호/비밀번호 확인/가입 버튼이 보이고 UICON-001의 필수 유지 요소를 따른다 | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-02 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 약한 비밀번호 오류 | password1! | 약한 비밀번호 오류 메시지가 보이고 가입이 차단된다 | docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-03 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 비밀번호 확인 불일치 | password / password2 | 비밀번호 확인 불일치 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-03_signup_password_mismatch_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-04 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 중복 이메일 오류 | 기존 이메일 | 중복 이메일 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-04_signup_duplicate_email_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-05 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 성공 | 유효한 신규 계정 | 가입 완료 메시지와 로그인 안내가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-06 | SCR-002 | UIREF-002 | UICON-002 | Desktop 1280x720 | 성공 후 로그인 연계 | 가입한 이메일 | 로그인 화면으로 이동했고 성공 메시지 또는 이메일 연계가 확인된다 | docs/artifacts/04-review/evidence/ui/UI-001-06_signup_to_login_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+
+> `관련 Contract`가 있는 행은 화면 모양만 보지 않는다. 필수 유지 요소, 허용된 차이, 금지된 차이를 함께 판정한다.
 
 ## 9. 변경이력
 
@@ -147,6 +159,7 @@ change_reason: 최초 초안 작성
 | 모든 테스트가 `REQ`, `AC`, `NREQ`, `SEC`, `CR` 중 하나 이상과 연결되었는가 |  |
 | 보안 테스트에 `SEC-ID`와 `SR-ID`가 연결되었는가 |  |
 | 화면 테스트에 `UI-ID`, `SCR-ID`, 기준 시안, viewport, 캡처 경로가 연결되었는가 |  |
+| 기준 시안의 UI Implementation Contract가 테스트 기대결과와 비교 방식에 반영되었는가 |  |
 | 테스트 데이터가 프로젝트 단어사전과 연결되었는가 |  |
 | PASS/FAIL 판정 기준이 명확한가 |  |
 | 자동화 가능한 테스트에 파일/명령 정보가 작성되었는가 |  |

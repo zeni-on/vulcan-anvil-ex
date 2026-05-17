@@ -29,6 +29,7 @@ change_reason: 최초 초안 작성
 | 대상 요구사항 | REQ- |
 | 대상 화면 | SCR- |
 | 기준 시안 | UIREF- |
+| UI 구현 계약 | UICON- |
 | QA 방식 | 단위/통합 테스트, 추적성 검사, 브라우저 확인, 화면 캡처 증적 |
 
 ## 2. 요구사항 검증 요약
@@ -37,7 +38,7 @@ change_reason: 최초 초안 작성
 
 | REQ-ID | 검증 항목 | 관련 테스트 | 결과 | 증적 |
 | --- | --- | --- | --- | --- |
-| REQ- |  | UT- / IT- / UI- | Pass / Fail / Not Run / Skipped | EV- / UI- / LOG- 또는 경로 |
+| REQ- |  | UT- / IT- / UI-001-01 | Pass / Fail / Not Run / Skipped | EV- / UI- / LOG- 또는 경로 |
 
 ## 3. 실행 검증
 
@@ -51,10 +52,32 @@ change_reason: 최초 초안 작성
 ## 4. 화면 증적
 
 > 대시보드는 이 표의 헤더를 기준으로 이미지 썸네일과 미리보기를 렌더링한다. 파일은 프로젝트 기준 상대 경로를 쓴다.
+> 화면 증적은 화면 단위가 아니라 상태/시나리오 단위로 기록한다. 기대 화면과 다른 캡처를 Pass 증적으로 연결하지 않는다.
 
-| 증적 ID | 관련 UI | 파일 | 설명 |
-| --- | --- | --- | --- |
-| EV-UI-001 | UI- | docs/artifacts/04-review/evidence/ui/ |  |
+| 증적 ID | 관련 UI | 관련 SCR | 상태/시나리오 | 기대 화면 | 실제 확인 | 파일 | 결과 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| EV-UI-001-01 | UI-001-01 | SCR-001 | 회원가입 기본 화면 | 이메일/비밀번호/비밀번호 확인/가입 버튼이 보인다 |  | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png | Pass / Fail / Not Run |
+| EV-UI-001-02 | UI-001-02 | SCR-001 | 약한 비밀번호 오류 | 오류 메시지가 보이고 가입이 차단된다 |  | docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png | Pass / Fail / Not Run |
+| EV-UI-001-05 | UI-001-05 | SCR-001 | 회원가입 성공 | 가입 완료 메시지와 로그인 안내가 보인다 |  | docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png | Pass / Fail / Not Run |
+
+### 4.1 UI 증적 판정 규칙
+
+| 항목 | 기준 |
+| --- | --- |
+| Pass | 기대 화면, 메시지, 상태 전환이 증적 파일에서 확인된다 |
+| Fail | 화면은 확인했지만 기대 화면과 다르다 |
+| Not Run | 캡처 또는 브라우저 검증을 수행하지 못했다 |
+| FIND 등록 | 테스트 항목과 증적 파일이 맞지 않거나, 기대 화면을 보여주지 못하는 캡처가 Pass로 기록된 경우 |
+
+### 4.2 UIREF 구현 계약 비교
+
+프로토타입이나 외부 시안이 UI Implementation Contract로 지정된 경우, 기준 UIREF와 구현 화면을 비교한다.
+허용된 차이는 근거를 남기고, 허용되지 않은 차이는 `FIND`로 등록한다.
+요구사항, 보안 정책, 화면 설계 자체를 바꿔야 하는 차이는 `CR`로 승격한다.
+
+| 비교 ID | 관련 UI | 관련 Contract | 기준 UIREF/파일 | 구현 증적 | 차이 | 허용 여부 | 처리 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| UICMP-001 | UI-001-01 | UICON-001 | UIREF-001 / docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png |  | 허용 / 미허용 | Pass / FIND- / CR- |
 
 ## 5. QA 발견사항과 재귀 수정 방침
 

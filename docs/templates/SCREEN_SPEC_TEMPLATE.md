@@ -38,6 +38,8 @@ change_reason: 최초 초안 작성
 - 외부 시안이 없더라도 `Text Wireframe`, `HTML Mockup`, `Mermaid`, 이미지 중 하나 이상의 화면 구조 증적을 작성한다.
 - 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 두고, HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/`에 둔다.
 - `Text Wireframe`을 사용하는 경우 `UIREF-ID`별로 별도 절과 fenced code block을 작성한다. 단순 화면 구성 표만으로는 와이어프레임으로 보지 않는다.
+- 외부 시안이나 prototype이 있으면 이를 단순 참고자료로 둘지, 구현자가 지켜야 하는 UI Implementation Contract로 둘지 명시한다.
+- 구현 기준 시안이면 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 반드시 작성한다.
 - 구현 후 비교가 가능하도록 기준 viewport와 주요 비교 항목을 작성한다.
 
 ## 3. 화면 목록
@@ -52,7 +54,20 @@ change_reason: 최초 초안 작성
 | --- | --- | --- | --- | --- | --- | --- |
 | SCR-001 | UIREF-001 | Figma / imagegen / 외부 이미지 / 손그림 / 기존 시스템 캡처 / HTML Mockup | docs/artifacts/02-design/screen/images/UIREF-001_example.png 또는 docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | Desktop 1280x720, Mobile 390x844 | 레이아웃, 입력항목, 메시지 위치, 버튼 상태 | Draft |
 
-### 4.1 UIREF-001 Text Wireframe
+### 4.1 UI Implementation Contract
+
+프로토타입이나 외부 시안이 구현 기준이면 아래 계약을 작성한다.
+계약이 없으면 구현자는 시안을 참고자료로만 해석할 수 있으므로 Gate 3 또는 구현 단계로 넘기지 않는다.
+
+| Contract-ID | 관련 SCR | 기준 UIREF | 기준 파일 | 기준 CSS/토큰 | 구현 기준 유형 | 상태 |
+| --- | --- | --- | --- | --- | --- | --- |
+| UICON-001 | SCR-001 | UIREF-001 | docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | docs/artifacts/02-design/screen/prototypes/UIREF-001/styles.css | Must Follow / Reference Only / Hybrid | Draft |
+
+| Contract-ID | 필수 유지 요소 | 변경 허용 항목 | 변경 금지 항목 | 구현 비교 방식 |
+| --- | --- | --- | --- | --- |
+| UICON-001 | 레이아웃 구조, 주요 class, 입력 순서, 버튼 위치, 메시지 위치 | 보안가이드에 따른 문구/검증 강화, 필수 필드 추가 | 별도 레이아웃 재설계, 카드/패널 구조 변경, 주요 메시지 위치 변경 | prototype screenshot과 구현 screenshot 비교, class/DOM 주요 구조 점검 |
+
+### 4.2 UIREF-001 Text Wireframe
 
 `출처`가 `Text Wireframe`이면 아래처럼 실제 배치 기준을 작성한다.
 외부 이미지나 HTML mockup을 사용하는 경우에는 파일/URL과 viewport, 비교 기준을 표에 명시한다.
@@ -135,9 +150,9 @@ change_reason: 최초 초안 작성
 
 #### 5.8 UI 테스트 및 증적 기준
 
-| UI-ID | 대상 SCR | 사용자 흐름 | 기준 시안 | Viewport | 캡처 경로 | 비교 기준 | 관련 AC/SEC |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| UI-001 | SCR-001 |  | UIREF-001 | Desktop 1280x720 / Mobile 390x844 | docs/artifacts/04-review/evidence/ui/UI-001_desktop.png | 레이아웃, 메시지, 주요 상태 | AC-/SEC- |
+| UI-ID | 대상 SCR | 사용자 흐름 | 기준 시안 | 관련 Contract | Viewport | 캡처 경로 | 비교 기준 | 관련 AC/SEC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| UI-001-01 | SCR-001 | 기본 상태 | UIREF-001 | UICON-001 | Desktop 1280x720 / Mobile 390x844 | docs/artifacts/04-review/evidence/ui/UI-001-01_default_desktop.png | 레이아웃, 메시지, 주요 상태, 허용 차이 | AC-/SEC- |
 
 #### 5.9 테스트 연결
 
@@ -162,6 +177,8 @@ change_reason: 최초 초안 작성
 | 입력값 검증과 오류 메시지가 작성되었는가 |  |
 | 보안 고려사항에 `SEC-ID`와 `SR-ID`가 연결되었는가 |  |
 | 외부/생성 시안이 `SCR-ID`, 출처, 파일/URL, viewport와 연결되었는가 |  |
+| 기준 시안이 구현 계약인지 참고자료인지 명시되었는가 |  |
+| 구현 계약이면 필수 유지, 변경 허용, 변경 금지, 비교 방식이 작성되었는가 |  |
 | 기본/오류/빈/권한 제한 상태가 필요한 경우 작성되었는가 |  |
 | UI 테스트와 캡처 증적 기준이 작성되었는가 |  |
 | 테스트 연결이 작성되었는가 |  |

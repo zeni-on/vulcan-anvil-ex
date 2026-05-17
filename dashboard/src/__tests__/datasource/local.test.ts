@@ -226,6 +226,38 @@ describe('UT-002-07: LocalDataSource Path Traversal 방지 — 정상 접근 시
     expect(tree.length).toBeGreaterThan(0)
   })
 
+  it('screen/prototypes의 html/css/js 파일을 외부 산출물로 문서 트리에 포함한다', async () => {
+    const protoDir = path.join(tmpDir, 'docs', 'artifacts', '02-design', 'screen', 'prototypes')
+    fs.mkdirSync(path.join(protoDir, 'css'), { recursive: true })
+    fs.mkdirSync(path.join(protoDir, 'js'), { recursive: true })
+    fs.writeFileSync(path.join(protoDir, 'login.html'), '<!doctype html>', 'utf-8')
+    fs.writeFileSync(path.join(protoDir, 'css', 'app.css'), 'body {}', 'utf-8')
+    fs.writeFileSync(path.join(protoDir, 'js', 'login.js'), 'console.log("login")', 'utf-8')
+
+    const ds = new LocalDataSource({ path: tmpDir })
+    const tree = await ds.getDocTree()
+
+    const artifacts = tree.find((node) => node.name === 'artifacts')
+    const design = artifacts?.children?.find((node) => node.name === '02-design')
+    const screen = design?.children?.find((node) => node.name === 'screen')
+    const prototypes = screen?.children?.find((node) => node.name === 'prototypes')
+
+    expect(prototypes?.children).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'login.html', type: 'file' }),
+      expect.objectContaining({ name: 'css', type: 'dir' }),
+      expect.objectContaining({ name: 'js', type: 'dir' }),
+    ]))
+
+    const css = prototypes?.children?.find((node) => node.name === 'css')
+    const js = prototypes?.children?.find((node) => node.name === 'js')
+    expect(css?.children).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'app.css', type: 'file' }),
+    ]))
+    expect(js?.children).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'login.js', type: 'file' }),
+    ]))
+  })
+
   it('session.json이 basePath 내에 있으면 정상 파싱한다', async () => {
     const sessionData = {
       project: 'SafeProject',

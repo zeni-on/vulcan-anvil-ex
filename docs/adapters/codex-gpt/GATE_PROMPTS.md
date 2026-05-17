@@ -8,6 +8,8 @@
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, 증적을 사용자 승인 없이 만들지 않는다.
 - 모든 의미 있는 변경은 관련 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI/FIND/CR/RUN`과 연결한다.
 - 실행하지 않은 테스트를 통과로 보고하지 않는다.
+- 각 Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 산출물 요약, 미해결 항목, 다음 Gate 제안, 사용자 승인 질문을 남기고 대기한다.
+- 대화상 명시 승인 없이 Run 또는 승인 문서에 User Approved로 기록하지 않는다.
 - 운영 상태를 요구사항, 제약, 성공 기준에 쓰지 않는다.
 - `docs/ref-docs/`는 민감 자료일 수 있으므로 커밋하지 않는다.
 - Claude 전용 `.claude/` 문서는 Codex 실행 계약으로 보지 않는다.
@@ -50,8 +52,13 @@
 목표: 승인된 요구사항을 아키텍처, 기능, 화면, 프로그램/API, DB, 보안, 개발표준으로 전개한다.
 
 해야 할 일:
+- `docs/core/GATE2_DESIGN_SEQUENCE.md`를 읽고 이번 Run이 Gate 2 설계 순서의 어디에 있는지 기록한다.
+- 권장 순서는 Kickoff/범위 고정 -> SW Architecture Draft -> 화면/사용자 흐름 -> 기능 -> 프로그램/API -> 데이터/DB -> 보안 -> 개발표준 -> SW Architecture Baseline 보강 -> 설계 검수다.
 - SW 아키텍처는 큰 그림과 Pending/ADR 후보를 먼저 잡고, 상세 설계와 함께 보강한다.
 - 화면이 있으면 `SCR-ID`, 화면 상태, 와이어프레임/시안, UI 증적 기준을 기록한다.
+- 프로토타입, Figma, 이미지 시안, 기존 화면 캡처가 있으면 단순 참고자료인지 구현 기준인지 구분하고, 구현 기준이면 UI Implementation Contract를 작성한다.
+- UI Implementation Contract에는 기준 파일/CSS, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 포함한다.
+- UI 증적 기준은 화면 단위가 아니라 기본/오류/성공/전환 상태별 `UI-001-01` 형식으로 분리한다.
 - 보안가이드는 구현 가능한 구체 값, 정책, 오류 메시지, 검증 ID를 가진다.
 - 개발표준은 구현 전에 확정한다.
 - 필요한 skill: `screen-design`, `screen-review`, `ui-review`, `security-review`, `development-standard-review`, `data-standard-review`
@@ -62,6 +69,9 @@
 
 완료 기준:
 - 설계 산출물과 추적표가 연결되어 있다.
+- SW 아키텍처의 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다.
+- 이번 Run의 Gate 2 순서 위치와 다음 Gate 2 Run 후보가 남아 있다.
+- UIREF/prototype이 구현 계약으로 전환되었고 Gate 3/Impl/Gate 4에서 검증 가능한 비교 기준이 있다.
 - Gate 3 테스트 설계로 넘길 AC/SEC/NREQ가 식별되어 있다.
 
 ## 5. Gate 3 Test Planning
@@ -70,6 +80,8 @@
 
 해야 할 일:
 - `UT/IT/PT/UI` ID를 정의한다.
+- UI 테스트는 상태/시나리오 단위로 작성하고 각 UI-ID에 기대 화면과 캡처 경로를 1:1로 둔다.
+- prototype 기반 화면 테스트는 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과와 비교 방식에 반영한다.
 - 테스트는 `AC/SEC/NREQ/SCR` 중 하나 이상과 연결한다.
 - 화면 테스트는 viewport, 기준 시안, 캡처 경로, 비교 기준을 가진다.
 
@@ -87,9 +99,12 @@
 
 해야 할 일:
 - 구현 전 `implementation-plan` 또는 단일 구현 Run의 생략 사유를 확인한다.
+- 화면 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
 - 구현, 테스트, 증적, 추적표, Run 결과를 분리하지 않는다.
 - 화면이 있으면 실제 화면을 확인하고 필요한 캡처 증적을 남긴다.
+- prototype 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
+- 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
 
 주의:
 - Orchestrator는 구현 주 작성자가 아니다. 구현은 `build` persona/subagent가 맡고 Orchestrator는 검토와 통합을 책임진다.

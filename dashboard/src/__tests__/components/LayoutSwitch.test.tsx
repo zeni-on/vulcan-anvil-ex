@@ -115,6 +115,29 @@ describe('UT-012-18: template=A2일 때 LayoutA2 렌더링, LayoutA/LayoutB 미�
     expect(screen.queryByTestId('layout-a')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layout-b')).not.toBeInTheDocument()
   })
+
+  it('stats가 아직 없으면 Phase 0 안내와 통계 대기 상태를 표시한다', () => {
+    const phase0Session: SessionData = {
+      ...baseSession,
+      current_gate: 'phase0',
+      gate_status: {
+        phase0: 'in-progress',
+        gate1: 'pending',
+        gate2: 'pending',
+        gate3: 'pending',
+        impl: 'pending',
+        gate4: 'pending',
+        gate5: 'pending',
+      },
+    }
+
+    render(<LayoutA2 {...layoutProps} session={phase0Session} />)
+
+    expect(screen.getByTestId('layout-a2-gate-empty')).toBeInTheDocument()
+    expect(screen.getByText('Discovery 준비 중')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-a2-stats-empty')).toBeInTheDocument()
+    expect(screen.getByText('통계 대기 중')).toBeInTheDocument()
+  })
 })
 
 // ── UT-012-18B ────────────────────────────────────────────────────────────────

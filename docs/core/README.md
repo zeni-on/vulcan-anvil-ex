@@ -14,6 +14,7 @@
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전, 용어, 도메인, 데이터 항목명 관리 규칙
 - `AGENT_PERSONAS.md`: 단계별 에이전트 persona와 subagent 위임 규칙
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
+- `GATE2_DESIGN_SEQUENCE.md`: Gate 2 설계 산출 순서와 SW 아키텍처 반복 갱신 기준
 - `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 승인된 CR의 Gate 진행 프로세스
 - `DELIVERY_PROFILES.md`: Audit, Solution, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절 기준
 - `TECH_STACK_BASELINES.md`: Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기술스택별 코딩/주석/테스트 기본 규칙
@@ -31,6 +32,7 @@
 - 구현 단계는 작은 Run과 Build Wave를 모두 허용하되, 중간 이상 작업은 Wave 단위로 작업지시/검증/상태 갱신을 남기도록 했다.
 - 변경관리는 rollback 대신 승인된 CR의 필요한 Gate 진행과 Run 기록으로 처리한다.
 - SW Architecture, DBML ERD, 보안가이드, 개발표준, 릴리즈 승인 산출물을 Gate 2~5 흐름에 연결했다.
+- Gate 2에서 SW Architecture Draft로 시작해 상세 설계를 거쳐 Baseline으로 보강하는 설계 순서 기준을 추가했다.
 - 기술스택 선택 시 개발표준정의서가 참조할 Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 베이스라인을 추가했다.
 - 리팩토링을 추적 가능한 개선 작업으로 다루기 위해 DEBT/FIND/CR 분기와 문서 영향 판단 기준을 정의했다.
 - 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.

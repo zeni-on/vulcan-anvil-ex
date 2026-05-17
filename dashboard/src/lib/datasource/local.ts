@@ -118,7 +118,7 @@ export class LocalDataSource implements DataSource {
   }
 
   /**
-   * docs/ 디렉토리를 재귀 순회하여 .md 파일 목록을 DocNode[]로 반환한다.
+   * docs/ 디렉토리를 재귀 순회하여 .md 및 허용된 외부 산출물 파일 목록을 DocNode[]로 반환한다.
    *
    * UT-002-06, UT-002-07: Path Traversal 방지 적용
    */
@@ -181,7 +181,7 @@ export class LocalDataSource implements DataSource {
 
   /**
    * 디렉토리를 재귀 순회하여 DocNode 트리를 구성한다.
-   * .md 파일만 포함, 숨김 파일 제외.
+   * .md 및 허용된 외부 산출물 파일만 포함, 숨김 파일 제외.
    */
   private buildDocTree(dir: string, slugPrefix: string[]): DocNode[] {
     // 각 항목 접근 전 Path Traversal 검증

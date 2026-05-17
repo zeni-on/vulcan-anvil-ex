@@ -147,6 +147,68 @@ function CompactStats({ stats }: { stats: ProjectStats }) {
   )
 }
 
+function emptyGateLabel(gate: string) {
+  if (gate === 'phase0') return 'Phase 0'
+  if (gate === 'impl') return '구현'
+  return gate.replace(/^gate/i, 'Gate ')
+}
+
+function A2GateEmptyPanel({ gate }: { gate: string }) {
+  const label = emptyGateLabel(gate)
+
+  return (
+    <section
+      className="rounded-xl border border-slate-700 bg-[#111827] p-4"
+      data-testid="layout-a2-gate-empty"
+    >
+      <div className="space-y-3">
+        <div>
+          <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-semibold text-cyan-300">
+            {label}
+          </span>
+          <h2 className="mt-2 text-base font-bold text-[#F9FAFB]">
+            {gate === 'phase0' ? 'Discovery 준비 중' : '진행 통계 준비 중'}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[#9CA3AF]">
+            아직 진행 통계가 생성되지 않아 현재 Gate 요약이 비어 있습니다. 왼쪽 산출물을 채우고 검증을 실행하면 요구사항, 문서, Run 통계가 이 영역에 표시됩니다.
+          </p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <CompactStat
+            icon={<FileText className="h-4 w-4" />}
+            label="먼저 채울 문서"
+            value="4"
+            sub="Project Brief, Scope, As-Is/To-Be, Risk"
+            tone="blue"
+          />
+          <CompactStat
+            icon={<CheckCircle className="h-4 w-4" />}
+            label="통계 갱신"
+            value="check"
+            sub="python vulcan.py check-trace"
+            tone="default"
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function A2StatsEmptyPanel() {
+  return (
+    <div
+      className="rounded-lg border border-slate-700/80 bg-slate-950/35 px-3 py-3"
+      data-testid="layout-a2-stats-empty"
+    >
+      <h3 className="text-sm font-semibold text-slate-200">통계 대기 중</h3>
+      <p className="mt-1 text-xs leading-5 text-slate-500">
+        Phase 0 산출물을 작성하고 검증을 실행하면 진행 통계가 표시됩니다.
+      </p>
+    </div>
+  )
+}
+
 function waveLabel(status: string, isCurrent: boolean) {
   if (['Implemented', 'Verified', 'Completed', 'Done'].includes(status)) return '완료'
   if (['In Progress', 'Running', 'Review Requested'].includes(status) || isCurrent) return '진행중'
@@ -512,7 +574,7 @@ export default function LayoutA2({
           )}
         </section>
 
-        {session?.stats && (
+        {session?.stats ? (
           <>
             {session.current_gate === 'impl' ? (
               <A2ImplementationPanel stats={session.stats} />
@@ -529,6 +591,10 @@ export default function LayoutA2({
               onDocSelect={onDocSelect}
             />
           </>
+        ) : (
+          session && !sessionLoading && !sessionError && (
+            <A2GateEmptyPanel gate={session.current_gate} />
+          )
         )}
       </div>
 
@@ -566,7 +632,9 @@ export default function LayoutA2({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-500">
-            {sideView === 'stats' && session?.stats && <CompactStats stats={session.stats} />}
+            {sideView === 'stats' && (
+              session?.stats ? <CompactStats stats={session.stats} /> : <A2StatsEmptyPanel />
+            )}
             {sideView === 'commits' && (
               <>
                 {commitsLoading && <SectionSkeleton rows={5} />}

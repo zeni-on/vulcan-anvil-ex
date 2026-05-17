@@ -414,6 +414,35 @@ status: Draft
             children: [{ name: 'DOC-CORE-G1-001_Requirements-Spec_v0.1', type: 'file' }],
           },
           {
+            name: '02-design',
+            type: 'dir',
+            children: [
+              {
+                name: 'screen',
+                type: 'dir',
+                children: [
+                  {
+                    name: 'prototypes',
+                    type: 'dir',
+                    children: [
+                      { name: 'login.html', type: 'file' },
+                      {
+                        name: 'css',
+                        type: 'dir',
+                        children: [{ name: 'app.css', type: 'file' }],
+                      },
+                      {
+                        name: 'js',
+                        type: 'dir',
+                        children: [{ name: 'login.js', type: 'file' }],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
             name: '05-change',
             type: 'dir',
             children: [{ name: 'DOC-PM-G0-001_Change-Request_v0.1', type: 'file' }],
@@ -449,6 +478,24 @@ status: Draft
       expect.objectContaining({
         path: 'docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md',
         category: 'release',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/02-design/screen/prototypes/login.html',
+        category: 'design',
+        kind: 'external',
+        ext: 'html',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/02-design/screen/prototypes/css/app.css',
+        category: 'design',
+        kind: 'external',
+        ext: 'css',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/02-design/screen/prototypes/js/login.js',
+        category: 'design',
+        kind: 'external',
+        ext: 'js',
       }),
     ]))
     expect(body.docs).not.toEqual(expect.arrayContaining([

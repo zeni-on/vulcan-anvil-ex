@@ -15,6 +15,8 @@ Core 원칙:
 - 에이전트의 모든 작업은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `PT`, `UI` 중 하나 이상과 연결되어야 한다.
 - 에이전트가 임의로 범위를 확장하지 않도록 Run Scope를 명시한다.
 - Gate 완료 전에는 산출물, 구현, 테스트, 증적, 미해결 이슈를 함께 남긴다.
+- Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다.
+- 대화상 명시 승인이 없으면 Run, 릴리즈 승인서, Gate 결과에 사용자 승인으로 기록하지 않는다.
 - 모델별 차이는 Adapter에서 흡수하고 Core 산출물 형식은 유지한다.
 
 ## 2. Run 단위
@@ -30,7 +32,7 @@ Run은 다음 중 하나의 목적을 가진다.
 | Screen Design Run | 화면 구조와 시안을 `SCR-ID`에 연결 | 화면설계서, 와이어프레임, 시안 이미지, 기준 viewport |
 | Design Review Run | Gate 3 진입 전 설계 완성도를 검수 | 보안 검토, 화면 검토, 개발표준 검토 |
 | Implementation Run | 승인된 설계를 코드로 구현 | 소스 코드, 설정, 리소스, 마이그레이션 |
-| Test Run | 테스트 코드와 실행 결과 작성 | `UT`, `IT`, `PT`, `UI`, 결과서 |
+| Test Run | 테스트 코드와 실행 결과 작성 | `UT`, `IT`, `PT`, 상태/시나리오별 `UI`, 결과서 |
 | Evidence Run | 화면 캡처, 로그, 결과 파일 정리 | 증적 파일, 결과 문서 |
 | Review Run | 추적성, 보안, 품질 점검 | 이슈, 변경요청, 리뷰 결과 |
 | QA Fix Run | G4에서 발견된 기존 설계 범위 내 결함 수정 | `FIND`, 수정 코드, 재검증 결과 |
@@ -170,7 +172,40 @@ open_issues: []
 
 Gate 1의 인수기준은 요구사항 충족 여부를 판단하는 검증 가능한 문장과 검증 방식까지만 작성한다. `Given/When/Then`, 선행조건, 예외조건, 검증 데이터, 테스트 절차, 자동화 파일명은 Gate 3 테스트케이스 문서에 작성한다.
 
-## 5.1 Implementation Plan과 Build Wave
+## 5.1 Gate 종료 승인 규칙
+
+각 Gate Run의 마지막 출력은 다음 순서를 따른다.
+
+1. 이번 Gate에서 작성 또는 수정한 산출물과 관련 ID를 요약한다.
+2. 미해결 `open_issues`, `FIND`, `CR`, `ISSUE`를 숨기지 않고 나열한다.
+3. 다음 Gate에서 수행할 Run 후보를 제안한다.
+4. "다음 Gate로 진행해도 되는지"를 명시적으로 질문한다.
+5. 사용자가 승인하기 전까지 다음 Gate 산출물, 구현, QA Pass, 릴리즈 승인 작업을 시작하지 않는다.
+
+승인으로 볼 수 있는 표현은 사용자가 다음 Gate 진행을 직접 허용한 경우다.
+예: "Gate 2로 진행해", "승인", "다음 단계 진행해".
+단순한 작업 지시나 "계속 확인해줘"를 전체 Gate 승인으로 넓게 해석하지 않는다.
+
+## 5.2 UI 테스트와 증적 매칭 규칙
+
+UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
+상태와 시나리오별로 `UI-001-01`처럼 나누고, 각 UI-ID에 기대 화면과 실제 증적 파일을 1:1로 연결한다.
+
+예:
+
+| UI-ID | 상태/시나리오 | 기대 증적 |
+| --- | --- | --- |
+| UI-001-01 | 회원가입 기본 화면 | 이메일/비밀번호/비밀번호 확인/가입 버튼 |
+| UI-001-02 | 약한 비밀번호 오류 | 오류 메시지와 가입 차단 상태 |
+| UI-001-03 | 비밀번호 확인 불일치 | 불일치 오류 메시지 |
+| UI-001-04 | 중복 이메일 오류 | 중복 이메일 오류 메시지 |
+| UI-001-05 | 회원가입 성공 | 가입 완료 메시지와 로그인 안내 |
+| UI-001-06 | 성공 후 로그인 연계 | 로그인 화면 전환과 성공 메시지 또는 이메일 연계 |
+
+기대 화면이 회원가입 성공 메시지인데 실제 증적이 단순 로그인 화면이면 Pass가 아니다.
+이 경우 `Fail` 또는 `Not Run`으로 기록하고 `FIND`를 남긴다.
+
+## 5.3 Implementation Plan과 Build Wave
 
 구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 여러 `Build Wave`로 나눈다. 작은 단일 Run 구현은 Build Wave를 생략할 수 있다.
 
@@ -226,6 +261,8 @@ Build Wave를 생략하는 경우 구현 Run은 다음을 남긴다.
 Gate 2에서 Gate 3로 넘어가기 전에는 다음 검수가 완료되어야 한다.
 
 SW 아키텍처는 Gate 2 안에서 점진적으로 성숙시킨다.
+Gate 2의 세부 산출 순서는 `docs/core/GATE2_DESIGN_SEQUENCE.md`를 기준으로 한다.
+Orchestrator는 각 Gate 2 Run에 현재 순서 위치와 다음 Gate 2 Run 후보를 남긴다.
 
 | 시점 | Orchestrator 책임 | 권장 검증 |
 | --- | --- | --- |
@@ -233,12 +270,15 @@ SW 아키텍처는 Gate 2 안에서 점진적으로 성숙시킨다.
 | 상세 설계 작성 후 | 기능/프로그램/API/DB/화면/보안가이드 내용을 아키텍처의 CMP/FLOW/품질속성/상세 설계 연결로 되돌려 반영한다 | `python vulcan.py check-architecture --level baseline` |
 | Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py check-trace` |
 
+Gate 2가 작지 않으면 하나의 설계 Run에 모든 산출물을 밀어 넣지 않는다.
+화면, API, DB, 보안, 개발표준이 함께 바뀌거나 아키텍처 Pending/ADR 후보가 여러 개면 Gate 2를 작은 Run으로 나누고, 마지막 Run에서 SW Architecture Baseline과 전체 설계 일관성을 검수한다.
+
 | 검수 | 책임 Persona | 최소 확인 |
 | --- | --- | --- |
 | 요구사항 대비 설계 검수 | `review` 또는 `design` | 모든 `REQ/AC`가 `FUNC/SCR/PGM/DB/SEC` 중 필요한 산출물과 연결됨 |
 | 보안 검수 | `security-review` | `SECURITY_BASELINE.md` 기준 보안항목 누락 여부, `KISA/SR`, `OWASP`, `CWE` 매핑 |
-| 화면 검수 | `screen-review` | 화면 목록, 화면 상태, 와이어프레임/시안, 메시지, UI 증적 기준 |
-| UI 품질 검수 | `ui-review` | 구현자가 임의 해석하지 않도록 UI 기준선 유형, 레이아웃 밀도, 상태 표현, 모바일 기준이 충분한지 확인 |
+| 화면 검수 | `screen-review` | 화면 목록, 화면 상태, 와이어프레임/시안, 메시지, UI Implementation Contract, UI 증적 기준 |
+| UI 품질 검수 | `ui-review` | 구현자가 임의 해석하지 않도록 UI 기준선 유형, 구현 계약, 레이아웃 밀도, 상태 표현, 모바일 기준이 충분한지 확인 |
 | 개발표준 검수 | `development-review` | 언어/프레임워크, 기술스택 베이스라인, 패키지 구조, 메시지 관리, 주석/코딩/테스트 컨벤션, 빌드/실행 명령 |
 
 위 검수 중 하나라도 `Failed` 또는 `Blocked`이면 Gate 3 테스트 설계로 넘어가지 않는다.
@@ -248,12 +288,16 @@ SW 아키텍처는 Gate 2 안에서 점진적으로 성숙시킨다.
 | 단계 | 책임 Persona | 최소 산출물 |
 | --- | --- | --- |
 | Gate 2 | `screen-design` | `SCR-ID`, 화면 상태, 시안/와이어프레임 경로, 기준 viewport, 비교 기준 |
-| Gate 2 Review | `screen-review`, `ui-review` | 화면 누락, 상태 누락, 시안 연결, 증적 가능 여부와 UI 품질 기준선 검토 |
-| Gate 3 | `test-design` | `UI-ID`, viewport, 사용자 흐름, 기대 화면, 캡처/비교 기준 |
-| Impl | `build` | 시안을 실제 UI 코드로 구현하고 desktop/mobile에서 확인 |
-| Gate 4 | `evidence`, `screen-review` | Playwright 스크린샷, 시안 대비 차이, UI Finding 또는 승인 |
+| Gate 2 | `screen-design` | prototype 또는 외부 시안이 구현 기준이면 UI Implementation Contract 작성 |
+| Gate 2 Review | `screen-review`, `ui-review` | 화면 누락, 상태 누락, 시안 연결, 구현 계약, 증적 가능 여부와 UI 품질 기준선 검토 |
+| Gate 3 | `test-design` | `UI-ID`, viewport, 사용자 흐름, 기대 화면, Contract 반영 캡처/비교 기준 |
+| Impl | `build` | UI Implementation Contract를 확인하고 시안을 실제 UI 코드로 구현 |
+| Gate 4 | `evidence`, `screen-review` | Playwright 스크린샷, 기준 UIREF 대비 구현 차이, 허용 여부, UI Finding 또는 승인 |
 
 외부에서 가져온 시안도 Anvil 산출물이다. 외부 Figma, 이미지, PPT, 손그림, 기존 시스템 캡처는 화면설계서에 출처와 경로를 기록하고 `SCR-ID`와 연결해야 한다.
+프로토타입이나 외부 시안이 구현 기준이면 `UI Implementation Contract`로 승격해야 한다.
+계약에는 기준 파일, 기준 CSS/토큰, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식, 차이 발생 시 FIND/CR 판정 기준이 있어야 한다.
+계약이 없으면 구현자는 시안을 참고자료로만 볼 수 있으므로 Gate 3 또는 구현으로 넘기지 않는다.
 
 Implementation Run은 다음 조건을 만족해야 완료할 수 있다.
 
@@ -263,7 +307,7 @@ Implementation Run은 다음 조건을 만족해야 완료할 수 있다.
 | 구현 파일 연결 | 요구사항추적표의 증적에 실제 구현 파일 경로가 연결된다. |
 | 추적 ID 표시 | 구현 또는 테스트 파일 안에 관련 `REQ`, `PGM`, `SCR`, `SEC`, `UT`, `IT` 중 하나 이상의 ID가 남는다. |
 | 테스트 실행 | Gate 3에서 정의한 테스트와 개발표준정의서의 필수 검증 명령이 실행되고 Pass/Fail/Skip/Not Run 상태가 기록된다. |
-| 화면 구현 검증 | 화면이 있으면 기준 시안 또는 화면설계서와 실제 구현 화면을 desktop/mobile에서 확인한다. |
+| 화면 구현 검증 | 화면이 있으면 기준 시안 또는 화면설계서와 실제 구현 화면을 desktop/mobile에서 확인하고, UI Implementation Contract 대비 차이를 기록한다. |
 | 문서 갱신 | 구현 결과가 테스트케이스, 추적표, Run 기록에 반영된다. |
 
 ## 6. 승인과 질문 규칙

@@ -28,7 +28,7 @@ REQ -> AC -> FUNC -> SCR/PGM -> UT/IT/UI -> Result
 화면이 있는 기능은 다음 경로도 가져야 한다.
 
 ```text
-REQ/AC -> SCR -> UI 시안/와이어프레임 -> UI-ID -> 구현 화면 캡처 -> Result
+REQ/AC -> SCR -> UIREF -> UICON -> UI-ID -> 구현 화면 캡처 -> Result
 ```
 
 보안 민감 기능은 다음 경로를 가져야 한다.
@@ -51,15 +51,17 @@ NREQ -> PGM/IF/DB -> PT -> Result
 | `NREQ` | `AC` 또는 검증 기준 | `SEC`, `PT`, 운영 문서 |
 | `AC` | `REQ` 또는 `NREQ`, 테스트 ID | `SEC` |
 | `FUNC` | `REQ`, `AC` | `SCR`, `PGM`, `DB`, `IF` |
-| `SCR` | `FUNC` 또는 `REQ` | `SEC`, `PGM`, `UT`, `IT`, `UI` |
-| `UI` | `SCR`, `AC`, 또는 `SEC` | 시안 경로, viewport, 실제 캡처 경로, 비교 결과 |
+| `SCR` | `FUNC` 또는 `REQ` | `UIREF`, `UICON`, `SEC`, `PGM`, `UT`, `IT`, `UI` |
+| `UIREF` | `SCR` | 기준 파일/URL, viewport, 출처, 비교 기준 |
+| `UICON` | `SCR`, `UIREF` | 필수 유지 요소, 변경 허용/금지, 비교 방식, FIND/CR 판정 기준 |
+| `UI` | `SCR`, `AC`, 또는 `SEC` | `UIREF`, `UICON`, 실제 캡처 경로, 비교 결과 |
 | `PGM` | `FUNC` 또는 `REQ` | `SCR`, `DB`, `IF`, `SEC`, `UT`, `IT` |
 | `DB` | `REQ`, `FUNC`, 또는 `PGM` | `SEC`, `PT` |
 | `IF` | `REQ`, `FUNC`, 또는 `PGM` | `SEC`, `IT`, 외부 시스템 ID |
 | `SEC` | `REQ`, `NREQ`, `SCR`, 또는 `PGM` | `UT`, `IT`, 보안 가이드 참조 |
 | `UT` | `PGM`, `AC` 또는 `SEC` | 소스 파일 경로, 테스트 명령 |
 | `IT` | `REQ` 또는 `AC` | `SCR`, `PGM`, `IF`, `DB` |
-| `UI` | `SCR`, `AC`, 또는 `SEC` | 화면 캡처 경로, 브라우저/뷰포트, 테스트 결과 문서 |
+| `UI` | `SCR`, `AC`, 또는 `SEC` | `UIREF`, `UICON`, 화면 캡처 경로, 브라우저/뷰포트, 테스트 결과 문서 |
 | `PT` | `NREQ` | `PGM`, `DB`, `IF`, 테스트 환경 |
 | `CR` | 영향받는 ID | 의사결정, 승인, 릴리즈 노트 |
 | `FIND` | 발견된 결함과 관련된 ID | `RUN`, 수정 파일, 재검증 결과, `CR` 승격 여부 |
@@ -136,8 +138,8 @@ SEC-001 비밀번호는 평문으로 저장하지 않는다.
 | --- | --- |
 | Phase 0 | 의사결정과 가정을 메모 또는 `DEC` 항목으로 남긴다 |
 | Gate 1 | 승인 범위의 `REQ`, `NREQ`, `AC`가 존재한다 |
-| Gate 2 | 필요한 `CNT`, `CMP`, `FLOW`, `ADR`, `FUNC`, `SCR`, `PGM`, `DB`, `IF`, `SEC`가 연결되고 화면 시안/와이어프레임 기준이 정의된다 |
-| Gate 3 | `UT`, `IT`, `PT`, `UI` 계획이 `AC`, `SEC`, `NREQ`, `SCR`와 연결된다 |
+| Gate 2 | 필요한 `CNT`, `CMP`, `FLOW`, `ADR`, `FUNC`, `SCR`, `UIREF`, `UICON`, `PGM`, `DB`, `IF`, `SEC`가 연결되고 화면 시안/와이어프레임 기준과 구현 계약이 정의된다 |
+| Gate 3 | `UT`, `IT`, `PT`, `UI` 계획이 `AC`, `SEC`, `NREQ`, `SCR`, `UIREF`, `UICON`과 연결된다 |
 | Impl | 구현 파일, 테스트 코드, 개발표준 준수 결과가 `REQ/PGM/SCR/SEC/UT/IT`와 연결된다 |
 | Gate 4 | 테스트 결과, 화면 캡처, 시안 대비 검토, 리뷰 증적이 연결된다 |
 | Gate 5 | 승인된 베이스라인과 릴리즈 증적이 연결된다 |
@@ -155,6 +157,7 @@ SEC-001 비밀번호는 평문으로 저장하지 않는다.
 - Gate 3 진입 전 보안 검토, 화면 검토, 개발표준 검토가 완료되지 않은 설계
 - 화면이 있는 기능인데 `SCR-ID`, 화면 상태, 와이어프레임/시안, UI 증적 기준이 없는 경우
 - 외부 시안 또는 생성 시안이 `SCR-ID`, 출처, 파일 경로, viewport, 비교 기준과 연결되지 않은 경우
+- 구현 기준 시안인데 `UICON-ID`, 필수 유지 요소, 변경 허용/금지, 비교 방식이 없는 경우
 - 구현 화면 캡처가 없거나 기준 시안/화면설계와 비교되지 않은 경우
 - 인증/권한/비밀번호/세션/개인정보가 있는데 `SECURITY_BASELINE.md` 기준 보안항목이 누락된 경우
 - 구현 전에 개발표준정의서의 언어, 프레임워크, 기술스택 베이스라인, 패키지 구조, 메시지 관리, 코딩/주석/테스트 컨벤션, 실행/테스트 명령이 확정되지 않은 경우

@@ -24,10 +24,10 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `discovery` | 배경, 제약, 현행 자료, 질문, 위험을 정리한다. | P0 | 분석 메모, 질문, 가정, 위험 |
 | `requirements` | 요구사항, 비기능 요구사항, 인수기준을 정리한다. | G1 | 요구사항정의서, 요구사항추적표 |
 | `design` | SW 아키텍처, 기능, 화면, 프로그램, DB, 보안 설계를 작성한다. | G2 | SW 아키텍처 정의서, 기능명세서, 화면설계서, 프로그램명세서, DB명세서 |
-| `screen-design` | 화면 구조, 시안, 와이어프레임, UI 기준 증적을 설계한다. | G2 | 화면설계서, UI 시안, 와이어프레임, 기준 스크린샷 |
+| `screen-design` | 화면 구조, 시안, 와이어프레임, UI 구현 계약, UI 기준 증적을 설계한다. | G2 | 화면설계서, UI 시안, 와이어프레임, UI Implementation Contract, 기준 스크린샷 |
 | `security-review` | 보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다. | G1, G2, G3, G4 | 보안 검토 결과, 보안 FIND/CR |
-| `screen-review` | 화면 식별, 화면상태, 와이어프레임, UI 증적 기준 누락을 검토한다. | G2, G3, G4 | 화면 검토 결과, UI FIND/CR |
-| `ui-review` | 구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선이 충분한지 까다롭게 검토한다. | G2, G4 | UI 품질 검토 결과, UI 보강 ISSUE/FIND |
+| `screen-review` | 화면 식별, 화면상태, 와이어프레임, UI 구현 계약, UI 증적 기준 누락을 검토한다. | G2, G3, G4 | 화면 검토 결과, UI FIND/CR |
+| `ui-review` | 구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선과 구현 계약이 충분한지 까다롭게 검토한다. | G2, G4 | UI 품질 검토 결과, UI 보강 ISSUE/FIND |
 | `development-review` | 개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다. | G2, G4 | 개발표준 검토 결과, 표준 준수 FIND |
 | `test-design` | AC, SEC, NREQ를 검증 가능한 테스트로 전개한다. | G3 | 테스트케이스, 테스트계획, 증적 기준 |
 | `build-planning` | 승인된 설계와 테스트 기준을 구현 가능한 Build Wave로 나눈다. | Impl | 구현 계획, Build Wave 목록, 위임 계획 |
@@ -84,9 +84,17 @@ gate: gate4
 goal: "PGM-005 게시글 작성 API 구현"
 related_ids: [REQ-005, AC-007, PGM-005, UT-007]
 source_documents:
-  - docs/core/AGENT_PERSONAS.md
-  - docs/core/AGENT_RUN_PROTOCOL.md
-  - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
+  read_first:
+    - AGENTS.md
+    - session.json
+    - docs/core/TRACEABILITY_RULES.md
+  working_documents:
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
+  reference_on_demand:
+    - docs/core/AGENT_PERSONAS.md
+    - docs/core/AGENT_RUN_PROTOCOL.md
+    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
 scope:
   writable:
     - app/api/posts.py
@@ -104,14 +112,14 @@ completion_criteria:
 | --- | --- |
 | `requirements` | 승인 없이 설계나 구현 상세를 확정하지 않는다. |
 | `design` | 구현 코드를 작성하지 않는다. 단, 사용자가 명시한 샘플 구현은 예외다. |
-| `screen-design` | 시안을 실제 구현 완료로 간주하지 않는다. 외부 시안을 가져와도 `SCR-ID`와 검증 기준 없이 사용하지 않는다. |
+| `screen-design` | 시안을 실제 구현 완료로 간주하지 않는다. 외부 시안을 가져와도 `SCR-ID`, `UIREF-ID`, `UICON-ID`, 검증 기준 없이 사용하지 않는다. |
 | `security-review` | 보안 기준 완화나 위험 수용을 임의로 승인하지 않는다. |
-| `screen-review` | 취향성 디자인 선호를 필수 결함으로 올리지 않는다. 다만 화면 누락, 상태 누락, 증적 불가 항목은 결함으로 본다. |
-| `ui-review` | 개인 취향을 강요하지 않는다. 다만 텍스트 와이어프레임만으로 구현 품질이 흔들릴 경우 `Minimal` 또는 `Needs Mockup`으로 판정한다. |
+| `screen-review` | 취향성 디자인 선호를 필수 결함으로 올리지 않는다. 다만 화면 누락, 상태 누락, 구현 계약 누락, 증적 불가 항목은 결함으로 본다. |
+| `ui-review` | 개인 취향을 강요하지 않는다. 다만 텍스트 와이어프레임만으로 구현 품질이 흔들리거나 prototype의 구현 계약이 없으면 `Minimal`, `Needs Mockup`, `Contract Missing`으로 판정한다. |
 | `development-review` | 프로젝트가 이미 승인한 기술스택을 임의로 변경하지 않는다. |
 | `test-design` | 테스트를 위한 테스트를 만들지 않는다. AC, SEC, NREQ와 연결되지 않은 테스트는 만들지 않는다. |
 | `build-planning` | 코드를 작성하지 않는다. 구현 순서, Wave, 위임, 검증, 커밋 단위만 계획한다. |
-| `build` | 승인된 설계 범위 밖의 요구사항을 임의로 추가하지 않는다. |
+| `build` | 승인된 설계 범위 밖의 요구사항을 임의로 추가하지 않는다. 화면 구현 시 UI Implementation Contract를 무시하고 재설계하지 않는다. |
 | `evidence` | 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다. |
 | `review` | 단순 취향성 리팩터링을 필수 결함으로 올리지 않는다. |
 | `change-control` | 영향도 분석 없이 다시 진행할 Gate나 scope를 결정하지 않는다. |

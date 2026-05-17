@@ -25,9 +25,11 @@ Gate 2에서 화면이 있는 기능을 설계할 때 사용한다.
 5. 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 둔다.
 6. HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/UIREF-NNN/` 하위에 둔다.
 7. 시안이 없고 사용자가 허용하면 imagegen, HTML mockup, 간단 와이어프레임 중 적절한 방식으로 기준 시안을 만든다.
-8. 화면설계서에 입력 항목, 출력 항목, 이벤트, 메시지 위치, 보안 적용 방식을 작성한다.
-9. Gate 3에서 사용할 `UI-ID`, viewport, 캡처 경로, 비교 기준 후보를 작성한다.
-10. 요구사항추적표에 `SCR-ID`와 관련 `REQ/AC/FUNC/PGM/SEC` 연결을 반영한다.
+8. UIREF가 단순 참고자료인지 구현 기준인지 구분한다.
+9. 구현 기준이면 UI Implementation Contract에 기준 파일, 기준 CSS/토큰, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 작성한다.
+10. 화면설계서에 입력 항목, 출력 항목, 이벤트, 메시지 위치, 보안 적용 방식을 작성한다.
+11. Gate 3에서 사용할 `UI-ID`, viewport, 캡처 경로, 비교 기준 후보를 작성한다.
+12. 요구사항추적표에 `SCR-ID`, `UIREF-ID`, 관련 `REQ/AC/FUNC/PGM/SEC` 연결을 반영한다.
 
 ## 출력
 
@@ -35,6 +37,7 @@ Gate 2에서 화면이 있는 기능을 설계할 때 사용한다.
 
 - 작성 또는 갱신한 `SCR-ID`
 - 사용한 시안 출처와 파일/URL
+- UI Implementation Contract 적용 여부와 필수 유지/허용 변경/금지 변경
 - 기준 viewport
 - 화면 상태 목록
 - Gate 3로 넘길 `UI-ID` 후보

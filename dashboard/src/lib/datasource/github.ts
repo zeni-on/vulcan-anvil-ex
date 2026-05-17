@@ -113,7 +113,7 @@ export class GitHubDataSource implements DataSource {
    * docs/ 경로의 파일 목록을 GitHub Git Trees API로 읽어 DocNode[]로 변환한다.
    *
    * GET /repos/{repo}/git/trees/{branch}?recursive=1
-   * → docs/ 경로 필터링 → .md 파일만 포함 → DocNode[] 변환
+   * → docs/ 경로 필터링 → .md 및 허용된 외부 산출물 파일 포함 → DocNode[] 변환
    */
   async getDocTree(): Promise<DocNode[]> {
     try {

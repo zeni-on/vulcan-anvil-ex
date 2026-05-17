@@ -29,6 +29,8 @@ Run Output Contract는 에이전트의 완료보고서다.
 | `verification_results` | 예 | 테스트/린트/캡처 실행 결과 |
 | `evidence` | 예 | 결과서, 캡처, 로그, 커밋 등 |
 | `traceability_updates` | 예 | 추적표 또는 산출물 갱신 내용 |
+| `gate_exit_summary` | 예 | 현재 Gate 산출물 요약과 다음 Gate 진행 전 승인 상태 |
+| `approval_request` | 예 | 사용자에게 남긴 명시 승인 질문 |
 | `open_issues` | 예 | 남은 이슈. 없으면 빈 배열 |
 | `findings` | 선택 | QA/리뷰 중 발견한 결함과 처리 결과 |
 | `change_requests` | 선택 | 설계 또는 기준선 변경이 필요한 항목 |
@@ -78,11 +80,38 @@ evidence:
   documents:
     - docs/artifacts/04-results/DOC-QA-G4-002_Test-Result_v0.1.md
   files: []
+  ui:
+    - ui_id: UI-001-05
+      scenario: "회원가입 성공 메시지"
+      expected_screen: "가입 완료 메시지와 로그인 안내가 보인다."
+      file: docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png
+      result: passed
+  ui_contract_diffs:
+    - compare_id: UICMP-001
+      ui_id: UI-001-01
+      contract_id: UICON-001
+      baseline: docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html
+      implementation: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
+      differences: []
+      allowed: true
+      action: pass
   commit: null
 
 traceability_updates:
   - document: docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
     update: "REQ-005 관련 상태와 증적을 최신 테스트 결과로 갱신"
+
+gate_exit_summary:
+  current_gate: gate4
+  completed_outputs:
+    - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
+  next_gate_candidate: gate5
+  approval_status: pending
+  approval_evidence: null
+
+approval_request:
+  question: "Gate 4 QA 결과를 기준으로 Gate 5 릴리즈 승인 검토로 진행해도 될까요?"
+  required_before_next_gate: true
 
 open_issues: []
 
@@ -112,6 +141,7 @@ next_run_suggestion:
 - 모든 변경 파일
 - 모든 검증 결과
 - 증적 위치
+- 다음 Gate 진행 전 사용자 승인 질문
 - 미해결 이슈 없음 또는 후속 이슈가 완료 조건에 영향 없음
 
 ### CompletedWithIssues
@@ -191,6 +221,71 @@ evidence:
   files:
     - "캡처함"
 ```
+
+UI 증적은 상태/시나리오 단위로 남긴다.
+
+좋은 예:
+
+```yaml
+evidence:
+  ui:
+    - ui_id: UI-001-01
+      scenario: "회원가입 기본 화면"
+      expected_screen: "이메일, 비밀번호, 비밀번호 확인, 가입 버튼이 보인다."
+      file: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
+      result: passed
+    - ui_id: UI-001-02
+      scenario: "약한 비밀번호 오류"
+      expected_screen: "약한 비밀번호 오류 메시지가 보이고 가입이 차단된다."
+      file: docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png
+      result: passed
+```
+
+나쁜 예:
+
+```yaml
+evidence:
+  ui:
+    - ui_id: UI-001
+      scenario: "회원가입 확인"
+      file: docs/artifacts/04-review/evidence/ui/login.png
+      result: passed
+```
+
+회원가입 성공 테스트의 기대 화면이 성공 메시지라면 로그인 화면만 있는 캡처는 Pass 증적이 아니다.
+이 경우 `failed` 또는 `not_run`으로 기록하고 `FIND`를 남긴다.
+
+UIREF 또는 prototype이 UI Implementation Contract로 지정된 화면은 기준 대비 차이를 별도로 남긴다.
+
+```yaml
+evidence:
+  ui_contract_diffs:
+    - compare_id: UICMP-001
+      ui_id: UI-001-01
+      contract_id: UICON-001
+      baseline: docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html
+      implementation: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
+      differences:
+        - "비밀번호 placeholder가 보안가이드에 따라 8자 이상 문구로 변경됨"
+      allowed: true
+      action: pass
+```
+
+허용되지 않은 차이는 `allowed: false`와 함께 `FIND-` 또는 `CR-` 조치를 연결한다.
+
+## 6.1 Gate 종료 승인 규칙
+
+각 Gate Run은 완료 보고 끝에 다음 Gate 진행 승인 질문을 남긴다.
+사용자가 명시적으로 승인하기 전까지 다음 Gate 산출물 작성, 구현 착수, QA Pass 확정, 릴리즈 승인 선언을 하지 않는다.
+
+승인 상태 값:
+
+| 값 | 의미 |
+| --- | --- |
+| `pending` | 승인 질문을 남기고 대기 중 |
+| `approved` | 대화상 사용자가 명시 승인함 |
+| `rejected` | 사용자가 반려함 |
+| `deferred` | 보완 후 재확인 필요 |
 
 ## 7. 추적성 갱신 규칙
 
