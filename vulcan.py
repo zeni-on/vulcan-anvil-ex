@@ -1195,11 +1195,22 @@ def git_commit(message, project_dir=".", include_source=False, paths=None):
         if include_source:
             # 구현/QA 이후: .gitignore가 관리하는 범위 내에서 모든 변경 포함
             subprocess.run(["git", "add", "-A"], cwd=project_dir, check=True, capture_output=True)
+
+        staged = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=project_dir)
+        if staged.returncode == 0:
+            print(f"  커밋 생략: 변경 없음 ({message})")
+            return False
+
         subprocess.run(["git", "commit", "-m", message], cwd=project_dir, check=True, capture_output=True)
         print(f"  커밋 완료: {message}")
+        return True
     except subprocess.CalledProcessError as e:
         # git commit 실패는 경고만 출력하고 계속 진행 (git_push와 다른 동작)
-        print(f"  경고: git commit 실패 - {e.stderr.decode().strip()}")
+        stdout = e.stdout.decode(errors="replace").strip() if e.stdout else ""
+        stderr = e.stderr.decode(errors="replace").strip() if e.stderr else ""
+        detail = "\n".join(part for part in [stderr, stdout] if part).strip()
+        print(f"  경고: git commit 실패 - {detail or '상세 메시지 없음'}")
+        return False
 
 
 def git_push(project_dir="."):
@@ -3545,9 +3556,10 @@ def cmd_session(gate, status, feature, project_dir="."):
         commit_msg += f" ({feature_label})"
     # 구현(impl), Gate 4(QA리뷰), Gate 5(최종승인): 소스코드 포함 커밋
     include_source = gate in ("impl", "gate4", "gate5")
-    git_commit(commit_msg, project_dir, include_source=include_source)
+    committed = git_commit(commit_msg, project_dir, include_source=include_source)
     # git push: commit 성공 직후 실행. 실패 시 sys.exit(1) (REQ-006-01, REQ-006-02)
-    git_push(project_dir)
+    if committed:
+        git_push(project_dir)
 
 
 def cmd_gate_start(gate, feature=None, project_dir="."):
@@ -3577,8 +3589,9 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
     commit_msg = f"session: {gate} start - {GATE_LABELS[gate]}"
     if feature_label:
         commit_msg += f" ({feature_label})"
-    git_commit(commit_msg, project_dir, paths=["session.json"])
-    git_push(project_dir)
+    committed = git_commit(commit_msg, project_dir, paths=["session.json"])
+    if committed:
+        git_push(project_dir)
 
 
 def sync_session(project_dir="."):
