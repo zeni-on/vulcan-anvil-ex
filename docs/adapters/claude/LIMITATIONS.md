@@ -17,7 +17,7 @@ Adapter는 Run마다 다음 우선순위로 문서를 제공한다.
 
 문서가 길면 전체를 제공하기보다 관련 ID 중심으로 요약한다.
 
-subagent에게 위임할 때는 모든 컨텍스트를 다시 전달하지 않고 `source_documents.required`와 `related_ids`만 전달한다.
+subagent에게 위임할 때는 모든 컨텍스트를 다시 전달하지 않고 `source_documents`(3-tier: `read_first` / `working_documents` / `reference_on_demand`)와 `related_ids`만 전달한다.
 
 ## 2. subagent 위임 한계
 

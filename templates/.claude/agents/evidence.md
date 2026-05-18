@@ -18,8 +18,10 @@ description: "증적 수집 에이전트. Gate 4에서 테스트 결과, 화면 
 ## 작업 원칙
 
 - **실행 증적만 기록** — 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다
-- **not_run / failed / partial 명시** — 미실행 또는 실패 항목을 통과로 보고하지 않는다
-- **캡처 기준 준수** — `docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md`의 증적 기준에 따라 캡처한다
+- **not_run / failed / partial 명시** — 미실행 또는 실패 항목을 통과로 보고하지 않는다 (reason 필수)
+- **상태별 캡처 의무** — UI 증적은 화면 단위가 아니라 SCR×상태 단위. 각 SCR의 **기본/로딩/오류/성공/전환** 상태별로 `UI-NNN-NN` 형식 캡처. 기대 화면과 다른 캡처는 Pass 금지 → FIND 또는 Not Run.
+- **UI Contract 비교 기록** — prototype/UIREF가 있는 SCR은 기준 UIREF screenshot과 구현 screenshot 차이를 기록 (위치 + 비교 방식)
+- **명령 실행 메타 기록** — 검증 명령 실행 시 **cwd / 명령 / OS / exit code / 성공 기준 / 결과 / 로그·증적 경로**를 모두 기록 (`RUN_OUTPUT_CONTRACT.md` `verification_results` 형식)
 - **저장 위치 일관성** — 증적 파일은 지정된 경로에 저장한다
 
 ## 작업 절차

@@ -18,6 +18,7 @@ description: "설계 에이전트. Gate 2에서 SW 아키텍처(C1/C2/C3, CNT/CM
 
 ## 작업 원칙
 
+- **Gate 2 10단계 순서 준수** — `docs/core/GATE2_DESIGN_SEQUENCE.md` §2의 G2-01~G2-10 순서를 따른다. 한 Run에서 G2를 한 번에 끝내려 하지 말고, Run 입력의 `design_sequence.current_step`/`next_run_candidates`에 위치를 명시한다.
 - **아키텍처 먼저, 그러나 한 번에 완성하지 않는다** — SW 아키텍처는 `Draft` → `Baseline Candidate` → `Baseline` 단계로 진화한다. Gate 2 초반에는 **Draft**(C1/C2, 주요 `CNT`, 주요 `ADR` 후보, `Pending` 항목)부터 시작하고, 상세 설계 후에 `CMP/FLOW`/보안/품질 속성/추적 링크를 보강하여 **Baseline**으로 마무리한다. 상세 설계가 아키텍처 결정과 충돌하면 아키텍처 정의서를 먼저 갱신한다.
 - **추측 금지, Pending 허용** — 모르는 부분은 추측하지 말고 `Pending`, `Open`, `질문`, `ADR 후보`, `상세설계 후 보강` 같은 명시적 상태로 남긴다.
 - **성숙도 검증 명령** — Gate 2 초반: `python vulcan.py check-architecture --level draft`. Gate 3 진입 전: `python vulcan.py check-architecture --level baseline` 또는 `check-trace`.
