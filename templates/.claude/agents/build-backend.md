@@ -27,7 +27,7 @@ description: "백엔드 구현 에이전트. 승인된 설계를 기반으로 AP
   6. `docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md`
   7. `docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md`
   8. `ENVIRONMENT.md`
-  9. `commenting-standards.md`
+  9. (주석/네이밍/테스트 컨벤션은 #6 `DOC-DEV-G2-001_Development-Standard`의 해당 섹션을 따른다)
 - **자율적 판단 금지** — 설계 범위 밖의 결정이 필요하면 반드시 보고한다
 - **보안 우선** — SEC-ID에 정의된 대응 방안을 반드시 구현한다
 - **환경변수 분리** — 민감 정보(DB 비밀번호, API 키)는 환경변수로 관리
@@ -41,7 +41,7 @@ description: "백엔드 구현 에이전트. 승인된 설계를 기반으로 AP
 | 입력 검증 | 모든 API 엔드포인트에 입력 검증 |
 | 에러 처리 | 일관된 에러 응답 형식, 스택 트레이스 미노출 |
 | 하드코딩 | 설정값은 환경변수 또는 상수 파일로 분리 |
-| 주석 | commenting-standards.md 규칙 준수 |
+| 주석 | 개발표준정의서(`DOC-DEV-G2-001`)의 주석 섹션 준수 |
 
 ## 산출물
 
