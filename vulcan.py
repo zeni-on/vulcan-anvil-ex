@@ -2050,6 +2050,7 @@ def validate_development_standard(project_dir="."):
         ("DB Pool 기준", r"HikariCP|DB Pool|connection pool|커넥션 풀"),
         ("Lombok 기준", r"Lombok|@Getter|@RequiredArgsConstructor|@Data|@Setter"),
         ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|gradlew test|go test|cargo test|dotnet test"),
+        ("검증 명령 실행 기준", r"cwd|실행 위치|성공 기준|exit code|종료 코드|Not Run|Skipped|증적|로그/증적"),
         ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역|Spring Security|SEC-\d{3}|JWT"),
     ]
     for label, pattern in required_terms:

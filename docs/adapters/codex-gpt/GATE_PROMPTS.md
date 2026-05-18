@@ -60,7 +60,7 @@
 - UI Implementation Contract에는 기준 파일/CSS, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 포함한다.
 - UI 증적 기준은 화면 단위가 아니라 기본/오류/성공/전환 상태별 `UI-001-01` 형식으로 분리한다.
 - 보안가이드는 구현 가능한 구체 값, 정책, 오류 메시지, 검증 ID를 가진다.
-- 개발표준은 구현 전에 확정한다.
+- 개발표준은 구현 전에 확정하고, 필수 검증 명령의 실행 위치(cwd), 성공 기준, 로그/증적 경로, Not Run/Skipped 처리 기준을 포함한다.
 - 필요한 skill: `screen-design`, `screen-review`, `ui-review`, `security-review`, `development-standard-review`, `data-standard-review`
 
 하지 않을 일:
@@ -84,6 +84,7 @@
 - prototype 기반 화면 테스트는 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과와 비교 방식에 반영한다.
 - 테스트는 `AC/SEC/NREQ/SCR` 중 하나 이상과 연결한다.
 - 화면 테스트는 viewport, 기준 시안, 캡처 경로, 비교 기준을 가진다.
+- 명령 기반 테스트는 실행 위치(cwd), Windows/POSIX 명령, 성공 기준, 로그/증적 경로를 가진다.
 
 주의:
 - 보안가이드에 없는 정책값을 테스트가 새로 만들지 않는다.
@@ -102,6 +103,7 @@
 - 화면 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
 - 구현, 테스트, 증적, 추적표, Run 결과를 분리하지 않는다.
+- 개발표준과 테스트케이스에 지정된 필수 명령을 실행하고, cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 테스트결과서에 남긴다.
 - 화면이 있으면 실제 화면을 확인하고 필요한 캡처 증적을 남긴다.
 - prototype 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
 - 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
@@ -111,7 +113,7 @@
 - 개발표준/보안가이드/테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
 
 완료 기준:
-- 관련 테스트와 린트 결과가 기록되어 있다.
+- 관련 테스트와 린트 결과가 실행 위치, exit code, 성공 기준, 로그/증적 경로와 함께 기록되어 있다.
 - 구현 파일, 테스트 파일, 증적 경로가 추적표와 결과서에 연결되어 있다.
 
 ## 7. Change Control

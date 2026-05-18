@@ -69,6 +69,9 @@ completion_criteria:
   - "메시지, 예외, 로그, 설정값, 외부 의존성, 주석/추적 ID 표기 규칙이 있다."
   - "로깅은 SLF4J, Logback/Log4j2 선택, Log4j 1.x 금지, logger 선언, 로그 레벨, MDC/requestId, 민감정보 금지 기준이 있다."
   - "Java/Spring 주석 기준은 클래스/메서드 JavaDoc 대상과 실제 예시를 포함한다."
+  - "필수 검증 명령은 실행 위치(cwd), Windows/POSIX 명령, 성공 기준, 로그/증적 경로, Not Run/Skipped 처리 기준을 가진다."
+  - "Frontend가 있으면 npm ci/npm install 선택 기준과 frontend 테스트/린트/빌드 명령이 명확하다."
+  - "통합 배포가 필요하면 backend 단독 빌드와 frontend 포함 통합 빌드 명령 및 성공 기준이 구분되어 있다."
   - "보안 구현 기준이 SECURITY_BASELINE과 SEC-ID에 연결되어 있다."
 gate_exit_policy:
   stop_required: true
@@ -83,6 +86,7 @@ verification:
 ## Review Notes
 
 - 단순히 "Python 사용"처럼 선택만 적는 것은 부족하다. 왜 그 스택을 쓰는지, 어떤 기준선을 따르는지, 구현자가 지켜야 할 구조와 검증 명령이 있어야 한다.
+- 검증 명령은 명령 문자열만으로 충분하지 않다. 실행 위치, 성공 기준, exit code, 로그/증적 위치, 미실행 판정 기준까지 있어야 Gate 4에서 에이전트별 해석 차이를 줄일 수 있다.
 - 감리 대응 프로젝트에서는 개발표준이 아키텍처, 프로그램명세, 보안가이드, 테스트케이스로 이어져야 한다.
 - 개발표준 검토는 권장 순서상 G2-08이므로, 아키텍처/프로그램/API/보안 설계가 부족하면 먼저 보완 Run을 제안한다.
 - Gate 3로 넘어가기 전 개발표준 보완 결과와 승인 질문을 남긴다.

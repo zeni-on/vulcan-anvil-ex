@@ -399,18 +399,18 @@ test_IT_001_signup_then_login()
 
 ## 12. 빌드, 실행, 테스트 명령
 
-구현 및 QA 단계에서 실행해야 하는 명령을 정의한다. 에이전트는 필수 명령을 실행한 뒤 `docs/runs/`의 Run 문서와 `DOC-QA-G4-002_Test-Result_v0.1.md`에 결과를 기록한다.
+구현 및 QA 단계에서 실행해야 하는 명령을 정의한다. 에이전트마다 명령 해석이 달라지지 않도록 실행 위치(cwd), OS별 명령, 필수 여부, 성공 기준, 결과 기록 위치, 로그/증적 경로를 함께 기록한다.
 
-| 목적 | 명령 | 필수 여부 | 실행 시점 | 결과 기록 위치 | 비고 |
-| --- | --- | --- | --- | --- | --- |
-| 의존성 설치 |  | 필수/선택 | 최초 구현 또는 환경 갱신 | Run |  |
-| 개발 서버 실행 |  | 선택 | 화면 확인 또는 수동 QA | Run / Test Result |  |
-| 단위 테스트 |  | 필수 | Build Wave 완료 시, Gate 4 전 | Run / Test Result |  |
-| 통합 테스트 |  | 필수/선택 | Gate 4 전 또는 영향 범위 검증 | Run / Test Result |  |
-| E2E/UI 테스트 |  | 필수/선택 | 화면 기능 구현 후, Gate 4 | Run / Test Result / UI Evidence |  |
-| 정적 검사 |  | 필수/선택 | Build Wave 완료 시, Gate 4 전 | Run |  |
-| 빌드 |  | 필수/선택 | Gate 4 전, 릴리즈 후보 전 | Run / Test Result |  |
-| 포맷 |  | 선택 | 구현 중 또는 커밋 전 | Run |  |
+| 목적 | 실행 위치(cwd) | Windows 명령 | POSIX 명령 | 필수 여부 | 실행 시점 | 성공 기준 | 결과 기록 위치 | 로그/증적 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 의존성 설치 |  |  |  | 필수/선택 | 최초 구현 또는 환경 갱신 |  | Run |  |  |
+| 개발 서버 실행 |  |  |  | 선택 | 화면 확인 또는 수동 QA |  | Run / Test Result |  |  |
+| 단위 테스트 |  |  |  | 필수 | Build Wave 완료 시, Gate 4 전 | exit code 0, 실패 0건 | Run / Test Result |  |  |
+| 통합 테스트 |  |  |  | 필수/선택 | Gate 4 전 또는 영향 범위 검증 | exit code 0, 실패 0건 | Run / Test Result |  |  |
+| E2E/UI 테스트 |  |  |  | 필수/선택 | 화면 기능 구현 후, Gate 4 | exit code 0, 기대 화면 증적 생성 | Run / Test Result / UI Evidence |  |  |
+| 정적 검사 |  |  |  | 필수/선택 | Build Wave 완료 시, Gate 4 전 | exit code 0, 오류 0건 | Run |  |  |
+| 빌드 |  |  |  | 필수/선택 | Gate 4 전, 릴리즈 후보 전 | exit code 0, 배포 산출물 생성 | Run / Test Result |  |  |
+| 포맷 |  |  |  | 선택 | 구현 중 또는 커밋 전 | exit code 0 또는 변경 없음 | Run |  |  |
 
 기술스택별 명령 예:
 
@@ -422,7 +422,26 @@ test_IT_001_signup_then_login()
 | Vue.js | `npm run test:unit` | `npm run lint` | `npm run build` | Vitest/ESLint 기준 |
 | Python/FastAPI | `pytest` | `ruff check .` | 해당 시 작성 | 프로젝트 도구에 맞게 조정 |
 
-필수 명령을 실행하지 못한 경우에는 `Not Run` 또는 `Skipped`로 기록하고 사유, 영향 범위, 후속 조치를 남긴다. 실행하지 않은 명령을 `Pass`로 기록하지 않는다.
+Spring Boot + Vue 통합 배포 예:
+
+| 목적 | 실행 위치(cwd) | Windows 명령 | POSIX 명령 | 필수 여부 | 실행 시점 | 성공 기준 | 결과 기록 위치 | 로그/증적 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Backend 테스트 | repository root | `.\gradlew.bat test` | `./gradlew test` | 필수 | Build Wave 완료 시 | exit code 0, 테스트 실패 0건 | Run / Test Result | `build/reports/tests/test/` | 검증 기준 명령은 `gradlew test` |
+| Backend 정적검사/빌드 | repository root | `.\gradlew.bat check build` | `./gradlew check build` | 필수 | Gate 4 전 | exit code 0, check/build 성공 | Run / Test Result | `build/reports/` | Vue 통합 전 backend 기준 |
+| Frontend 의존성 설치 | `frontend/` | `npm ci` 또는 `npm install` | `npm ci` 또는 `npm install` | 최초 1회 | 구현 시작 또는 환경 갱신 | lockfile 기준 설치 성공 | Run | npm output | `package-lock.json`이 있으면 `npm ci` 우선 |
+| Frontend 단위 테스트 | `frontend/` | `npm run test:unit` | `npm run test:unit` | 필수 | UI 구현 후 | exit code 0, 실패 0건 | Run / Test Result | test report | Vitest |
+| Frontend 정적검사 | `frontend/` | `npm run lint` | `npm run lint` | 필수 | UI 구현 후 | exit code 0, 오류 0건 | Run | lint output | ESLint |
+| Frontend 빌드 | `frontend/` | `npm run build` | `npm run build` | 필수 | 배포 패키지 전 | exit code 0, `dist/` 생성 | Run | build output | 정적 파일 생성 |
+| 통합 배포 빌드 | repository root | `.\gradlew.bat clean build` | `./gradlew clean build` | 필수 | 릴리즈 후보 전 | exit code 0, frontend 산출물이 backend static 또는 Gradle copy task에 포함 | Run / Test Result | `build/libs/`, static/copy task 결과 | 단일 배포 패키지 기준 |
+| E2E/UI 테스트 | repository root 또는 `frontend/` | `npx playwright test` | `npx playwright test` | Gate 3 확정 시 필수, 미확정 시 선택/권장 | Gate 4 화면 증적 | exit code 0, 상태별 screenshot/video/trace 생성 | UI Evidence / Test Result | `docs/artifacts/04-review/evidence/ui/` | Gate 3에서 UI-ID별 확정 |
+
+명령 실행 기록 기준:
+
+- 실행한 모든 필수 명령은 실행 위치(cwd), 실제 명령, OS, exit code, 결과, 요약, 로그/증적 경로를 기록한다.
+- `Pass`는 exit code와 성공 기준, 필수 로그/증적이 모두 충족될 때만 기록한다.
+- 실행하지 못한 필수 명령은 `Not Run`으로 기록하고 사유, 영향 범위, 후속 조치를 남긴다.
+- 프로젝트 범위상 적용하지 않는 명령은 승인 근거와 함께 `Skipped`로 기록한다.
+- 개발표준정의서에서 필수로 지정한 명령은 Gate 4 테스트결과서의 실행 검증 표에 모두 반영한다.
 
 ## 13. 에이전트 작업 규칙
 

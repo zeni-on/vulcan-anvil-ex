@@ -40,6 +40,7 @@ scope:
 completion_criteria:
   - "AC, SEC, NREQ가 UT, IT, UI, PT 후보로 전개되어 있다."
   - "각 테스트케이스에 입력, 절차, 기대결과, 증적 방식이 있다."
+  - "명령 기반 테스트는 실행 위치(cwd), Windows/POSIX 명령, 성공 기준, 로그/증적 경로가 있다."
   - "UI 테스트는 화면 단위가 아니라 상태/시나리오 단위로 UI-001-01처럼 분리되어 있다."
   - "각 UI 테스트는 기대 화면과 캡처 증적 파일이 1:1로 연결되어 있다."
   - "프로토타입 기반 화면은 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 테스트 기대결과에 반영한다."
@@ -67,5 +68,6 @@ ui_implementation_contract_policy:
 ## Review Notes
 
 - 테스트를 실제로 실행하지 않았으면 통과로 쓰지 않는다. Gate 3는 테스트 설계 단계다.
+- Gate 3에서는 테스트를 실행하지 않더라도, Gate 4에서 동일하게 실행할 수 있도록 cwd, 명령, 성공 기준, 증적 경로를 정한다.
 - 회원가입, 로그인, TODO처럼 상태가 있는 화면은 기본/오류/성공/전환을 별도 UI-ID로 나눈다.
 - prototype 기반 화면은 `UI-ID -> SCR-ID -> UIREF-ID -> UICON-ID -> 증적 경로` 흐름으로 연결한다.

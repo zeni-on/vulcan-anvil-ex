@@ -38,7 +38,10 @@ scope:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
     - docs/runs/
 completion_criteria:
-  - "실행한 테스트 명령과 결과가 테스트 결과서에 기록되어 있다."
+  - "개발표준정의서와 테스트케이스에서 필수로 지정한 검증 명령이 테스트 결과서에 모두 기록되어 있다."
+  - "각 실행 검증에는 실행 위치(cwd), 명령/방법, OS, 성공 기준, exit code, 결과, 로그/증적 경로가 있다."
+  - "실행하지 못한 필수 명령은 Pass가 아니라 Not Run으로 기록하고 사유, 영향 범위, 후속 조치가 있다."
+  - "적용 제외한 명령은 Skipped로 기록하고 승인 근거 또는 적용 제외 사유가 있다."
   - "화면/UI 증적 또는 로그 증적이 관련 UI/UT/IT/PT ID와 1:1로 연결되어 있다."
   - "회원가입, 로그인, TODO 같은 UI 흐름은 기본/오류/성공/전환 상태별 캡처가 분리되어 있다."
   - "프로토타입 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다."
@@ -69,5 +72,6 @@ ui_implementation_contract_policy:
 
 - QA 결함이 승인된 설계 범위 안이면 FIND로 처리한다.
 - 요구사항, 보안 기준, 릴리즈 범위를 바꾸면 CR로 승격한다.
+- 개발표준의 필수 명령이 테스트결과서에 없거나, exit code/성공 기준/로그 증적 없이 Pass로 기록되어 있으면 FIND로 남긴다.
 - prototype 기반 화면이 UI Implementation Contract와 다르면 기준 UIREF와 구현 screenshot을 비교하고, 허용되지 않은 차이를 FIND로 남긴다.
 - 기대 화면과 다른 캡처를 Pass로 기록하지 않는다. 예를 들어 회원가입 성공 테스트에 로그인 화면만 있으면 FIND로 남긴다.
