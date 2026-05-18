@@ -22,7 +22,9 @@ Run Output Contract는 에이전트의 완료보고서다.
 | --- | --- | --- |
 | `run_id` | 예 | 입력과 동일한 Run ID |
 | `adapter` | 예 | `claude` |
-| `status` | 예 | `Completed`, `Blocked`, `Failed`, `CompletedWithIssues` 등 |
+| `status` | 예 | `Completed`, `Blocked`, `Failed`, `CompletedWithIssues`, `AwaitingApproval` 등 |
+| `gate_exit_summary` | Gate 종료 Run 시 예 | 산출물 요약 / 미해결 / 다음 Gate 제안 / 다음 Run 후보 |
+| `approval_request` | Gate 종료 Run 시 예 | 사용자에게 묻는 승인 질문과 승인 기록 상태 |
 | `summary` | 예 | 작업 요약 |
 | `changed_files` | 예 | 변경 파일 목록 |
 | `related_ids` | 예 | 변경과 연결된 ID |
@@ -92,6 +94,49 @@ evidence:
     - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
   files: []
   commit: null
+  # 상태별 UI 증적 (SCR × 상태 단위)
+  ui:
+    - ui_id: UI-003-01
+      scr: SCR-003
+      state: 기본
+      expected_path: "docs/artifacts/02-design/screen/prototypes/scr-003-default.html"
+      actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-01_default.png"
+      result: passed
+    - ui_id: UI-003-02
+      scr: SCR-003
+      state: 오류
+      expected_path: "docs/artifacts/02-design/screen/images/scr-003-error.png"
+      actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-02_error.png"
+      result: not_run
+      reason: "오류 상태 재현 시나리오 미구현"
+  # UI Implementation Contract 차이 판정 (prototype/UIREF 있는 SCR)
+  ui_contract_diffs:
+    - scr: SCR-003
+      contract_path: "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md#SCR-003-contract"
+      ref_screenshot: "docs/artifacts/02-design/screen/prototypes/scr-003.html"
+      impl_screenshot: "docs/artifacts/04-review/evidence/ui/UI-003-01_default.png"
+      verdict: Pass    # Pass / FIND / CR
+      notes: "필수 유지 요소(헤더, CTA, 폼 레이아웃) 모두 일치. 변경 허용 항목(색상) 디자인 토큰 적용."
+
+# Gate 종료 Run (Gate N → Gate N+1 진입 직전)에서만 작성
+gate_exit_summary:
+  gate: G2
+  artifacts_completed:
+    - "DOC-ARCH-G2-001_SW-Architecture (Baseline)"
+    - "DOC-CORE-G2-001~003 (Function/Program/Screen)"
+    - "DOC-API-G2-001, DOC-DATA-G2-001~002, DOC-SEC-G2-001, DOC-DEV-G2-001"
+  open_items:
+    - "FIND-003 변경 허용 항목 텍스트 wording 검토 필요"
+  next_gate_proposal: gate3
+  next_run_candidates:
+    - "G3 Test Cases 작성 (test-design)"
+
+approval_request:
+  pending: true
+  question: "Gate 2 산출물 검토 후 Gate 3 (테스트 설계)로 진행해도 될까요?"
+  approval_recorded: false   # 사용자 명시 승인 후에만 true
+  user_approved_at: null
+  approval_evidence: null    # 승인 시 대화 인용 또는 결정 메모 경로
 
 traceability_updates:
   - document: docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
@@ -158,6 +203,25 @@ failure:
   affected_ids: [UT-008, SEC-002]
   retry_possible: true
 ```
+
+## 4.1 Gate 종료 / 승인 요청 규칙
+
+Gate N의 마지막 Run(다음 Gate 진입 직전)은 다음 두 필드를 **반드시** 채운다.
+
+- **`gate_exit_summary`**: 산출물 목록 / 미해결 항목 / 다음 Gate 제안 / 다음 Run 후보
+- **`approval_request`**: 사용자에게 묻는 명시적 승인 질문 + 승인 기록 상태
+
+승인 흐름:
+1. Run 종료 시 `status: AwaitingApproval` + `approval_request.pending=true` + 질문 문장
+2. 사용자가 명시 승인하면 다음 Run(또는 `session --status done` 처리 Run)에서 `approval_recorded=true`, `user_approved_at`, `approval_evidence` 채움
+3. **명시 승인 없이는 `approval_recorded=true` 기록 금지** (대화상 승인 없는 상태에서 Run 또는 Release Approval 산출물에 "User Approved" 자동 기록 불가)
+
+## 4.2 UI 증적 / Contract diff 작성 규칙
+
+화면 작업 Run은 `evidence.ui`와 (UIREF/prototype 있는 SCR이면) `evidence.ui_contract_diffs`를 **반드시** 채운다.
+
+- **`evidence.ui[]`**: SCR×상태 단위(`UI-NNN-NN`). 기본/로딩/오류/성공/전환 상태별 1행. 각 행에 `expected_path`(UIREF/prototype) + `actual_path`(실제 캡처) + `result`(passed/failed/not_run) + (실패/미실행 시) `reason`
+- **`evidence.ui_contract_diffs[]`**: prototype/UIREF가 있는 SCR마다 1행. `verdict`는 `Pass` / `FIND` / `CR` 중 하나. 차이 무시 또는 묵시적 Pass 금지
 
 ## 5. 검증 결과 작성 규칙
 

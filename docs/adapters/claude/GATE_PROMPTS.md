@@ -54,7 +54,7 @@ Gate Prompt는 단독으로 쓰지 않는다.
 담당 에이전트: discovery
 
 작업:
-1. source_documents.required를 읽고 프로젝트 배경, 제약, 가정을 정리한다.
+1. source_documents.read_first를 먼저 읽고, working_documents 대상 P0 산출물(`DOC-CORE-P0-001~004`)에 프로젝트 배경/제약/가정을 정리한다.
 2. 요구사항 또는 설계에 불명확한 부분을 질문 목록으로 만든다.
 3. 즉시 구현하지 않는다.
 4. 필요한 경우 가정(ASM), 위험(RISK), 미해결 질문 후보를 제안한다.
