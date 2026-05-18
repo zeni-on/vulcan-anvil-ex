@@ -21,7 +21,7 @@ Vulcan-Anvil Ex Run을 수행하기 전에 어떤 절차를 읽어야 하는지 
 | `data-standard-review.md` | 프로젝트 용어집, DB 명세, 데이터 명명, 공공데이터 표준 준수 여부를 검토할 때 |
 | `qa-fix-loop.md` | 승인된 설계 범위 안에서 QA 발견사항을 수정할 때 |
 | `change-impact-analysis.md` | 변경요청을 분석하거나 이슈를 CR로 승격해야 하는지 판단할 때 |
-| `l2-review.md` | 작성 세션과 분리된 독립 리뷰로 Gate 산출물과 증적을 다시 검토할 때 |
+| `independent-review.md` | 작성 세션과 분리된 독립 검수로 Gate 산출물과 증적을 다시 검토할 때 |
 
 ## 규칙
 

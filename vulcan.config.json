@@ -4,17 +4,17 @@
     "primary": null
   },
   "review": {
-    "l2_enabled": false,
-    "l2_runner": "codex-cli",
-    "l2_model": "gpt-5.5",
-    "l2_reasoning_effort": "high",
-    "l2_sandbox": "workspace-write",
-    "l2_exec_timeout_seconds": 1800,
-    "l2_triggers": [
+    "independent_enabled": false,
+    "independent_runner": "codex-cli",
+    "independent_model": "gpt-5.5",
+    "independent_reasoning_effort": "high",
+    "independent_sandbox": "workspace-write",
+    "independent_exec_timeout_seconds": 1800,
+    "independent_triggers": [
       "gate2",
       "gate4"
     ],
-    "l2_worktree": true,
-    "l2_readonly": true
+    "independent_worktree": true,
+    "independent_readonly": true
   }
 }

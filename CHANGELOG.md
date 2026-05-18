@@ -4,10 +4,11 @@
 
 ### Added
 
-- `vulcan.py l2-review` 명령 추가: Gate 산출물을 별도 세션 또는 detached worktree에서 독립 검수하기 위한 review request/result 파일과 Run 초안을 생성한다.
-- `vulcan.py l2-run` 명령 추가: 생성된 L2 Review 요청을 `codex exec`로 실행하고 JSONL 로그, 마지막 응답, result 변경 여부를 Run 증적으로 남긴다.
-- `vulcan.config.json` 초기 생성 추가: L2 Review runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
-- `docs/core/L2_REVIEW_PROCESS.md`와 Codex `l2-review` skill 추가.
+- `vulcan.py review-request` 명령 추가: Gate 산출물을 별도 세션 또는 detached worktree에서 독립 검수하기 위한 review request/result 파일과 Run 초안을 생성한다.
+- `vulcan.py review-run` 명령 추가: 생성된 Independent Review 요청을 `codex exec`로 실행하고 JSONL 로그, 마지막 응답, result 변경 여부를 Run 증적으로 남긴다.
+- `vulcan.config.json` 초기 생성 추가: 독립 검수 runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
+- `docs/core/INDEPENDENT_REVIEW_PROCESS.md`와 Codex `independent-review` skill 추가.
+- 기존 `l2-review`, `l2-run`, `l2_*` 설정은 호환 alias로 유지하되 문서 표준 용어는 `독립 검수`로 정리했다.
 
 ## 0.2.2 - 2026-05-18
 

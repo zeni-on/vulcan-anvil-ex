@@ -14,7 +14,7 @@
 - `DATA_STANDARD_RULES.md`: 프로젝트 단어사전, 용어, 도메인, 데이터 항목명 관리 규칙
 - `AGENT_PERSONAS.md`: 단계별 에이전트 persona와 subagent 위임 규칙
 - `AGENT_RUN_PROTOCOL.md`: Codex, GPT, Claude 등 에이전트 실행 단위와 Gate별 작업 계약
-- `L2_REVIEW_PROCESS.md`: 별도 세션 또는 worktree 기반 독립 리뷰 절차
+- `INDEPENDENT_REVIEW_PROCESS.md`: 별도 세션 또는 worktree 기반 독립 검수 절차
 - `GATE2_DESIGN_SEQUENCE.md`: Gate 2 설계 산출 순서와 SW 아키텍처 반복 갱신 기준
 - `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 승인된 CR의 Gate 진행 프로세스
 - `DELIVERY_PROFILES.md`: Audit, Solution, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절 기준
@@ -38,4 +38,4 @@
 - 리팩토링을 추적 가능한 개선 작업으로 다루기 위해 DEBT/FIND/CR 분기와 문서 영향 판단 기준을 정의했다.
 - 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
 - 감리 대응, 솔루션 개발, PoC, 소규모 개발을 같은 무게로 다루지 않기 위해 Delivery Profile을 도입 방향으로 정의했다.
-- Gate 2와 Gate 4에서 작성 세션과 분리된 L2 Review를 실험 기능으로 사용할 수 있도록 절차를 추가했다.
+- Gate 2와 Gate 4에서 작성 세션과 분리된 독립 검수를 실험 기능으로 사용할 수 있도록 절차를 추가했다.

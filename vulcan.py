@@ -120,7 +120,8 @@ RUN_SKILLS = {
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
     "handoff": "docs/core/ORCHESTRATOR_PROTOCOL.md",
-    "l2-review": "docs/adapters/codex-gpt/skills/l2-review.md",
+    "independent-review": "docs/adapters/codex-gpt/skills/independent-review.md",
+    "l2-review": "docs/adapters/codex-gpt/skills/independent-review.md",
 }
 RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
@@ -155,6 +156,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "qa-fix-loop": "build",
     "change-impact-analysis": "change-control",
     "handoff": "review",
+    "independent-review": "review",
     "l2-review": "review",
 }
 GATE_DEFAULT_PERSONAS = {
@@ -167,9 +169,9 @@ GATE_DEFAULT_PERSONAS = {
     "gate5": "release",
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
-L2_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
-L2_EXEC_RUNNERS = ["codex-cli", "codex"]
-L2_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
+INDEPENDENT_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
+INDEPENDENT_REVIEW_EXEC_RUNNERS = ["codex-cli", "codex"]
+INDEPENDENT_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
     "adapter",
@@ -909,12 +911,12 @@ def find_review_file(project_dir, review_id, suffix):
     return ""
 
 
-def find_l2_run_file(project_dir, review_id):
+def find_independent_review_run_file(project_dir, review_id):
     runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
     if not os.path.isdir(runs_dir):
         return ""
     for name in sorted(os.listdir(runs_dir)):
-        if not name.endswith(".md") or "l2-review" not in name:
+        if not name.endswith(".md") or ("independent-review" not in name and "l2-review" not in name):
             continue
         path = os.path.join(runs_dir, name)
         try:
@@ -4558,16 +4560,26 @@ def git_status_porcelain(project_dir="."):
         return ""
 
 
-def create_l2_worktree(project_dir, review_id, worktree_dir=None):
+def review_config_get(review_config, key, default=None):
+    new_key = f"independent_{key}"
+    old_key = f"l2_{key}"
+    if new_key in review_config:
+        return review_config.get(new_key)
+    if old_key in review_config:
+        return review_config.get(old_key)
+    return default
+
+
+def create_review_worktree(project_dir, review_id, worktree_dir=None):
     project_abs = os.path.abspath(project_dir)
     if worktree_dir:
         target = os.path.abspath(worktree_dir)
     else:
         parent = os.path.dirname(project_abs)
-        target = os.path.join(parent, f"{os.path.basename(project_abs)}-l2-{review_id.lower()}")
+        target = os.path.join(parent, f"{os.path.basename(project_abs)}-review-{review_id.lower()}")
 
     if os.path.exists(target):
-        print(f"오류: L2 worktree 경로가 이미 존재합니다: {target}")
+        print(f"오류: 독립 검수 worktree 경로가 이미 존재합니다: {target}")
         sys.exit(1)
 
     try:
@@ -4582,40 +4594,40 @@ def create_l2_worktree(project_dir, review_id, worktree_dir=None):
         )
     except subprocess.CalledProcessError as e:
         detail = (e.stderr or e.stdout or str(e)).strip()
-        print(f"오류: L2 worktree 생성 실패 - {detail}")
+        print(f"오류: 독립 검수 worktree 생성 실패 - {detail}")
         sys.exit(1)
 
     return target
 
 
-def cmd_l2_review(title, gate, related_ids, from_run="", runner=None, create_worktree=None, worktree_dir="", project_dir="."):
+def cmd_review_request(title, gate, related_ids, from_run="", runner=None, create_worktree=None, worktree_dir="", project_dir="."):
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
-    runner = runner or review_config.get("l2_runner") or "codex-cli"
-    if runner not in L2_REVIEW_RUNNERS:
-        print(f"오류: 알 수 없는 L2 runner입니다: {runner}")
+    runner = runner or review_config_get(review_config, "runner", "codex-cli")
+    if runner not in INDEPENDENT_REVIEW_RUNNERS:
+        print(f"오류: 알 수 없는 독립 검수 runner입니다: {runner}")
         print("사용 가능 runner:")
-        for name in L2_REVIEW_RUNNERS:
+        for name in INDEPENDENT_REVIEW_RUNNERS:
             print(f"  - {name}")
         sys.exit(1)
 
     if create_worktree is None:
-        create_worktree = bool(review_config.get("l2_worktree", True))
+        create_worktree = bool(review_config_get(review_config, "worktree", True))
 
     ids = split_csv(related_ids)
     review_id = next_review_id(project_dir)
-    review_slug = slugify(f"l2 {gate} {title}")
+    review_slug = slugify(f"review {gate} {title}")
     review_rel_dir = reviews_rel_dir(project_dir)
     request_rel_path = os.path.join(review_rel_dir, f"{review_id}_{review_slug}_request.md")
     result_rel_path = os.path.join(review_rel_dir, f"{review_id}_{review_slug}_result.md")
     run_id = next_run_id(project_dir)
-    run_rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_l2-review-{review_slug}_v0.1.md")
+    run_rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_independent-review-{review_slug}_v0.1.md")
     source_run = from_run or "TBD"
     dirty_status = git_status_porcelain(project_dir)
     worktree_path = "TBD"
 
     if create_worktree:
-        worktree_path = create_l2_worktree(project_dir, review_id, worktree_dir or None)
+        worktree_path = create_review_worktree(project_dir, review_id, worktree_dir or None)
 
     gate_focus = {
         "gate2": [
@@ -4638,11 +4650,11 @@ def cmd_l2_review(title, gate, related_ids, from_run="", runner=None, create_wor
         "발견사항을 PASS, FIND, CR, ISSUE 중 하나로 분류한다.",
     ])
 
-    request_content = f"""# {review_id} L2 Review Request - {title}
+    request_content = f"""# {review_id} Independent Review Request - {title}
 
 ```yaml
 review_id: {review_id}
-review_level: L2
+review_type: independent
 status: Requested
 runner: {runner}
 gate: {gate}
@@ -4660,19 +4672,19 @@ created_at: {date.today()}
 
 {title}
 
-L2 리뷰는 작성 세션과 분리된 독립 검수다. 리뷰어는 산출물을 직접 수정하지 않고, 결과 파일에 `PASS`, `FIND`, `CR`, `ISSUE` 후보를 남긴다.
+독립 검수는 작성 세션과 분리된 검수다. 리뷰어는 산출물을 직접 수정하지 않고, 결과 파일에 `PASS`, `FIND`, `CR`, `ISSUE` 후보를 남긴다.
 
 ## 2. 먼저 읽을 문서
 
 - `AGENTS.md`
 - `session.json`
 - `vulcan.config.json`
-- `docs/core/L2_REVIEW_PROCESS.md`
+- `docs/core/INDEPENDENT_REVIEW_PROCESS.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
 - `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/skills/l2-review.md`
+- `docs/adapters/codex-gpt/skills/independent-review.md`
 
 ## 3. 리뷰 대상
 
@@ -4719,11 +4731,11 @@ L2 리뷰는 작성 세션과 분리된 독립 검수다. 리뷰어는 산출물
 - 산출물을 수정해야 한다면 직접 수정하지 말고 결과 파일에 `FIND` 또는 `CR`로 남긴다.
 """
 
-    result_content = f"""# {review_id} L2 Review Result - {title}
+    result_content = f"""# {review_id} Independent Review Result - {title}
 
 ```yaml
 review_id: {review_id}
-review_level: L2
+review_type: independent
 status: Draft
 runner: {runner}
 gate: {gate}
@@ -4776,19 +4788,19 @@ TBD
 TBD
 """
 
-    run_content = f"""# {run_id} L2 Review - {title}
+    run_content = f"""# {run_id} Independent Review - {title}
 
 ```yaml
 run_id: {run_id}
 adapter: codex-gpt
 gate: {gate}
 persona: review
-skill: l2-review
-skill_path: docs/adapters/codex-gpt/skills/l2-review.md
+skill: independent-review
+skill_path: docs/adapters/codex-gpt/skills/independent-review.md
 status: Draft
 created_at: {date.today()}
 review_id: {review_id}
-review_level: L2
+review_type: independent
 runner: {runner}
 from_run: {source_run}
 request_file: {request_rel_path}
@@ -4807,7 +4819,7 @@ open_issues: []
 
 {title}
 
-## 2. L2 리뷰 요청
+## 2. 독립 검수 요청
 
 - 요청 파일: `{request_rel_path}`
 - 결과 파일: `{result_rel_path}`
@@ -4815,7 +4827,7 @@ open_issues: []
 
 ## 3. Orchestrator 처리 원칙
 
-- L2 리뷰 결과를 최종 사실로 바로 확정하지 않는다.
+- 독립 검수 결과를 최종 사실로 바로 확정하지 않는다.
 - 결과 파일의 `FIND`, `CR`, `ISSUE` 후보를 본선 산출물과 대조한다.
 - 반영이 필요하면 별도 Run 또는 QA Fix Loop로 처리한다.
 - 리뷰 worktree는 결과 수집 후 사용자가 확인한 뒤 정리한다.
@@ -4839,18 +4851,18 @@ TBD
             with open(dst, "w", encoding="utf-8") as f:
                 f.write(content)
 
-    print(f"\nL2 리뷰 요청 생성 완료: {request_rel_path}")
-    print(f"L2 리뷰 결과 초안 생성 완료: {result_rel_path}")
-    print(f"L2 리뷰 Run 생성 완료: {run_rel_path}")
+    print(f"\n독립 검수 요청 생성 완료: {request_rel_path}")
+    print(f"독립 검수 결과 초안 생성 완료: {result_rel_path}")
+    print(f"독립 검수 Run 생성 완료: {run_rel_path}")
     if create_worktree:
-        print(f"L2 리뷰 worktree 생성 완료: {worktree_path}")
+        print(f"독립 검수 worktree 생성 완료: {worktree_path}")
     if dirty_status and create_worktree:
         print("\n주의: 본 작업공간에 커밋되지 않은 변경이 있습니다.")
         print("  worktree는 HEAD 기준으로 생성되므로 미커밋 변경은 포함되지 않을 수 있습니다.")
     print("\n다음 단계: 새 Codex/Claude 세션에서 request 파일을 열고 result 파일을 작성합니다.")
 
 
-def cmd_l2_run(
+def cmd_review_run(
     review_id,
     runner=None,
     model=None,
@@ -4862,19 +4874,19 @@ def cmd_l2_run(
 ):
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
-    runner = runner or review_config.get("l2_runner") or "codex-cli"
+    runner = runner or review_config_get(review_config, "runner", "codex-cli")
     runner_normalized = "codex-cli" if runner == "codex" else runner
-    if runner_normalized not in L2_EXEC_RUNNERS:
-        print(f"오류: l2-run에서 아직 지원하지 않는 runner입니다: {runner}")
+    if runner_normalized not in INDEPENDENT_REVIEW_EXEC_RUNNERS:
+        print(f"오류: review-run에서 아직 지원하지 않는 runner입니다: {runner}")
         print("현재 지원 runner: codex-cli")
         sys.exit(1)
 
     project_abs = os.path.abspath(project_dir)
     request_rel_path = find_review_file(project_abs, review_id, "_request.md")
     result_rel_path = find_review_file(project_abs, review_id, "_result.md")
-    run_rel_path = find_l2_run_file(project_abs, review_id)
+    run_rel_path = find_independent_review_run_file(project_abs, review_id)
     if not request_rel_path or not result_rel_path:
-        print(f"오류: {review_id}에 해당하는 L2 request/result 파일을 찾을 수 없습니다.")
+        print(f"오류: {review_id}에 해당하는 독립 검수 request/result 파일을 찾을 수 없습니다.")
         sys.exit(1)
 
     request_abs = os.path.abspath(os.path.join(project_abs, request_rel_path))
@@ -4893,10 +4905,10 @@ def cmd_l2_run(
     if not os.path.exists(exec_result_abs):
         exec_result_abs = result_abs
 
-    model = model or review_config.get("l2_model") or "gpt-5.5"
-    reasoning_effort = reasoning_effort or review_config.get("l2_reasoning_effort") or "high"
-    sandbox = sandbox or review_config.get("l2_sandbox") or "workspace-write"
-    timeout_seconds = int(timeout_seconds or review_config.get("l2_exec_timeout_seconds") or 1800)
+    model = model or review_config_get(review_config, "model", "gpt-5.5")
+    reasoning_effort = reasoning_effort or review_config_get(review_config, "reasoning_effort", "high")
+    sandbox = sandbox or review_config_get(review_config, "sandbox", "workspace-write")
+    timeout_seconds = int(timeout_seconds or review_config_get(review_config, "exec_timeout_seconds", 1800))
 
     codex_exe = shutil.which("codex")
     if not codex_exe:
@@ -4912,12 +4924,12 @@ def cmd_l2_run(
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
     os.makedirs(os.path.dirname(log_abs), exist_ok=True)
 
-    prompt = f"""You are an independent L2 reviewer for Vulcan-Anvil Ex.
+    prompt = f"""You are an independent reviewer for Vulcan-Anvil Ex.
 
 Working directory:
 {exec_dir}
 
-Read this L2 review request:
+Read this independent review request:
 {request_rel_path}
 
 Write your review result only to:
@@ -4954,7 +4966,7 @@ Rules:
 
     printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
     if dry_run:
-        print("L2 run dry-run")
+        print("Independent review run dry-run")
         print(f"  review_id: {review_id}")
         print(f"  runner: {runner_normalized}")
         print(f"  model: {model}")
@@ -4999,7 +5011,7 @@ Rules:
     if run_abs and os.path.exists(run_abs):
         execution_note = f"""
 
-## 5. L2 실행 기록
+## 5. 독립 검수 실행 기록
 
 ```yaml
 executed_at: {started_at}
@@ -5019,7 +5031,7 @@ result_file_changed: {str(result_changed).lower()}
         with open(run_abs, "a", encoding="utf-8") as f:
             f.write(execution_note)
 
-    print("\nL2 리뷰 실행 완료")
+    print("\n독립 검수 실행 완료")
     print(f"  review_id: {review_id}")
     print(f"  runner: {runner_normalized}")
     print(f"  model: {model}")
@@ -5032,7 +5044,7 @@ result_file_changed: {str(result_changed).lower()}
         print(f"오류: codex exec가 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
         sys.exit(exit_code)
     if not result_changed:
-        print("경고: result 파일 변경이 감지되지 않았습니다. L2 리뷰 결과를 확인하세요.")
+        print("경고: result 파일 변경이 감지되지 않았습니다. 독립 검수 결과를 확인하세요.")
 
 
 def check_run_file(path):
@@ -5148,15 +5160,15 @@ def default_vulcan_config():
             "primary": None
         },
         "review": {
-            "l2_enabled": False,
-            "l2_runner": "codex-cli",
-            "l2_model": "gpt-5.5",
-            "l2_reasoning_effort": "high",
-            "l2_sandbox": "workspace-write",
-            "l2_exec_timeout_seconds": 1800,
-            "l2_triggers": L2_REVIEW_DEFAULT_GATES,
-            "l2_worktree": True,
-            "l2_readonly": True
+            "independent_enabled": False,
+            "independent_runner": "codex-cli",
+            "independent_model": "gpt-5.5",
+            "independent_reasoning_effort": "high",
+            "independent_sandbox": "workspace-write",
+            "independent_exec_timeout_seconds": 1800,
+            "independent_triggers": INDEPENDENT_REVIEW_DEFAULT_GATES,
+            "independent_worktree": True,
+            "independent_readonly": True
         }
     }
 
@@ -5414,25 +5426,25 @@ def main():
     p_handoff.add_argument("--persona", default="review", choices=sorted(RUN_PERSONAS.keys()), help="handoff persona")
     p_handoff.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
 
-    p_l2_review = subparsers.add_parser("l2-review", help="독립 세션/워크트리 기반 L2 리뷰 요청 생성")
-    p_l2_review.add_argument("--title", required=True, help="L2 리뷰 목표")
-    p_l2_review.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="리뷰 대상 Gate")
-    p_l2_review.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
-    p_l2_review.add_argument("--from-run", default="", help="리뷰 대상 Run ID 또는 파일명")
-    p_l2_review.add_argument("--runner", choices=L2_REVIEW_RUNNERS, help="L2 리뷰 실행 런타임")
-    p_l2_review.add_argument("--worktree", dest="worktree", action="store_true", help="격리 worktree 생성")
-    p_l2_review.add_argument("--no-worktree", dest="worktree", action="store_false", help="worktree를 생성하지 않음")
-    p_l2_review.set_defaults(worktree=None)
-    p_l2_review.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
+    p_review_request = subparsers.add_parser("review-request", aliases=["l2-review"], help="독립 세션/워크트리 기반 검수 요청 생성")
+    p_review_request.add_argument("--title", required=True, help="독립 검수 목표")
+    p_review_request.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="검수 대상 Gate")
+    p_review_request.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+    p_review_request.add_argument("--from-run", default="", help="검수 대상 Run ID 또는 파일명")
+    p_review_request.add_argument("--runner", choices=INDEPENDENT_REVIEW_RUNNERS, help="독립 검수 실행 런타임")
+    p_review_request.add_argument("--worktree", dest="worktree", action="store_true", help="격리 worktree 생성")
+    p_review_request.add_argument("--no-worktree", dest="worktree", action="store_false", help="worktree를 생성하지 않음")
+    p_review_request.set_defaults(worktree=None)
+    p_review_request.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
 
-    p_l2_run = subparsers.add_parser("l2-run", help="L2 리뷰 요청을 codex-cli로 실행")
-    p_l2_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
-    p_l2_run.add_argument("--runner", choices=L2_REVIEW_RUNNERS, help="L2 리뷰 실행 런타임")
-    p_l2_run.add_argument("--model", default="", help="codex-cli 모델")
-    p_l2_run.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
-    p_l2_run.add_argument("--timeout-seconds", type=int, default=0, help="codex exec timeout seconds")
-    p_l2_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex exec sandbox")
-    p_l2_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
+    p_review_run = subparsers.add_parser("review-run", aliases=["l2-run"], help="독립 검수 요청을 codex-cli로 실행")
+    p_review_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
+    p_review_run.add_argument("--runner", choices=INDEPENDENT_REVIEW_RUNNERS, help="독립 검수 실행 런타임")
+    p_review_run.add_argument("--model", default="", help="codex-cli 모델")
+    p_review_run.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
+    p_review_run.add_argument("--timeout-seconds", type=int, default=0, help="codex exec timeout seconds")
+    p_review_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex exec sandbox")
+    p_review_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
@@ -5516,8 +5528,8 @@ def main():
             persona=args.persona,
             adapter=args.adapter,
         )
-    elif args.command == "l2-review":
-        cmd_l2_review(
+    elif args.command in {"review-request", "l2-review"}:
+        cmd_review_request(
             title=args.title,
             gate=args.gate,
             related_ids=args.related_ids,
@@ -5526,8 +5538,8 @@ def main():
             create_worktree=args.worktree,
             worktree_dir=args.worktree_dir,
         )
-    elif args.command == "l2-run":
-        cmd_l2_run(
+    elif args.command in {"review-run", "l2-run"}:
+        cmd_review_run(
             review_id=args.review_id,
             runner=args.runner,
             model=args.model or None,

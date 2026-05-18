@@ -1,55 +1,54 @@
-# L2 Review Process
+# Independent Review Process
 
 > 상태: v0.1
-> 목적: 작성 세션과 분리된 독립 리뷰를 Gate 종료 검수에 붙이는 실험 절차를 정의한다.
+> 목적: 작성 세션과 분리된 독립 검수를 Gate 종료 검수에 붙이는 실험 절차를 정의한다.
 
 ## 1. 개념
 
-L2 Review는 같은 런타임이라도 작성 세션과 리뷰 세션을 분리해 산출물을 다시 검수하는 절차다.
+Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
-| 수준 | 의미 | 예 |
+| 구분 | 의미 | 예 |
 | --- | --- | --- |
-| L1 | 같은 세션의 자기 점검 | 메인 Orchestrator가 직접 리뷰 |
-| L2 | 별도 세션 또는 별도 worktree의 독립 리뷰 | Codex가 작성한 산출물을 새 Codex 세션이 검토 |
-| L3 | 다른 런타임 교차 리뷰 | Codex 산출물을 Claude가 검토, 또는 반대 |
+| 자체 점검 | 같은 세션에서 Orchestrator가 스스로 산출물과 증적을 점검한다 | 작성 직후 체크리스트 확인, `run-check`, `check-trace` |
+| 독립 검수 | 작성 세션과 분리된 세션, worktree, 또는 다른 runner가 산출물과 증적을 다시 검토한다 | 새 Codex CLI 세션, Claude CLI, GitHub reviewer, 수동 검수 |
 
-L2 리뷰어는 수정자가 아니라 검수자다. 결과는 `PASS`, `FIND`, `CR`, `ISSUE` 후보로 남기고, Orchestrator가 본선 산출물 반영 여부를 다시 판단한다.
+독립 검수에서 Codex가 검토하는지 Claude가 검토하는지는 단계명이 아니라 `runner` 속성이다. 결과는 `PASS`, `FIND`, `CR`, `ISSUE` 후보로 남기고, Orchestrator가 본선 산출물 반영 여부를 다시 판단한다.
 
 ## 2. 기본 원칙
 
-- L2 Review는 실험 기능이며 Gate 완료를 항상 막는 필수 절차는 아니다.
+- 독립 검수는 실험 기능이며 Gate 완료를 항상 막는 필수 절차는 아니다.
 - 우선 적용 Gate는 `gate2`, `gate4`다.
 - 리뷰 요청과 결과는 `docs/reviews/`에 파일로 남긴다.
 - 리뷰 Run은 `docs/runs/`에 별도로 남긴다.
 - 가능하면 별도 worktree를 사용해 작성 맥락과 파일 변경을 분리한다.
-- L2 리뷰 결과는 자동 승인하지 않는다. Orchestrator가 재검토한 뒤 `FIND`, `CR`, `ISSUE`, 승인 후보로 분류한다.
+- 독립 검수 결과는 자동 승인하지 않는다. Orchestrator가 재검토한 뒤 `FIND`, `CR`, `ISSUE`, 승인 후보로 분류한다.
 
 ## 3. 설정
 
-프로젝트 루트의 `vulcan.config.json`에서 L2 Review 기본값을 둔다.
+프로젝트 루트의 `vulcan.config.json`에서 독립 검수 기본값을 둔다.
 
 ```json
 {
   "review": {
-    "l2_enabled": false,
-    "l2_runner": "codex-cli",
-    "l2_model": "gpt-5.5",
-    "l2_reasoning_effort": "high",
-    "l2_sandbox": "workspace-write",
-    "l2_exec_timeout_seconds": 1800,
-    "l2_triggers": ["gate2", "gate4"],
-    "l2_worktree": true,
-    "l2_readonly": true
+    "independent_enabled": false,
+    "independent_runner": "codex-cli",
+    "independent_model": "gpt-5.5",
+    "independent_reasoning_effort": "high",
+    "independent_sandbox": "workspace-write",
+    "independent_exec_timeout_seconds": 1800,
+    "independent_triggers": ["gate2", "gate4"],
+    "independent_worktree": true,
+    "independent_readonly": true
   }
 }
 ```
 
-`l2_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py l2-review`를 실행하면 요청을 만들 수 있다.
+`independent_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py review-request`를 실행하면 요청을 만들 수 있다. 기존 `l2_*` 설정은 호환 목적으로만 읽는다.
 
 ## 4. 생성 명령
 
 ```bash
-python vulcan.py l2-review \
+python vulcan.py review-request \
   --gate gate2 \
   --title "Gate 2 설계 독립 검수" \
   --from-run RUN-003 \
@@ -60,15 +59,15 @@ python vulcan.py l2-review \
 
 - `docs/reviews/RV-NNN_*_request.md` 생성
 - `docs/reviews/RV-NNN_*_result.md` 생성
-- `docs/runs/RUN-NNN_l2-review-*_v0.1.md` 생성
-- `vulcan.config.json.review.l2_worktree`가 `true`이면 detached worktree 생성
+- `docs/runs/RUN-NNN_independent-review-*_v0.1.md` 생성
+- `vulcan.config.json.review.independent_worktree`가 `true`이면 detached worktree 생성
 
 ## 5. 실행 명령
 
-`codex-cli` runner를 사용할 수 있으면 Orchestrator가 L2 리뷰 세션을 비대화형으로 실행할 수 있다.
+`codex-cli` runner를 사용할 수 있으면 Orchestrator가 독립 검수 세션을 비대화형으로 실행할 수 있다.
 
 ```bash
-python vulcan.py l2-run --review-id RV-001
+python vulcan.py review-run --review-id RV-001
 ```
 
 기본 동작:
@@ -78,11 +77,11 @@ python vulcan.py l2-run --review-id RV-001
 - 모델과 reasoning effort는 `vulcan.config.json.review` 값을 사용한다.
 - JSONL 실행 로그를 `docs/reviews/RV-NNN_codex-exec.jsonl`에 남긴다.
 - 마지막 응답을 `docs/reviews/RV-NNN_codex-last-message.md`에 남긴다.
-- result 파일 변경 여부와 exit code를 L2 Review Run에 기록한다.
+- result 파일 변경 여부와 exit code를 Independent Review Run에 기록한다.
 
 주의:
 
-- `l2-run`은 Desktop 대화창을 새로 여는 기능이 아니다.
+- `review-run`은 Desktop 대화창을 새로 여는 기능이 아니다.
 - `codex exec` 기반의 독립 실행 세션을 만든다.
 - result 파일이 변경되었더라도 Orchestrator가 다시 검토한 뒤 본선 산출물 반영 여부를 결정한다.
 
@@ -125,7 +124,7 @@ python vulcan.py l2-run --review-id RV-001
 
 ## 8. Worktree 정리
 
-L2 worktree는 결과 수집 후 사람이 확인하고 삭제한다.
+독립 검수 worktree는 결과 수집 후 사람이 확인하고 삭제한다.
 
 ```bash
 git worktree remove <worktree-path>
