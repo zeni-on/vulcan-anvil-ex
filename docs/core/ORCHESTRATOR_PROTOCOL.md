@@ -147,6 +147,19 @@ Handoff는 기본적으로 강제 절차가 아니다. Orchestrator는 Gate 4로
 
 특히 `desktop` handoff는 화면이 있는 기능에서 유용하지만, 모든 구현 작업의 필수 단계로 두지 않는다. Codex Desktop에서 이미 같은 세션 안에 화면 확인과 증적 수집이 가능하다면 별도 handoff 문서 없이 현재 Run에 검증 결과를 남길 수 있다.
 
+## 8.1 L2 Review
+
+`vulcan.py l2-review`는 작성 세션과 분리된 독립 검수 요청을 만든다.
+
+L2 Review는 handoff보다 더 좁은 검수 절차다. 목적은 다른 세션 또는 detached worktree에서 산출물과 증적을 읽기 중심으로 재검토하고, 결과를 `PASS`, `FIND`, `CR`, `ISSUE` 후보로 남기는 것이다.
+
+초기 권장 적용 지점은 다음이다.
+
+- Gate 2 종료 전 설계 산출물 독립 검수
+- Gate 4 종료 전 테스트 결과와 화면 증적 독립 검수
+
+Orchestrator는 L2 Review 결과를 자동 승인하지 않는다. 결과 파일은 판단 재료이며, 최종 반영 여부는 본선 Run, 추적표, 사용자 승인 흐름에 맞춰 결정한다.
+
 대표 대상은 다음과 같다.
 
 | 대상 | 사용 목적 |

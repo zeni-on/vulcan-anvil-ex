@@ -39,7 +39,7 @@
 - 감리 제출용 DOCX/XLSX/HWPX 변환 흐름 설계
 - Dashboard A2의 반응형 밀도와 검수 화면 개선
 - Codex/Claude adapter의 실제 Run 결과 비교와 규칙 보강
-- Review Queue 또는 별도 reviewer 프로세스 도입 여부 판단
+- L2 Review 실험 기능의 실제 프로젝트 적용 결과 확인과 review-import/watch 확장 여부 판단
 
 ## Delivery Profile 방향
 

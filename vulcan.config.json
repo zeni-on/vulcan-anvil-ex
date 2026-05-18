@@ -1,0 +1,16 @@
+{
+  "version": "0.2.2",
+  "runtime": {
+    "primary": null
+  },
+  "review": {
+    "l2_enabled": false,
+    "l2_runner": "codex",
+    "l2_triggers": [
+      "gate2",
+      "gate4"
+    ],
+    "l2_worktree": true,
+    "l2_readonly": true
+  }
+}

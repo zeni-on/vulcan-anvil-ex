@@ -73,6 +73,7 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/05-change",
     "docs/artifacts/07-release",
     "docs/runs",
+    "docs/reviews",
     "docs/ref-docs",
 ]
 PROJECT_ARTIFACT_TEMPLATES = [
@@ -117,6 +118,7 @@ RUN_SKILLS = {
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
     "handoff": "docs/core/ORCHESTRATOR_PROTOCOL.md",
+    "l2-review": "docs/adapters/codex-gpt/skills/l2-review.md",
 }
 RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
@@ -151,6 +153,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "qa-fix-loop": "build",
     "change-impact-analysis": "change-control",
     "handoff": "review",
+    "l2-review": "review",
 }
 GATE_DEFAULT_PERSONAS = {
     "phase0": "discovery",
@@ -162,6 +165,8 @@ GATE_DEFAULT_PERSONAS = {
     "gate5": "release",
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
+L2_REVIEW_RUNNERS = ["codex", "claude", "manual"]
+L2_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
     "adapter",
@@ -871,6 +876,24 @@ def next_run_id(project_dir="."):
             if match:
                 max_num = max(max_num, int(match.group(1)))
     return f"RUN-{max_num + 1:03d}"
+
+
+def reviews_rel_dir(project_dir="."):
+    docs_reviews = os.path.join(project_dir, "docs", "reviews")
+    if os.path.isdir(docs_reviews):
+        return os.path.join("docs", "reviews")
+    return os.path.join("docs", "reviews")
+
+
+def next_review_id(project_dir="."):
+    reviews_dir = os.path.join(project_dir, reviews_rel_dir(project_dir))
+    max_num = 0
+    if os.path.isdir(reviews_dir):
+        for name in os.listdir(reviews_dir):
+            match = re.match(r"RV-(\d+)", name)
+            if match:
+                max_num = max(max_num, int(match.group(1)))
+    return f"RV-{max_num + 1:03d}"
 
 
 def format_yaml_list(items):
@@ -4139,6 +4162,7 @@ def cmd_upgrade(project_dir="."):
     install_project_doc_framework(project_dir, variables, overwrite=True, source_root=vulcan_src)
     install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
+    create_vulcan_config(project_dir)
 
     session["vulcan_version"] = new_ver
     session["vulcan_src"] = vulcan_src
@@ -4477,6 +4501,314 @@ TBD
     print("다음 단계: 대상 환경에서 검증한 뒤 이 Run 파일을 갱신합니다.")
 
 
+def git_status_porcelain(project_dir="."):
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=project_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def create_l2_worktree(project_dir, review_id, worktree_dir=None):
+    project_abs = os.path.abspath(project_dir)
+    if worktree_dir:
+        target = os.path.abspath(worktree_dir)
+    else:
+        parent = os.path.dirname(project_abs)
+        target = os.path.join(parent, f"{os.path.basename(project_abs)}-l2-{review_id.lower()}")
+
+    if os.path.exists(target):
+        print(f"오류: L2 worktree 경로가 이미 존재합니다: {target}")
+        sys.exit(1)
+
+    try:
+        subprocess.run(
+            ["git", "worktree", "add", "--detach", target, "HEAD"],
+            cwd=project_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.CalledProcessError as e:
+        detail = (e.stderr or e.stdout or str(e)).strip()
+        print(f"오류: L2 worktree 생성 실패 - {detail}")
+        sys.exit(1)
+
+    return target
+
+
+def cmd_l2_review(title, gate, related_ids, from_run="", runner=None, create_worktree=None, worktree_dir="", project_dir="."):
+    config = load_vulcan_config(project_dir)
+    review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
+    runner = runner or review_config.get("l2_runner") or "codex"
+    if runner not in L2_REVIEW_RUNNERS:
+        print(f"오류: 알 수 없는 L2 runner입니다: {runner}")
+        print("사용 가능 runner:")
+        for name in L2_REVIEW_RUNNERS:
+            print(f"  - {name}")
+        sys.exit(1)
+
+    if create_worktree is None:
+        create_worktree = bool(review_config.get("l2_worktree", True))
+
+    ids = split_csv(related_ids)
+    review_id = next_review_id(project_dir)
+    review_slug = slugify(f"l2 {gate} {title}")
+    review_rel_dir = reviews_rel_dir(project_dir)
+    request_rel_path = os.path.join(review_rel_dir, f"{review_id}_{review_slug}_request.md")
+    result_rel_path = os.path.join(review_rel_dir, f"{review_id}_{review_slug}_result.md")
+    run_id = next_run_id(project_dir)
+    run_rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_l2-review-{review_slug}_v0.1.md")
+    source_run = from_run or "TBD"
+    dirty_status = git_status_porcelain(project_dir)
+    worktree_path = "TBD"
+
+    if create_worktree:
+        worktree_path = create_l2_worktree(project_dir, review_id, worktree_dir or None)
+
+    gate_focus = {
+        "gate2": [
+            "Gate 2 설계 순서(G2-01~G2-10)가 지켜졌는지 확인한다.",
+            "REQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 기준으로 빠짐없이 전개되었는지 확인한다.",
+            "SW Architecture가 Draft에서 Baseline 후보로 충분히 보강되었는지 확인한다.",
+            "UIREF/prototype이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.",
+            "Gate 3 테스트 설계로 넘길 검증 후보와 미해결 질문이 분리되었는지 확인한다.",
+        ],
+        "gate4": [
+            "테스트 결과가 개발표준과 테스트케이스의 필수 명령을 모두 실행했는지 확인한다.",
+            "각 검증 결과에 cwd, 명령, exit code, 성공 기준, 로그/증적 경로가 있는지 확인한다.",
+            "UI 증적이 상태/시나리오별 UI-ID와 1:1로 연결되었는지 확인한다.",
+            "기준 UIREF와 구현 screenshot 차이가 Pass/FIND/CR로 판정되었는지 확인한다.",
+            "미실행 검증이나 기대 화면과 다른 캡처가 Pass로 기록되지 않았는지 확인한다.",
+        ],
+    }.get(gate, [
+        "현재 Gate 산출물, Run 결과, 추적표의 일관성을 확인한다.",
+        "완료 선언 전에 사용자 승인 대기와 미해결 항목이 분리되었는지 확인한다.",
+        "발견사항을 PASS, FIND, CR, ISSUE 중 하나로 분류한다.",
+    ])
+
+    request_content = f"""# {review_id} L2 Review Request - {title}
+
+```yaml
+review_id: {review_id}
+review_level: L2
+status: Requested
+runner: {runner}
+gate: {gate}
+source_run: {source_run}
+request_file: {request_rel_path}
+result_file: {result_rel_path}
+worktree_path: {worktree_path}
+independent_session_required: true
+readonly_review: true
+related_ids: {format_yaml_list(ids)}
+created_at: {date.today()}
+```
+
+## 1. 리뷰 목적
+
+{title}
+
+L2 리뷰는 작성 세션과 분리된 독립 검수다. 리뷰어는 산출물을 직접 수정하지 않고, 결과 파일에 `PASS`, `FIND`, `CR`, `ISSUE` 후보를 남긴다.
+
+## 2. 먼저 읽을 문서
+
+- `AGENTS.md`
+- `session.json`
+- `vulcan.config.json`
+- `docs/core/L2_REVIEW_PROCESS.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/adapters/codex-gpt/skills/l2-review.md`
+
+## 3. 리뷰 대상
+
+| 항목 | 내용 |
+| --- | --- |
+| Gate | `{gate}` |
+| 원본 Run | `{source_run}` |
+| 관련 ID | `{format_yaml_list(ids)}` |
+| 결과 파일 | `{result_rel_path}` |
+
+## 4. 중점 검토 항목
+
+{chr(10).join(f"- {item}" for item in gate_focus)}
+
+## 5. 범위
+
+### Readonly
+
+- `docs/artifacts/`
+- `docs/runs/`
+- `docs/core/`
+- `docs/adapters/`
+- `session.json`
+- `vulcan.config.json`
+
+### Writable
+
+- `{result_rel_path}`
+
+## 6. 판정 규칙
+
+| 판정 | 기준 |
+| --- | --- |
+| PASS | Gate 산출물과 증적이 다음 Gate 진행에 충분하다 |
+| FIND | 승인된 범위 안의 결함이며 Gate 안에서 수정 가능하다 |
+| CR | 요구사항, 설계, 보안, 데이터, 릴리즈 범위 변경이 필요하다 |
+| ISSUE | 결론을 내리려면 추가 질문 또는 사용자 판단이 필요하다 |
+
+## 7. 주의
+
+- 리뷰어는 작성자의 의도를 추측하지 않는다.
+- 대화상 사용자 승인 없이 `User Approved`로 기록하지 않는다.
+- 실행하지 않은 테스트나 확인하지 않은 화면을 Pass로 판정하지 않는다.
+- 산출물을 수정해야 한다면 직접 수정하지 말고 결과 파일에 `FIND` 또는 `CR`로 남긴다.
+"""
+
+    result_content = f"""# {review_id} L2 Review Result - {title}
+
+```yaml
+review_id: {review_id}
+review_level: L2
+status: Draft
+runner: {runner}
+gate: {gate}
+source_run: {source_run}
+reviewed_by: TBD
+environment: independent-session
+result_verdict: Pending
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+findings: []
+change_requests: []
+issues: []
+orchestrator_decision_needed: []
+```
+
+## 1. 요약
+
+TBD
+
+## 2. 실행/확인 증적
+
+| 항목 | 결과 | 근거 |
+| --- | --- | --- |
+| 문서 검토 | TBD |  |
+| 추적성 검토 | TBD |  |
+| 검증 명령 확인 | TBD |  |
+| UI/증적 확인 | TBD |  |
+
+## 3. Findings
+
+| ID | 심각도 | 관련 ID | 내용 | 권고 처리 |
+| --- | --- | --- | --- | --- |
+| FIND- | Blocker/Major/Minor |  |  |  |
+
+## 4. CR 후보
+
+| ID | 관련 ID | 변경 필요 범위 | 사유 |
+| --- | --- | --- | --- |
+| CR- |  |  |  |
+
+## 5. ISSUE 후보
+
+| ID | 질문/위험 | 필요한 결정 |
+| --- | --- | --- |
+| ISSUE- |  |  |
+
+## 6. Orchestrator 결정 필요 항목
+
+TBD
+"""
+
+    run_content = f"""# {run_id} L2 Review - {title}
+
+```yaml
+run_id: {run_id}
+adapter: codex-gpt
+gate: {gate}
+persona: review
+skill: l2-review
+skill_path: docs/adapters/codex-gpt/skills/l2-review.md
+status: Draft
+created_at: {date.today()}
+review_id: {review_id}
+review_level: L2
+runner: {runner}
+from_run: {source_run}
+request_file: {request_rel_path}
+result_file: {result_rel_path}
+worktree_path: {worktree_path}
+related_ids: {format_yaml_list(ids)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. 목적
+
+{title}
+
+## 2. L2 리뷰 요청
+
+- 요청 파일: `{request_rel_path}`
+- 결과 파일: `{result_rel_path}`
+- 독립 세션/worktree: `{worktree_path}`
+
+## 3. Orchestrator 처리 원칙
+
+- L2 리뷰 결과를 최종 사실로 바로 확정하지 않는다.
+- 결과 파일의 `FIND`, `CR`, `ISSUE` 후보를 본선 산출물과 대조한다.
+- 반영이 필요하면 별도 Run 또는 QA Fix Loop로 처리한다.
+- 리뷰 worktree는 결과 수집 후 사용자가 확인한 뒤 정리한다.
+
+## 4. 완료 보고
+
+TBD
+"""
+
+    write_file(project_dir, request_rel_path, request_content)
+    write_file(project_dir, result_rel_path, result_content)
+    write_file(project_dir, run_rel_path, run_content)
+
+    if create_worktree and worktree_path != "TBD":
+        for rel_path in (request_rel_path, result_rel_path, run_rel_path):
+            src = os.path.join(project_dir, rel_path)
+            dst = os.path.join(worktree_path, rel_path)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(src, encoding="utf-8") as f:
+                content = f.read()
+            with open(dst, "w", encoding="utf-8") as f:
+                f.write(content)
+
+    print(f"\nL2 리뷰 요청 생성 완료: {request_rel_path}")
+    print(f"L2 리뷰 결과 초안 생성 완료: {result_rel_path}")
+    print(f"L2 리뷰 Run 생성 완료: {run_rel_path}")
+    if create_worktree:
+        print(f"L2 리뷰 worktree 생성 완료: {worktree_path}")
+    if dirty_status and create_worktree:
+        print("\n주의: 본 작업공간에 커밋되지 않은 변경이 있습니다.")
+        print("  worktree는 HEAD 기준으로 생성되므로 미커밋 변경은 포함되지 않을 수 있습니다.")
+    print("\n다음 단계: 새 Codex/Claude 세션에서 request 파일을 열고 result 파일을 작성합니다.")
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -4498,7 +4830,7 @@ def check_run_file(path):
     status_match = re.search(r"^\s*status\s*:\s*(.+)$", content, re.MULTILINE)
     if status_match:
         status = status_match.group(1).strip()
-        if status not in {"Draft", "InProgress", "Completed", "Verified", "Blocked", "Failed", "CompletedWithIssues"}:
+        if status not in {"Draft", "Requested", "InProgress", "Completed", "Verified", "Blocked", "Failed", "CompletedWithIssues", "AwaitingApproval"}:
             issues.append(f"허용되지 않은 status 값: {status}")
 
     skill_match = re.search(r"^\s*skill\s*:\s*(.+)$", content, re.MULTILINE)
@@ -4583,6 +4915,49 @@ def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFI
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
+def default_vulcan_config():
+    return {
+        "version": VULCAN_VERSION,
+        "runtime": {
+            "primary": None
+        },
+        "review": {
+            "l2_enabled": False,
+            "l2_runner": "codex",
+            "l2_triggers": L2_REVIEW_DEFAULT_GATES,
+            "l2_worktree": True,
+            "l2_readonly": True
+        }
+    }
+
+
+def create_vulcan_config(target_dir):
+    rel_path = "vulcan.config.json"
+    path = os.path.join(target_dir, rel_path)
+    if os.path.exists(path):
+        return
+    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(), ensure_ascii=False, indent=2))
+
+
+def load_vulcan_config(project_dir="."):
+    path = os.path.join(project_dir, "vulcan.config.json")
+    config = default_vulcan_config()
+    if not os.path.exists(path):
+        return config
+    try:
+        with open(path, encoding="utf-8") as f:
+            user_config = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return config
+    if isinstance(user_config, dict):
+        for key, value in user_config.items():
+            if isinstance(value, dict) and isinstance(config.get(key), dict):
+                config[key].update(value)
+            else:
+                config[key] = value
+    return config
+
+
 def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE):
     import shutil
     print(f"\nVulcan-Anvil 초기화")
@@ -4649,6 +5024,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
     # session.json
     create_session_json(target_dir, project_name, profile)
+    create_vulcan_config(target_dir)
 
     # vulcan.py 자신을 프로젝트에 복사
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
@@ -4808,6 +5184,17 @@ def main():
     p_handoff.add_argument("--persona", default="review", choices=sorted(RUN_PERSONAS.keys()), help="handoff persona")
     p_handoff.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
 
+    p_l2_review = subparsers.add_parser("l2-review", help="독립 세션/워크트리 기반 L2 리뷰 요청 생성")
+    p_l2_review.add_argument("--title", required=True, help="L2 리뷰 목표")
+    p_l2_review.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="리뷰 대상 Gate")
+    p_l2_review.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+    p_l2_review.add_argument("--from-run", default="", help="리뷰 대상 Run ID 또는 파일명")
+    p_l2_review.add_argument("--runner", choices=L2_REVIEW_RUNNERS, help="L2 리뷰 실행 런타임")
+    p_l2_review.add_argument("--worktree", dest="worktree", action="store_true", help="격리 worktree 생성")
+    p_l2_review.add_argument("--no-worktree", dest="worktree", action="store_false", help="worktree를 생성하지 않음")
+    p_l2_review.set_defaults(worktree=None)
+    p_l2_review.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -4889,6 +5276,16 @@ def main():
             related_ids=args.related_ids,
             persona=args.persona,
             adapter=args.adapter,
+        )
+    elif args.command == "l2-review":
+        cmd_l2_review(
+            title=args.title,
+            gate=args.gate,
+            related_ids=args.related_ids,
+            from_run=args.from_run,
+            runner=args.runner,
+            create_worktree=args.worktree,
+            worktree_dir=args.worktree_dir,
         )
     elif args.command == "backlog":
         if args.backlog_cmd == "list":

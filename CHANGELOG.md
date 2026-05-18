@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `vulcan.py l2-review` 명령 추가: Gate 산출물을 별도 세션 또는 detached worktree에서 독립 검수하기 위한 review request/result 파일과 Run 초안을 생성한다.
+- `vulcan.config.json` 초기 생성 추가: L2 Review runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
+- `docs/core/L2_REVIEW_PROCESS.md`와 Codex `l2-review` skill 추가.
+
 ## 0.2.2 - 2026-05-18
 
 `0.2.2`는 Codex와 Claude 양쪽 런타임의 Gate 운영 규칙, Run 계약, UI 증적, 검증 명령 기록 기준을 같은 수준으로 맞춘 패치 릴리즈다.

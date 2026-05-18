@@ -95,6 +95,7 @@ docs/adapters/codex-gpt/skills/
 | 표준용어 또는 DB 명명 검토 | `docs/adapters/codex-gpt/skills/data-standard-review.md` |
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
 | 변경요청 또는 영향도 분석 | `docs/adapters/codex-gpt/skills/change-impact-analysis.md` |
+| 독립 세션 기반 L2 리뷰 | `docs/adapters/codex-gpt/skills/l2-review.md` |
 
 ## 6. Run 규칙
 

@@ -100,6 +100,7 @@ my-project/
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
+| `l2-review` | 별도 세션/worktree 기반 L2 리뷰 요청 생성 |
 | `check-trace` | Gate별 추적성 검사 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |
