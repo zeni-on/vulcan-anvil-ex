@@ -29,7 +29,6 @@ Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상
 - `docs/seed-docs/`
 - `.claude/` 런타임 규칙, agent, skill 파일
 - `GATE_GUIDE.md`
-- `commenting-standards.md`
 - `docs/backlog/PROCESS.md`
 
 보존되는 항목은 다음과 같습니다.

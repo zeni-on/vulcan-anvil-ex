@@ -68,7 +68,6 @@ my-project/
 ├── vulcan.py
 ├── ENVIRONMENT.md
 ├── GATE_GUIDE.md
-├── commenting-standards.md
 └── docs/
     ├── core/
     ├── templates/

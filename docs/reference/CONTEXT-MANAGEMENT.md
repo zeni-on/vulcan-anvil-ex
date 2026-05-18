@@ -352,7 +352,6 @@ CLAUDE.md에서 참조 문서를 import하여 세션 시작 시 함께 로드한
 ```markdown
 # CLAUDE.md
 @ENVIRONMENT.md
-@commenting-standards.md
 ```
 
 `@import`는 **항상 로드**되므로, 모든 세션에서 필요한 공통 참조에만 사용한다.

@@ -3995,6 +3995,7 @@ def cmd_release(target):
 DEPRECATED_FILES = [
     ".claude/skills/gate-transition/skill.md",
     "docs/CHANGE_PROCESS.md",
+    "commenting-standards.md",
 ]
 
 FRAMEWORK_FILES = [
@@ -4031,7 +4032,6 @@ FRAMEWORK_FILES = [
     ".claude/skills/context-engineering/skill.md",
     ".claude/skills/git-workflow-and-versioning/skill.md",
     # docs & guides
-    "commenting-standards.md",
     "GATE_GUIDE.md",
     # backlog (v1.1+): PROCESS.md는 upgrade 시 덮어쓰기, BACKLOG.md는 보존
     "docs/backlog/PROCESS.md",
@@ -4629,9 +4629,6 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     # ENVIRONMENT.md
     content = render(read_template("ENVIRONMENT.md"), variables)
     write_file(target_dir, "ENVIRONMENT.md", content)
-
-    # commenting-standards.md
-    copy_file(target_dir, "commenting-standards.md")
 
     # GATE_GUIDE.md
     copy_file(target_dir, "GATE_GUIDE.md")
