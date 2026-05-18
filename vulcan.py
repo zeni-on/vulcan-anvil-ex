@@ -121,7 +121,6 @@ RUN_SKILLS = {
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
     "handoff": "docs/core/ORCHESTRATOR_PROTOCOL.md",
     "independent-review": "docs/adapters/codex-gpt/skills/independent-review.md",
-    "l2-review": "docs/adapters/codex-gpt/skills/independent-review.md",
 }
 RUN_PERSONAS = {
     "discovery": "배경, 제약, 현행 자료, 질문, 위험을 정리한다.",
@@ -157,7 +156,6 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "change-impact-analysis": "change-control",
     "handoff": "review",
     "independent-review": "review",
-    "l2-review": "review",
 }
 GATE_DEFAULT_PERSONAS = {
     "phase0": "discovery",
@@ -916,7 +914,7 @@ def find_independent_review_run_file(project_dir, review_id):
     if not os.path.isdir(runs_dir):
         return ""
     for name in sorted(os.listdir(runs_dir)):
-        if not name.endswith(".md") or ("independent-review" not in name and "l2-review" not in name):
+        if not name.endswith(".md") or "independent-review" not in name:
             continue
         path = os.path.join(runs_dir, name)
         try:
@@ -4562,11 +4560,8 @@ def git_status_porcelain(project_dir="."):
 
 def review_config_get(review_config, key, default=None):
     new_key = f"independent_{key}"
-    old_key = f"l2_{key}"
     if new_key in review_config:
         return review_config.get(new_key)
-    if old_key in review_config:
-        return review_config.get(old_key)
     return default
 
 
@@ -5426,7 +5421,7 @@ def main():
     p_handoff.add_argument("--persona", default="review", choices=sorted(RUN_PERSONAS.keys()), help="handoff persona")
     p_handoff.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
 
-    p_review_request = subparsers.add_parser("review-request", aliases=["l2-review"], help="독립 세션/워크트리 기반 검수 요청 생성")
+    p_review_request = subparsers.add_parser("review-request", help="독립 세션/워크트리 기반 검수 요청 생성")
     p_review_request.add_argument("--title", required=True, help="독립 검수 목표")
     p_review_request.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="검수 대상 Gate")
     p_review_request.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
@@ -5437,7 +5432,7 @@ def main():
     p_review_request.set_defaults(worktree=None)
     p_review_request.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
 
-    p_review_run = subparsers.add_parser("review-run", aliases=["l2-run"], help="독립 검수 요청을 codex-cli로 실행")
+    p_review_run = subparsers.add_parser("review-run", help="독립 검수 요청을 codex-cli로 실행")
     p_review_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
     p_review_run.add_argument("--runner", choices=INDEPENDENT_REVIEW_RUNNERS, help="독립 검수 실행 런타임")
     p_review_run.add_argument("--model", default="", help="codex-cli 모델")
@@ -5528,7 +5523,7 @@ def main():
             persona=args.persona,
             adapter=args.adapter,
         )
-    elif args.command in {"review-request", "l2-review"}:
+    elif args.command == "review-request":
         cmd_review_request(
             title=args.title,
             gate=args.gate,
@@ -5538,7 +5533,7 @@ def main():
             create_worktree=args.worktree,
             worktree_dir=args.worktree_dir,
         )
-    elif args.command in {"review-run", "l2-run"}:
+    elif args.command == "review-run":
         cmd_review_run(
             review_id=args.review_id,
             runner=args.runner,

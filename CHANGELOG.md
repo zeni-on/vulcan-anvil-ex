@@ -8,7 +8,7 @@
 - `vulcan.py review-run` 명령 추가: 생성된 Independent Review 요청을 `codex exec`로 실행하고 JSONL 로그, 마지막 응답, result 변경 여부를 Run 증적으로 남긴다.
 - `vulcan.config.json` 초기 생성 추가: 독립 검수 runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
 - `docs/core/INDEPENDENT_REVIEW_PROCESS.md`와 Codex `independent-review` skill 추가.
-- 기존 `l2-review`, `l2-run`, `l2_*` 설정은 호환 alias로 유지하되 문서 표준 용어는 `독립 검수`로 정리했다.
+- 혼동을 줄이기 위해 이전 호환 경로를 제거하고 `review-request`, `review-run`, `independent_*`만 표준으로 유지한다.
 
 ## 0.2.2 - 2026-05-18
 

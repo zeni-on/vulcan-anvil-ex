@@ -43,7 +43,7 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 }
 ```
 
-`independent_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py review-request`를 실행하면 요청을 만들 수 있다. 기존 `l2_*` 설정은 호환 목적으로만 읽는다.
+`independent_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py review-request`를 실행하면 요청을 만들 수 있다.
 
 ## 4. 생성 명령
 
