@@ -1,6 +1,6 @@
 # Claude Run Input Contract
 
-> 상태: v0.2.1
+> 상태: v0.2.2
 > 목적: Claude subagent에게 작업을 위임할 때 전달할 표준 작업지시서 형식을 정의한다.
 
 ## 1. 개념

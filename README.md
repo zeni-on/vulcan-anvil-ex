@@ -93,9 +93,9 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 
 ## 현재 상태
 
-**Experimental - v0.2.1**
+**Experimental - v0.2.2**
 
-`0.2.1`은 `0.2.0`의 Codex/Claude Gate 흐름을 유지하면서, 기술스택 베이스라인과 리팩토링 프로세스, 필수 검증 명령 기록 기준을 보강한 패치 버전입니다. Dashboard A2, SW Architecture, API 정의서, DBML ERD, 변경관리/릴리즈 산출물, Build Wave 운영 규칙이 포함되어 있습니다.
+`0.2.2`는 `0.2.1`의 Gate 기반 흐름 위에 Codex/Claude 양쪽 런타임의 Gate 종료 승인, Run 입력/출력 계약, UI Implementation Contract, 상태별 UI 증적, 필수 검증 명령 기록 기준을 정렬한 패치 버전입니다. Dashboard A2, SW Architecture, API 정의서, DBML ERD, 변경관리/릴리즈 산출물, Build Wave 운영 규칙이 포함되어 있습니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 

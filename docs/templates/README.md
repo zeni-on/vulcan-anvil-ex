@@ -2,7 +2,7 @@
 
 이 디렉토리는 Vulcan-Anvil Ex Core 규칙을 따르는 공식 산출물 템플릿을 보관한다.
 
-`0.2.1` 기준 공식 템플릿:
+`0.2.2` 기준 공식 템플릿:
 
 - `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서
 - `STAKEHOLDER_SCOPE_TEMPLATE.md`: 이해관계자 및 범위 정의서
