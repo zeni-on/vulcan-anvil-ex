@@ -37,7 +37,7 @@ Gate 4는 별도 subagent로 단계를 분리한다.
 
 | ID | 항목 | 기준 |
 | --- | --- | --- |
-| E | 주석 표준 | `commenting-standards.md` 준수 |
+| E | 주석 표준 | 개발표준정의서(`DOC-DEV-G2-001_Development-Standard`)의 주석 섹션 준수 |
 | F | 코드 품질 | 함수 길이, 네이밍, 중복 |
 
 ## 발견사항 분류 (`docs/core/CHANGE_CONTROL_PROCESS.md`)
