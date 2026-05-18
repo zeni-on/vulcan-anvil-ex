@@ -4636,6 +4636,10 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     # GATE_GUIDE.md
     copy_file(target_dir, "GATE_GUIDE.md")
 
+    # README.md
+    content = render(read_template("PROJECT_README.md"), variables)
+    write_file(target_dir, "README.md", content)
+
     # docs/backlog/
     content = render(read_template("docs/backlog/BACKLOG.md"), variables)
     write_file(target_dir, BACKLOG_PATH, content)
