@@ -2045,7 +2045,10 @@ def validate_development_standard(project_dir="."):
         ("기술 선택 근거", r"선정 사유|선택 근거|선정 근거"),
         ("기술스택 베이스라인 조정 근거", r"TECH_STACK_BASELINES|참조 베이스라인|프로젝트 조정사항"),
         ("메시지 관리", r"메시지|message"),
-        ("주석/코딩 컨벤션", r"주석|코드 컨벤션|네이밍"),
+        ("주석/코딩 컨벤션", r"주석|JavaDoc|Javadoc|코드 컨벤션|네이밍"),
+        ("로깅 기준", r"SLF4J|Logback|Log4j2|Logger|MDC|requestId|correlationId|System\.out|printStackTrace|로그 레벨"),
+        ("DB Pool 기준", r"HikariCP|DB Pool|connection pool|커넥션 풀"),
+        ("Lombok 기준", r"Lombok|@Getter|@RequiredArgsConstructor|@Data|@Setter"),
         ("테스트 명령", r"python -m unittest|pytest|npm test|pnpm test|mvn test|gradle test|gradlew test|go test|cargo test|dotnet test"),
         ("보안 구현 기준", r"SECURITY_BASELINE|KISA|SR2-|SR1-|보안 구현|보안 영역|Spring Security|SEC-\d{3}|JWT"),
     ]

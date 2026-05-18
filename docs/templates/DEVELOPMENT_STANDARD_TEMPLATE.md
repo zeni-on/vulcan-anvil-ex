@@ -72,12 +72,15 @@ Spring Boot를 사용하는 경우 다음 항목을 반드시 확정한다.
 | --- | --- |
 | Base Package | 예: `com.example.todo` |
 | MVC 적용 방식 | 예: Controller -> Service -> Repository -> Entity |
-| 패키지 구조 기준 | 예: feature 우선 `domain/{domain}/...` |
+| 패키지 구조 기준 | 예: feature 우선 `{feature}/...`, `domain` 래퍼 사용 시 사유 기록 |
 | JPA 사용 여부 | 예: Spring Data JPA + QueryDSL |
 | Entity/DTO 분리 | 예: Entity 직접 응답 금지, Response DTO 사용 |
 | Transaction 기준 | 예: Service 계층에서만 `@Transactional` |
 | Pagination/Sort 기준 | 예: page/size/sort 허용값과 최대 size |
 | Auditing 기준 | 예: createdAt/updatedAt/createdBy/updatedBy |
+| DB Pool 기준 | 예: HikariCP 기본, 대체 pool 사용 시 사유 기록 |
+| Lombok 기준 | 예: 허용 annotation과 금지 annotation |
+| Logging 기준 | 예: SLF4J + Logback, Log4j2 선택 시 사유 기록 |
 
 ## 4. 아키텍처 및 패키지 구조
 
@@ -117,25 +120,45 @@ Spring Boot MVC/JPA 패키지 구조 예:
 
 ```text
 src/main/java/{basePackage}/
+  {ApplicationName}Application.java
   config/
   common/
     error/
     message/
     response/
-  domain/{domainName}/
+  security/
+  auth/
     controller/
     service/
-    repository/
-    entity/
     dto/
+  user/
+    entity/
+    repository/
+    service/
+    dto/
+  {featureName}/
+    controller/
+    service/
+    dto/
+    entity/
+    repository/
     mapper/
-  security/
 src/main/resources/
   messages_ko.properties
   application.yml
 src/test/java/{basePackage}/
-  domain/{domainName}/
+  auth/
+  user/
+  {featureName}/
 ```
+
+패키지 구조 선택 기준:
+
+- `security/`: Spring Security 설정, 필터, 인증 principal, 보안 공통 컴포넌트
+- `auth/`: 로그인, 회원가입, 토큰 발급, 로그아웃 등 인증 기능
+- `user/`: 사용자 Entity, Repository, 사용자 상태/조회 도메인
+- `{featureName}/`: TODO, 주문, 게시글처럼 업무 기능 단위 패키지
+- `domain/{domainName}/...`: DDD 구조를 명시적으로 선택한 경우에만 사용하며 선택 사유를 기록
 
 JPA 기준:
 
@@ -147,6 +170,17 @@ JPA 기준:
 | Query 방식 | Spring Data JPA, JPQL, QueryDSL, native query 선택 기준 명시 | native query는 DB 종속성 기록 |
 | 트랜잭션 | Service 계층에서 관리 | Repository 직접 트랜잭션은 사유 기록 |
 | Auditing | 생성/수정 일시와 사용자 기준 명시 |  |
+| DB Pool | HikariCP 기본 또는 대체 pool 선택 사유와 설정 위치 명시 | 대체 pool은 검증 방법 기록 |
+
+Lombok 기준:
+
+| 항목 | 규칙 |
+| --- | --- |
+| 사용 여부 |  |
+| 허용 annotation | 예: `@Getter`, `@RequiredArgsConstructor`, `@Builder`, `@NoArgsConstructor(access = AccessLevel.PROTECTED)` |
+| Entity 금지 annotation | 예: `@Data`, 무분별한 `@Setter`, 양방향 연관관계가 있는 `@ToString`, 전체 필드 기반 `@EqualsAndHashCode` |
+| DTO 사용 기준 | 예: 불변성, validation, 직렬화 기준을 해치지 않는 범위 |
+| 예외/조정 사유 |  |
 
 ## 5. 코드 컨벤션
 
@@ -159,6 +193,9 @@ JPA 기준:
 | 로그 |  |  |
 | 설정값 |  |  |
 | 외부 의존성 |  |  |
+| DB Pool | 예: HikariCP 기본값, pool size/timeouts 설정 위치 |  |
+| Lombok | 예: 허용/금지 annotation, Entity 사용 제한 |  |
+| Logger | 예: SLF4J facade + Logback, Log4j2 선택 시 사유 |  |
 
 언어/프레임워크별 상세 기준:
 
@@ -176,6 +213,9 @@ JPA 기준:
 - 코드가 그대로 설명하는 내용은 주석으로 반복하지 않는다.
 - 요구사항, 보안 기준, 성능 제약, 추적 ID, 복잡한 의사결정은 주석 또는 docstring에 남길 수 있다.
 - 임시 우회 처리는 `ISSUE-ID` 또는 `DEC-ID`와 함께 남긴다.
+- Java/Spring의 Controller, Service, Security Config, 핵심 Component 클래스에는 책임과 관련 ID를 JavaDoc으로 남긴다.
+- public 메서드 중 API/업무 규칙/트랜잭션/권한 판단을 포함하는 메서드는 JavaDoc으로 입력, 출력, 예외, 관련 ID를 남긴다.
+- 단순 getter/setter, 단순 CRUD 위임, repository 기본 메서드에는 주석을 쓰지 않는다.
 
 추적 ID 표기 예:
 
@@ -193,6 +233,71 @@ TEST: UT-001
 | Java/Spring | 보안 판단, 트랜잭션 경계, 복잡한 도메인 규칙에는 관련 `REQ/SEC/PGM`을 남길 수 있다. 단순 getter/setter, 단순 CRUD 위임에는 주석을 쓰지 않는다. |
 | TypeScript/React/Next/Vue | 복잡한 상태 전이, 권한 가드, API 오류 변환, 접근성 예외에는 관련 `REQ/SCR/SEC`을 남길 수 있다. JSX/Template이 그대로 설명하는 내용은 주석으로 반복하지 않는다. |
 | Python/FastAPI | 보안 dependency, 권한 판단, repository transaction, 복잡한 validation에는 관련 `REQ/SEC/PGM`을 남길 수 있다. |
+
+Java/Spring 클래스 JavaDoc 예:
+
+```java
+/**
+ * TODO 항목 생성, 조회, 완료 처리 업무 규칙을 담당한다.
+ *
+ * 관련 ID: FUNC-003, PGM-003, SEC-004
+ * 주요 규칙: 로그인한 사용자는 본인 TODO만 조회하거나 변경할 수 있다.
+ */
+@Service
+@RequiredArgsConstructor
+public class TodoService {
+}
+```
+
+Java/Spring 메서드 JavaDoc 예:
+
+```java
+/**
+ * 로그인 사용자의 TODO를 생성한다.
+ *
+ * 관련 ID: REQ-003, PGM-003, UT-004
+ * 트랜잭션: TODO 저장과 감사 필드 생성을 하나의 쓰기 트랜잭션으로 처리한다.
+ *
+ * @param userId 인증된 사용자 ID
+ * @param request TODO 생성 요청 DTO
+ * @return 생성된 TODO 응답 DTO
+ */
+@Transactional
+public TodoResponse createTodo(Long userId, TodoCreateRequest request) {
+    // SEC-004: 요청 userId가 인증 principal에서 온 값인지 controller에서 보장한다.
+}
+```
+
+## 6.1 로깅 컨벤션
+
+| 항목 | 규칙 |
+| --- | --- |
+| 로깅 API | 예: SLF4J facade |
+| 구현체 | 예: Spring Boot 기본 Logback. Log4j2 선택 시 사유와 의존성 충돌 검증 방법 기록 |
+| 금지 구현체 | 예: Log4j 1.x |
+| Logger 선언 | 예: 클래스별 `private static final Logger` 또는 승인된 Lombok `@Slf4j` |
+| 금지 API | 예: 운영 코드에서 `System.out.println`, `printStackTrace` 금지 |
+| 로그 레벨 | ERROR/WARN/INFO/DEBUG/TRACE 사용 기준 작성 |
+| 민감정보 | 비밀번호, 토큰, 인증 헤더, 세션 식별자, 개인정보 로그 출력 금지 |
+| 요청 추적 | requestId/correlationId를 사용할 경우 MDC 생성/전파/삭제 위치 작성 |
+| 예외 로그 | 사용자 노출 메시지와 내부 원인 분리, stack trace 노출 금지 |
+
+Logger 예:
+
+```java
+private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+public void logout(Long userId) {
+    log.info("User logout completed. userId={}", userId);
+}
+```
+
+민감정보 로그 금지 예:
+
+```java
+// 금지: 토큰과 비밀번호가 로그에 남는다.
+log.debug("login token={}, password={}", token, rawPassword);
+```
 
 ## 7. API 및 오류 응답 규칙
 

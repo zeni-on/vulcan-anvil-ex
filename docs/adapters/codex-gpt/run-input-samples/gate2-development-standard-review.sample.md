@@ -63,7 +63,12 @@ completion_criteria:
   - "언어, 런타임, 프레임워크, DB, 빌드, 테스트 도구와 선택 근거가 작성되어 있다."
   - "TECH_STACK_BASELINES.md 중 어떤 기준을 준용하고 어떤 점을 프로젝트에 맞게 조정했는지 기록되어 있다."
   - "패키지 구조, 계층 책임, 금지 의존성, DTO/Entity 분리, 트랜잭션 기준이 구현자가 따를 수 있을 만큼 구체적이다."
+  - "Spring Boot라면 base package 아래 auth/user/{feature}/security/common 구조 또는 domain 래퍼 선택 사유가 명확하다."
+  - "DB pool은 HikariCP 기본 또는 대체 pool 선택 사유, 설정 위치, 검증 방법이 작성되어 있다."
+  - "Lombok 사용 여부, 허용 annotation, Entity 금지 annotation이 작성되어 있다."
   - "메시지, 예외, 로그, 설정값, 외부 의존성, 주석/추적 ID 표기 규칙이 있다."
+  - "로깅은 SLF4J, Logback/Log4j2 선택, Log4j 1.x 금지, logger 선언, 로그 레벨, MDC/requestId, 민감정보 금지 기준이 있다."
+  - "Java/Spring 주석 기준은 클래스/메서드 JavaDoc 대상과 실제 예시를 포함한다."
   - "보안 구현 기준이 SECURITY_BASELINE과 SEC-ID에 연결되어 있다."
 gate_exit_policy:
   stop_required: true
