@@ -135,6 +135,7 @@ Orchestrator는 다른 세션의 결과를 자동 승인하지 않는다. 결과
 ```text
 vulcan.py review-new --target desktop --from-run RUN-004 --title "로그인 화면 검수"
 vulcan.py l2-review --gate gate4 --from-run RUN-004 --title "로그인 화면 L2 검수"
+vulcan.py l2-run --review-id RV-001
 vulcan.py review-list
 vulcan.py review-result --review-id RV-001 --status Completed
 vulcan.py review-import --review-id RV-001

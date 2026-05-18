@@ -25,13 +25,15 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 """
 
 import argparse
+import hashlib
 import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
 
 # Windows 콘솔 UTF-8 출력 보장
 if sys.platform == "win32":
@@ -165,7 +167,8 @@ GATE_DEFAULT_PERSONAS = {
     "gate5": "release",
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
-L2_REVIEW_RUNNERS = ["codex", "claude", "manual"]
+L2_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
+L2_EXEC_RUNNERS = ["codex-cli", "codex"]
 L2_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
@@ -896,6 +899,34 @@ def next_review_id(project_dir="."):
     return f"RV-{max_num + 1:03d}"
 
 
+def find_review_file(project_dir, review_id, suffix):
+    reviews_dir = os.path.join(project_dir, reviews_rel_dir(project_dir))
+    if not os.path.isdir(reviews_dir):
+        return ""
+    for name in sorted(os.listdir(reviews_dir)):
+        if name.startswith(f"{review_id}_") and name.endswith(suffix):
+            return os.path.join(reviews_rel_dir(project_dir), name)
+    return ""
+
+
+def find_l2_run_file(project_dir, review_id):
+    runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
+    if not os.path.isdir(runs_dir):
+        return ""
+    for name in sorted(os.listdir(runs_dir)):
+        if not name.endswith(".md") or "l2-review" not in name:
+            continue
+        path = os.path.join(runs_dir, name)
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        if re.search(rf"^\s*review_id\s*:\s*{re.escape(review_id)}\s*$", content, re.MULTILINE):
+            return os.path.join(runs_rel_dir(project_dir), name)
+    return ""
+
+
 def format_yaml_list(items):
     if not items:
         return "[]"
@@ -904,6 +935,16 @@ def format_yaml_list(items):
 
 def format_yaml_scalar(value):
     return json.dumps(value, ensure_ascii=False)
+
+
+def file_sha256(path):
+    if not os.path.exists(path):
+        return ""
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def format_yaml_sequence(items, indent=0):
@@ -4550,7 +4591,7 @@ def create_l2_worktree(project_dir, review_id, worktree_dir=None):
 def cmd_l2_review(title, gate, related_ids, from_run="", runner=None, create_worktree=None, worktree_dir="", project_dir="."):
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
-    runner = runner or review_config.get("l2_runner") or "codex"
+    runner = runner or review_config.get("l2_runner") or "codex-cli"
     if runner not in L2_REVIEW_RUNNERS:
         print(f"오류: 알 수 없는 L2 runner입니다: {runner}")
         print("사용 가능 runner:")
@@ -4809,6 +4850,191 @@ TBD
     print("\n다음 단계: 새 Codex/Claude 세션에서 request 파일을 열고 result 파일을 작성합니다.")
 
 
+def cmd_l2_run(
+    review_id,
+    runner=None,
+    model=None,
+    reasoning_effort=None,
+    timeout_seconds=None,
+    sandbox=None,
+    dry_run=False,
+    project_dir=".",
+):
+    config = load_vulcan_config(project_dir)
+    review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
+    runner = runner or review_config.get("l2_runner") or "codex-cli"
+    runner_normalized = "codex-cli" if runner == "codex" else runner
+    if runner_normalized not in L2_EXEC_RUNNERS:
+        print(f"오류: l2-run에서 아직 지원하지 않는 runner입니다: {runner}")
+        print("현재 지원 runner: codex-cli")
+        sys.exit(1)
+
+    project_abs = os.path.abspath(project_dir)
+    request_rel_path = find_review_file(project_abs, review_id, "_request.md")
+    result_rel_path = find_review_file(project_abs, review_id, "_result.md")
+    run_rel_path = find_l2_run_file(project_abs, review_id)
+    if not request_rel_path or not result_rel_path:
+        print(f"오류: {review_id}에 해당하는 L2 request/result 파일을 찾을 수 없습니다.")
+        sys.exit(1)
+
+    request_abs = os.path.abspath(os.path.join(project_abs, request_rel_path))
+    result_abs = os.path.abspath(os.path.join(project_abs, result_rel_path))
+    run_abs = os.path.abspath(os.path.join(project_abs, run_rel_path)) if run_rel_path else ""
+    with open(request_abs, encoding="utf-8") as f:
+        request_content = f.read()
+    request_meta = parse_simple_yaml_block(request_content)
+
+    worktree_path = request_meta.get("worktree_path", "TBD")
+    exec_dir = os.path.abspath(worktree_path) if worktree_path and worktree_path != "TBD" and os.path.isdir(worktree_path) else project_abs
+    exec_result_abs = os.path.abspath(os.path.join(exec_dir, result_rel_path))
+    exec_request_abs = os.path.abspath(os.path.join(exec_dir, request_rel_path))
+    if not os.path.exists(exec_request_abs):
+        exec_request_abs = request_abs
+    if not os.path.exists(exec_result_abs):
+        exec_result_abs = result_abs
+
+    model = model or review_config.get("l2_model") or "gpt-5.5"
+    reasoning_effort = reasoning_effort or review_config.get("l2_reasoning_effort") or "high"
+    sandbox = sandbox or review_config.get("l2_sandbox") or "workspace-write"
+    timeout_seconds = int(timeout_seconds or review_config.get("l2_exec_timeout_seconds") or 1800)
+
+    codex_exe = shutil.which("codex")
+    if not codex_exe:
+        print("오류: codex CLI를 찾을 수 없습니다. `codex --version`이 실행되는지 확인하세요.")
+        sys.exit(1)
+
+    review_rel_dir = reviews_rel_dir(project_dir)
+    log_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-exec.jsonl")
+    stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-exec.stderr.txt")
+    last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-last-message.md")
+    log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
+    stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
+    last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
+    os.makedirs(os.path.dirname(log_abs), exist_ok=True)
+
+    prompt = f"""You are an independent L2 reviewer for Vulcan-Anvil Ex.
+
+Working directory:
+{exec_dir}
+
+Read this L2 review request:
+{request_rel_path}
+
+Write your review result only to:
+{result_rel_path}
+
+Rules:
+- Treat this as a new independent review session.
+- Do not modify project artifacts, source code, requirements, design documents, test results, or traceability documents.
+- You may read files and run safe verification commands if needed.
+- You must update the result file with status, reviewed_by, result_verdict, reviewed documents, findings, CR candidates, ISSUE candidates, and evidence.
+- Use PASS, FIND, CR, or ISSUE as the result verdict.
+- Do not mark user approval unless the request/result contains explicit user approval evidence.
+- In your final response, summarize what you wrote to the result file and mention the result verdict.
+"""
+
+    cmd = [
+        codex_exe,
+        "-a",
+        "never",
+        "exec",
+        "--cd",
+        exec_dir,
+        "-m",
+        model,
+        "-c",
+        f"model_reasoning_effort={format_yaml_scalar(reasoning_effort)}",
+        "--sandbox",
+        sandbox,
+        "--json",
+        "--output-last-message",
+        last_message_abs,
+        prompt,
+    ]
+
+    printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
+    if dry_run:
+        print("L2 run dry-run")
+        print(f"  review_id: {review_id}")
+        print(f"  runner: {runner_normalized}")
+        print(f"  model: {model}")
+        print(f"  reasoning_effort: {reasoning_effort}")
+        print(f"  exec_dir: {exec_dir}")
+        print(f"  command: {printable_cmd}")
+        return
+
+    before_hash = file_sha256(exec_result_abs)
+    started_at = datetime.now().isoformat(timespec="seconds")
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=exec_dir,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+        )
+        exit_code = result.returncode
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+    except subprocess.TimeoutExpired as e:
+        exit_code = 124
+        stdout = e.stdout or ""
+        stderr = (e.stderr or "") + f"\nTIMEOUT after {timeout_seconds} seconds"
+    completed_at = datetime.now().isoformat(timespec="seconds")
+
+    with open(log_abs, "w", encoding="utf-8") as f:
+        f.write(stdout)
+    with open(stderr_abs, "w", encoding="utf-8") as f:
+        f.write(stderr)
+
+    after_hash = file_sha256(exec_result_abs)
+    result_changed = bool(before_hash and after_hash and before_hash != after_hash)
+    if os.path.normcase(exec_result_abs) != os.path.normcase(result_abs) and os.path.exists(exec_result_abs):
+        os.makedirs(os.path.dirname(result_abs), exist_ok=True)
+        shutil.copy2(exec_result_abs, result_abs)
+
+    if run_abs and os.path.exists(run_abs):
+        execution_note = f"""
+
+## 5. L2 실행 기록
+
+```yaml
+executed_at: {started_at}
+completed_at: {completed_at}
+runner: {runner_normalized}
+model: {model}
+reasoning_effort: {reasoning_effort}
+sandbox: {sandbox}
+exec_dir: {exec_dir}
+exit_code: {exit_code}
+json_log: {log_rel_path}
+stderr_log: {stderr_rel_path}
+last_message: {last_message_rel_path}
+result_file_changed: {str(result_changed).lower()}
+```
+"""
+        with open(run_abs, "a", encoding="utf-8") as f:
+            f.write(execution_note)
+
+    print("\nL2 리뷰 실행 완료")
+    print(f"  review_id: {review_id}")
+    print(f"  runner: {runner_normalized}")
+    print(f"  model: {model}")
+    print(f"  reasoning_effort: {reasoning_effort}")
+    print(f"  exit_code: {exit_code}")
+    print(f"  result_changed: {str(result_changed).lower()}")
+    print(f"  json_log: {log_rel_path}")
+    print(f"  last_message: {last_message_rel_path}")
+    if exit_code != 0:
+        print(f"오류: codex exec가 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
+        sys.exit(exit_code)
+    if not result_changed:
+        print("경고: result 파일 변경이 감지되지 않았습니다. L2 리뷰 결과를 확인하세요.")
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -4923,7 +5149,11 @@ def default_vulcan_config():
         },
         "review": {
             "l2_enabled": False,
-            "l2_runner": "codex",
+            "l2_runner": "codex-cli",
+            "l2_model": "gpt-5.5",
+            "l2_reasoning_effort": "high",
+            "l2_sandbox": "workspace-write",
+            "l2_exec_timeout_seconds": 1800,
             "l2_triggers": L2_REVIEW_DEFAULT_GATES,
             "l2_worktree": True,
             "l2_readonly": True
@@ -5195,6 +5425,15 @@ def main():
     p_l2_review.set_defaults(worktree=None)
     p_l2_review.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
 
+    p_l2_run = subparsers.add_parser("l2-run", help="L2 리뷰 요청을 codex-cli로 실행")
+    p_l2_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
+    p_l2_run.add_argument("--runner", choices=L2_REVIEW_RUNNERS, help="L2 리뷰 실행 런타임")
+    p_l2_run.add_argument("--model", default="", help="codex-cli 모델")
+    p_l2_run.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
+    p_l2_run.add_argument("--timeout-seconds", type=int, default=0, help="codex exec timeout seconds")
+    p_l2_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex exec sandbox")
+    p_l2_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -5286,6 +5525,16 @@ def main():
             runner=args.runner,
             create_worktree=args.worktree,
             worktree_dir=args.worktree_dir,
+        )
+    elif args.command == "l2-run":
+        cmd_l2_run(
+            review_id=args.review_id,
+            runner=args.runner,
+            model=args.model or None,
+            reasoning_effort=args.reasoning_effort or None,
+            timeout_seconds=args.timeout_seconds or None,
+            sandbox=args.sandbox or None,
+            dry_run=args.dry_run,
         )
     elif args.command == "backlog":
         if args.backlog_cmd == "list":

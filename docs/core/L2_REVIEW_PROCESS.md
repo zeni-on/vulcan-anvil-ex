@@ -32,7 +32,11 @@ L2 리뷰어는 수정자가 아니라 검수자다. 결과는 `PASS`, `FIND`, `
 {
   "review": {
     "l2_enabled": false,
-    "l2_runner": "codex",
+    "l2_runner": "codex-cli",
+    "l2_model": "gpt-5.5",
+    "l2_reasoning_effort": "high",
+    "l2_sandbox": "workspace-write",
+    "l2_exec_timeout_seconds": 1800,
     "l2_triggers": ["gate2", "gate4"],
     "l2_worktree": true,
     "l2_readonly": true
@@ -59,7 +63,30 @@ python vulcan.py l2-review \
 - `docs/runs/RUN-NNN_l2-review-*_v0.1.md` 생성
 - `vulcan.config.json.review.l2_worktree`가 `true`이면 detached worktree 생성
 
-## 5. 리뷰어의 작업
+## 5. 실행 명령
+
+`codex-cli` runner를 사용할 수 있으면 Orchestrator가 L2 리뷰 세션을 비대화형으로 실행할 수 있다.
+
+```bash
+python vulcan.py l2-run --review-id RV-001
+```
+
+기본 동작:
+
+- `codex exec`를 새 비대화형 세션으로 실행한다.
+- worktree가 있으면 해당 worktree를 `--cd`로 사용한다.
+- 모델과 reasoning effort는 `vulcan.config.json.review` 값을 사용한다.
+- JSONL 실행 로그를 `docs/reviews/RV-NNN_codex-exec.jsonl`에 남긴다.
+- 마지막 응답을 `docs/reviews/RV-NNN_codex-last-message.md`에 남긴다.
+- result 파일 변경 여부와 exit code를 L2 Review Run에 기록한다.
+
+주의:
+
+- `l2-run`은 Desktop 대화창을 새로 여는 기능이 아니다.
+- `codex exec` 기반의 독립 실행 세션을 만든다.
+- result 파일이 변경되었더라도 Orchestrator가 다시 검토한 뒤 본선 산출물 반영 여부를 결정한다.
+
+## 6. 리뷰어의 작업
 
 리뷰어는 request 파일을 읽고 result 파일만 작성한다.
 
@@ -78,7 +105,7 @@ python vulcan.py l2-review \
 - 추가 판단이 필요하면 `ISSUE`로 남긴다.
 - 검증 명령을 실행했으면 cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 기록한다.
 
-## 6. Gate별 중점
+## 7. Gate별 중점
 
 ### Gate 2
 
@@ -96,7 +123,7 @@ python vulcan.py l2-review \
 - 기준 UIREF와 구현 screenshot 차이가 `Pass`, `FIND`, `CR`로 판정되었는지 확인한다.
 - 미실행 검증이나 기대 화면과 다른 캡처가 Pass로 기록되지 않았는지 확인한다.
 
-## 7. Worktree 정리
+## 8. Worktree 정리
 
 L2 worktree는 결과 수집 후 사람이 확인하고 삭제한다.
 

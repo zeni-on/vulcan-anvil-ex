@@ -5,7 +5,11 @@
   },
   "review": {
     "l2_enabled": false,
-    "l2_runner": "codex",
+    "l2_runner": "codex-cli",
+    "l2_model": "gpt-5.5",
+    "l2_reasoning_effort": "high",
+    "l2_sandbox": "workspace-write",
+    "l2_exec_timeout_seconds": 1800,
     "l2_triggers": [
       "gate2",
       "gate4"
