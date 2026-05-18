@@ -40,6 +40,8 @@ description: "UI 품질 검토 에이전트. Gate 2/4에서 구현자가 좋은 
 | UI-B | 컴포넌트 명세 | 재사용 컴포넌트의 props와 variant 정의됨 |
 | UI-C | 화면 상태 표현 | 모든 상태(로딩/에러/빈)의 UI 처리가 명시됨 |
 | UI-D | CTA 명확성 | 주요 액션(버튼, 폼 제출)의 위치와 스타일이 명시됨 |
+| UI-I | UI Implementation Contract | UIREF/prototype이 있는 SCR에 contract 작성됨 (필수 유지/허용/금지/비교 방식) |
+| UI-J | 상태별 UI-ID | UI 증적이 SCR×상태 단위(`UI-001-01`)로 분리됨, 기본/로딩/오류/성공/전환 상태 포함 |
 
 ### 권고 검증
 

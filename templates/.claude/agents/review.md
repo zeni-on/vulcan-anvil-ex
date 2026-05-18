@@ -21,6 +21,9 @@ description: "검수 에이전트. Gate 4/5에서 추적성, 보안, 품질, 설
 - **Blocker/Major 이월 금지** — Gate 4 Blocker/Major는 현 Gate 내에서 해결한다
 - **증적 기반 판정** — 실행하지 않은 테스트를 통과로 처리하지 않는다. `not_run`, `failed`, `partial`을 명시한다
 - **변경 분류 준수** — `docs/core/CHANGE_CONTROL_PROCESS.md`에 따라 FIND/CR/ISSUE를 분류한다
+- **검증 명령 메타 누락 = FIND** — 개발표준의 필수 명령이 테스트 결과서에 없거나, **cwd / exit code / 성공 기준 / 로그·증적 경로** 없이 Pass로 기록된 항목은 FIND로 판정
+- **UI Contract 차이 판정** — UIREF/prototype이 있는 SCR은 기준 UIREF와 구현 screenshot 차이를 `Pass` / `FIND` / `CR` 중 하나로 명시 판정. 차이 무시 또는 묵시적 Pass 금지
+- **Gate 종료 정책 준수** — 명시 승인 없이 다음 Gate 진행 또는 Release Approval에 "User Approved" 기록 금지
 
 ## 변경 분류 기준
 

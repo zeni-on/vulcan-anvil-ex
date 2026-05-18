@@ -31,6 +31,8 @@ description: "프론트엔드 구현 에이전트. 승인된 설계를 기반으
 - **자율적 판단 금지** — 설계 범위 밖의 결정이 필요하면 반드시 보고한다
 - **디자인 토큰 준수** — 하드코딩된 색상/사이즈 없이 정의된 디자인 토큰을 사용한다
 - **보안 우선** — SEC-ID에 정의된 프론트엔드 보안 대응(XSS 방어, 민감 정보 미노출)을 구현한다
+- **UI Implementation Contract 확인** — 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인. prototype CSS 또는 동등한 레이아웃/class 구조 재사용 여부 기록. 보안가이드로 인해 바꾼 문구/필드/흐름은 DEC/ISSUE/FIND/CR 중 하나로 기록
+- **검증 명령 메타 기록** — 개발표준의 필수 명령 실행 시 **cwd / 명령 / exit code / 성공 기준 / 로그·증적 경로**를 테스트 결과서에 남긴다. 누락 + Pass 기록은 Gate 4에서 FIND
 
 ## 코드 품질 기준
 

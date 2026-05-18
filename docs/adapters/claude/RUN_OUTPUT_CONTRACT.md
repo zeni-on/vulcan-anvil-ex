@@ -65,14 +65,27 @@ related_ids:
   test: [UT-007, UT-008, IT-004]
 
 verification_results:
-  - type: test
+  - id: UT-005
+    type: test
+    cwd: "repository root"
     command: "python -m pytest tests -p no:cacheprovider"
+    os: posix
+    exit_code: 0
+    success_criteria: "exit code 0, 실패 0건"
     result: passed
-    summary: "20 passed"
-  - type: lint
+    summary: "20 passed, 0 failed"
+    log_path: ".pytest_cache/v/cache/lastfailed"
+    evidence_path: "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"
+  - id: LINT-001
+    type: lint
+    cwd: "repository root"
     command: "python -m ruff check ."
+    os: posix
+    exit_code: 0
+    success_criteria: "exit code 0, 오류 0건"
     result: passed
     summary: "All checks passed"
+    evidence_path: "Run 본문"
 
 evidence:
   documents:
@@ -148,17 +161,23 @@ failure:
 
 ## 5. 검증 결과 작성 규칙
 
+각 검증 결과는 **id / type / cwd / command / os / exit_code / success_criteria / result / summary / log_path / evidence_path** 필드를 가진다. 명령 문자열만으로는 불충분 — cwd와 성공 기준, exit code, 로그/증적 경로까지 기록해야 Gate 4에서 에이전트별 해석 차이를 제거할 수 있다.
+
 검증을 실행하지 못했으면 `not_run`으로 기록한다.
 
 ```yaml
 verification_results:
-  - type: ui_capture
-    command: "playwright screenshot"
+  - id: UI-003-01
+    type: ui_capture
+    cwd: "repository root"
+    command: "playwright screenshot --target SCR-003"
+    os: posix
     result: not_run
     reason: "브라우저 MCP를 사용할 수 없음"
+    followup: "evidence persona가 환경 복구 후 재실행"
 ```
 
-실패한 검증을 성공처럼 쓰지 않는다.
+실패한 검증을 성공처럼 쓰지 않는다. 누락 필드 + Pass 기록은 **Gate 4 검수에서 FIND로 처리**된다.
 
 권장 `result` 값:
 
@@ -166,7 +185,7 @@ verification_results:
 | --- | --- |
 | `passed` | 검증 통과 |
 | `failed` | 검증 실패 |
-| `not_run` | 실행하지 못함 |
+| `not_run` | 실행하지 못함 (reason 필수) |
 | `partial` | 일부만 실행 |
 
 ## 6. Claude 전용 증적 필드

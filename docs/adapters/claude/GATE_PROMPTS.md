@@ -40,6 +40,11 @@ Gate Prompt는 단독으로 쓰지 않는다.
 - G4에서 기존 설계 범위 내 결함은 FIND로 처리하고, 설계 변경이 필요한 항목은 CR로 승격한다.
 - session.json.current_gate보다 앞선 Gate의 Run, 구현 파일, 테스트 코드, 결과, 화면 증적을 사용자 승인 없이 만들지 않는다.
 - 사용자가 end-to-end 목표를 말해도 현재 Gate가 phase0 또는 gate1이면 현재 Gate 산출물과 다음 Gate 승인 질문까지만 만들고 멈춘다.
+- **Gate 종료 정책 (모든 Gate 공통)**:
+  - 각 Gate 산출물 완료 후 다음 Gate로 진행하지 말고 **산출물 요약 + 미해결 항목 + 다음 Gate 제안 + 사용자 승인 질문**을 남기고 대기한다.
+  - 대화상 명시 승인 없이 Run/Release Approval에 "User Approved"로 기록하지 않는다.
+  - 명시 승인 없이 다음 Gate 산출물 작성·구현·테스트 실행·QA 승인·릴리즈 승인을 선언하지 않는다.
+- **검증 명령 메타 (모든 Gate 공통)**: 검증 명령은 문자열만으로 불충분. **cwd / Windows·POSIX 명령 / 필수 여부 / 성공 기준 / exit code / 결과 / 로그·증적 경로 / Not Run 기준**까지 모두 기록한다 (`RUN_INPUT_CONTRACT.md` `verification`, `RUN_OUTPUT_CONTRACT.md` `verification_results` 참조).
 ```
 
 ## 3. P0 Discovery Prompt
@@ -84,7 +89,16 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 ```text
 이번 Run은 Gate 2 설계 Run이다.
-담당 에이전트: design (기능/프로그램/API/DB/보안), screen-design (화면)
+담당 에이전트: design (아키텍처/기능/프로그램/API/DB/보안), screen-design (화면)
+
+설계 순서 (docs/core/GATE2_DESIGN_SEQUENCE.md §2 참조):
+G2-01 Kickoff/범위 → G2-02 SW Architecture Draft → G2-03 Screen/Flow →
+G2-04 Function Spec → G2-05 Program/API Spec → G2-06 Data/DB Spec →
+G2-07 Security Guide → G2-08 Development Standard →
+G2-09 SW Architecture Baseline 보강 → G2-10 Design Review / Gate 3 승인 대기
+
+각 Run의 design_sequence.current_step과 next_run_candidates를 명시한다.
+한 Run에서 G2를 전부 끝내려 하지 않는다.
 
 작업:
 1. 관련 REQ, AC, FUNC를 확인한다.
@@ -103,12 +117,17 @@ Gate Prompt는 단독으로 쓰지 않는다.
 - `main.py`, `page.tsx`, `auth.py` 같은 파일명만 연결한 그림은 C1/C2로 인정하지 않는다. 파일명은 C3 컴포넌트 표의 보조 정보로 둔다.
 - 프로그램명세서에는 복잡도, 상태 전이, 도메인/정책 복잡도, 외부/비동기 연계 여부를 보고 상세 SW 설계 다이어그램 필요 여부를 판단한다.
 - Class/State/Sequence/Activity 다이어그램이 필요하면 작성하고, 단순 CRUD라 불필요하면 생략 사유를 명시한다.
+- **UI Implementation Contract (G2-03 화면 단계 필수, prototype/UIREF가 있을 때)**: 프로토타입/이미지 시안/Figma/기존 화면 캡처가 단순 참고자료인지 구현 기준인지 분류한다. 구현 기준이면 UI Implementation Contract를 작성한다 — 기준 파일/CSS, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식. (`RUN_INPUT_CONTRACT.md` `ui_implementation_contract_policy` 참조)
+- **상태별 UI 증적 기준**: UI 증적은 화면 단위가 아니라 기본/로딩/오류/성공/전환 상태별로 `UI-001-01` 형식으로 분리한다. 각 UI-ID에 기대 화면(UIREF/prototype 경로)과 캡처 경로를 1:1로 둔다.
 - 보안가이드는 단순히 SEC-ID를 나열하지 않는다. 구체 값, 정책, 오류 메시지, 적용 위치, 검증 ID를 명시한다.
 - Gate 2 검수(security-review, screen-review, ui-review, development-review)가 모두 통과해야 Gate 3로 진행한다.
 - Gate 3으로 넘어가려면 사용자 승인 또는 python vulcan.py session --gate gate2 --status done이 필요하다.
 
 완료 조건:
 - 설계 산출물 갱신, 관련 ID 연결, 보안/화면/개발표준 검수 결과 기록
+- Gate 2 순서 현재 위치(`design_sequence.current_step`)와 다음 Gate 2 Run 후보 기록
+- UIREF/prototype이 있는 SCR은 UI Implementation Contract가 작성되어 Gate 3/Impl/Gate 4에서 검증 가능한 비교 기준이 있음
+- 산출물 요약 + 미해결 + 다음 Gate 제안 + **사용자 승인 질문**을 남기고 대기 (다음 Gate 자동 진행 금지)
 ```
 
 ## 6. G3 Test Planning Prompt
@@ -128,6 +147,8 @@ Gate Prompt는 단독으로 쓰지 않는다.
 - 테스트를 위한 테스트를 만들지 않는다.
 - 각 테스트는 AC, SEC, NREQ 중 하나 이상과 연결되어야 한다.
 - 구현 파일을 만들지 않는다.
+- **검증 명령 정의**: 명령 기반 테스트는 실행 위치(cwd) / Windows·POSIX 명령 / 필수 여부 / 성공 기준 / 결과 기록 위치 / 로그·증적 경로 / Not Run 처리 기준을 가진다. Gate 3에서 정의해두면 Gate 4 실행 시 에이전트별 해석 차이가 줄어든다.
+- **UI 테스트**: UI-ID는 SCR 단위가 아니라 SCR×상태 단위(`UI-001-01`)로 작성. 각 UI-ID에 기대 화면(UIREF/prototype) + 캡처 경로 1:1. prototype 기반이면 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과에 반영.
 - 구현으로 넘어가려면 사용자 승인 또는 python vulcan.py session --gate gate3 --status done이 필요하다.
 
 완료 조건:
@@ -152,8 +173,11 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 주의:
 - 테스트 실패를 숨기지 않는다.
-- 실행하지 못한 검증은 not_run으로 기록한다.
+- 실행하지 못한 검증은 not_run으로 기록한다 (reason 필수).
 - 현재 session.json.current_gate가 impl 또는 gate4가 아니면 구현을 시작하지 않는다.
+- **검증 명령 실행 기록**: 개발표준/테스트케이스에 정의된 필수 명령을 실행하고, **cwd / 명령 / exit code / 성공 기준 / 결과 / 로그·증적 경로**를 테스트 결과서에 남긴다.
+- **UI Implementation Contract 확인**: 화면 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인. prototype 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부 판정.
+- 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
 
 완료 조건:
 - 현재 Build Wave 구현 완료, 검증 결과 기록, 증적 연결, 추적표 반영, RUN_OUTPUT_CONTRACT 보고
@@ -174,7 +198,9 @@ Gate Prompt는 단독으로 쓰지 않는다.
 
 주의:
 - 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다.
-- not_run, failed, partial을 명시한다.
+- not_run, failed, partial을 명시한다 (이유 포함).
+- **상태별 캡처**: 각 SCR의 기본/로딩/오류/성공/전환 상태를 분리하여 `UI-NNN-NN` 형식으로 캡처. 한 화면당 상태별 다중 파일.
+- **명령 실행 시 메타 기록**: 실행 위치(cwd), 명령, OS, exit code, 성공 기준, 결과, 로그·증적 경로를 Run에 함께 남긴다.
 
 완료 조건:
 - 증적 파일 경로, 결과서 갱신, 추적표 갱신, 실패 또는 누락 증적 기록
@@ -197,6 +223,9 @@ Gate Prompt는 단독으로 쓰지 않는다.
 주의:
 - 단순 취향성 리팩터링을 필수 결함으로 올리지 않는다.
 - Blocker/Major는 현 Gate 내에서 해결한다 (백로그 이월 금지).
+- **검증 명령 누락 = FIND**: 개발표준의 필수 명령이 테스트 결과서에 없거나, cwd/성공 기준/exit code/로그 없이 Pass로 기록되어 있으면 FIND로 남긴다.
+- **UI Contract 차이 판정**: prototype/UIREF가 있는 SCR은 기준 UIREF와 구현 screenshot의 차이를 `Pass` / `FIND` / `CR` 중 하나로 판정. 차이 없음을 묵시적으로 Pass 처리하지 않는다.
+- 산출물 요약 + 미해결 + 다음 단계 제안 + 사용자 승인 질문을 남기고 대기.
 
 완료 조건:
 - 검수 결과 문서, FIND/CR 목록, Gate 통과/보류 판정, 추적표 갱신
