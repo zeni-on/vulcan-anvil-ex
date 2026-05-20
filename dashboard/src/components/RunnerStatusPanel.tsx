@@ -1,10 +1,38 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Cpu, GitBranch } from 'lucide-react'
+import { AlertCircle, Bot, Cpu, GitBranch, Sparkles, type LucideIcon } from 'lucide-react'
 import { ProjectRuntime, RuntimeRunner } from '@/lib/types'
 
 function runnerLabel(runner: RuntimeRunner): string {
+  if (runner.name === 'codex-cli' || runner.name === 'codex') return 'Codex'
+  if (runner.name === 'claude-cli' || runner.name === 'claude') return 'Claude'
   return runner.name.replace(/-cli$/, '')
+}
+
+function runnerVisual(runner: RuntimeRunner): {
+  Icon: LucideIcon
+  badgeClass: string
+  iconClass: string
+} {
+  if (runner.name === 'codex-cli' || runner.name === 'codex') {
+    return {
+      Icon: Bot,
+      badgeClass: 'border-cyan-500/35 bg-cyan-500/10',
+      iconClass: 'text-cyan-200',
+    }
+  }
+  if (runner.name === 'claude-cli' || runner.name === 'claude') {
+    return {
+      Icon: Sparkles,
+      badgeClass: 'border-amber-500/35 bg-amber-500/10',
+      iconClass: 'text-amber-200',
+    }
+  }
+  return {
+    Icon: Cpu,
+    badgeClass: 'border-slate-600 bg-slate-800/70',
+    iconClass: 'text-slate-300',
+  }
 }
 
 function runnerDetail(runner: RuntimeRunner): string {
@@ -80,27 +108,38 @@ export default function RunnerStatusPanel({
         <p className="text-xs text-slate-500">vulcan.config.json의 runtime 설정이 없습니다.</p>
       ) : (
         <ul className={compact ? 'space-y-1.5' : 'grid gap-1.5'}>
-          {runners.map((runner) => (
-            <li
-              key={runner.name}
-              className="flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-semibold text-slate-100">
-                  {runnerLabel(runner)}
-                </div>
-                <div className="truncate text-[11px] text-slate-500">
-                  {runnerDetail(runner)}
-                </div>
-              </div>
-              {runner.name === runtime?.primary && (
-                <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">
-                  primary
+          {runners.map((runner) => {
+            const visual = runnerVisual(runner)
+            const RunnerIcon = visual.Icon
+
+            return (
+              <li
+                key={runner.name}
+                className="flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5"
+              >
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${visual.badgeClass}`}
+                  title={`${runnerLabel(runner)} runner`}
+                  aria-label={`${runnerLabel(runner)} runner`}
+                >
+                  <RunnerIcon className={`h-4 w-4 ${visual.iconClass}`} />
                 </span>
-              )}
-            </li>
-          ))}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs font-semibold text-slate-100">
+                    {runnerLabel(runner)}
+                  </div>
+                  <div className="truncate text-[11px] text-slate-500">
+                    {runnerDetail(runner)}
+                  </div>
+                </div>
+                {runner.name === runtime?.primary && (
+                  <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">
+                    primary
+                  </span>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
 
