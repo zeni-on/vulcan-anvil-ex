@@ -20,12 +20,10 @@ import { X, AlertCircle, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
 import { isQaDoc, parseQaDoc } from '@/lib/qaDoc'
-import { isRequirementsDoc, parseRequirementsDoc } from '@/lib/requirementsDoc'
 import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
 import { isTraceabilityDoc, parseTraceabilityDoc } from '@/lib/traceabilityDoc'
 import MermaidBlock from './MermaidBlock'
 import QaDocView from './QaDocView'
-import RequirementsDocView from './RequirementsDocView'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
 
@@ -182,9 +180,7 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       data-drawer-scroll
       className="p-6 overflow-y-auto flex-1 focus:outline-none"
     >
-      {content && isRequirementsDoc(doc, content) ? (
-        <RequirementsDocView model={parseRequirementsDoc(content)} />
-      ) : content && isTraceabilityDoc(doc, content) ? (
+      {content && isTraceabilityDoc(doc, content) ? (
         <TraceabilityDocView model={parseTraceabilityDoc(content)} />
       ) : content && isScreenSpecDoc(doc, content) ? (
         <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
