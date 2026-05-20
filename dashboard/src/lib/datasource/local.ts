@@ -20,12 +20,13 @@ import { execSync } from 'child_process'
 import {
   DataSource,
   SessionData,
+  ProjectRuntime,
   DocNode,
   CommitEntry,
   PathTraversalError,
   EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
-import { SessionDataSchema } from '../schemas'
+import { SessionDataSchema, VulcanConfigSchema } from '../schemas'
 
 /** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
 const ALLOWED_DOC_EXTENSIONS = new Set<string>([
@@ -113,6 +114,31 @@ export class LocalDataSource implements DataSource {
       return result.data as SessionData
     } catch (err) {
       console.warn('[LocalDataSource] session.json 읽기 실패:', err)
+      return null
+    }
+  }
+
+  async getRuntime(): Promise<ProjectRuntime | null> {
+    const configPath = path.join(this.resolvedBasePath, 'vulcan.config.json')
+    this.assertSafePath(configPath)
+
+    if (!fs.existsSync(configPath)) {
+      return null
+    }
+
+    try {
+      const content = fs.readFileSync(configPath, 'utf-8')
+      const parsed = JSON.parse(content)
+      const result = VulcanConfigSchema.safeParse(parsed)
+
+      if (!result.success) {
+        console.warn('[LocalDataSource] vulcan.config.json 스키마 오류:', result.error.message)
+        return null
+      }
+
+      return result.data.runtime ?? null
+    } catch (err) {
+      console.warn('[LocalDataSource] vulcan.config.json 읽기 실패:', err)
       return null
     }
   }

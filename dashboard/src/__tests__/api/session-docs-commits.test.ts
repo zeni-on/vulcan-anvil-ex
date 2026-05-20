@@ -34,6 +34,7 @@ jest.mock('../../lib/projects', () => ({
 // ── datasource 모킹 (네트워크/파일시스템 격리) ──────────────────────────────
 
 const mockGetSession = jest.fn()
+const mockGetRuntime = jest.fn()
 const mockGetDocTree = jest.fn()
 const mockGetCommits = jest.fn()
 const mockReadDocFile = jest.fn()
@@ -41,6 +42,7 @@ const mockReadDocFile = jest.fn()
 jest.mock('../../lib/datasource', () => ({
   createDataSource: jest.fn(() => ({
     getSession: mockGetSession,
+    getRuntime: mockGetRuntime,
     getDocTree: mockGetDocTree,
     getCommits: mockGetCommits,
     readDocFile: mockReadDocFile,
@@ -137,6 +139,7 @@ beforeEach(() => {
   // 기본값: createDataSource가 정상 DataSource 반환
   mockCreateDataSource.mockImplementation(() => ({
     getSession: mockGetSession,
+    getRuntime: mockGetRuntime,
     getDocTree: mockGetDocTree,
     getCommits: mockGetCommits,
     readDocFile: mockReadDocFile,

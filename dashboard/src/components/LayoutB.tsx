@@ -22,6 +22,7 @@ import CommitList from '@/components/CommitList'
 import StatsCards from '@/components/StatsCards'
 import CurrentGatePanel from '@/components/CurrentGatePanel'
 import OpenFolderButton from '@/components/OpenFolderButton'
+import RunnerStatusPanel from '@/components/RunnerStatusPanel'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
 import { LayoutProps } from '@/components/LayoutA'
 
@@ -36,6 +37,9 @@ export default function LayoutB({
   projectId,
   projectType,
   session,
+  runtime,
+  runtimeLoading,
+  runtimeError,
   sessionLoading,
   sessionError,
   docs,
@@ -120,6 +124,15 @@ export default function LayoutB({
             <SectionLabel>
               <span id="layout-b-commits-label">최근 커밋</span>
             </SectionLabel>
+
+            <div className="mb-4">
+              <RunnerStatusPanel
+                runtime={runtime ?? null}
+                isLoading={runtimeLoading}
+                error={runtimeError}
+                compact
+              />
+            </div>
 
             {commitsLoading && <SectionSkeleton rows={5} />}
             {Boolean(commitsError) && !commitsLoading && (

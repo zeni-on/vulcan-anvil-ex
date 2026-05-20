@@ -148,6 +148,29 @@ export interface ImplementationStats {
   waves: BuildWaveStats
 }
 
+// ── vulcan.config.json runtime 타입 ─────────────────────────────────────────
+
+export interface RuntimeRunner {
+  name: string
+  model?: string
+  effort?: string
+  reasoning_effort?: string
+  sandbox?: string
+  version?: string
+}
+
+export interface RuntimeCapabilities {
+  same_runner_independent_review: boolean
+  cross_model_validation: boolean
+  parallel_cross_runner_work: boolean
+}
+
+export interface ProjectRuntime {
+  primary?: string | null
+  available_runners: RuntimeRunner[]
+  capabilities: RuntimeCapabilities
+}
+
 /**
  * session.json stats 필드 전체 타입.
  * check-trace 실행 시 한 번 계산되어 session.json에 기록된다.
@@ -210,6 +233,7 @@ export interface DocNode {
  */
 export interface DataSource {
   getSession(): Promise<SessionData | null>
+  getRuntime(): Promise<ProjectRuntime | null>
   getDocTree(): Promise<DocNode[]>
   getCommits(limit: number): Promise<CommitEntry[]>
   /** docs/ 하위 .md 파일 내용을 raw 텍스트로 반환. 파일 미존재 시 ENOENT/DataSourceError throw. (REQ-010-01) */
@@ -224,6 +248,7 @@ export interface DataSource {
  */
 export interface ProjectData {
   session: SessionData | null
+  runtime?: ProjectRuntime | null
   docs: DocNode[]
   commits: CommitEntry[]
   fetchedAt: string // ISO 8601 — SWR 캐시 무효화 확인용
@@ -300,6 +325,12 @@ export function isExternalDocExt(ext: string): ext is ExternalDocExt {
 /** GET /api/projects/[id]/session 응답 타입 */
 export interface SessionApiResponse {
   session: SessionData | null
+  fetchedAt: string
+}
+
+/** GET /api/projects/[id]/runtime 응답 타입 */
+export interface RuntimeApiResponse {
+  runtime: ProjectRuntime | null
   fetchedAt: string
 }
 

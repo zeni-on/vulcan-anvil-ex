@@ -14,6 +14,7 @@ import GateStatusStepper from '@/components/GateStatusStepper'
 import DocList from '@/components/DocList'
 import CommitList from '@/components/CommitList'
 import OpenFolderButton from '@/components/OpenFolderButton'
+import RunnerStatusPanel from '@/components/RunnerStatusPanel'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
 import { LayoutProps } from '@/components/LayoutA'
 import { CommitEntry, DocEntry, DocNode, ProjectStats } from '@/lib/types'
@@ -501,6 +502,9 @@ export default function LayoutA2({
   projectId,
   projectType,
   session,
+  runtime,
+  runtimeLoading,
+  runtimeError,
   sessionLoading,
   sessionError,
   docs,
@@ -633,7 +637,14 @@ export default function LayoutA2({
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-500">
             {sideView === 'stats' && (
-              session?.stats ? <CompactStats stats={session.stats} /> : <A2StatsEmptyPanel />
+              <div className="space-y-4">
+                <RunnerStatusPanel
+                  runtime={runtime ?? null}
+                  isLoading={runtimeLoading}
+                  error={runtimeError}
+                />
+                {session?.stats ? <CompactStats stats={session.stats} /> : <A2StatsEmptyPanel />}
+              </div>
             )}
             {sideView === 'commits' && (
               <>

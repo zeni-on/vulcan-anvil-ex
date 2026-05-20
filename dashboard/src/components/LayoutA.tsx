@@ -20,8 +20,9 @@ import CommitList from '@/components/CommitList'
 import StatsCards from '@/components/StatsCards'
 import CurrentGatePanel from '@/components/CurrentGatePanel'
 import OpenFolderButton from '@/components/OpenFolderButton'
+import RunnerStatusPanel from '@/components/RunnerStatusPanel'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
-import { SessionData, DocEntry, CommitEntry, DocNode } from '@/lib/types'
+import { SessionData, ProjectRuntime, DocEntry, CommitEntry, DocNode } from '@/lib/types'
 
 // ── Props 타입 ────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,9 @@ export interface LayoutProps {
   projectId: string
   projectType?: 'local' | 'github'
   session: SessionData | null
+  runtime?: ProjectRuntime | null
+  runtimeLoading?: boolean
+  runtimeError?: unknown
   sessionLoading: boolean
   sessionError: unknown
   docs: DocEntry[]
@@ -56,6 +60,9 @@ export default function LayoutA({
   projectId,
   projectType,
   session,
+  runtime,
+  runtimeLoading,
+  runtimeError,
   sessionLoading,
   sessionError,
   docs,
@@ -148,6 +155,15 @@ export default function LayoutA({
           <SectionLabel>
             <span id="layout-a-commits-label">최근 커밋</span>
           </SectionLabel>
+
+          <div className="mb-4">
+            <RunnerStatusPanel
+              runtime={runtime ?? null}
+              isLoading={runtimeLoading}
+              error={runtimeError}
+              compact
+            />
+          </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500">
             {commitsLoading && <SectionSkeleton rows={5} />}

@@ -24,6 +24,7 @@ import LayoutA from '@/components/LayoutA'
 import LayoutA2 from '@/components/LayoutA2'
 import LayoutB from '@/components/LayoutB'
 import { useProjectSession } from '@/hooks/useProjectSession'
+import { useProjectRuntime } from '@/hooks/useProjectRuntime'
 import { useProjectDocs } from '@/hooks/useProjectDocs'
 import { useProjectCommits } from '@/hooks/useProjectCommits'
 import { useLayoutTemplate } from '@/hooks/useLayoutTemplate'
@@ -54,6 +55,13 @@ export default function ProjectDetailPage() {
   } = useProjectSession(id)
 
   const {
+    runtime,
+    isLoading: runtimeLoading,
+    error: runtimeError,
+    mutate: mutateRuntime,
+  } = useProjectRuntime(id)
+
+  const {
     docs,
     projectType,
     isLoading: docsLoading,
@@ -70,7 +78,7 @@ export default function ProjectDetailPage() {
 
   /** 세 SWR 훅을 동시 재검증한다 — RefreshButton에 전달 */
   const handleRefresh = async () => {
-    await Promise.all([mutateSession(), mutateDocs(), mutateCommits()])
+    await Promise.all([mutateSession(), mutateRuntime(), mutateDocs(), mutateCommits()])
   }
 
   /**
@@ -100,6 +108,9 @@ export default function ProjectDetailPage() {
     projectId: id,
     projectType,
     session,
+    runtime,
+    runtimeLoading,
+    runtimeError,
     sessionLoading,
     sessionError,
     docs,

@@ -3,7 +3,7 @@
  * @description GET /api/projects/[id]/data API Route
  *
  * projects.json에서 id로 프로젝트를 찾아 DataSource를 통해
- * session, docs, commits를 병렬 패치하여 ProjectData로 반환한다.
+ * session, runtime, docs, commits를 병렬 패치하여 ProjectData로 반환한다.
  *
  * 에러 케이스:
  * - id 미존재 → 404
@@ -51,15 +51,16 @@ export async function GET(
     return NextResponse.json({ error: '데이터 소스 초기화 실패' }, { status: 500 })
   }
 
-  // 세 가지 데이터를 병렬 패치 — 하나 실패해도 나머지는 반환 (설계 §5-4)
-  const [sessionResult, docsResult, commitsResult] = await Promise.allSettled([
+  // 주요 데이터를 병렬 패치 — 하나 실패해도 나머지는 반환 (설계 §5-4)
+  const [sessionResult, runtimeResult, docsResult, commitsResult] = await Promise.allSettled([
     dataSource.getSession(),
+    dataSource.getRuntime(),
     dataSource.getDocTree(),
     dataSource.getCommits(10),
   ])
 
   // PathTraversalError는 403으로 변환
-  const traversalError = [sessionResult, docsResult, commitsResult].find(
+  const traversalError = [sessionResult, runtimeResult, docsResult, commitsResult].find(
     (r) => r.status === 'rejected' && r.reason instanceof PathTraversalError,
   )
   if (traversalError) {
@@ -67,7 +68,7 @@ export async function GET(
   }
 
   // DataSourceError (GitHub API 오류 등)는 503으로 변환
-  const sourceError = [sessionResult, docsResult, commitsResult].find(
+  const sourceError = [sessionResult, runtimeResult, docsResult, commitsResult].find(
     (r) => r.status === 'rejected' && r.reason instanceof DataSourceError,
   )
   if (sourceError && sourceError.status === 'rejected') {
@@ -76,6 +77,7 @@ export async function GET(
 
   const projectData: ProjectData = {
     session: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
+    runtime: runtimeResult.status === 'fulfilled' ? runtimeResult.value : null,
     docs: docsResult.status === 'fulfilled' ? docsResult.value : [],
     commits: commitsResult.status === 'fulfilled' ? commitsResult.value : [],
     fetchedAt: new Date().toISOString(),

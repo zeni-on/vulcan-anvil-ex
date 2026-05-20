@@ -133,6 +133,40 @@ export const ImplementationStatsSchema = z.object({
   }),
 })
 
+// ── vulcan.config.json runtime 스키마 ────────────────────────────────────────
+
+export const RuntimeRunnerSchema = z.object({
+  name: z.string().min(1),
+  model: z.string().optional(),
+  effort: z.string().optional(),
+  reasoning_effort: z.string().optional(),
+  sandbox: z.string().optional(),
+  version: z.string().optional(),
+})
+
+export const ProjectRuntimeSchema = z.object({
+  primary: z.string().nullable().optional(),
+  available_runners: z.array(RuntimeRunnerSchema).default([]),
+}).transform((runtime) => {
+  const names = runtime.available_runners.map((runner) => runner.name)
+  const hasRunner = names.length > 0
+  const hasCodex = names.includes('codex-cli') || names.includes('codex')
+  const hasClaude = names.includes('claude-cli') || names.includes('claude')
+
+  return {
+    ...runtime,
+    capabilities: {
+      same_runner_independent_review: hasRunner,
+      cross_model_validation: hasCodex && hasClaude,
+      parallel_cross_runner_work: hasCodex && hasClaude,
+    },
+  }
+})
+
+export const VulcanConfigSchema = z.object({
+  runtime: ProjectRuntimeSchema.optional(),
+})
+
 /** ProjectStats Zod 스키마. updated_at은 YYYY-MM-DD 형식을 검증한다. */
 export const ProjectStatsSchema = z.object({
   requirements: RequirementsStatsSchema,
@@ -168,4 +202,5 @@ export const SessionDataSchema = z.object({
 // ── 추론 타입 내보내기 ─────────────────────────────────────────────────────────
 
 export type SessionDataFromSchema = z.infer<typeof SessionDataSchema>
+export type ProjectRuntimeFromSchema = z.infer<typeof ProjectRuntimeSchema>
 export type ProjectFromSchema = z.infer<typeof ProjectSchema>

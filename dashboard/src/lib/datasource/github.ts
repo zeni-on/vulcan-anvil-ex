@@ -13,12 +13,13 @@
 import {
   DataSource,
   SessionData,
+  ProjectRuntime,
   DocNode,
   CommitEntry,
   DataSourceError,
   EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
-import { SessionDataSchema } from '../schemas'
+import { SessionDataSchema, VulcanConfigSchema } from '../schemas'
 
 /** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
 const ALLOWED_DOC_EXTENSIONS_GH = new Set<string>([
@@ -106,6 +107,35 @@ export class GitHubDataSource implements DataSource {
     } catch (err) {
       if (err instanceof DataSourceError) throw err
       throw new DataSourceError('session.json 읽기 실패', err)
+    }
+  }
+
+  async getRuntime(): Promise<ProjectRuntime | null> {
+    try {
+      const data = await this.ghFetch(
+        `/repos/${this.repo}/contents/vulcan.config.json?ref=${this.branch}`
+      ) as { content?: string; encoding?: string }
+
+      if (!data.content || data.encoding !== 'base64') {
+        throw new DataSourceError('vulcan.config.json 응답 형식이 올바르지 않습니다.')
+      }
+
+      const decoded = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8')
+      const parsed = JSON.parse(decoded)
+      const result = VulcanConfigSchema.safeParse(parsed)
+
+      if (!result.success) {
+        console.warn('[GitHubDataSource] vulcan.config.json 스키마 오류:', result.error.message)
+        return null
+      }
+
+      return result.data.runtime ?? null
+    } catch (err) {
+      if (err instanceof DataSourceError && err.message.includes('404')) {
+        return null
+      }
+      if (err instanceof DataSourceError) throw err
+      throw new DataSourceError('vulcan.config.json 읽기 실패', err)
     }
   }
 
