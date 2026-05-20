@@ -50,22 +50,27 @@ Adapter는 다음 상태를 구분한다.
 
 ## 5. 화면 증적 한계
 
-Claude의 브라우저 캡처는 환경에 따라 다르다.
+화면 증적의 기준 도구는 Playwright다.
+Claude-in-Chrome, CDP, computer-use, 브라우저 수동 캡처는 보조 관찰로만 사용할 수 있고 UI Pass 증거가 될 수 없다.
 
-| 방법 | 조건 | 제한 |
-| --- | --- | --- |
-| Playwright MCP (`mcp__Claude_Preview__*`) | Preview 환경 | 로컬 앱 필요 |
-| Claude-in-Chrome MCP (`mcp__Claude_in_Chrome__*`) | Chrome 확장 연결 | 브라우저 tier 제한 |
-| computer-use | 데스크탑 접근 | tier "read" 브라우저 제한 |
+Playwright가 설치되어 있지 않으면 먼저 설치하고 다시 실행한다.
+
+```text
+npx playwright --version
+npm install -D @playwright/test
+npx playwright install
+npx playwright test
+```
 
 화면 증적 Run은 다음을 기록한다.
 
-- 캡처 방법 (Playwright/Chrome MCP/수동)
+- Playwright 설치 확인 또는 설치 명령 결과
+- Playwright 실행 명령과 exit code
 - 캡처 대상 URL
 - 캡처 파일 경로
 - 뷰포트 크기
 
-캡처를 생성하지 못하면 `not_run`으로 기록하고 대체 증적을 제안한다.
+Playwright 캡처를 생성하지 못하면 `not_run` 또는 `FIND`로 기록하고, CDP/수동 캡처만으로 Pass 처리하지 않는다.
 
 ## 6. 민감정보 제한
 
@@ -106,7 +111,7 @@ Claude Adapter와 Codex/GPT Adapter는 같은 Core 규약을 따르지만 다음
 | 진입 문서 | `AGENTS.md` | `.claude/CLAUDE.md` |
 | 스킬 참조 방식 | 수동 경로 참조 | `.claude/skills/` 자동 로드 |
 | 도구 실행 | 텍스트 명령 출력 | Bash tool 직접 실행 |
-| 브라우저 캡처 | 명령 출력 | Playwright/Chrome MCP |
+| 브라우저 캡처 | Playwright 명령 출력 | Playwright 명령 실행 |
 | `adapter` 필드 | `codex-gpt` | `claude` |
 
 두 어댑터가 같은 프로젝트에 공존할 수 있다. Core 규칙은 변경하지 않는다.

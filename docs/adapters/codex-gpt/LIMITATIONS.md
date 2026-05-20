@@ -40,17 +40,27 @@ Adapter는 다음 상태를 구분한다.
 
 ## 4. 화면 증적 한계
 
-브라우저 캡처 도구, 뷰포트, 로컬 서버 실행 방식은 환경마다 다를 수 있다.
+화면 증적의 기준 도구는 Playwright다. CDP, 브라우저 수동 캡처, 런타임 Preview 캡처는 보조 관찰로만 사용할 수 있고 UI Pass 증거가 될 수 없다.
+
+Playwright가 설치되어 있지 않으면 먼저 설치하고 다시 실행한다.
+
+```text
+npx playwright --version
+npm install -D @playwright/test
+npx playwright install
+npx playwright test
+```
 
 화면 증적 Run은 다음을 기록한다.
 
-- 브라우저 종류 또는 실행 도구
+- Playwright 설치 확인 또는 설치 명령 결과
+- Playwright 실행 명령과 exit code
 - 캡처 대상 URL
 - 캡처 파일 경로
 - 콘솔 오류 여부
 - 모바일/데스크톱 여부
 
-캡처를 생성하지 못하면 `not_run`으로 기록하고 대체 증적을 제안한다.
+Playwright 캡처를 생성하지 못하면 `not_run` 또는 `FIND`로 기록하고, CDP/수동 캡처만으로 Pass 처리하지 않는다.
 
 ## 5. 민감정보 제한
 

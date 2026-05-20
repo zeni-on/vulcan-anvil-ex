@@ -36,10 +36,32 @@ scope:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
 completion_criteria:
   - "승인된 Gate 2/3 범위 안에서만 구현 또는 구현 계획을 작성한다."
+  - "코딩 전 개발표준정의서의 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령을 확인하고 준수 체크리스트를 남긴다."
+  - "Spring Boot 구현은 개발표준의 base package와 feature 우선 패키지 구조를 따른다. domain 래퍼는 DDD 선택 사유가 있을 때만 사용한다."
+  - "로깅은 개발표준의 SLF4J/Logback 또는 Log4j2 선택, logger 선언, 로그 레벨, 민감정보 금지 기준을 따른다."
+  - "Java/Spring 주요 클래스와 public 업무 메서드는 개발표준의 JavaDoc/추적 ID 기준을 따른다."
   - "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다."
   - "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다."
   - "구현 변경은 테스트 코드, 테스트 결과, 추적표 갱신과 연결된다."
   - "동시에 active 상태인 Build Wave가 하나만 유지된다."
+development_standard_policy:
+  required: true
+  block_implementation_when_missing:
+    - "base package와 backend 패키지 구조"
+    - "계층 책임과 금지 의존성"
+    - "로깅 API/구현체, logger 선언, 로그 레벨, 민감정보 로그 금지"
+    - "클래스/메서드 주석 또는 JavaDoc 기준과 예시"
+    - "필수 검증 명령의 cwd, 성공 기준, 결과 기록 위치"
+  spring_boot_default:
+    package_style: "feature-first"
+    domain_wrapper_allowed_only_with_reason: true
+    required_top_level_packages:
+      - config
+      - common
+      - security
+      - auth
+      - user
+      - "{featureName}"
 gate_exit_policy:
   stop_required: true
   next_gate_requires_user_approval: true

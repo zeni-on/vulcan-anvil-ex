@@ -154,6 +154,11 @@ design_sequence:
 ui_evidence_policy:
   state_level_required: true
   id_pattern: "UI-001-01"   # SCR-단위가 아니라 SCR×상태 단위
+  capture_tool_required: "Playwright"
+  install_if_missing:
+    - "npx playwright --version"
+    - "npm install -D @playwright/test"
+    - "npx playwright install"
   states_required:
     - 기본
     - 로딩
@@ -170,6 +175,7 @@ ui_evidence_policy:
   forbidden:
     - "기대 화면과 다른 캡처를 Pass로 기록하지 않는다."
     - "캡처가 비어 있거나 누락된 상태를 묵시적으로 Pass 처리하지 않는다."
+    - "CDP, Chrome MCP, 브라우저 수동 캡처만으로 UI Pass를 확정하지 않는다."
 
 # UIREF/ui-baseline이 있는 화면 작업 시 사용
 ui_implementation_contract_policy:
@@ -225,7 +231,7 @@ security_policy:
 ```yaml
 skills: [vulcan, security-baseline]   # 자동 로드 — 명시는 선택
 allow_bash: true                       # Bash tool 실행 허용
-allow_browser_capture: true            # Playwright/Chrome MCP UI 캡처 허용
+allow_browser_capture: true            # Playwright UI 캡처 허용. CDP/Chrome MCP 단독 Pass 금지
 ```
 
 ## 5. 필드 작성 규칙

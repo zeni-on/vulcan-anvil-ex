@@ -101,12 +101,16 @@ evidence:
       state: 기본
       expected_path: "docs/artifacts/02-design/screen/ui-baseline/scr-003-default.html"
       actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-01_default.png"
+      capture_tool: Playwright
+      command: "npx playwright test"
       result: passed
     - ui_id: UI-003-02
       scr: SCR-003
       state: 오류
       expected_path: "docs/artifacts/02-design/screen/images/scr-003-error.png"
       actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-02_error.png"
+      capture_tool: Playwright
+      command: "npx playwright test"
       result: not_run
       reason: "오류 상태 재현 시나리오 미구현"
   # UI Implementation Contract 차이 판정 (화면 퍼블리싱 산출물/UIREF 있는 SCR)

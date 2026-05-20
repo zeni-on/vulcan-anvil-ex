@@ -433,7 +433,8 @@ Spring Boot + Vue 통합 배포 예:
 | Frontend 정적검사 | `frontend/` | `npm run lint` | `npm run lint` | 필수 | UI 구현 후 | exit code 0, 오류 0건 | Run | lint output | ESLint |
 | Frontend 빌드 | `frontend/` | `npm run build` | `npm run build` | 필수 | 배포 패키지 전 | exit code 0, `dist/` 생성 | Run | build output | 정적 파일 생성 |
 | 통합 배포 빌드 | repository root | `.\gradlew.bat clean build` | `./gradlew clean build` | 필수 | 릴리즈 후보 전 | exit code 0, frontend 산출물이 backend static 또는 Gradle copy task에 포함 | Run / Test Result | `build/libs/`, static/copy task 결과 | 단일 배포 패키지 기준 |
-| E2E/UI 테스트 | repository root 또는 `frontend/` | `npx playwright test` | `npx playwright test` | Gate 3 확정 시 필수, 미확정 시 선택/권장 | Gate 4 화면 증적 | exit code 0, 상태별 screenshot/video/trace 생성 | UI Evidence / Test Result | `docs/artifacts/04-review/evidence/ui/` | Gate 3에서 UI-ID별 확정 |
+| Playwright 설치 확인 | repository root 또는 `frontend/` | `npx playwright --version`; 미설치 시 `npm install -D @playwright/test` 후 `npx playwright install` | `npx playwright --version`; 미설치 시 `npm install -D @playwright/test` 후 `npx playwright install` | 화면 QA 필수 | Gate 4 화면 증적 전 | Playwright 실행 가능, 브라우저 설치 완료 | Run / Test Result | npm/playwright output | CDP 캡처로 대체 금지 |
+| E2E/UI 테스트 | repository root 또는 `frontend/` | `npx playwright test` | `npx playwright test` | 화면이 있으면 필수 | Gate 4 화면 증적 | exit code 0, 상태별 screenshot/video/trace 생성 | UI Evidence / Test Result | `docs/artifacts/04-review/evidence/ui/` | Gate 3에서 UI-ID별 확정. CDP/수동 캡처만으로 Pass 금지 |
 
 명령 실행 기록 기준:
 
@@ -442,6 +443,7 @@ Spring Boot + Vue 통합 배포 예:
 - 실행하지 못한 필수 명령은 `Not Run`으로 기록하고 사유, 영향 범위, 후속 조치를 남긴다.
 - 프로젝트 범위상 적용하지 않는 명령은 승인 근거와 함께 `Skipped`로 기록한다.
 - 개발표준정의서에서 필수로 지정한 명령은 Gate 4 테스트결과서의 실행 검증 표에 모두 반영한다.
+- 화면 QA는 Playwright 설치 확인과 `npx playwright test` 실행 결과를 필수로 기록한다. CDP, 브라우저 수동 캡처, 런타임 Preview 캡처는 보조 관찰로만 기록할 수 있고 UI Pass 증거로 사용하지 않는다.
 
 ## 13. 에이전트 작업 규칙
 

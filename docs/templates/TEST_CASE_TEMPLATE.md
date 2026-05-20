@@ -144,12 +144,12 @@ change_reason: 최초 초안 작성
 
 | UI-ID | 관련 SCR | 기준 시안 | 관련 Contract | Viewport | 상태/시나리오 | 입력값 | 기대 화면 | 캡처 경로 | 비교 방식 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| UI-001-01 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 기본 화면 | 없음 | 이메일/비밀번호/비밀번호 확인/가입 버튼이 보이고 UICON-001의 필수 유지 요소를 따른다 | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
-| UI-001-02 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 약한 비밀번호 오류 | password1! | 약한 비밀번호 오류 메시지가 보이고 가입이 차단된다 | docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
-| UI-001-03 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 비밀번호 확인 불일치 | password / password2 | 비밀번호 확인 불일치 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-03_signup_password_mismatch_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
-| UI-001-04 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 중복 이메일 오류 | 기존 이메일 | 중복 이메일 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-04_signup_duplicate_email_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
-| UI-001-05 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 성공 | 유효한 신규 계정 | 가입 완료 메시지와 로그인 안내가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
-| UI-001-06 | SCR-002 | UIREF-002 | UICON-002 | Desktop 1280x720 | 성공 후 로그인 연계 | 가입한 이메일 | 로그인 화면으로 이동했고 성공 메시지 또는 이메일 연계가 확인된다 | docs/artifacts/04-review/evidence/ui/UI-001-06_signup_to_login_desktop.png | 수동 비교 / Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-01 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 기본 화면 | 없음 | 이메일/비밀번호/비밀번호 확인/가입 버튼이 보이고 UICON-001의 필수 유지 요소를 따른다 | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-02 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 약한 비밀번호 오류 | password1! | 약한 비밀번호 오류 메시지가 보이고 가입이 차단된다 | docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-03 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 비밀번호 확인 불일치 | password / password2 | 비밀번호 확인 불일치 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-03_signup_password_mismatch_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-04 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 중복 이메일 오류 | 기존 이메일 | 중복 이메일 오류 메시지가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-04_signup_duplicate_email_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-05 | SCR-001 | UIREF-001 | UICON-001 | Desktop 1280x720 | 회원가입 성공 | 유효한 신규 계정 | 가입 완료 메시지와 로그인 안내가 보인다 | docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
+| UI-001-06 | SCR-002 | UIREF-002 | UICON-002 | Desktop 1280x720 | 성공 후 로그인 연계 | 가입한 이메일 | 로그인 화면으로 이동했고 성공 메시지 또는 이메일 연계가 확인된다 | docs/artifacts/04-review/evidence/ui/UI-001-06_signup_to_login_desktop.png | Playwright screenshot / 시각 회귀 비교 / Contract diff | Draft |
 
 > `관련 Contract`가 있는 행은 화면 모양만 보지 않는다. 필수 유지 요소, 허용된 차이, 금지된 차이를 함께 판정한다.
 

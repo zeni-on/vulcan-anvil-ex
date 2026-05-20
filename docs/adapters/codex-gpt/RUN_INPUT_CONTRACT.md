@@ -152,6 +152,14 @@ gate_exit_policy:
 ui_evidence_policy:
   state_level_required: true
   id_pattern: "UI-001-01"
+  capture_tool_required: "Playwright"
+  install_if_missing:
+    - "npx playwright --version"
+    - "npm install -D @playwright/test"
+    - "npx playwright install"
+  pass_forbidden_when:
+    - "CDP 또는 브라우저 수동 캡처만 있고 Playwright 실행 결과가 없다."
+    - "Playwright 미설치 상태를 설치/재실행 없이 Not Run으로만 넘긴다."
   minimum_fields:
     - UI-ID
     - 관련 SCR

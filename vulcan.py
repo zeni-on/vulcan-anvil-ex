@@ -289,6 +289,16 @@ AUDIT_GATE_EXIT_POLICY = {
 AUDIT_UI_EVIDENCE_POLICY = {
     "state_level_required": True,
     "id_pattern": "UI-001-01",
+    "capture_tool": "Playwright",
+    "install_if_missing": [
+        "npx playwright --version",
+        "npm install -D @playwright/test",
+        "npx playwright install",
+    ],
+    "forbidden_as_pass_evidence": [
+        "CDP-only capture",
+        "browser manual screenshot without Playwright run",
+    ],
     "minimum_fields": [
         "UI-ID",
         "관련 SCR",
@@ -500,6 +510,8 @@ AUDIT_GATE_PRESETS = {
             "실행한 테스트 명령과 결과가 테스트 결과서에 기록되어 있다.",
             "화면/UI 증적 또는 로그 증적이 관련 UI/UT/IT/PT ID와 1:1로 연결되어 있다.",
             "회원가입, 로그인, TODO 같은 UI 흐름은 기본/오류/성공/전환 상태별 캡처가 분리되어 있다.",
+            "화면 캡처 증적은 Playwright로 생성되어 있으며, Playwright 미설치 시 설치 명령과 재실행 결과가 기록되어 있다.",
+            "CDP, 브라우저 수동 캡처, 런타임 Preview 캡처만으로 UI Pass를 확정하지 않는다.",
             "화면 퍼블리싱 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다.",
             "증적 파일이 기대 화면을 실제로 보여주지 못하면 Pass가 아니라 Fail 또는 Not Run으로 기록되어 있다.",
             "결함은 FIND로 기록하고, 범위 변경은 CR로 승격한다.",
@@ -2120,6 +2132,34 @@ def validate_development_standard(project_dir="."):
     for label, pattern in required_terms:
         if not re.search(pattern, content, re.IGNORECASE):
             issues.append(f"{rel_path}에 {label} 기준 없음")
+
+    critical_blank_rows = [
+        ("적용 언어", r"\|\s*적용 언어\s*\|\s*\|"),
+        ("적용 프레임워크", r"\|\s*적용 프레임워크\s*\|\s*\|"),
+        ("Base Package", r"\|\s*Base Package\s*\|\s*(?:예:\s*)?\|"),
+        ("패키지 구조 기준", r"\|\s*패키지 구조 기준\s*\|\s*(?:예:\s*)?\|"),
+        ("Lombok 사용 여부", r"\|\s*사용 여부\s*\|\s*\|"),
+        ("Lombok 허용 annotation", r"\|\s*허용 annotation\s*\|\s*(?:예:\s*)?\|"),
+        ("로깅 API", r"\|\s*로깅 API\s*\|\s*(?:예:\s*)?\|"),
+        ("로깅 구현체", r"\|\s*(?:로깅\s*)?구현체\s*\|\s*(?:예:\s*)?\|"),
+        ("로그 레벨 기준", r"\|\s*로그 레벨\s*(?:기준)?\s*\|\s*(?:예:\s*)?\|"),
+    ]
+    for label, pattern in critical_blank_rows:
+        if re.search(pattern, content, re.IGNORECASE):
+            issues.append(f"{rel_path}에 {label} 값이 비어 있음")
+
+    if re.search(r"Spring Boot|Spring Security|JPA|gradlew", content, re.IGNORECASE):
+        spring_required_terms = [
+            ("Spring Boot base package", r"Base Package.+`?[a-z]+(?:\.[a-z][a-z0-9_]*)+`?|base package"),
+            ("feature 우선 패키지 구조", r"feature 우선|auth/|user/|\{featureName\}|domain/\{domainName\}|DDD"),
+            ("domain 래퍼 선택 사유", r"domain/\{domainName\}|domain 래퍼|DDD 구조 선택 사유"),
+            ("JavaDoc 적용 대상", r"JavaDoc|Javadoc|public 업무 메서드|Controller, Service, Security Config"),
+            ("logger 선언 기준", r"private static final Logger|LoggerFactory|getLogger|@Slf4j|logger 선언"),
+            ("System.out 금지", r"System\.out|printStackTrace"),
+        ]
+        for label, pattern in spring_required_terms:
+            if not re.search(pattern, content, re.IGNORECASE):
+                issues.append(f"{rel_path}에 {label} 기준 없음")
 
     return [rel_path], issues
 
@@ -5144,6 +5184,18 @@ def check_run_file(path):
         has_state_level_ui = bool(re.search(r"\bUI-\d{3}-\d{2}\b", content))
         if has_ui_reference and not has_state_level_ui and re.search(r"ui|화면|캡처|증적", content, re.IGNORECASE):
             issues.append("UI 증적이 포함된 완료 Run이지만 상태/시나리오 단위 UI-ID(UI-001-01)가 없습니다.")
+        has_ui_pass_evidence = (
+            has_ui_reference
+            and re.search(r"result\s*:\s*(passed|Pass)|\|\s*Pass\s*\|", content, re.IGNORECASE)
+            and re.search(r"캡처|screenshot|UI Evidence|증적|actual_path|file\s*:", content, re.IGNORECASE)
+        )
+        has_playwright_evidence = bool(re.search(
+            r"capture_tool\s*:\s*Playwright|npx\s+playwright\s+test|playwright\s+test|Playwright.+exit code",
+            content,
+            re.IGNORECASE,
+        ))
+        if has_ui_pass_evidence and not has_playwright_evidence:
+            issues.append("UI Pass 증적이 있지만 Playwright 실행 결과 또는 capture_tool: Playwright 기록이 없습니다.")
 
     return issues, warnings
 

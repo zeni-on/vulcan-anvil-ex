@@ -100,11 +100,15 @@
 
 해야 할 일:
 - 구현 전 `implementation-plan` 또는 단일 구현 Run의 생략 사유를 확인한다.
+- 개발표준정의서는 구현 계약으로 취급한다. 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령 기준이 비어 있으면 구현하지 않고 FIND/CR로 보고한다.
+- Spring Boot 구현은 개발표준의 base package와 feature 우선 구조를 따른다. `domain/{feature}` 래퍼는 DDD 구조 선택 사유가 개발표준에 있을 때만 사용한다.
 - 화면 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
 - 구현, 테스트, 증적, 추적표, Run 결과를 분리하지 않는다.
 - 개발표준과 테스트케이스에 지정된 필수 명령을 실행하고, cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 테스트결과서에 남긴다.
-- 화면이 있으면 실제 화면을 확인하고 필요한 캡처 증적을 남긴다.
+- 화면이 있으면 Playwright로 실제 화면을 확인하고 상태별 캡처 증적을 남긴다.
+- Playwright가 설치되어 있지 않으면 `npm install -D @playwright/test`와 `npx playwright install`을 실행한 뒤 `npx playwright test`로 재검증한다.
+- CDP 캡처, 브라우저 수동 캡처, 런타임 Preview 캡처만으로 UI 테스트 Pass를 확정하지 않는다. Playwright를 실행하지 못하면 `Not Run` 또는 `FIND`로 남긴다.
 - 화면 퍼블리싱 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
 - 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
 

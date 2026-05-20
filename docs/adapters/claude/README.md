@@ -26,7 +26,7 @@ Claude Adapter는 다음 Claude 고유 특징을 고려한다.
 - **subagent**: `.claude/agents/*.md` 파일명으로 subagent를 위임할 수 있다. 파일명 = persona명 (1:1)
 - **skills**: `.claude/skills/*/skill.md`가 런타임 플러그인으로 자동 로드된다
 - **tools**: Bash, Read, Write, Edit, Grep, Glob 등 내장 도구를 직접 실행할 수 있다
-- **브라우저**: Playwright 또는 Claude-in-Chrome MCP로 UI 캡처가 가능하다
+- **브라우저**: UI Pass 증적은 Playwright 캡처를 기준으로 한다. Claude-in-Chrome/CDP 캡처는 보조 관찰로만 사용한다
 - **대화 컨텍스트**: 이전 대화 내용을 Orchestrator가 유지한다
 
 ## 3. Codex/GPT Adapter와의 차이
@@ -38,7 +38,7 @@ Claude Adapter는 다음 Claude 고유 특징을 고려한다.
 | 스킬 | `docs/adapters/codex-gpt/skills/` 수동 참조 | `.claude/skills/` 자동 로드 |
 | 도구 실행 | 텍스트 명령 출력 | Bash tool 직접 실행 |
 | 컨텍스트 | Run 단위 주입 | 대화 누적 |
-| UI 캡처 | 명령 출력 | Playwright MCP / Claude-in-Chrome |
+| UI 캡처 | Playwright 명령 출력 | Playwright 명령 실행 |
 
 ## 4. 기본 실행 순서
 

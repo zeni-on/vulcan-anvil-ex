@@ -84,6 +84,8 @@ evidence:
     - ui_id: UI-001-05
       scenario: "회원가입 성공 메시지"
       expected_screen: "가입 완료 메시지와 로그인 안내가 보인다."
+      capture_tool: Playwright
+      command: "npx playwright test"
       file: docs/artifacts/04-review/evidence/ui/UI-001-05_signup_success_desktop.png
       result: passed
   ui_contract_diffs:
@@ -232,11 +234,15 @@ evidence:
     - ui_id: UI-001-01
       scenario: "회원가입 기본 화면"
       expected_screen: "이메일, 비밀번호, 비밀번호 확인, 가입 버튼이 보인다."
+      capture_tool: Playwright
+      command: "npx playwright test"
       file: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
       result: passed
     - ui_id: UI-001-02
       scenario: "약한 비밀번호 오류"
       expected_screen: "약한 비밀번호 오류 메시지가 보이고 가입이 차단된다."
+      capture_tool: Playwright
+      command: "npx playwright test"
       file: docs/artifacts/04-review/evidence/ui/UI-001-02_signup_weak_password_desktop.png
       result: passed
 ```
@@ -254,6 +260,7 @@ evidence:
 
 회원가입 성공 테스트의 기대 화면이 성공 메시지라면 로그인 화면만 있는 캡처는 Pass 증적이 아니다.
 이 경우 `failed` 또는 `not_run`으로 기록하고 `FIND`를 남긴다.
+UI 캡처 증적은 Playwright 실행으로 생성해야 한다. CDP, 브라우저 수동 캡처, 런타임 Preview 캡처만 있는 경우 `passed`로 기록하지 않는다.
 
 UIREF 또는 ui-baseline이 UI Implementation Contract로 지정된 화면은 기준 대비 차이를 별도로 남긴다.
 
