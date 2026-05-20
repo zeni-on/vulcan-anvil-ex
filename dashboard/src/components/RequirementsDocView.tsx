@@ -3,11 +3,19 @@
 import type { ReactNode } from 'react'
 import {
   AcceptanceCriteriaRow,
+  ChangeHistoryRow,
+  DataStandardRow,
   DecisionRow,
+  DetailRequirementDefinitionRow,
   DetailRequirementRow,
+  ExcludedScopeRow,
+  GlossaryRow,
+  IncludedScopeRow,
   NonFunctionalRequirementRow,
+  RequirementStatusRow,
   RequirementRow,
   RequirementsDocModel,
+  ReviewChecklistRow,
   SecurityConsiderationRow,
 } from '@/lib/requirementsDoc'
 
@@ -116,6 +124,17 @@ function renderDetailRows(rows: DetailRequirementRow[]) {
   ])
 }
 
+function renderDetailDefinitionRows(rows: DetailRequirementDefinitionRow[]) {
+  return rows.map((row) => [
+    <span key="id" className="font-mono font-semibold text-blue-700">{row.id}</span>,
+    row.name || '-',
+    row.description || '-',
+    row.priority || '-',
+    row.related || '-',
+    row.openQuestion || '-',
+  ])
+}
+
 function renderAcRows(rows: AcceptanceCriteriaRow[]) {
   return rows.map((row) => [
     <span key="id" className="font-mono font-semibold text-emerald-700">{row.id}</span>,
@@ -137,6 +156,31 @@ function renderNreqRows(rows: NonFunctionalRequirementRow[]) {
   ])
 }
 
+function renderStatusRows(rows: RequirementStatusRow[]) {
+  return rows.map((row) => [
+    row.type || '-',
+    row.count || '-',
+    <span key="ids" className="font-mono text-[11px] text-slate-700">{row.ids || '-'}</span>,
+    row.status || '-',
+  ])
+}
+
+function renderGlossaryRows(rows: GlossaryRow[]) {
+  return rows.map((row) => [row.term || '-', row.definition || '-', row.note || '-'])
+}
+
+function renderIncludedScopeRows(rows: IncludedScopeRow[]) {
+  return rows.map((row) => [
+    row.no || '-',
+    row.content || '-',
+    <span key="id" className="font-mono text-[11px] text-blue-700">{row.relatedId || '-'}</span>,
+  ])
+}
+
+function renderExcludedScopeRows(rows: ExcludedScopeRow[]) {
+  return rows.map((row) => [row.no || '-', row.content || '-', row.reason || '-', row.note || '-'])
+}
+
 function renderSecurityRows(rows: SecurityConsiderationRow[]) {
   return rows.map((row) => [
     <span key="id" className="font-mono font-semibold text-red-700">{row.id}</span>,
@@ -146,6 +190,33 @@ function renderSecurityRows(rows: SecurityConsiderationRow[]) {
     row.target || '-',
     row.verification || '-',
   ])
+}
+
+function renderDataStandardRows(rows: DataStandardRow[]) {
+  return rows.map((row) => [
+    row.name || '-',
+    <span key="req" className="font-mono text-[11px] text-blue-700">{row.requirementId || '-'}</span>,
+    row.standardTerm || '-',
+    row.abbreviation || '-',
+    row.domain || '-',
+    row.compliance || '-',
+    row.note || '-',
+  ])
+}
+
+function renderChangeHistoryRows(rows: ChangeHistoryRow[]) {
+  return rows.map((row) => [
+    row.version || '-',
+    row.date || '-',
+    row.change || '-',
+    row.author || '-',
+    row.reviewer || '-',
+    row.approver || '-',
+  ])
+}
+
+function renderChecklistRows(rows: ReviewChecklistRow[]) {
+  return rows.map((row) => [row.item || '-', row.checked || '-'])
 }
 
 function renderDecisionRows(rows: DecisionRow[]) {
@@ -161,6 +232,7 @@ function renderDecisionRows(rows: DecisionRow[]) {
 
 export default function RequirementsDocView({ model }: { model: RequirementsDocModel }) {
   const summaryEntries = Object.entries(model.scopeSummary).filter(([, value]) => value)
+  const projectOverviewEntries = Object.entries(model.projectOverview).filter(([, value]) => value)
 
   return (
     <div
@@ -179,11 +251,31 @@ export default function RequirementsDocView({ model }: { model: RequirementsDocM
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <StatPill label="상위 REQ" value={model.functionalRequirements.length} />
-        <StatPill label="상세 REQ" value={model.detailRequirements.length} />
+        <StatPill label="상세 REQ" value={model.detailRequirementDefinitions.length || model.detailRequirements.length} />
         <StatPill label="AC" value={model.acceptanceCriteria.length} />
         <StatPill label="NREQ" value={model.nonFunctionalRequirements.length} />
         <StatPill label="SEC" value={model.securityConsiderations.length} />
       </div>
+
+      {model.purpose.length > 0 && (
+        <Section title="문서 목적">
+          <div className="rounded-md border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700 shadow-sm">
+            {model.purpose.map((line, index) => (
+              <p key={index} className={index > 0 ? 'mt-2' : undefined}>{line}</p>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {model.writingCriteria.length > 0 && (
+        <Section title="작성 기준">
+          <ul className="list-disc space-y-1 rounded-md border border-slate-200 bg-white py-3 pl-7 pr-3 text-xs leading-relaxed text-slate-700 shadow-sm">
+            {model.writingCriteria.map((line, index) => (
+              <li key={index}>{line}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {summaryEntries.length > 0 && (
         <Section title="범위 요약">
@@ -198,6 +290,37 @@ export default function RequirementsDocView({ model }: { model: RequirementsDocM
         </Section>
       )}
 
+      {model.requirementStatus.length > 0 && (
+        <Section title="요구사항 현황">
+          <SmallTable
+            headers={['구분', '수량', '주요 ID', '상태/비고']}
+            rows={renderStatusRows(model.requirementStatus)}
+          />
+        </Section>
+      )}
+
+      {projectOverviewEntries.length > 0 && (
+        <Section title="프로젝트 개요">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {projectOverviewEntries.map(([key, value]) => (
+              <div key={key} className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="text-[11px] font-medium text-slate-500">{key}</div>
+                <div className="mt-1 text-xs font-medium leading-relaxed text-slate-900">{value}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {model.glossary.length > 0 && (
+        <Section title="용어 정의">
+          <SmallTable
+            headers={['용어', '정의', '비고']}
+            rows={renderGlossaryRows(model.glossary)}
+          />
+        </Section>
+      )}
+
       <Section title="기능 요구사항">
         {model.functionalRequirements.length > 0 ? (
           <div className="grid gap-3">
@@ -209,6 +332,15 @@ export default function RequirementsDocView({ model }: { model: RequirementsDocM
           <p className="text-xs text-slate-500">등록된 기능 요구사항이 없습니다.</p>
         )}
       </Section>
+
+      {model.detailRequirementDefinitions.length > 0 && (
+        <Section title="기능 요구사항 상세">
+          <SmallTable
+            headers={['상세 REQ', '요구사항명', '설명', '우선순위', '관련 NREQ/SEC', '확인 필요 사항']}
+            rows={renderDetailDefinitionRows(model.detailRequirementDefinitions)}
+          />
+        </Section>
+      )}
 
       {model.detailRequirements.length > 0 && (
         <Section title="상세 요구사항과 AC 매핑">
@@ -225,6 +357,25 @@ export default function RequirementsDocView({ model }: { model: RequirementsDocM
             headers={['AC', '관련 요구사항', '인수기준', '검증 방식', '상태']}
             rows={renderAcRows(model.acceptanceCriteria)}
           />
+        </Section>
+      )}
+
+      {(model.includedScope.length > 0 || model.excludedScope.length > 0) && (
+        <Section title="범위 정의">
+          <div className="space-y-3">
+            {model.includedScope.length > 0 && (
+              <SmallTable
+                headers={['번호', '포함 범위', '관련 ID']}
+                rows={renderIncludedScopeRows(model.includedScope)}
+              />
+            )}
+            {model.excludedScope.length > 0 && (
+              <SmallTable
+                headers={['번호', '제외 범위', '제외 사유', '비고']}
+                rows={renderExcludedScopeRows(model.excludedScope)}
+              />
+            )}
+          </div>
         </Section>
       )}
 
@@ -246,11 +397,38 @@ export default function RequirementsDocView({ model }: { model: RequirementsDocM
         </Section>
       )}
 
+      {model.dataStandardConsiderations.length > 0 && (
+        <Section title="데이터 표준 고려사항">
+          <SmallTable
+            headers={['항목명', '관련 요구사항', '표준 용어', '영문 약어', '도메인', '준용 여부', '비고']}
+            rows={renderDataStandardRows(model.dataStandardConsiderations)}
+          />
+        </Section>
+      )}
+
       {model.decisions.length > 0 && (
         <Section title="확인 필요 및 의사결정">
           <SmallTable
             headers={['ID', '구분', '내용', '영향', '확인 주체', '목표 Gate']}
             rows={renderDecisionRows(model.decisions)}
+          />
+        </Section>
+      )}
+
+      {model.changeHistory.length > 0 && (
+        <Section title="변경이력">
+          <SmallTable
+            headers={['버전', '일자', '변경내용', '작성자', '검토자', '승인자']}
+            rows={renderChangeHistoryRows(model.changeHistory)}
+          />
+        </Section>
+      )}
+
+      {model.reviewChecklist.length > 0 && (
+        <Section title="검토 체크리스트">
+          <SmallTable
+            headers={['항목', '확인']}
+            rows={renderChecklistRows(model.reviewChecklist)}
           />
         </Section>
       )}
