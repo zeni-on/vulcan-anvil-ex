@@ -274,6 +274,31 @@ AUDIT_GATE_ANCHOR_DOCS = {
     ],
 }
 
+AUDIT_FOCUSED_SOURCE_SKILLS = {
+    "traceability-review",
+    "independent-review",
+    "change-impact-analysis",
+    "handoff",
+}
+
+AUDIT_DESIGN_SEQUENCE_SKILLS = {
+    "screen-design",
+    "screen-review",
+    "ui-review",
+    "development-standard-review",
+    "data-standard-review",
+    "security-review",
+}
+
+AUDIT_UI_POLICY_SKILLS = {
+    "screen-design",
+    "screen-review",
+    "ui-review",
+    "implementation-plan",
+    "build-wave",
+    "qa-fix-loop",
+}
+
 AUDIT_GATE_EXIT_POLICY = {
     "stop_required": True,
     "next_gate_requires_user_approval": True,
@@ -343,6 +368,23 @@ AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY = {
         "차이 목록",
         "허용된 차이 여부",
         "미허용 차이의 FIND 또는 CR",
+    ],
+}
+
+AUDIT_WORKER_EXECUTION_POLICY = {
+    "applies_when": "Run이 subagent, codex-cli, claude-cli, manual worker 등 Orchestrator와 분리된 작업자 runner에게 전달되는 경우",
+    "role": "worker-runner",
+    "forbidden_actions": [
+        "Gate 전환을 수행하지 않는다.",
+        "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다.",
+        "사용자 승인, Gate 완료, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다.",
+        "Run의 scope.writable 밖 파일을 수정하지 않는다.",
+        "Orchestrator가 요청하지 않은 신규 Run, PR, 커밋, push를 만들지 않는다.",
+    ],
+    "required_outputs": [
+        "수행한 변경과 검증 결과를 Run 결과에 남긴다.",
+        "Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다.",
+        "범위 밖 수정이나 기준 충돌이 필요하면 직접 처리하지 않고 open_issues 또는 findings로 남긴다.",
     ],
 }
 
@@ -1021,7 +1063,10 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     skill_sample = skill_preset.get("sample")
     skill_required = skill_preset.get("required", [])
     skill_has_working_docs = any(is_working_document(path) for path in skill_required)
+    focused_source = skill in AUDIT_FOCUSED_SOURCE_SKILLS
     if skill_has_working_docs:
+        source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
+    elif focused_source:
         source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
     else:
         source_candidates = merge_unique(gate_preset.get("required", []), skill_required)
@@ -1058,6 +1103,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     return {
         "profile": profile,
         "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
+        "focused_source": focused_source,
         "source_documents": {
             "read_first": source_read_first,
             "working_documents": working_documents,
@@ -1070,7 +1116,12 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
             "excluded": merge_unique(AUDIT_COMMON_EXCLUDED_PATHS, gate_preset.get("excluded", []), skill_preset.get("excluded", [])),
         },
         "completion_criteria": completion_criteria,
-        "design_sequence": merge_unique(gate_preset.get("design_sequence", []), skill_preset.get("design_sequence", [])),
+        "design_sequence": (
+            merge_unique(gate_preset.get("design_sequence", []), skill_preset.get("design_sequence", []))
+            if gate != "gate2" or skill in AUDIT_DESIGN_SEQUENCE_SKILLS
+            else []
+        ),
+        "include_ui_policies": gate in ("gate3", "impl", "gate4") or skill in AUDIT_UI_POLICY_SKILLS,
         "verification": {
             "commands": verification_commands,
             "evidence": {
@@ -1081,6 +1132,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         "gate_exit_policy": AUDIT_GATE_EXIT_POLICY,
         "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
         "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
+        "worker_execution_policy": AUDIT_WORKER_EXECUTION_POLICY,
         "output_requirements": {
             "format": "RUN_OUTPUT_CONTRACT.md",
             "include": [
@@ -1126,6 +1178,7 @@ def render_run_input_preset(preset, ids, persona, gate):
     gate_exit = preset["gate_exit_policy"]
     ui_evidence = preset["ui_evidence_policy"]
     ui_contract = preset["ui_implementation_contract_policy"]
+    worker_policy = preset["worker_execution_policy"]
     design_sequence = preset.get("design_sequence", [])
     design_sequence_block = ""
     design_sequence_instruction = ""
@@ -1135,6 +1188,37 @@ design_sequence:
 {format_yaml_sequence(design_sequence, 2)}"""
         design_sequence_instruction = """
    - Gate 2 Run이면 `design_sequence`에서 현재 위치를 확인하고, 필요한 이전 단계 누락과 다음 Gate 2 Run 제안을 기록한다."""
+    ui_evidence_block = ""
+    ui_contract_block = ""
+    if preset.get("include_ui_policies", True):
+        ui_evidence_block = f"""
+ui_evidence_policy:
+  state_level_required: {str(ui_evidence["state_level_required"]).lower()}
+  id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
+  minimum_fields:
+{format_yaml_sequence(ui_evidence["minimum_fields"], 4)}
+  examples:
+{format_yaml_sequence(ui_evidence["examples"], 4)}"""
+        ui_contract_block = f"""
+ui_implementation_contract_policy:
+  required_when: {format_yaml_scalar(ui_contract["required_when"])}
+  gate2_required_fields:
+{format_yaml_sequence(ui_contract["gate2_required_fields"], 4)}
+  impl_checklist:
+{format_yaml_sequence(ui_contract["impl_checklist"], 4)}
+  gate4_required_evidence:
+{format_yaml_sequence(ui_contract["gate4_required_evidence"], 4)}"""
+        ui_instruction_block = """
+8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
+9. UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
+10. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
+11. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
+12. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."""
+    else:
+        ui_instruction_block = """
+8. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
+9. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
+10. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."""
 
     read_first_docs = source.get("read_first", [])
     working_docs = source.get("working_documents", [])
@@ -1179,22 +1263,14 @@ gate_exit_policy:
   approval_evidence_required: {str(gate_exit["approval_evidence_required"]).lower()}
   allowed_next_action: {format_yaml_scalar(gate_exit["allowed_next_action"])}
   forbidden_actions:
-{format_yaml_sequence(gate_exit["forbidden_actions"], 4)}
-ui_evidence_policy:
-  state_level_required: {str(ui_evidence["state_level_required"]).lower()}
-  id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
-  minimum_fields:
-{format_yaml_sequence(ui_evidence["minimum_fields"], 4)}
-  examples:
-{format_yaml_sequence(ui_evidence["examples"], 4)}
-ui_implementation_contract_policy:
-  required_when: {format_yaml_scalar(ui_contract["required_when"])}
-  gate2_required_fields:
-{format_yaml_sequence(ui_contract["gate2_required_fields"], 4)}
-  impl_checklist:
-{format_yaml_sequence(ui_contract["impl_checklist"], 4)}
-  gate4_required_evidence:
-{format_yaml_sequence(ui_contract["gate4_required_evidence"], 4)}
+{format_yaml_sequence(gate_exit["forbidden_actions"], 4)}{ui_evidence_block}{ui_contract_block}
+worker_execution_policy:
+  applies_when: {format_yaml_scalar(worker_policy["applies_when"])}
+  role: {format_yaml_scalar(worker_policy["role"])}
+  forbidden_actions:
+{format_yaml_sequence(worker_policy["forbidden_actions"], 4)}
+  required_outputs:
+{format_yaml_sequence(worker_policy["required_outputs"], 4)}
 output_requirements:
   format: {format_yaml_scalar(output["format"])}
   include:
@@ -1220,10 +1296,7 @@ security_policy:
 5. `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다.
 6. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
 7. `verification.commands`를 실행하고 결과를 이 Run 기록에 남긴다.
-8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
-9. UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
-10. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
-11. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다.
+{ui_instruction_block}
 
 ## 5. Gate 종료 및 승인 대기
 
@@ -3798,6 +3871,31 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
         run_title = title or f"Build Wave {bw_id}"
         rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_build-wave-{bw_id}_{slugify(run_title)}_v0.1.md")
         skill_path = RUN_SKILLS["build-wave"]
+        wave_read_first = [
+            "AGENTS.md",
+            "session.json",
+            "docs/core/TRACEABILITY_RULES.md",
+            skill_path,
+        ]
+        wave_working_documents = [
+            rel_path.replace("\\", "/"),
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        ]
+        wave_reference_documents = [
+            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            "docs/artifacts/02-design/",
+            "docs/core/AGENT_RUN_PROTOCOL.md",
+            "docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md",
+            "docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md",
+        ]
+        wave_writable = [
+            rel_path.replace("\\", "/"),
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/artifacts/04-review/evidence/",
+            "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
+        ]
         content = f"""# {run_id} Build Wave {bw_id} - {run_title}
 
 ```yaml
@@ -3811,6 +3909,35 @@ bw_id: {bw_id}
 status: In Progress
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
+runner_role: worker-runner
+source_documents:
+  read_first:
+{format_yaml_sequence(wave_read_first, 4)}
+  working_documents:
+{format_yaml_sequence(wave_working_documents, 4)}
+  reference_on_demand:
+{format_yaml_sequence(wave_reference_documents, 4)}
+scope:
+  writable:
+{format_yaml_sequence(wave_writable, 4)}
+  readonly:
+    - "docs/core/"
+    - "docs/templates/"
+    - "docs/seed-docs/reference-standards/"
+  excluded:
+    - "docs/ref-docs/"
+    - "**/*.db"
+    - "**/__pycache__/"
+    - "**/.ruff_cache/"
+worker_execution_policy:
+  forbidden_actions:
+    - "Gate 전환을 수행하지 않는다."
+    - "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다."
+    - "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다."
+    - "scope.writable 밖 파일을 수정하지 않는다."
+  required_outputs:
+    - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
+    - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
 verification_results: []
 evidence: []
 traceability_updates: []
@@ -3827,15 +3954,24 @@ open_issues: []
 
 {format_yaml_list(ids)}
 
-## 3. Orchestrator 지시
+## 3. 작업자 입력 계약
+
+- 먼저 `source_documents.read_first`만 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
+- `source_documents.working_documents`는 이번 Wave의 필수 작업 문서다.
+- `source_documents.reference_on_demand`는 설계 충돌, 기준 확인, 세부 판단이 필요할 때만 참고한다.
+- `scope.writable`에 `TBD`가 남아 있으면 코드 수정 전에 Orchestrator에게 수정 허용 경로를 요청한다.
+
+## 4. Orchestrator 지시
 
 - 이 Run은 `{bw_id}` 하나만 수행한다.
 - 다른 Build Wave의 코드 수정은 하지 않는다.
 - subagent를 병렬 실행하더라도 이 Wave의 수정 허용 범위 안에서만 작업한다.
 - 구현 결과는 Orchestrator가 검토하고 통합한다.
-- 완료 시 테스트, 추적표, Run 기록을 갱신하고 `python vulcan.py wave-complete {bw_id}`를 실행한다.
+- 작업자 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
+- `session.json`의 `current_gate`, `gate_status`, `completed`는 직접 변경하지 않는다.
+- 완료 시 테스트, 추적표, Run 기록을 갱신하고 Orchestrator에게 `wave-complete {bw_id}` 실행 필요 여부를 보고한다.
 
-## 4. 수정 범위
+## 5. 수정 범위
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3843,11 +3979,11 @@ open_issues: []
 | 읽기 전용 | 요구사항, 설계, 테스트케이스, 개발표준 |
 | 제외 | 다른 Wave 범위, 승인되지 않은 리팩터링, `docs/ref-docs/` |
 
-## 5. 검증 계획
+## 6. 검증 계획
 
 TBD
 
-## 6. 결과 기록
+## 7. 결과 기록
 
 ### 변경 파일
 
@@ -4801,6 +4937,7 @@ created_at: {date.today()}
 ## 7. 주의
 
 - 리뷰어는 작성자의 의도를 추측하지 않는다.
+- 리뷰어는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
 - 대화상 사용자 승인 없이 `User Approved`로 기록하지 않는다.
 - 실행하지 않은 테스트나 확인하지 않은 화면을 Pass로 판정하지 않는다.
 - 산출물을 수정해야 한다면 직접 수정하지 말고 결과 파일에 `FIND` 또는 `CR`로 남긴다.
@@ -4906,6 +5043,7 @@ open_issues: []
 - 독립 검수 결과를 최종 사실로 바로 확정하지 않는다.
 - 결과 파일의 `FIND`, `CR`, `ISSUE` 후보를 본선 산출물과 대조한다.
 - 반영이 필요하면 별도 Run 또는 QA Fix Loop로 처리한다.
+- 독립 검수 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
 - 리뷰 worktree는 결과 수집 후 사용자가 확인한 뒤 정리한다.
 
 ## 4. 완료 보고
@@ -5034,6 +5172,7 @@ Rules:
 - You may read files and run safe verification commands if needed.
 - You must update the result file with status, reviewed_by, result_verdict, reviewed documents, findings, CR candidates, ISSUE candidates, and evidence.
 - Use PASS, FIND, CR, or ISSUE as the result verdict.
+- Do not perform Gate transitions, edit session state, or make final approval/merge/release decisions.
 - Do not mark user approval unless the request/result contains explicit user approval evidence.
 - In your final response, summarize what you wrote to the result file and mention the result verdict.
 """

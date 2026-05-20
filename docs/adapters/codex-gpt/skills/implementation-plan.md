@@ -58,6 +58,8 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 - 하나의 Wave 안에서는 파일 책임이 분리된 경우에만 subagent 병렬 실행을 허용한다.
 - 다음 Wave의 읽기 전용 조사나 질문 정리는 가능하지만 코드 수정은 현재 Wave 완료 후 시작한다.
 - Wave 상태와 구현 진행률은 `session.json`을 직접 수정하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
+- 작업자 runner는 Gate 전환, `session.json` Gate 상태 변경, 최종 승인 판단을 하지 않는다.
+- 작업자 runner가 `wave-complete`, Gate 전환, PR merge, QA Pass가 필요하다고 판단하면 직접 확정하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
 
 ## 권장 Wave 예시
 

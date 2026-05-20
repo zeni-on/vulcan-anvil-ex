@@ -30,6 +30,8 @@ Codex CLI, Claude CLI, GitHub reviewer, 수동 검수자는 모두 Run 계약을
 - Review runner는 본선 산출물을 직접 수정하지 않고 result 또는 review 파일에 후보 판단을 남긴다.
 - Build runner가 만든 결과는 Orchestrator가 다시 검토하고 통합한다.
 - Runner 완료 보고만으로 Gate를 완료 처리하지 않는다.
+- Runner는 Gate 전환, `session.json`의 Gate 상태 변경, 사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 판단하지 않는다.
+- Runner가 위 판단이 필요하다고 보더라도 직접 처리하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
 - Worktree를 사용한 경우 결과 수집 후 사람이 확인하고 정리한다.
 
 ## 3. Runner 구분

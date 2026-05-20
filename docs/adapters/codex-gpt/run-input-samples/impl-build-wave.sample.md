@@ -71,6 +71,17 @@ gate_exit_policy:
   stop_required: true
   next_gate_requires_user_approval: true
   approval_evidence_required: true
+worker_execution_policy:
+  applies_when: "Build Wave가 subagent, codex-cli, claude-cli 등 작업자 runner에게 전달되는 경우"
+  role: "worker-runner"
+  forbidden_actions:
+    - "Gate 전환을 수행하지 않는다."
+    - "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다."
+    - "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다."
+    - "Orchestrator가 요청하지 않은 신규 Run, PR, 커밋, push를 만들지 않는다."
+  required_outputs:
+    - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
+    - "Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
 ui_implementation_contract_policy:
   impl_checklist:
     - "구현 전 관련 SCR의 UI Implementation Contract를 확인한다."
@@ -83,6 +94,8 @@ ui_implementation_contract_policy:
 ## Review Notes
 
 - 중간 이상 구현은 `implementation-plan`으로 Wave를 먼저 나눈 뒤 `build-wave`로 실행한다.
+- 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 테스트케이스, 추적표를 우선 작업 문서로 둔다.
+- API/화면/프로그램/DB/보안 설계는 related ID나 기준 충돌이 있을 때 필요한 문서만 `reference_on_demand`에서 확인한다.
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
-- 구현자가 자기 구현을 최종 승인하지 않도록 Orchestrator 검증과 review Run을 분리한다.
+- 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 검증과 review Run을 분리한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 구현 범위, 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
