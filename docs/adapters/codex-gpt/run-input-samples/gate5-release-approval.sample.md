@@ -17,13 +17,13 @@ source_documents:
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/adapters/codex-gpt/skills/traceability-review.md
   working_documents:
-    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
-    - docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md
-    - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
     - docs/artifacts/05-change/
     - docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md
   reference_on_demand:
+    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
+    - docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md
+    - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
     - docs/templates/RELEASE_APPROVAL_TEMPLATE.md
     - docs/templates/CHANGE_REQUEST_TEMPLATE.md
     - docs/core/ID_SYSTEM.md
@@ -52,5 +52,6 @@ gate_exit_policy:
 
 ## Review Notes
 
+- `working_documents`에는 릴리즈 승인서, 변경요청, 추적표처럼 승인 판단 결과를 직접 작성/갱신할 문서만 둔다.
 - Gate 5는 기능 추가 단계가 아니다. 승인 전 미해결 항목과 릴리즈 판단 근거를 고정한다.
 - 릴리즈 승인 여부는 대화상 명시 승인 또는 보류 사유로 남긴다.

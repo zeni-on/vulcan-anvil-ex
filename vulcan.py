@@ -277,7 +277,6 @@ AUDIT_GATE_ANCHOR_DOCS = {
 AUDIT_FOCUSED_SOURCE_SKILLS = {
     "traceability-review",
     "independent-review",
-    "change-impact-analysis",
     "handoff",
 }
 
@@ -1024,6 +1023,26 @@ def is_working_document(path):
     return normalized.startswith("docs/artifacts/")
 
 
+def is_run_working_document(path):
+    normalized = path.replace("\\", "/")
+    if normalized in ("session.json",):
+        return False
+    if normalized.startswith("docs/runs/"):
+        return False
+    if normalized.startswith("TBD:"):
+        return False
+    return normalized.startswith(("docs/artifacts/", "docs/backlog/"))
+
+
+def working_documents_from_scope(*scopes):
+    docs = []
+    for scope in scopes:
+        for path in scope or []:
+            if is_run_working_document(path):
+                docs.append(path)
+    return merge_unique(docs)
+
+
 def split_working_and_reference(paths):
     working = []
     reference = []
@@ -1064,13 +1083,29 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     skill_required = skill_preset.get("required", [])
     skill_has_working_docs = any(is_working_document(path) for path in skill_required)
     focused_source = skill in AUDIT_FOCUSED_SOURCE_SKILLS
+    preset_working_documents = skill_preset.get("working") or gate_preset.get("working", [])
+    if preset_working_documents:
+        scoped_working_documents = merge_unique(preset_working_documents)
+    elif focused_source:
+        scoped_working_documents = []
+    elif skill_preset.get("writable"):
+        scoped_working_documents = working_documents_from_scope(skill_preset.get("writable", []))
+    else:
+        scoped_working_documents = working_documents_from_scope(gate_preset.get("writable", []))
     if skill_has_working_docs:
         source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
     elif focused_source:
         source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
     else:
         source_candidates = merge_unique(gate_preset.get("required", []), skill_required)
-    working_documents, reference_documents = split_working_and_reference(source_candidates)
+    if scoped_working_documents:
+        working_documents = scoped_working_documents
+        reference_documents = [
+            path for path in source_candidates
+            if path not in working_documents and path not in scoped_working_documents
+        ]
+    else:
+        working_documents, reference_documents = split_working_and_reference(source_candidates)
     source_read_first = merge_unique(
         AUDIT_COMMON_READ_FIRST_DOCS,
         AUDIT_GATE_READ_FIRST_DOCS.get(gate, []),

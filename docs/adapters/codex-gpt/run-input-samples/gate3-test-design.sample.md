@@ -17,13 +17,15 @@ source_documents:
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/adapters/codex-gpt/skills/traceability-review.md
   working_documents:
-    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
-    - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
-    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   reference_on_demand:
+    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
+    - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
     - docs/templates/TEST_CASE_TEMPLATE.md
     - docs/core/ID_SYSTEM.md
     - docs/core/ORCHESTRATOR_PROTOCOL.md
@@ -67,6 +69,7 @@ ui_implementation_contract_policy:
 
 ## Review Notes
 
+- `working_documents`에는 이번 Run이 작성/갱신할 테스트케이스와 추적표만 둔다. 요구사항과 설계 산출물은 테스트 전개가 필요할 때 `reference_on_demand`에서 관련 ID 기준으로 확인한다.
 - 테스트를 실제로 실행하지 않았으면 통과로 쓰지 않는다. Gate 3는 테스트 설계 단계다.
 - Gate 3에서는 테스트를 실행하지 않더라도, Gate 4에서 동일하게 실행할 수 있도록 cwd, 명령, 성공 기준, 증적 경로를 정한다.
 - 회원가입, 로그인, TODO처럼 상태가 있는 화면은 기본/오류/성공/전환을 별도 UI-ID로 나눈다.

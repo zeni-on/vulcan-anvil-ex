@@ -17,12 +17,11 @@ source_documents:
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/adapters/codex-gpt/skills/qa-fix-loop.md
   working_documents:
-    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
-    - docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md
-    - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
-    - docs/artifacts/04-review/evidence/
+    - docs/artifacts/04-review/
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   reference_on_demand:
+    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
+    - docs/artifacts/02-design/
     - docs/templates/QA_FINDING_TEMPLATE.md
     - docs/templates/TEST_RESULT_TEMPLATE.md
     - docs/core/ID_SYSTEM.md
@@ -79,6 +78,7 @@ ui_implementation_contract_policy:
 
 ## Review Notes
 
+- `working_documents`에는 이번 Run이 작성/갱신할 QA 결과, 결함, 증적, 추적표만 둔다. 테스트케이스와 설계 산출물은 실행 기준 확인이나 결함 판정이 필요할 때 `reference_on_demand`에서 관련 ID 기준으로 확인한다.
 - QA 결함이 승인된 설계 범위 안이면 FIND로 처리한다.
 - 요구사항, 보안 기준, 릴리즈 범위를 바꾸면 CR로 승격한다.
 - 개발표준의 필수 명령이 테스트결과서에 없거나, exit code/성공 기준/로그 증적 없이 Pass로 기록되어 있으면 FIND로 남긴다.
