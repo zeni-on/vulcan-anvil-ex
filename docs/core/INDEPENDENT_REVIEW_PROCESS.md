@@ -152,11 +152,25 @@ python vulcan.py review-run --review-id RV-001
 
 ### Gate 2
 
+- Gate 2 독립 검수는 Gate 2 산출물만 보지 않는다. 반드시 Phase 0, Gate 1, Gate 2 순서로 상류 정합성을 먼저 확인한다.
+- Phase 0의 목표, 제약, 가정, 질문, DEC/RISK/ASM이 Gate 1 요구사항과 범위에 반영되었는지 확인한다.
+- Gate 1의 REQ/NREQ/AC, 포함/제외 범위, DEC/ISSUE가 Gate 2 설계의 전제와 모순되지 않는지 확인한다.
+- Gate 2 설계가 Gate 1 범위를 임의로 축소하거나 확장하지 않았는지 확인한다. 범위 변경이 필요하면 `CR` 또는 `ISSUE` 후보로 남긴다.
 - Gate 2 설계 순서가 지켜졌는지 확인한다.
 - SW Architecture가 상세 설계와 함께 Baseline 후보로 보강되었는지 확인한다.
 - REQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 기준으로 전개되었는지 확인한다.
 - UIREF/prototype이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.
 - Gate 3 테스트 설계로 넘길 검증 후보와 미해결 질문이 분리되었는지 확인한다.
+
+Gate 2 result 파일에는 다음 판정을 별도로 남긴다.
+
+| 판정 항목 | 확인 기준 |
+| --- | --- |
+| `Phase0 -> Gate1` | Phase 0 목표, 제약, 가정, 질문이 Gate 1 요구사항/범위/DEC로 내려왔는가 |
+| `Gate1 -> Gate2` | REQ/NREQ/AC와 포함/제외 범위가 설계 산출물에 빠짐없이 전개됐는가 |
+| `Scope Drift` | Gate 2가 승인된 Gate 1 범위를 임의 확장/축소하지 않았는가 |
+| `Open Decisions` | 미해결 DEC/ISSUE/RISK/ASM이 닫혔거나 다음 Gate 입력으로 분리됐는가 |
+| `Design Internal Consistency` | 아키텍처, 화면, 기능, API, 프로그램, DB, 보안, 개발표준이 서로 모순되지 않는가 |
 
 ### Gate 4
 

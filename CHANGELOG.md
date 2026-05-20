@@ -9,6 +9,7 @@
 - `vulcan.config.json` 초기 생성 추가: 독립 검수 runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
 - 독립 검수 모델/추론 강도 기준 추가: Gate 2/Gate 4 검수는 `gpt-5.5` + `high`를 권장하고, `review-run --model ... --reasoning-effort ...`로 실행 단위 override할 수 있다.
 - 독립 검수 기본값 변경: 새 프로젝트는 `independent_enabled: true`로 생성되며, Gate 2/Gate 4 종료 전 독립 검수를 기본 권장 절차로 둔다. 단, `review-run`은 자동 실행하지 않는다.
+- Gate 2 독립 검수의 상류 정합성 기준 추가: Phase 0, Gate 1, Gate 2 순서로 목표/제약/가정, REQ/NREQ/AC, 범위 drift, 미해결 DEC/ISSUE, 설계 내부 정합성을 별도 판정한다.
 - `docs/core/INDEPENDENT_REVIEW_PROCESS.md`와 Codex `independent-review` skill 추가.
 - 혼동을 줄이기 위해 이전 호환 경로를 제거하고 `review-request`, `review-run`, `independent_*`만 표준으로 유지한다.
 

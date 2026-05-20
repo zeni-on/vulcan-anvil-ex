@@ -4626,6 +4626,10 @@ def cmd_review_request(title, gate, related_ids, from_run="", runner=None, creat
 
     gate_focus = {
         "gate2": [
+            "Gate 2만 보지 말고 Phase 0 -> Gate 1 -> Gate 2 순서로 상류 정합성을 먼저 확인한다.",
+            "Phase 0의 목표, 제약, 가정, 질문, DEC/RISK/ASM이 Gate 1 요구사항/범위에 반영되었는지 확인한다.",
+            "Gate 1의 REQ/NREQ/AC, 포함/제외 범위, DEC/ISSUE가 Gate 2 설계 전제와 모순되지 않는지 확인한다.",
+            "Gate 2 설계가 승인된 Gate 1 범위를 임의로 축소하거나 확장하지 않았는지 확인한다.",
             "Gate 2 설계 순서(G2-01~G2-10)가 지켜졌는지 확인한다.",
             "REQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 기준으로 빠짐없이 전개되었는지 확인한다.",
             "SW Architecture가 Draft에서 Baseline 후보로 충분히 보강되었는지 확인한다.",
@@ -4645,6 +4649,40 @@ def cmd_review_request(title, gate, related_ids, from_run="", runner=None, creat
         "발견사항을 PASS, FIND, CR, ISSUE 중 하나로 분류한다.",
     ])
 
+    upstream_review_content = ""
+    upstream_result_content = ""
+    if gate == "gate2":
+        upstream_review_content = """
+## 4.1 Gate 2 상류 정합성 필수 검토
+
+Gate 2 독립 검수는 Gate 2 산출물만 보는 검수가 아니다.
+반드시 다음 순서로 앞단부터 확인한 뒤 설계 산출물을 판정한다.
+
+| 순서 | 확인 범위 | 확인 기준 |
+| --- | --- | --- |
+| 1 | Phase 0 | 프로젝트 목표, 사용자, 제약, 가정, 질문, 리스크, 의사결정이 기록되어 있는가 |
+| 2 | Phase 0 -> Gate 1 | Phase 0의 목표/제약/가정/질문이 Gate 1 요구사항, 범위, DEC/ISSUE로 내려왔는가 |
+| 3 | Gate 1 | REQ/NREQ/AC, 포함/제외 범위, DEC/ISSUE가 명확한가 |
+| 4 | Gate 1 -> Gate 2 | REQ/NREQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 설계로 누락 없이 전개됐는가 |
+| 5 | Scope Drift | Gate 2가 승인된 Gate 1 범위를 임의 확장/축소하지 않았는가 |
+| 6 | Open Decisions | 미해결 DEC/ISSUE/RISK/ASM이 닫혔거나 Gate 3 입력/Orchestrator 판단 항목으로 분리됐는가 |
+| 7 | Design Internal Consistency | 아키텍처, 화면, 기능, API, 프로그램, DB, 보안, 개발표준이 서로 모순되지 않는가 |
+
+상류 정합성에서 누락이나 모순이 있으면 Gate 2 문서 내부가 잘 작성되어 있어도 `PASS`로 판정하지 않는다.
+승인된 범위 안에서 보완 가능한 결함은 `FIND`, 요구사항/범위/기준선 변경이 필요하면 `CR`, 사용자 판단이 필요하면 `ISSUE`로 남긴다.
+"""
+        upstream_result_content = """
+## 2.1 Gate 2 상류 정합성 판정
+
+| 판정 항목 | 결과 | 근거 | FIND/CR/ISSUE 후보 |
+| --- | --- | --- | --- |
+| Phase0 -> Gate1 | TBD |  |  |
+| Gate1 -> Gate2 | TBD |  |  |
+| Scope Drift | TBD |  |  |
+| Open Decisions | TBD |  |  |
+| Design Internal Consistency | TBD |  |  |
+"""
+
     request_content = f"""# {review_id} Independent Review Request - {title}
 
 ```yaml
@@ -4653,6 +4691,7 @@ review_type: independent
 status: Requested
 runner: {runner}
 gate: {gate}
+upstream_review_required: {"true" if gate == "gate2" else "false"}
 source_run: {source_run}
 request_file: {request_rel_path}
 result_file: {result_rel_path}
@@ -4693,6 +4732,7 @@ created_at: {date.today()}
 ## 4. 중점 검토 항목
 
 {chr(10).join(f"- {item}" for item in gate_focus)}
+{upstream_review_content}
 
 ## 5. 범위
 
@@ -4759,6 +4799,7 @@ TBD
 | 추적성 검토 | TBD |  |
 | 검증 명령 확인 | TBD |  |
 | UI/증적 확인 | TBD |  |
+{upstream_result_content}
 
 ## 3. Findings
 
