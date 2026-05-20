@@ -516,12 +516,12 @@ export default function LayoutA2({
 
   return (
     <div
-      className="grid grid-cols-1 xl:grid-cols-[28fr_50fr_22fr] gap-5 h-full"
+      className="grid min-w-0 grid-cols-1 xl:grid-cols-[28fr_50fr_22fr] gap-5 h-full"
       data-testid="layout-a2"
     >
       <section
         aria-labelledby="layout-a2-docs-label"
-        className="min-h-0 rounded-xl border border-[#475569] bg-[#0B1220] p-5 flex flex-col shadow-[0_0_0_1px_rgba(148,163,184,0.05)]"
+        className="min-w-0 min-h-0 rounded-xl border border-[#475569] bg-[#0B1220] p-5 flex flex-col shadow-[0_0_0_1px_rgba(148,163,184,0.05)]"
         data-testid="layout-a2-docs"
       >
         <div className="flex items-center justify-between mb-4">
@@ -553,7 +553,7 @@ export default function LayoutA2({
       </section>
 
       <div
-        className="min-h-0 overflow-y-auto space-y-3 pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-500"
+        className="min-w-0 min-h-0 overflow-y-auto space-y-3 pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-500"
         data-testid="layout-a2-center"
       >
         <section
@@ -599,7 +599,7 @@ export default function LayoutA2({
       </div>
 
       <aside
-        className="min-h-0 overflow-hidden"
+        className="min-w-0 min-h-0 overflow-hidden"
         data-testid="layout-a2-side"
       >
         <section

@@ -48,7 +48,7 @@ export default function LayoutB({
   onExternalOpen,
 }: LayoutProps) {
   return (
-    <div data-testid="layout-b" className="h-full flex flex-col overflow-hidden">
+    <div data-testid="layout-b" className="min-w-0 h-full flex flex-col overflow-hidden">
       {/* 상단 풀 width — session.stats 있을 때만 렌더링 */}
       {session?.stats && (
         <div className="space-y-6 mb-8 flex-shrink-0" data-testid="layout-b-stats">
@@ -63,9 +63,9 @@ export default function LayoutB({
       )}
 
       {/* 하단 — 모바일 단일 컬럼, 데스크탑 3컬럼 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 overflow-hidden">
+      <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-8 flex-1 overflow-hidden">
         {/* 좌측 (col-span-2): Gate 현황 + 산출물 문서 */}
-        <div className="lg:col-span-2 space-y-8 h-full overflow-y-auto" data-testid="layout-b-left">
+        <div className="min-w-0 lg:col-span-2 space-y-8 h-full overflow-y-auto" data-testid="layout-b-left">
           {/* Gate 진행 현황 섹션 */}
           <section aria-labelledby="layout-b-gate-label">
             <SectionLabel>
@@ -87,7 +87,7 @@ export default function LayoutB({
           {/* 산출물 문서 섹션 */}
           <section
             aria-labelledby="layout-b-docs-label"
-            className="rounded-xl border border-[#374151] bg-[#111827] p-5"
+            className="min-w-0 rounded-xl border border-[#374151] bg-[#111827] p-5"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest">
@@ -112,10 +112,10 @@ export default function LayoutB({
         </div>
 
         {/* 우측 (col-span-1): 최근 커밋 이력 */}
-        <div className="lg:col-span-1 h-full overflow-y-auto" data-testid="layout-b-commits">
+        <div className="min-w-0 lg:col-span-1 h-full overflow-y-auto" data-testid="layout-b-commits">
           <section
             aria-labelledby="layout-b-commits-label"
-            className="rounded-xl border border-[#374151] bg-[#111827] p-5"
+            className="min-w-0 rounded-xl border border-[#374151] bg-[#111827] p-5"
           >
             <SectionLabel>
               <span id="layout-b-commits-label">최근 커밋</span>

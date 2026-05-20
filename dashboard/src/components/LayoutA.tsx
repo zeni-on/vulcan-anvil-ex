@@ -69,14 +69,14 @@ export default function LayoutA({
 }: LayoutProps) {
   return (
     <div
-      className="grid grid-cols-1 lg:grid-cols-[23fr_57fr_20fr] gap-6 h-full"
+      className="grid min-w-0 grid-cols-1 lg:grid-cols-[23fr_57fr_20fr] gap-6 h-full"
       data-testid="layout-a"
     >
       {/* 좌측 (23%): 산출물 문서 — 내부 스크롤 */}
-      <div className="h-full overflow-hidden" data-testid="layout-a-docs">
+      <div className="min-w-0 h-full overflow-hidden" data-testid="layout-a-docs">
         <section
           aria-labelledby="layout-a-docs-label"
-          className="rounded-xl border border-[#374151] bg-[#111827] p-5 h-full flex flex-col"
+          className="min-w-0 rounded-xl border border-[#374151] bg-[#111827] p-5 h-full flex flex-col"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest">
@@ -104,7 +104,7 @@ export default function LayoutA({
 
       {/* 중앙 (57%): Gate 현황 + 통계 — 컬럼 자체 스크롤 */}
       <div
-        className="space-y-6 h-full overflow-y-auto pb-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500"
+        className="min-w-0 space-y-6 h-full overflow-y-auto pb-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500"
         data-testid="layout-a-center"
       >
         {/* Gate 진행 현황 */}
@@ -140,10 +140,10 @@ export default function LayoutA({
       </div>
 
       {/* 우측 (20%): 최근 커밋 — 내부 스크롤 */}
-      <div className="h-full overflow-hidden" data-testid="layout-a-commits">
+      <div className="min-w-0 h-full overflow-hidden" data-testid="layout-a-commits">
         <section
           aria-labelledby="layout-a-commits-label"
-          className="rounded-xl border border-[#374151] bg-[#111827] p-5 h-full flex flex-col"
+          className="min-w-0 rounded-xl border border-[#374151] bg-[#111827] p-5 h-full flex flex-col"
         >
           <SectionLabel>
             <span id="layout-a-commits-label">최근 커밋</span>

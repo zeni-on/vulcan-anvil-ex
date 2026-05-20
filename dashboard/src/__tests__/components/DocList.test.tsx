@@ -64,6 +64,23 @@ describe('DocList', () => {
     expect(screen.getByText('REQUIREMENTS')).toBeInTheDocument()
   })
 
+  it('긴 파일명이 산출물 박스 너비를 밀어내지 않도록 말줄임 클래스를 적용한다', () => {
+    const longDocs: DocEntry[] = [
+      {
+        name: 'DOC-CORE-G2-999_매우-긴-산출물-문서-제목-그리고-업무-도메인-설명이-계속-이어지는-파일명_v0.1',
+        path: 'docs/artifacts/02-design/function/DOC-CORE-G2-999_매우-긴-산출물-문서-제목-그리고-업무-도메인-설명이-계속-이어지는-파일명_v0.1.md',
+        category: 'design',
+      },
+    ]
+    render(<DocList docs={longDocs} />)
+
+    const item = screen.getByTestId('doc-item')
+    const title = screen.getByText(longDocs[0].name)
+
+    expect(item).toHaveClass('min-w-0', 'max-w-full')
+    expect(title).toHaveClass('min-w-0', 'flex-1', 'truncate')
+  })
+
   it('design 카테고리 파일을 하위 폴더별로 표시한다', () => {
     render(<DocList docs={mockDocs} />)
     expect(screen.getByTestId('doc-subfolder-function')).toBeInTheDocument()

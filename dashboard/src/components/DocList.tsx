@@ -283,7 +283,7 @@ function DocItem({
 
   return (
     <li
-      className={`flex items-center gap-2 py-1.5 text-sm rounded px-1 -mx-1 ${
+      className={`flex min-w-0 max-w-full items-center gap-2 py-1.5 text-sm rounded px-1 -mx-1 ${
         isClickable
           ? 'cursor-pointer hover:bg-zinc-700/60 transition-colors'
           : isDisabled
@@ -303,7 +303,7 @@ function DocItem({
       ) : (
         <FileText className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" aria-hidden="true" />
       )}
-      <span className="text-[#9CA3AF] truncate font-mono text-xs">{doc.name}</span>
+      <span className="min-w-0 flex-1 truncate text-[#9CA3AF] font-mono text-xs">{doc.name}</span>
       {isExternal && (
         <ExternalLink
           className="w-3 h-3 text-[#4B5563] flex-shrink-0 ml-auto"
@@ -346,7 +346,7 @@ function FolderTreeItem({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         data-testid={`doc-subfolder-toggle-${node.path}`}
-        className={`flex items-center gap-1 w-full text-left font-mono mb-1 pl-0.5 py-1 rounded hover:bg-zinc-700/50 hover:text-white transition-colors ${
+        className={`flex min-w-0 items-center gap-1 w-full text-left font-mono mb-1 pl-0.5 py-1 rounded hover:bg-zinc-700/50 hover:text-white transition-colors ${
           isTopLevel
             ? 'text-[11px] font-semibold text-[#C8D0DA]'
             : 'text-[11px] font-medium text-[#9CA3AF]'
@@ -357,7 +357,7 @@ function FolderTreeItem({
         ) : (
           <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 ${isTopLevel ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}`} aria-hidden="true" />
         )}
-        <span data-testid={`doc-subfolder-${node.path}`}>{node.name}</span>
+        <span className="min-w-0 flex-1 truncate" data-testid={`doc-subfolder-${node.path}`}>{node.name}</span>
         <span className="ml-1 rounded border border-[#334155] bg-[#111827] px-1.5 py-0.5 text-[10px] font-semibold text-[#D1D5DB] tabular-nums">
           {total}
         </span>
@@ -506,14 +506,14 @@ function CategorySection({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         data-testid={`doc-category-toggle-${category}`}
-        className="flex items-center gap-1 w-full text-left text-[12px] font-bold text-[#F3F4F6] uppercase tracking-wider mb-1.5 py-1 rounded hover:text-white transition-colors"
+        className="flex min-w-0 items-center gap-1 w-full text-left text-[12px] font-bold text-[#F3F4F6] uppercase tracking-wider mb-1.5 py-1 rounded hover:text-white transition-colors"
       >
         {isOpen ? (
           <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-[#60A5FA]" aria-hidden="true" />
         ) : (
           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-[#60A5FA]" aria-hidden="true" />
         )}
-        {CATEGORY_LABEL[category]}
+        <span className="min-w-0 flex-1 truncate">{CATEGORY_LABEL[category]}</span>
         <span className="ml-1 rounded border border-[#334155] bg-[#111827] px-1.5 py-0.5 text-[10px] font-semibold text-[#D1D5DB] tabular-nums">
           {docs.length}
         </span>
@@ -565,7 +565,7 @@ export default function DocList({
   return (
     <div
       data-testid="doc-list"
-      className="overflow-x-hidden"
+      className="min-w-0 max-w-full overflow-x-hidden"
     >
       {hasAny ? (
         <>
