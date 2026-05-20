@@ -4,7 +4,7 @@
     "primary": null
   },
   "review": {
-    "independent_enabled": false,
+    "independent_enabled": true,
     "independent_runner": "codex-cli",
     "independent_model": "gpt-5.5",
     "independent_reasoning_effort": "high",

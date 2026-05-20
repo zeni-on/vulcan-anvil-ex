@@ -5155,7 +5155,7 @@ def default_vulcan_config():
             "primary": None
         },
         "review": {
-            "independent_enabled": False,
+            "independent_enabled": True,
             "independent_runner": "codex-cli",
             "independent_model": "gpt-5.5",
             "independent_reasoning_effort": "high",

@@ -38,4 +38,4 @@
 - 리팩토링을 추적 가능한 개선 작업으로 다루기 위해 DEBT/FIND/CR 분기와 문서 영향 판단 기준을 정의했다.
 - 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
 - 감리 대응, 솔루션 개발, PoC, 소규모 개발을 같은 무게로 다루지 않기 위해 Delivery Profile을 도입 방향으로 정의했다.
-- Gate 2와 Gate 4에서 작성 세션과 분리된 독립 검수를 실험 기능으로 사용할 수 있도록 절차를 추가했다.
+- Gate 2와 Gate 4에서 작성 세션과 분리된 독립 검수를 기본 권장 절차로 사용할 수 있도록 절차를 추가했다.

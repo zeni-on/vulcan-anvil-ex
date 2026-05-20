@@ -1,7 +1,7 @@
 # Independent Review Process
 
 > 상태: v0.1
-> 목적: 작성 세션과 분리된 독립 검수를 Gate 종료 검수에 붙이는 실험 절차를 정의한다.
+> 목적: 작성 세션과 분리된 독립 검수를 Gate 종료 검수의 기본 권장 절차로 정의한다.
 
 ## 1. 개념
 
@@ -16,7 +16,8 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 ## 2. 기본 원칙
 
-- 독립 검수는 실험 기능이며 Gate 완료를 항상 막는 필수 절차는 아니다.
+- 독립 검수는 Gate 2와 Gate 4에서 기본 권장 절차다.
+- 독립 검수는 자동 승인 또는 자동 Gate 전환 조건이 아니다.
 - 우선 적용 Gate는 `gate2`, `gate4`다.
 - 리뷰 요청과 결과는 `docs/reviews/`에 파일로 남긴다.
 - 리뷰 Run은 `docs/runs/`에 별도로 남긴다.
@@ -30,7 +31,7 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 ```json
 {
   "review": {
-    "independent_enabled": false,
+    "independent_enabled": true,
     "independent_runner": "codex-cli",
     "independent_model": "gpt-5.5",
     "independent_reasoning_effort": "high",
@@ -43,7 +44,7 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 }
 ```
 
-`independent_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py review-request`를 실행하면 요청을 만들 수 있다.
+`independent_enabled`가 `true`이면 Orchestrator는 `independent_triggers`에 포함된 Gate 종료 전 독립 검수를 기본 권장 절차로 제안한다. 다만 `review-run` 자동 실행은 하지 않는다. 사용자의 명시 지시 또는 Orchestrator의 별도 실행 판단이 있을 때 `vulcan.py review-run`을 실행한다.
 
 ## 4. 모델과 추론 강도
 

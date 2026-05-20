@@ -104,6 +104,8 @@ my-project/
 | `review-run` | 생성된 독립 검수 요청을 codex-cli로 실행 |
 
 독립 검수 기본 모델과 추론 강도는 `vulcan.config.json`의 `independent_model`, `independent_reasoning_effort`로 정한다. 감리/QA 목적의 Gate 2, Gate 4 검수는 `gpt-5.5` + `high`를 권장한다.
+
+새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 독립 검수를 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
 | `check-trace` | Gate별 추적성 검사 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |

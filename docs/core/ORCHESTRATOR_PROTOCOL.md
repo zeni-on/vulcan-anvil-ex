@@ -155,10 +155,12 @@ Handoff는 기본적으로 강제 절차가 아니다. Orchestrator는 Gate 4로
 
 `vulcan.py review-run --review-id RV-NNN`은 `codex-cli` runner로 요청을 실제 실행한다. 이때 새 Desktop 대화창을 여는 것이 아니라 `codex exec` 기반의 새 비대화형 실행 세션을 만들고, JSONL 로그와 마지막 응답, result 파일 변경 여부를 증적으로 남긴다.
 
-초기 권장 적용 지점은 다음이다.
+기본 권장 적용 지점은 다음이다.
 
 - Gate 2 종료 전 설계 산출물 독립 검수
 - Gate 4 종료 전 테스트 결과와 화면 증적 독립 검수
+
+`vulcan.config.json.review.independent_enabled`가 `true`이면 Orchestrator는 위 Gate 종료 전 독립 검수를 기본 절차로 제안한다. 다만 자동 실행은 하지 않는다. `review-request`와 `review-run`은 사용자의 명시 지시 또는 Orchestrator의 별도 실행 판단이 있을 때 수행한다.
 
 Orchestrator는 독립 검수 결과를 자동 승인하지 않는다. 결과 파일은 판단 재료이며, 최종 반영 여부는 본선 Run, 추적표, 사용자 승인 흐름에 맞춰 결정한다.
 
