@@ -99,7 +99,7 @@ evidence:
     - ui_id: UI-003-01
       scr: SCR-003
       state: 기본
-      expected_path: "docs/artifacts/02-design/screen/prototypes/scr-003-default.html"
+      expected_path: "docs/artifacts/02-design/screen/ui-baseline/scr-003-default.html"
       actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-01_default.png"
       result: passed
     - ui_id: UI-003-02
@@ -109,11 +109,11 @@ evidence:
       actual_path: "docs/artifacts/04-review/evidence/ui/UI-003-02_error.png"
       result: not_run
       reason: "오류 상태 재현 시나리오 미구현"
-  # UI Implementation Contract 차이 판정 (prototype/UIREF 있는 SCR)
+  # UI Implementation Contract 차이 판정 (화면 퍼블리싱 산출물/UIREF 있는 SCR)
   ui_contract_diffs:
     - scr: SCR-003
       contract_path: "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md#SCR-003-contract"
-      ref_screenshot: "docs/artifacts/02-design/screen/prototypes/scr-003.html"
+      ref_screenshot: "docs/artifacts/02-design/screen/ui-baseline/scr-003.html"
       impl_screenshot: "docs/artifacts/04-review/evidence/ui/UI-003-01_default.png"
       verdict: Pass    # Pass / FIND / CR
       notes: "필수 유지 요소(헤더, CTA, 폼 레이아웃) 모두 일치. 변경 허용 항목(색상) 디자인 토큰 적용."
@@ -218,10 +218,10 @@ Gate N의 마지막 Run(다음 Gate 진입 직전)은 다음 두 필드를 **반
 
 ## 4.2 UI 증적 / Contract diff 작성 규칙
 
-화면 작업 Run은 `evidence.ui`와 (UIREF/prototype 있는 SCR이면) `evidence.ui_contract_diffs`를 **반드시** 채운다.
+화면 작업 Run은 `evidence.ui`와 (UIREF/ui-baseline 있는 SCR이면) `evidence.ui_contract_diffs`를 **반드시** 채운다.
 
-- **`evidence.ui[]`**: SCR×상태 단위(`UI-NNN-NN`). 기본/로딩/오류/성공/전환 상태별 1행. 각 행에 `expected_path`(UIREF/prototype) + `actual_path`(실제 캡처) + `result`(passed/failed/not_run) + (실패/미실행 시) `reason`
-- **`evidence.ui_contract_diffs[]`**: prototype/UIREF가 있는 SCR마다 1행. `verdict`는 `Pass` / `FIND` / `CR` 중 하나. 차이 무시 또는 묵시적 Pass 금지
+- **`evidence.ui[]`**: SCR×상태 단위(`UI-NNN-NN`). 기본/로딩/오류/성공/전환 상태별 1행. 각 행에 `expected_path`(UIREF/ui-baseline) + `actual_path`(실제 캡처) + `result`(passed/failed/not_run) + (실패/미실행 시) `reason`
+- **`evidence.ui_contract_diffs[]`**: 화면 퍼블리싱 산출물/UIREF가 있는 SCR마다 1행. `verdict`는 `Pass` / `FIND` / `CR` 중 하나. 차이 무시 또는 묵시적 Pass 금지
 
 ## 5. 검증 결과 작성 규칙
 

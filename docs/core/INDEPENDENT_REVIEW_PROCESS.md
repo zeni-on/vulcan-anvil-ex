@@ -159,7 +159,7 @@ python vulcan.py review-run --review-id RV-001
 - Gate 2 설계 순서가 지켜졌는지 확인한다.
 - SW Architecture가 상세 설계와 함께 Baseline 후보로 보강되었는지 확인한다.
 - REQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 기준으로 전개되었는지 확인한다.
-- UIREF/prototype이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.
+- UIREF/ui-baseline이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.
 - Gate 3 테스트 설계로 넘길 검증 후보와 미해결 질문이 분리되었는지 확인한다.
 
 Gate 2 result 파일에는 다음 판정을 별도로 남긴다.

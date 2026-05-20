@@ -39,7 +39,7 @@ Run Input Contract는 에이전트에게 주는 작업지시서다.
 | `verification` | 예 | 실행해야 할 테스트, 린트, 캡처 |
 | `gate_exit_policy` | 예 | Gate 종료 시 멈춤, 승인 질문, 다음 Gate 진행 제한 |
 | `ui_evidence_policy` | 화면 작업 시 예 | UI 테스트와 캡처 증적의 상태/시나리오 단위 연결 기준 |
-| `ui_implementation_contract_policy` | 화면 작업 시 예 | UIREF/prototype을 구현 계약으로 전환하고 설계-구현 차이를 판정하는 기준 |
+| `ui_implementation_contract_policy` | 화면 작업 시 예 | UIREF/ui-baseline을 구현 계약으로 전환하고 설계-구현 차이를 판정하는 기준 |
 | `output_requirements` | 예 | 결과 보고 형식과 갱신할 산출물 |
 | `question_policy` | 예 | 질문해야 하는 조건 |
 | `security_policy` | 예 | 민감문서, 비밀, 외부전송 제한 |
@@ -170,7 +170,7 @@ ui_evidence_policy:
     - "UI-001-06 성공 후 로그인 연계"
 
 ui_implementation_contract_policy:
-  required_when: "화면설계서에 UIREF, 이미지 시안, HTML mockup, Figma, 기존 화면 캡처, prototypes 경로가 있는 경우"
+  required_when: "화면설계서에 UIREF, 이미지 시안, HTML/CSS/JS 화면 퍼블리싱 산출물, Figma, 기존 화면 캡처, ui-baseline 경로가 있는 경우"
   gate2_required_fields:
     - 기준 파일 또는 URL
     - 기준 CSS 또는 디자인 토큰
@@ -181,12 +181,12 @@ ui_implementation_contract_policy:
     - 차이 발생 시 FIND/CR 판정 기준
   impl_checklist:
     - "구현 전 관련 SCR의 UI Implementation Contract를 확인한다."
-    - "prototype CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다."
+    - "화면 퍼블리싱 CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다."
     - "보안가이드 때문에 바꾼 문구, 필드, 흐름은 DEC/ISSUE/FIND/CR 중 하나로 기록한다."
     - "기본/오류/성공/전환 상태가 Gate 3 UI-ID와 연결되어 있는지 확인한다."
     - "구현 결과 screenshot이 기준 UIREF와 비교 가능한 위치에 저장되는지 확인한다."
   gate4_required_evidence:
-    - 기준 UIREF screenshot 또는 prototype 경로
+    - 기준 UIREF screenshot 또는 ui-baseline 경로
     - 구현 screenshot
     - 차이 목록
     - 허용된 차이 여부
@@ -262,7 +262,7 @@ UI 검증이 포함된 Run은 화면 단위가 아니라 상태/시나리오 단
 예를 들어 회원가입은 `UI-001` 한 건으로 처리하지 않고 기본 화면, 약한 비밀번호 오류, 비밀번호 확인 불일치, 중복 이메일, 성공 메시지, 로그인 연계처럼 `UI-001-01`부터 나눈다.
 각 UI 테스트는 기대 화면과 실제 캡처 파일이 1:1로 연결되어야 한다.
 
-`ui_implementation_contract_policy`는 prototype 또는 외부 시안이 있는 화면 작업에서 사용한다.
+`ui_implementation_contract_policy`는 화면 퍼블리싱 산출물 또는 외부 시안이 있는 화면 작업에서 사용한다.
 Gate 2에서는 시안을 참고자료로 둘지 구현 계약으로 둘지 분류하고, 구현 계약이면 필수 유지, 변경 허용, 변경 금지, 비교 방식을 작성한다.
 Gate 3에서는 이 계약을 UI 테스트 기대결과에 반영한다.
 Impl에서는 구현 전 체크리스트로 확인하고, Gate 4에서는 기준 UIREF와 구현 screenshot의 차이를 `Pass`, `FIND`, `CR`로 판정한다.
@@ -284,7 +284,7 @@ Adapter는 YAML 입력 뒤에 다음 실행 지침을 붙인다.
 6. completion_criteria를 모두 만족하도록 구현/문서/테스트를 갱신한다.
 7. verification.commands를 실행한다.
 8. UI 검증이 있으면 상태/시나리오별 UI-ID와 캡처 증적을 1:1로 연결한다.
-9. UIREF/prototype이 있으면 UI Implementation Contract와 기준 대비 차이 판정을 남긴다.
+9. UIREF/ui-baseline이 있으면 UI Implementation Contract와 기준 대비 차이 판정을 남긴다.
 10. RUN_OUTPUT_CONTRACT 형식으로 결과를 보고한다.
 11. 현재 Gate 산출물 완료 후 다음 Gate 진행 승인을 질문하고 대기한다.
 
@@ -295,7 +295,7 @@ Adapter는 YAML 입력 뒤에 다음 실행 지침을 붙인다.
 - 추적표/결과서 갱신이 필요하면 누락하지 않는다.
 - 사용자 명시 승인 없이 다음 Gate로 넘어가지 않는다.
 - 기대 화면과 다른 캡처를 UI 증적으로 Pass 처리하지 않는다.
-- UIREF/prototype이 구현 기준인데 UI Implementation Contract 없이 구현 착수하지 않는다.
+- UIREF/ui-baseline이 구현 기준인데 UI Implementation Contract 없이 구현 착수하지 않는다.
 ```
 
 ## 6. 최소 입력과 완전 입력

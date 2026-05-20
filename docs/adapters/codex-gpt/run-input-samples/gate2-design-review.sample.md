@@ -55,7 +55,7 @@ completion_criteria:
   - "설계 산출물 간 화면, API, 프로그램, 데이터, 보안 연결이 모순되지 않는다."
   - "Gate 2 산출 순서와 현재 Run 위치가 Run 기록에 남아 있다."
   - "SW 아키텍처 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다."
-  - "프로토타입 또는 외부 시안이 있으면 UI Implementation Contract로 기준 파일, 필수 유지, 변경 허용/금지, 비교 방식을 확정한다."
+  - "화면 퍼블리싱 산출물 또는 외부 시안이 있으면 UI Implementation Contract로 기준 파일, 필수 유지, 변경 허용/금지, 비교 방식을 확정한다."
   - "개발표준과 아키텍처 기준이 구현자가 사용할 수 있을 만큼 구체적이다."
   - "Gate 3 테스트 설계에 넘길 검증 후보가 식별되어 있다."
 gate_exit_policy:
@@ -63,7 +63,7 @@ gate_exit_policy:
   next_gate_requires_user_approval: true
   approval_evidence_required: true
 ui_implementation_contract_policy:
-  required_when: "UIREF, prototype, Figma, 이미지 시안, 기존 화면 캡처가 있는 경우"
+  required_when: "UIREF, 화면 퍼블리싱 산출물, Figma, 이미지 시안, 기존 화면 캡처가 있는 경우"
   gate2_required_fields:
     - 기준 파일 또는 URL
     - 기준 CSS 또는 디자인 토큰
@@ -78,6 +78,6 @@ ui_implementation_contract_policy:
 
 - Gate 2에서는 구현 코드를 만들지 않는다. 구현이 필요하면 Gate 3와 구현 승인 이후 Build Wave로 넘긴다.
 - SW 아키텍처는 Gate 2의 첫 Draft이자 마지막 Baseline 검토판이다.
-- 프로토타입이 있으면 `참고자료`인지 `구현 기준`인지 먼저 판정하고, 구현 기준이면 UI Implementation Contract로 승격한다.
+- 화면 퍼블리싱 산출물이 있으면 `참고자료`인지 `구현 기준`인지 먼저 판정하고, 구현 기준이면 UI Implementation Contract로 승격한다.
 - Run 종료 시 현재 Gate 2 순서 위치, 누락된 이전 단계, 다음 Gate 2 Run 후보를 남긴다.
 - Gate 3 테스트 설계로 넘어가기 전 설계 산출물 요약과 승인 질문을 남긴다.

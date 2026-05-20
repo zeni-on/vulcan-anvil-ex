@@ -60,7 +60,7 @@ PROJECT_DOC_DIRS = [
     "docs/artifacts/02-design/api",
     "docs/artifacts/02-design/screen",
     "docs/artifacts/02-design/screen/images",
-    "docs/artifacts/02-design/screen/prototypes",
+    "docs/artifacts/02-design/screen/ui-baseline",
     "docs/artifacts/02-design/data",
     "docs/artifacts/02-design/data/erd",
     "docs/artifacts/02-design/data/erd/logical",
@@ -310,7 +310,7 @@ AUDIT_UI_EVIDENCE_POLICY = {
 }
 
 AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY = {
-    "required_when": "화면설계서에 UIREF, 이미지 시안, HTML mockup, Figma, 기존 화면 캡처, prototypes 경로가 있는 경우",
+    "required_when": "화면설계서에 UIREF, 이미지 시안, HTML/CSS/JS 화면 퍼블리싱 산출물, Figma, 기존 화면 캡처, ui-baseline 경로가 있는 경우",
     "gate2_required_fields": [
         "기준 파일 또는 URL",
         "기준 CSS 또는 디자인 토큰",
@@ -322,13 +322,13 @@ AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY = {
     ],
     "impl_checklist": [
         "구현 전 관련 SCR의 UI Implementation Contract를 확인한다.",
-        "prototype CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다.",
+        "화면 퍼블리싱 CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다.",
         "보안가이드 때문에 바꾼 문구, 필드, 흐름은 DEC/ISSUE/FIND/CR 중 하나로 기록한다.",
         "기본/오류/성공/전환 상태가 Gate 3 UI-ID와 연결되어 있는지 확인한다.",
         "구현 결과 screenshot이 기준 UIREF와 비교 가능한 위치에 저장되는지 확인한다.",
     ],
     "gate4_required_evidence": [
-        "기준 UIREF screenshot 또는 prototype 경로",
+        "기준 UIREF screenshot 또는 ui-baseline 경로",
         "구현 screenshot",
         "차이 목록",
         "허용된 차이 여부",
@@ -420,7 +420,7 @@ AUDIT_GATE_PRESETS = {
             "설계 산출물 간 화면, API, 프로그램, 데이터, 보안 연결이 모순되지 않는다.",
             "Gate 2 산출 순서와 현재 Run 위치가 Run 기록에 남아 있다.",
             "SW 아키텍처 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다.",
-            "프로토타입 또는 외부 시안이 있으면 UI Implementation Contract로 기준 파일, 필수 유지, 변경 허용/금지, 비교 방식을 확정한다.",
+            "화면 퍼블리싱 산출물 또는 외부 시안이 있으면 UI Implementation Contract로 기준 파일, 필수 유지, 변경 허용/금지, 비교 방식을 확정한다.",
             "개발표준과 아키텍처 기준이 구현자가 사용할 수 있을 만큼 구체적이다.",
             "Gate 3 테스트 설계에 넘길 검증 후보가 식별되어 있다.",
         ],
@@ -449,7 +449,7 @@ AUDIT_GATE_PRESETS = {
             "각 테스트케이스에 입력, 절차, 기대결과, 증적 방식이 있다.",
             "UI 테스트는 화면 단위가 아니라 상태/시나리오 단위로 UI-001-01처럼 분리되어 있다.",
             "각 UI 테스트는 기대 화면, 실제 확인 방법, 캡처 증적 파일 경로가 1:1로 연결되어 있다.",
-            "프로토타입 기반 화면은 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 테스트 기대결과에 반영한다.",
+            "화면 퍼블리싱 기반 화면은 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 테스트 기대결과에 반영한다.",
             "자동화 가능 테스트와 수동 검수 테스트가 구분되어 있다.",
             "구현 전에 필요한 테스트 데이터와 환경 제약이 식별되어 있다.",
         ],
@@ -500,7 +500,7 @@ AUDIT_GATE_PRESETS = {
             "실행한 테스트 명령과 결과가 테스트 결과서에 기록되어 있다.",
             "화면/UI 증적 또는 로그 증적이 관련 UI/UT/IT/PT ID와 1:1로 연결되어 있다.",
             "회원가입, 로그인, TODO 같은 UI 흐름은 기본/오류/성공/전환 상태별 캡처가 분리되어 있다.",
-            "프로토타입 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다.",
+            "화면 퍼블리싱 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다.",
             "증적 파일이 기대 화면을 실제로 보여주지 못하면 Pass가 아니라 Fail 또는 Not Run으로 기록되어 있다.",
             "결함은 FIND로 기록하고, 범위 변경은 CR로 승격한다.",
             "수정 완료 결함은 qa-fix-loop Run과 재검증 결과가 연결되어 있다.",
@@ -631,7 +631,7 @@ AUDIT_GATE_SKILL_PRESETS = {
         "completion_criteria": [
             "필수 화면과 상태가 SCR-ID로 식별되어 있다.",
             "각 화면에 입력 항목, 이벤트, 메시지, 호출 API/프로그램, 관련 SEC-ID가 연결되어 있다.",
-            "와이어프레임, 이미지, HTML mockup, 또는 동등한 화면 구조 증적이 있다.",
+            "와이어프레임, 이미지, HTML/CSS/JS 화면 퍼블리싱 산출물, 또는 동등한 화면 구조 증적이 있다.",
             "UIREF가 참고자료인지 구현 기준인지 구분되고, 구현 기준이면 필수 유지/변경 허용/금지 항목이 정의되어 있다.",
             "Gate 3 UI 테스트와 Gate 4 캡처 증적 기준이 작성되어 있다.",
         ],
@@ -640,7 +640,7 @@ AUDIT_GATE_SKILL_PRESETS = {
         "required": [
             "docs/templates/SCREEN_SPEC_TEMPLATE.md",
             "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
-            "docs/artifacts/02-design/screen/prototypes/",
+            "docs/artifacts/02-design/screen/ui-baseline/",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
         ],
         "writable": [
@@ -651,7 +651,7 @@ AUDIT_GATE_SKILL_PRESETS = {
         "completion_criteria": [
             "구현자가 화면 밀도, 레이아웃, 상태, 메시지, 반응형 기준을 판단할 수 있다.",
             "desktop/mobile viewport와 비교 기준이 명시되어 있다.",
-            "프로토타입 또는 외부 시안이 구현 계약으로 전환되어 필수 유지 요소와 허용 차이가 명확하다.",
+            "화면 퍼블리싱 산출물 또는 외부 시안이 구현 계약으로 전환되어 필수 유지 요소와 허용 차이가 명확하다.",
             "빈 상태, 오류 상태, 인증 필요 상태, 성공 상태의 UI 기준이 상태/시나리오별 UI-ID로 분리되어 있다.",
             "실제 캡처 증적 경로와 UI-ID 후보가 Gate 3/4로 1:1 전달된다.",
         ],
@@ -1209,7 +1209,7 @@ security_policy:
 6. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
 7. `verification.commands`를 실행하고 결과를 이 Run 기록에 남긴다.
 8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
-9. UIREF, prototype, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
+9. UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
 10. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
 11. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다.
 
@@ -2401,12 +2401,12 @@ def validate_screen_spec(project_dir="."):
     has_ui_test = bool(re.search(r"UI-\d{3}", content))
     has_viewport = bool(re.search(r"Desktop\s+\d+x\d+|Mobile\s+\d+x\d+|viewport", content, re.IGNORECASE))
     has_visual_evidence = bool(re.search(
-        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/(?:images|prototypes)/|figma|imagegen|html mockup|mermaid|```(?:text|mermaid|html)",
+        r"!\[[^\]]*\]\([^)]+\)|docs/artifacts/02-design/screen/(?:images|ui-baseline)/|figma|imagegen|html\s+mockup|화면 퍼블리싱|mermaid|```(?:text|mermaid|html)",
         content,
         re.IGNORECASE,
     ))
-    has_prototype_or_external_design = bool(re.search(
-        r"docs/artifacts/02-design/screen/(?:images|prototypes)/|figma|imagegen|html mockup|외부 시안|기존 시스템 캡처|UIREF-\d{3}",
+    has_ui_baseline_or_external_design = bool(re.search(
+        r"docs/artifacts/02-design/screen/(?:images|ui-baseline)/|figma|imagegen|html\s+mockup|화면 퍼블리싱|외부 시안|기존 시스템 캡처|UIREF-\d{3}",
         content,
         re.IGNORECASE,
     ))
@@ -2423,9 +2423,9 @@ def validate_screen_spec(project_dir="."):
     if has_screen and not has_viewport:
         issues.append(f"{rel_path}에 기준 viewport 없음")
     if has_screen and not has_visual_evidence:
-        issues.append(f"{rel_path}에 실제 화면 구조 증적 없음(Text Wireframe fenced block, Mermaid, HTML mockup, 이미지/Figma 등)")
-    if has_screen and has_prototype_or_external_design and not has_ui_contract:
-        issues.append(f"{rel_path}에 UIREF/prototype을 구현 계약으로 전환한 UI Implementation Contract 없음")
+        issues.append(f"{rel_path}에 실제 화면 구조 증적 없음(Text Wireframe fenced block, Mermaid, 화면 퍼블리싱 산출물, 이미지/Figma 등)")
+    if has_screen and has_ui_baseline_or_external_design and not has_ui_contract:
+        issues.append(f"{rel_path}에 UIREF/ui-baseline을 구현 계약으로 전환한 UI Implementation Contract 없음")
 
     text_wireframe_rows = [
         line for line in content.splitlines()
@@ -4633,7 +4633,7 @@ def cmd_review_request(title, gate, related_ids, from_run="", runner=None, creat
             "Gate 2 설계 순서(G2-01~G2-10)가 지켜졌는지 확인한다.",
             "REQ/AC가 FUNC, SCR, PGM, API, DB, SEC, DEV 기준으로 빠짐없이 전개되었는지 확인한다.",
             "SW Architecture가 Draft에서 Baseline 후보로 충분히 보강되었는지 확인한다.",
-            "UIREF/prototype이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.",
+            "UIREF/ui-baseline이 있으면 UI Implementation Contract와 상태별 UI 증적 기준이 있는지 확인한다.",
             "Gate 3 테스트 설계로 넘길 검증 후보와 미해결 질문이 분리되었는지 확인한다.",
         ],
         "gate4": [

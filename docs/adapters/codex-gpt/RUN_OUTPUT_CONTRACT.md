@@ -90,7 +90,7 @@ evidence:
     - compare_id: UICMP-001
       ui_id: UI-001-01
       contract_id: UICON-001
-      baseline: docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html
+      baseline: docs/artifacts/02-design/screen/ui-baseline/UIREF-001/index.html
       implementation: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
       differences: []
       allowed: true
@@ -255,7 +255,7 @@ evidence:
 회원가입 성공 테스트의 기대 화면이 성공 메시지라면 로그인 화면만 있는 캡처는 Pass 증적이 아니다.
 이 경우 `failed` 또는 `not_run`으로 기록하고 `FIND`를 남긴다.
 
-UIREF 또는 prototype이 UI Implementation Contract로 지정된 화면은 기준 대비 차이를 별도로 남긴다.
+UIREF 또는 ui-baseline이 UI Implementation Contract로 지정된 화면은 기준 대비 차이를 별도로 남긴다.
 
 ```yaml
 evidence:
@@ -263,7 +263,7 @@ evidence:
     - compare_id: UICMP-001
       ui_id: UI-001-01
       contract_id: UICON-001
-      baseline: docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html
+      baseline: docs/artifacts/02-design/screen/ui-baseline/UIREF-001/index.html
       implementation: docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png
       differences:
         - "비밀번호 placeholder가 보안가이드에 따라 8자 이상 문구로 변경됨"

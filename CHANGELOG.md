@@ -22,7 +22,7 @@
 - Gate 완료 후 산출물 요약, 미해결 항목, 다음 Gate 제안, 사용자 승인 질문을 남기고 대기하는 Gate exit policy.
 - Run 입력 계약의 `source_documents.read_first`, `working_documents`, `reference_on_demand` 3-tier 구조.
 - Gate 2 설계 순서(`G2-01`~`G2-10`)와 SW Architecture 반복 보강 기준.
-- UIREF/prototype 기반 UI Implementation Contract와 상태/시나리오 단위 UI 증적 기준.
+- UIREF/ui-baseline 기반 UI Implementation Contract와 상태/시나리오 단위 UI 증적 기준.
 - 검증 명령의 cwd, OS별 명령, 성공 기준, exit code, 로그/증적 경로, Not Run/Skipped 기록 기준.
 
 ### Changed
@@ -30,7 +30,7 @@
 - Codex/GPT adapter와 Claude adapter의 Gate Prompt, Run Input/Output Contract, persona/skill 지침을 정렬.
 - 개발표준, 테스트케이스, 테스트결과서 템플릿이 명령 실행 기준과 증적 기준을 더 구체적으로 요구하도록 보강.
 - `gate-start`와 Run 생성 흐름이 Gate 작업 시작 전 Run 초안을 기준으로 움직이도록 정리.
-- Dashboard와 문서 트리가 초기 프로젝트/프로토타입 산출물을 더 명확하게 보여주도록 보강.
+- Dashboard와 문서 트리가 초기 프로젝트/화면 기준 산출물을 더 명확하게 보여주도록 보강.
 
 ### Verification
 

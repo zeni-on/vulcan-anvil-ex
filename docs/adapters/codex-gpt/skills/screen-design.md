@@ -23,8 +23,8 @@ Gate 2에서 화면이 있는 기능을 설계할 때 사용한다.
 3. 각 화면의 기본, 오류, 빈 상태, 권한 제한 상태를 정의한다.
 4. 외부 시안이 있으면 출처, 파일/URL, 기준 viewport를 기록한다.
 5. 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 둔다.
-6. HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/UIREF-NNN/` 하위에 둔다.
-7. 시안이 없고 사용자가 허용하면 imagegen, HTML mockup, 간단 와이어프레임 중 적절한 방식으로 기준 시안을 만든다.
+6. HTML/CSS/JS 화면 퍼블리싱 산출물은 `docs/artifacts/02-design/screen/ui-baseline/UIREF-NNN/` 하위에 둔다.
+7. 시안이 없고 사용자가 허용하면 imagegen, 화면 퍼블리싱 산출물, 간단 와이어프레임 중 적절한 방식으로 기준 시안을 만든다.
 8. UIREF가 단순 참고자료인지 구현 기준인지 구분한다.
 9. 구현 기준이면 UI Implementation Contract에 기준 파일, 기준 CSS/토큰, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 작성한다.
 10. 화면설계서에 입력 항목, 출력 항목, 이벤트, 메시지 위치, 보안 적용 방식을 작성한다.

@@ -47,7 +47,7 @@ gate_exit_policy:
 ui_implementation_contract_policy:
   impl_checklist:
     - "구현 전 관련 SCR의 UI Implementation Contract를 확인한다."
-    - "prototype CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다."
+    - "화면 퍼블리싱 CSS 또는 동등한 레이아웃/class 구조를 재사용했는지 기록한다."
     - "보안가이드 때문에 바꾼 문구, 필드, 흐름은 DEC/ISSUE/FIND/CR 중 하나로 기록한다."
     - "기본/오류/성공/전환 상태가 Gate 3 UI-ID와 연결되어 있는지 확인한다."
     - "구현 결과 screenshot이 기준 UIREF와 비교 가능한 위치에 저장되는지 확인한다."
@@ -56,6 +56,6 @@ ui_implementation_contract_policy:
 ## Review Notes
 
 - 중간 이상 구현은 `implementation-plan`으로 Wave를 먼저 나눈 뒤 `build-wave`로 실행한다.
-- prototype 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
+- 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
 - 구현자가 자기 구현을 최종 승인하지 않도록 Orchestrator 검증과 review Run을 분리한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 구현 범위, 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.

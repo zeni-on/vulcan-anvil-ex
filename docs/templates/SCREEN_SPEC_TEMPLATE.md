@@ -35,10 +35,10 @@ change_reason: 최초 초안 작성
 - 화면 이벤트는 관련 프로그램 `PGM`과 연결한다.
 - 보안 민감 화면은 `SEC`와 외부 보안 기준 `SR`을 함께 기록한다.
 - 외부 시안, Figma 캡처, 이미지 생성 시안, 손그림, 기존 화면 캡처는 출처와 파일 경로를 기록하고 `SCR-ID`와 연결한다.
-- 외부 시안이 없더라도 `Text Wireframe`, `HTML Mockup`, `Mermaid`, 이미지 중 하나 이상의 화면 구조 증적을 작성한다.
-- 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 두고, HTML/CSS/JS 화면 mockup은 `docs/artifacts/02-design/screen/prototypes/`에 둔다.
+- 외부 시안이 없더라도 `Text Wireframe`, `HTML/CSS/JS 화면 퍼블리싱 산출물`, `Mermaid`, 이미지 중 하나 이상의 화면 구조 증적을 작성한다.
+- 정적 이미지 시안은 `docs/artifacts/02-design/screen/images/`에 두고, HTML/CSS/JS 화면 퍼블리싱 산출물은 `docs/artifacts/02-design/screen/ui-baseline/`에 둔다.
 - `Text Wireframe`을 사용하는 경우 `UIREF-ID`별로 별도 절과 fenced code block을 작성한다. 단순 화면 구성 표만으로는 와이어프레임으로 보지 않는다.
-- 외부 시안이나 prototype이 있으면 이를 단순 참고자료로 둘지, 구현자가 지켜야 하는 UI Implementation Contract로 둘지 명시한다.
+- 외부 시안이나 화면 퍼블리싱 산출물이 있으면 이를 단순 참고자료로 둘지, 구현자가 지켜야 하는 UI Implementation Contract로 둘지 명시한다.
 - 구현 기준 시안이면 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 반드시 작성한다.
 - 구현 후 비교가 가능하도록 기준 viewport와 주요 비교 항목을 작성한다.
 
@@ -52,25 +52,25 @@ change_reason: 최초 초안 작성
 
 | SCR-ID | 시안/와이어프레임 ID | 출처 | 파일/URL | 기준 Viewport | 비교 기준 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- |
-| SCR-001 | UIREF-001 | Figma / imagegen / 외부 이미지 / 손그림 / 기존 시스템 캡처 / HTML Mockup | docs/artifacts/02-design/screen/images/UIREF-001_example.png 또는 docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | Desktop 1280x720, Mobile 390x844 | 레이아웃, 입력항목, 메시지 위치, 버튼 상태 | Draft |
+| SCR-001 | UIREF-001 | Figma / imagegen / 외부 이미지 / 손그림 / 기존 시스템 캡처 / HTML/CSS/JS 화면 퍼블리싱 산출물 | docs/artifacts/02-design/screen/images/UIREF-001_example.png 또는 docs/artifacts/02-design/screen/ui-baseline/UIREF-001/index.html | Desktop 1280x720, Mobile 390x844 | 레이아웃, 입력항목, 메시지 위치, 버튼 상태 | Draft |
 
 ### 4.1 UI Implementation Contract
 
-프로토타입이나 외부 시안이 구현 기준이면 아래 계약을 작성한다.
+화면 퍼블리싱 산출물이나 외부 시안이 구현 기준이면 아래 계약을 작성한다.
 계약이 없으면 구현자는 시안을 참고자료로만 해석할 수 있으므로 Gate 3 또는 구현 단계로 넘기지 않는다.
 
 | Contract-ID | 관련 SCR | 기준 UIREF | 기준 파일 | 기준 CSS/토큰 | 구현 기준 유형 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- |
-| UICON-001 | SCR-001 | UIREF-001 | docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | docs/artifacts/02-design/screen/prototypes/UIREF-001/styles.css | Must Follow / Reference Only / Hybrid | Draft |
+| UICON-001 | SCR-001 | UIREF-001 | docs/artifacts/02-design/screen/ui-baseline/UIREF-001/index.html | docs/artifacts/02-design/screen/ui-baseline/UIREF-001/styles.css | Must Follow / Reference Only / Hybrid | Draft |
 
 | Contract-ID | 필수 유지 요소 | 변경 허용 항목 | 변경 금지 항목 | 구현 비교 방식 |
 | --- | --- | --- | --- | --- |
-| UICON-001 | 레이아웃 구조, 주요 class, 입력 순서, 버튼 위치, 메시지 위치 | 보안가이드에 따른 문구/검증 강화, 필수 필드 추가 | 별도 레이아웃 재설계, 카드/패널 구조 변경, 주요 메시지 위치 변경 | prototype screenshot과 구현 screenshot 비교, class/DOM 주요 구조 점검 |
+| UICON-001 | 레이아웃 구조, 주요 class, 입력 순서, 버튼 위치, 메시지 위치 | 보안가이드에 따른 문구/검증 강화, 필수 필드 추가 | 별도 레이아웃 재설계, 카드/패널 구조 변경, 주요 메시지 위치 변경 | 화면 퍼블리싱 screenshot과 구현 screenshot 비교, class/DOM 주요 구조 점검 |
 
 ### 4.2 UIREF-001 Text Wireframe
 
 `출처`가 `Text Wireframe`이면 아래처럼 실제 배치 기준을 작성한다.
-외부 이미지나 HTML mockup을 사용하는 경우에는 파일/URL과 viewport, 비교 기준을 표에 명시한다.
+외부 이미지나 HTML/CSS/JS 화면 퍼블리싱 산출물을 사용하는 경우에는 파일/URL과 viewport, 비교 기준을 표에 명시한다.
 
 ```text
 [Header: 서비스명 / 사용자 상태]

@@ -56,7 +56,7 @@
 - 권장 순서는 Kickoff/범위 고정 -> SW Architecture Draft -> 화면/사용자 흐름 -> 기능 -> 프로그램/API -> 데이터/DB -> 보안 -> 개발표준 -> SW Architecture Baseline 보강 -> 설계 검수다.
 - SW 아키텍처는 큰 그림과 Pending/ADR 후보를 먼저 잡고, 상세 설계와 함께 보강한다.
 - 화면이 있으면 `SCR-ID`, 화면 상태, 와이어프레임/시안, UI 증적 기준을 기록한다.
-- 프로토타입, Figma, 이미지 시안, 기존 화면 캡처가 있으면 단순 참고자료인지 구현 기준인지 구분하고, 구현 기준이면 UI Implementation Contract를 작성한다.
+- 화면 퍼블리싱 산출물, Figma, 이미지 시안, 기존 화면 캡처가 있으면 단순 참고자료인지 구현 기준인지 구분하고, 구현 기준이면 UI Implementation Contract를 작성한다.
 - UI Implementation Contract에는 기준 파일/CSS, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 포함한다.
 - UI 증적 기준은 화면 단위가 아니라 기본/오류/성공/전환 상태별 `UI-001-01` 형식으로 분리한다.
 - 보안가이드는 구현 가능한 구체 값, 정책, 오류 메시지, 검증 ID를 가진다.
@@ -71,7 +71,7 @@
 - 설계 산출물과 추적표가 연결되어 있다.
 - SW 아키텍처의 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다.
 - 이번 Run의 Gate 2 순서 위치와 다음 Gate 2 Run 후보가 남아 있다.
-- UIREF/prototype이 구현 계약으로 전환되었고 Gate 3/Impl/Gate 4에서 검증 가능한 비교 기준이 있다.
+- UIREF/ui-baseline이 구현 계약으로 전환되었고 Gate 3/Impl/Gate 4에서 검증 가능한 비교 기준이 있다.
 - Gate 3 테스트 설계로 넘길 AC/SEC/NREQ가 식별되어 있다.
 
 ## 5. Gate 3 Test Planning
@@ -81,7 +81,7 @@
 해야 할 일:
 - `UT/IT/PT/UI` ID를 정의한다.
 - UI 테스트는 상태/시나리오 단위로 작성하고 각 UI-ID에 기대 화면과 캡처 경로를 1:1로 둔다.
-- prototype 기반 화면 테스트는 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과와 비교 방식에 반영한다.
+- 화면 퍼블리싱 기반 화면 테스트는 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과와 비교 방식에 반영한다.
 - 테스트는 `AC/SEC/NREQ/SCR` 중 하나 이상과 연결한다.
 - 화면 테스트는 viewport, 기준 시안, 캡처 경로, 비교 기준을 가진다.
 - 명령 기반 테스트는 실행 위치(cwd), Windows/POSIX 명령, 성공 기준, 로그/증적 경로를 가진다.
@@ -105,7 +105,7 @@
 - 구현, 테스트, 증적, 추적표, Run 결과를 분리하지 않는다.
 - 개발표준과 테스트케이스에 지정된 필수 명령을 실행하고, cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 테스트결과서에 남긴다.
 - 화면이 있으면 실제 화면을 확인하고 필요한 캡처 증적을 남긴다.
-- prototype 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
+- 화면 퍼블리싱 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
 - 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
 
 주의:

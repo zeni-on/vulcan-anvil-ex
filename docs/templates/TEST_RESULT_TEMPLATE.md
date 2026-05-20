@@ -78,13 +78,13 @@ change_reason: 최초 초안 작성
 
 ### 4.2 UIREF 구현 계약 비교
 
-프로토타입이나 외부 시안이 UI Implementation Contract로 지정된 경우, 기준 UIREF와 구현 화면을 비교한다.
+화면 퍼블리싱 산출물이나 외부 시안이 UI Implementation Contract로 지정된 경우, 기준 UIREF와 구현 화면을 비교한다.
 허용된 차이는 근거를 남기고, 허용되지 않은 차이는 `FIND`로 등록한다.
 요구사항, 보안 정책, 화면 설계 자체를 바꿔야 하는 차이는 `CR`로 승격한다.
 
 | 비교 ID | 관련 UI | 관련 Contract | 기준 UIREF/파일 | 구현 증적 | 차이 | 허용 여부 | 처리 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| UICMP-001 | UI-001-01 | UICON-001 | UIREF-001 / docs/artifacts/02-design/screen/prototypes/UIREF-001/index.html | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png |  | 허용 / 미허용 | Pass / FIND- / CR- |
+| UICMP-001 | UI-001-01 | UICON-001 | UIREF-001 / docs/artifacts/02-design/screen/ui-baseline/UIREF-001/index.html | docs/artifacts/04-review/evidence/ui/UI-001-01_signup_default_desktop.png |  | 허용 / 미허용 | Pass / FIND- / CR- |
 
 ## 5. QA 발견사항과 재귀 수정 방침
 

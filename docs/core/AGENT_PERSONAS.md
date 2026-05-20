@@ -115,7 +115,7 @@ completion_criteria:
 | `screen-design` | 시안을 실제 구현 완료로 간주하지 않는다. 외부 시안을 가져와도 `SCR-ID`, `UIREF-ID`, `UICON-ID`, 검증 기준 없이 사용하지 않는다. |
 | `security-review` | 보안 기준 완화나 위험 수용을 임의로 승인하지 않는다. |
 | `screen-review` | 취향성 디자인 선호를 필수 결함으로 올리지 않는다. 다만 화면 누락, 상태 누락, 구현 계약 누락, 증적 불가 항목은 결함으로 본다. |
-| `ui-review` | 개인 취향을 강요하지 않는다. 다만 텍스트 와이어프레임만으로 구현 품질이 흔들리거나 prototype의 구현 계약이 없으면 `Minimal`, `Needs Mockup`, `Contract Missing`으로 판정한다. |
+| `ui-review` | 개인 취향을 강요하지 않는다. 다만 텍스트 와이어프레임만으로 구현 품질이 흔들리거나 화면 퍼블리싱 산출물의 구현 계약이 없으면 `Minimal`, `Needs Mockup`, `Contract Missing`으로 판정한다. |
 | `development-review` | 프로젝트가 이미 승인한 기술스택을 임의로 변경하지 않는다. |
 | `test-design` | 테스트를 위한 테스트를 만들지 않는다. AC, SEC, NREQ와 연결되지 않은 테스트는 만들지 않는다. |
 | `build-planning` | 코드를 작성하지 않는다. 구현 순서, Wave, 위임, 검증, 커밋 단위만 계획한다. |
