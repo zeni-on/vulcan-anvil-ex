@@ -102,6 +102,8 @@ my-project/
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
 | `review-run` | 생성된 독립 검수 요청을 codex-cli로 실행 |
+
+독립 검수 기본 모델과 추론 강도는 `vulcan.config.json`의 `independent_model`, `independent_reasoning_effort`로 정한다. 감리/QA 목적의 Gate 2, Gate 4 검수는 `gpt-5.5` + `high`를 권장한다.
 | `check-trace` | Gate별 추적성 검사 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |

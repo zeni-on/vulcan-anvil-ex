@@ -45,7 +45,50 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 `independent_enabled`가 `false`여도 사용자가 명시적으로 `vulcan.py review-request`를 실행하면 요청을 만들 수 있다.
 
-## 4. 생성 명령
+## 4. 모델과 추론 강도
+
+독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
+
+프로젝트 기본값은 `vulcan.config.json`에서 정한다.
+
+```json
+{
+  "review": {
+    "independent_runner": "codex-cli",
+    "independent_model": "gpt-5.5",
+    "independent_reasoning_effort": "high"
+  }
+}
+```
+
+특정 리뷰 실행에서만 바꾸려면 `review-run` 옵션으로 override한다.
+
+```bash
+python vulcan.py review-run \
+  --review-id RV-001 \
+  --model gpt-5.5 \
+  --reasoning-effort high
+```
+
+`review-run`은 실제 실행 증적을 Independent Review Run에 남긴다.
+
+```yaml
+runner: codex-cli
+model: gpt-5.5
+reasoning_effort: high
+exit_code: 0
+json_log: docs/reviews/RV-001_codex-exec.jsonl
+last_message: docs/reviews/RV-001_codex-last-message.md
+result_file_changed: true
+```
+
+운영 기준:
+
+- Gate 2 설계 검수와 Gate 4 QA 검수는 `gpt-5.5` + `high`를 기본으로 사용한다.
+- 빠른 예비 검토나 로컬 스모크 확인만 필요하면 일회성으로 `--reasoning-effort low`를 사용할 수 있다.
+- 검수 완료 보고에는 실제 사용된 `model`과 `reasoning_effort`를 남긴다.
+
+## 5. 생성 명령
 
 ```bash
 python vulcan.py review-request \
@@ -62,7 +105,7 @@ python vulcan.py review-request \
 - `docs/runs/RUN-NNN_independent-review-*_v0.1.md` 생성
 - `vulcan.config.json.review.independent_worktree`가 `true`이면 detached worktree 생성
 
-## 5. 실행 명령
+## 6. 실행 명령
 
 `codex-cli` runner를 사용할 수 있으면 Orchestrator가 독립 검수 세션을 비대화형으로 실행할 수 있다.
 
@@ -74,7 +117,7 @@ python vulcan.py review-run --review-id RV-001
 
 - `codex exec`를 새 비대화형 세션으로 실행한다.
 - worktree가 있으면 해당 worktree를 `--cd`로 사용한다.
-- 모델과 reasoning effort는 `vulcan.config.json.review` 값을 사용한다.
+- 모델과 reasoning effort는 기본적으로 `vulcan.config.json.review` 값을 사용하며, `--model`, `--reasoning-effort`로 실행 단위 override가 가능하다.
 - JSONL 실행 로그를 `docs/reviews/RV-NNN_codex-exec.jsonl`에 남긴다.
 - 마지막 응답을 `docs/reviews/RV-NNN_codex-last-message.md`에 남긴다.
 - result 파일 변경 여부와 exit code를 Independent Review Run에 기록한다.
@@ -85,7 +128,7 @@ python vulcan.py review-run --review-id RV-001
 - `codex exec` 기반의 독립 실행 세션을 만든다.
 - result 파일이 변경되었더라도 Orchestrator가 다시 검토한 뒤 본선 산출물 반영 여부를 결정한다.
 
-## 6. 리뷰어의 작업
+## 7. 리뷰어의 작업
 
 리뷰어는 request 파일을 읽고 result 파일만 작성한다.
 
@@ -104,7 +147,7 @@ python vulcan.py review-run --review-id RV-001
 - 추가 판단이 필요하면 `ISSUE`로 남긴다.
 - 검증 명령을 실행했으면 cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 기록한다.
 
-## 7. Gate별 중점
+## 8. Gate별 중점
 
 ### Gate 2
 
@@ -122,7 +165,7 @@ python vulcan.py review-run --review-id RV-001
 - 기준 UIREF와 구현 screenshot 차이가 `Pass`, `FIND`, `CR`로 판정되었는지 확인한다.
 - 미실행 검증이나 기대 화면과 다른 캡처가 Pass로 기록되지 않았는지 확인한다.
 
-## 8. Worktree 정리
+## 9. Worktree 정리
 
 독립 검수 worktree는 결과 수집 후 사람이 확인하고 삭제한다.
 

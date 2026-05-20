@@ -58,4 +58,10 @@ python vulcan.py check-trace
 python vulcan.py session --gate gate1 --status done --feature "기능명"
 ```
 
+독립 검수는 기본적으로 `vulcan.config.json`의 `independent_model`과 `independent_reasoning_effort` 값을 사용합니다. Gate 2 설계 검수와 Gate 4 QA 검수는 `gpt-5.5` + `high`를 권장합니다.
+
+```bash
+python vulcan.py review-run --review-id RV-001 --model gpt-5.5 --reasoning-effort high
+```
+
 Gate 진행 중에는 사용자의 명시 승인 없이 다음 Gate로 넘어가지 않습니다.
