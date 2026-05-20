@@ -43,7 +43,7 @@ Codex CLI, Claude CLI, GitHub reviewer, 수동 검수자는 모두 Run 계약을
 | `manual` | 사람이 result 파일 작성 | 정책, 승인, 일정 판단에 사용 |
 
 Claude CLI는 Codex CLI처럼 별도 대화창을 여는 것이 아니라 비대화형 실행을 만들 수 있다.
-따라서 `review-run`, 향후 `run-exec`의 runner로 사용할 수 있다.
+따라서 `review-run`, `run-exec`의 runner로 사용할 수 있다.
 
 기본 Claude 설정은 `claude-opus-4-7` + `high` effort를 사용한다.
 Claude Code 공식 기준으로 Opus 4.7은 `low`, `medium`, `high`, `xhigh`, `max` effort를 지원한다.
@@ -140,14 +140,25 @@ Worktree와 PR은 같은 것이 아니다.
 Backend Wave를 먼저 끝내고 API 계약을 고정한 뒤 Frontend Wave가 그 계약을 따라가는 방식이 충돌을 줄인다.
 병렬 실행은 writable scope가 분리되고 fan-in review가 준비된 뒤 허용한다.
 
-향후 명령 형태:
+Build Wave 또는 작업자 Run 실행 명령:
 
 ```bash
 python vulcan.py run-exec --run-id RUN-010 --runner codex-cli
 python vulcan.py run-exec --run-id RUN-011 --runner claude-cli
+python vulcan.py run-exec --run-id RUN-010 --runner codex-cli --dry-run
 ```
 
-`run-exec`가 도입되기 전에는 Orchestrator가 Build Wave Run을 작업지시서로 만들고, Codex/Claude 세션 또는 CLI에 수동으로 전달할 수 있다.
+`run-exec`는 한 번에 하나의 Run을 실행한다.
+초기 운영은 직렬 실행이 기본이며, 병렬 실행은 writable scope가 분리되고 fan-in review가 준비된 뒤 허용한다.
+
+기본 동작:
+
+- `execution.default_worktree=true`이면 브랜치 worktree를 생성한다.
+- 기본 branch 예: `codex/run-run-010-codex-cli`
+- 기본 worktree 예: `.vulcan/worktrees/RUN-010-codex-cli`
+- 현재 worktree에 미커밋 변경이 있으면 기본 차단한다. HEAD 기준 worktree 생성을 감수할 때만 `--allow-dirty`를 사용한다.
+- runner가 만든 코드와 문서는 자동 merge하지 않는다. Orchestrator가 worktree diff, Run 문서, 검증 결과를 확인한 뒤 반영한다.
+- 실행 로그와 요약은 `docs/runs/_exec/`에 남긴다.
 
 ## 7. 설정 방향
 
@@ -234,7 +245,8 @@ result_file_changed: true
 따라서 Vulcan은 토큰 소진을 직접 판정하지 않고, exit code, stderr/stdout, 마지막 응답, 결과 파일 변경 여부로 비정상 종료를 판단한다.
 runner가 토큰 또는 사용량 한도 때문에 종료하면 보통 `failed`나 `completed_no_result_change`로 남고, Orchestrator가 로그에서 원인을 확인한다.
 
-장시간 build/evidence 실행은 향후 `run-exec`에서 heartbeat 또는 streaming log의 `last_output_at`을 추가해 멈춤 상태를 더 빨리 감지할 수 있다.
+장시간 build/evidence 실행은 현재 timeout, exit code, stderr/stdout, 마지막 응답, Run 문서 변경 여부로 판정한다.
+향후 heartbeat 또는 streaming log의 `last_output_at`을 추가하면 멈춤 상태를 더 빨리 감지할 수 있다.
 
 ## 9. Orchestrator 책임
 

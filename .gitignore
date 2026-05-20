@@ -12,3 +12,4 @@ dashboard/projects.json
 docs/ref-docs/
 docs/examples/
 .claude/worktrees/
+.vulcan/worktrees/

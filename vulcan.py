@@ -169,6 +169,7 @@ GATE_DEFAULT_PERSONAS = {
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
 INDEPENDENT_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
 INDEPENDENT_REVIEW_EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude"]
+EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude"]
 INDEPENDENT_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
@@ -1669,6 +1670,24 @@ def find_wave_run_file(project_dir, bw_id):
         except OSError:
             continue
         if pattern.search(content) or pattern.search(os.path.basename(path)):
+            return path
+    return None
+
+
+def find_run_file(project_dir, run_id):
+    pattern = re.compile(rf"\b{re.escape(run_id)}\b", re.IGNORECASE)
+    for path in find_run_files(project_dir):
+        if pattern.search(os.path.basename(path)):
+            return path
+
+    for path in find_run_files(project_dir):
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        metadata = parse_simple_yaml_block(content)
+        if metadata.get("run_id", "").lower() == run_id.lower() or pattern.search(content):
             return path
     return None
 
@@ -4769,6 +4788,75 @@ def git_status_porcelain(project_dir="."):
         return ""
 
 
+def normalize_exec_runner(runner):
+    return {
+        "codex": "codex-cli",
+        "claude": "claude-cli",
+    }.get(runner, runner)
+
+
+def execution_rel_dir(project_dir="."):
+    return os.path.join(runs_rel_dir(project_dir), "_exec")
+
+
+def default_execution_branch(run_id, runner):
+    runner_slug = slugify(normalize_exec_runner(runner))
+    return f"codex/run-{run_id.lower()}-{runner_slug}"
+
+
+def default_execution_worktree_path(project_dir, run_id, runner):
+    runner_slug = slugify(normalize_exec_runner(runner))
+    return os.path.abspath(os.path.join(project_dir, ".vulcan", "worktrees", f"{run_id}-{runner_slug}"))
+
+
+def create_execution_worktree(project_dir, run_id, runner, branch_name=None, worktree_dir=None):
+    project_abs = os.path.abspath(project_dir)
+    target = os.path.abspath(worktree_dir) if worktree_dir else default_execution_worktree_path(project_abs, run_id, runner)
+    branch = branch_name or default_execution_branch(run_id, runner)
+
+    if os.path.exists(target):
+        print(f"오류: 실행 worktree 경로가 이미 존재합니다: {target}")
+        sys.exit(1)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+
+    try:
+        subprocess.run(
+            ["git", "worktree", "add", "-b", branch, target, "HEAD"],
+            cwd=project_abs,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.CalledProcessError as e:
+        detail = (e.stderr or e.stdout or str(e)).strip()
+        print(f"오류: 실행 worktree 생성 실패 - {detail}")
+        sys.exit(1)
+
+    return target, branch
+
+
+def coerce_process_output(value):
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def parse_git_status_files(status_text):
+    files = []
+    for line in (status_text or "").splitlines():
+        if not line.strip():
+            continue
+        value = line[3:] if len(line) > 3 else line.strip()
+        if " -> " in value:
+            value = value.split(" -> ", 1)[1]
+        files.append(value.strip())
+    return files
+
+
 def review_config_get(review_config, key, default=None):
     new_key = f"independent_{key}"
     if new_key in review_config:
@@ -5372,6 +5460,354 @@ result_file_changed: {str(result_changed).lower()}
         print("경고: result 파일 변경이 감지되지 않았습니다. 독립 검수 결과를 확인하세요.")
 
 
+def infer_execution_role(run_content, metadata):
+    persona = (metadata.get("persona") or "").lower()
+    text = run_content.lower()
+    if "review" in persona or "review" in text or "검수" in run_content:
+        return "review"
+    if "evidence" in persona or "evidence" in text or "증적" in run_content:
+        return "evidence"
+    if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend"):
+        return "build-frontend"
+    if "backend" in text or "back-end" in text or "백엔드" in run_content:
+        return "build-backend"
+    return "build"
+
+
+def cmd_run_exec(
+    run_id,
+    runner=None,
+    model=None,
+    reasoning_effort=None,
+    timeout_seconds=None,
+    sandbox=None,
+    create_worktree=None,
+    worktree_dir="",
+    branch_name="",
+    allow_dirty=False,
+    dry_run=False,
+    project_dir=".",
+):
+    project_abs = os.path.abspath(project_dir)
+    config = load_vulcan_config(project_abs)
+    execution_config = config.get("execution", {}) if isinstance(config.get("execution"), dict) else {}
+
+    run_path = find_run_file(project_abs, run_id)
+    if not run_path:
+        print(f"오류: {run_id}에 해당하는 Run 문서를 찾을 수 없습니다.")
+        print(f"  검색 위치: {runs_rel_dir(project_abs)}")
+        sys.exit(1)
+
+    run_abs = os.path.abspath(run_path)
+    run_rel_path = os.path.relpath(run_abs, project_abs)
+    with open(run_abs, encoding="utf-8") as f:
+        run_content = f.read()
+    run_meta = parse_simple_yaml_block(run_content)
+
+    role = infer_execution_role(run_content, run_meta)
+    runner = runner or runtime_role_runner(config, role)
+    runner_normalized = normalize_exec_runner(runner)
+    if runner_normalized not in [normalize_exec_runner(name) for name in EXEC_RUNNERS]:
+        print(f"오류: run-exec에서 아직 지원하지 않는 runner입니다: {runner}")
+        print("현재 지원 runner: codex-cli, claude-cli")
+        sys.exit(1)
+
+    runner_config = runtime_runner_config(config, runner_normalized)
+    if runner_normalized == "codex-cli":
+        model = model or runner_config.get("model") or "gpt-5.5"
+        reasoning_effort = (
+            reasoning_effort
+            or runner_config.get("reasoning_effort")
+            or runner_config.get("effort")
+            or "high"
+        )
+    else:
+        model = model or runner_config.get("model") or "claude-opus-4-7"
+        reasoning_effort = (
+            reasoning_effort
+            or runner_config.get("effort")
+            or runner_config.get("reasoning_effort")
+            or "high"
+        )
+    sandbox = sandbox or runner_config.get("sandbox") or "workspace-write"
+    timeout_seconds = int(timeout_seconds or execution_config.get("default_timeout_seconds", 2400))
+
+    if create_worktree is None:
+        create_worktree = bool(execution_config.get("default_worktree", True))
+
+    dirty_status = git_status_porcelain(project_abs)
+    if create_worktree and dirty_status and not allow_dirty and not dry_run:
+        print("오류: 현재 worktree에 미커밋 변경이 있어 실행 worktree를 만들 수 없습니다.")
+        print("  run-exec worktree는 HEAD 기준으로 생성되므로 미커밋 변경이 누락될 수 있습니다.")
+        print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
+        sys.exit(1)
+
+    exec_dir = project_abs
+    worktree_path = ""
+    execution_branch = ""
+    if create_worktree:
+        worktree_path = worktree_dir or default_execution_worktree_path(project_abs, run_id, runner_normalized)
+        execution_branch = branch_name or default_execution_branch(run_id, runner_normalized)
+        exec_dir = os.path.abspath(worktree_path)
+
+    exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
+
+    exec_rel_dir = execution_rel_dir(project_abs)
+    runner_log_slug = "codex" if runner_normalized == "codex-cli" else "claude"
+    log_ext = "jsonl" if runner_normalized == "codex-cli" else "json"
+    log_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-exec.{log_ext}")
+    stderr_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-exec.stderr.txt")
+    last_message_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-last-message.md")
+    summary_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-summary.json")
+    log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
+    stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
+    last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
+    summary_abs = os.path.abspath(os.path.join(project_abs, summary_rel_path))
+
+    prompt = f"""You are a worker runner for Vulcan-Anvil Ex.
+
+Working directory:
+{exec_dir}
+
+Read and execute this Run document:
+{run_rel_path}
+
+Rules:
+- You are a worker runner, not the Orchestrator.
+- Use the Run document, source_documents, completion_criteria, verification, and scope as your contract.
+- Modify only files allowed by the Run document's writable scope.
+- Do not perform Gate transitions.
+- Do not edit session current_gate, gate_status, completed gate state, or final approval state.
+- Do not make merge, release, or final acceptance decisions.
+- Do not mark user approval unless explicit user approval evidence already exists.
+- Record your work in the Run document: changed_files, verification_results, evidence, traceability_updates, open_issues, and orchestrator_decision_needed.
+- In your final response, summarize changed files, verification commands/results, and any Orchestrator decision needed.
+"""
+
+    if runner_normalized == "codex-cli":
+        runner_exe = shutil.which("codex")
+        if not runner_exe:
+            print("오류: codex CLI를 찾을 수 없습니다. `codex --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        cmd = [
+            runner_exe,
+            "-a",
+            "never",
+            "exec",
+            "--cd",
+            exec_dir,
+            "-m",
+            model,
+            "-c",
+            f"model_reasoning_effort={format_yaml_scalar(reasoning_effort)}",
+            "--sandbox",
+            sandbox,
+            "--json",
+            "--output-last-message",
+            last_message_abs,
+            prompt,
+        ]
+    else:
+        runner_exe = shutil.which("claude")
+        if not runner_exe:
+            print("오류: Claude CLI를 찾을 수 없습니다. `claude --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        cmd = [
+            runner_exe,
+            "-p",
+            prompt,
+            "--output-format",
+            "json",
+            "--effort",
+            reasoning_effort,
+            "--permission-mode",
+            "acceptEdits",
+        ]
+        if model:
+            cmd.extend(["--model", model])
+
+    printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
+    if dry_run:
+        print("Run execution dry-run")
+        print(f"  run_id: {run_id}")
+        print(f"  run_file: {run_rel_path}")
+        print(f"  inferred_role: {role}")
+        print(f"  runner: {runner_normalized}")
+        print(f"  model: {model or '(runner default)'}")
+        print(f"  reasoning_effort: {reasoning_effort}")
+        print(f"  sandbox: {sandbox}")
+        print(f"  timeout_seconds: {timeout_seconds}")
+        print(f"  worktree: {str(create_worktree).lower()}")
+        if create_worktree:
+            print(f"  worktree_path: {worktree_path}")
+            print(f"  branch: {execution_branch}")
+            if dirty_status and not allow_dirty:
+                print("  warning: current worktree is dirty; non-dry-run would require commit or --allow-dirty")
+        print(f"  command: {printable_cmd}")
+        return
+
+    if create_worktree:
+        worktree_path, execution_branch = create_execution_worktree(
+            project_abs,
+            run_id,
+            runner_normalized,
+            branch_name=execution_branch,
+            worktree_dir=worktree_path,
+        )
+        exec_dir = worktree_path
+        exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
+
+    if not os.path.exists(exec_run_abs):
+        print(f"오류: 실행 위치에서 Run 문서를 찾을 수 없습니다: {exec_run_abs}")
+        sys.exit(1)
+
+    os.makedirs(os.path.dirname(log_abs), exist_ok=True)
+
+    before_hash = file_sha256(exec_run_abs)
+    started_dt = datetime.now()
+    deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
+    started_at = started_dt.isoformat(timespec="seconds")
+    deadline_at = deadline_dt.isoformat(timespec="seconds")
+    timed_out = False
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=exec_dir,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+        )
+        exit_code = result.returncode
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+    except subprocess.TimeoutExpired as e:
+        timed_out = True
+        exit_code = 124
+        stdout = coerce_process_output(e.stdout)
+        stderr = coerce_process_output(e.stderr) + f"\nTIMEOUT after {timeout_seconds} seconds"
+    completed_dt = datetime.now()
+    completed_at = completed_dt.isoformat(timespec="seconds")
+    duration_seconds = int((completed_dt - started_dt).total_seconds())
+
+    changed_status = git_status_porcelain(exec_dir)
+    changed_files = parse_git_status_files(changed_status)
+    after_hash = file_sha256(exec_run_abs)
+    run_file_changed = bool(before_hash and after_hash and before_hash != after_hash)
+
+    if timed_out:
+        run_status = "timeout"
+    elif exit_code != 0:
+        run_status = "failed"
+    elif not run_file_changed:
+        run_status = "completed_no_result_change"
+    else:
+        run_status = "completed"
+
+    with open(log_abs, "w", encoding="utf-8") as f:
+        f.write(stdout)
+    with open(stderr_abs, "w", encoding="utf-8") as f:
+        f.write(stderr)
+    if runner_normalized == "claude-cli":
+        with open(last_message_abs, "w", encoding="utf-8") as f:
+            try:
+                parsed_stdout = json.loads(stdout) if stdout.strip() else {}
+                message = (
+                    parsed_stdout.get("result")
+                    or parsed_stdout.get("text")
+                    or parsed_stdout.get("message")
+                    or stdout
+                )
+            except json.JSONDecodeError:
+                message = stdout
+            f.write(message if isinstance(message, str) else json.dumps(message, ensure_ascii=False, indent=2))
+
+    if os.path.normcase(exec_run_abs) != os.path.normcase(run_abs) and os.path.exists(exec_run_abs):
+        shutil.copy2(exec_run_abs, run_abs)
+
+    summary = {
+        "run_id": run_id,
+        "run_file": run_rel_path.replace("\\", "/"),
+        "executed_at": started_at,
+        "deadline_at": deadline_at,
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "timeout_seconds": timeout_seconds,
+        "timed_out": timed_out,
+        "status": run_status,
+        "runner": runner_normalized,
+        "model": model or "(runner default)",
+        "reasoning_effort": reasoning_effort,
+        "sandbox": sandbox,
+        "exec_dir": exec_dir,
+        "worktree_path": worktree_path or None,
+        "branch": execution_branch or None,
+        "exit_code": exit_code,
+        "json_log": log_rel_path.replace("\\", "/"),
+        "stderr_log": stderr_rel_path.replace("\\", "/"),
+        "last_message": last_message_rel_path.replace("\\", "/"),
+        "run_file_changed": run_file_changed,
+        "changed_files": changed_files,
+    }
+    with open(summary_abs, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+    execution_note = f"""
+
+## Run Execution Record
+
+```yaml
+executed_at: {started_at}
+deadline_at: {deadline_at}
+completed_at: {completed_at}
+duration_seconds: {duration_seconds}
+timeout_seconds: {timeout_seconds}
+timed_out: {str(timed_out).lower()}
+status: {run_status}
+runner: {runner_normalized}
+model: {model or "(runner default)"}
+reasoning_effort: {reasoning_effort}
+sandbox: {sandbox}
+exec_dir: {exec_dir}
+worktree_path: {worktree_path or ""}
+branch: {execution_branch or ""}
+exit_code: {exit_code}
+json_log: {log_rel_path}
+stderr_log: {stderr_rel_path}
+last_message: {last_message_rel_path}
+summary: {summary_rel_path}
+run_file_changed: {str(run_file_changed).lower()}
+changed_files:
+{format_yaml_sequence(changed_files, indent=2)}
+```
+"""
+    with open(run_abs, "a", encoding="utf-8") as f:
+        f.write(execution_note)
+
+    print("\nRun 실행 완료")
+    print(f"  run_id: {run_id}")
+    print(f"  runner: {runner_normalized}")
+    print(f"  model: {model or '(runner default)'}")
+    print(f"  reasoning_effort: {reasoning_effort}")
+    print(f"  status: {run_status}")
+    print(f"  duration_seconds: {duration_seconds}")
+    print(f"  exit_code: {exit_code}")
+    print(f"  run_file_changed: {str(run_file_changed).lower()}")
+    print(f"  changed_files: {len(changed_files)}")
+    print(f"  summary: {summary_rel_path}")
+    if worktree_path:
+        print(f"  worktree: {worktree_path}")
+        print(f"  branch: {execution_branch}")
+    if exit_code != 0:
+        print(f"오류: {runner_normalized} 실행이 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
+        sys.exit(exit_code)
+    if not run_file_changed:
+        print("경고: Run 문서 변경이 감지되지 않았습니다. runner 출력과 summary를 확인하세요.")
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -5910,6 +6346,21 @@ def main():
     p_review_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex-cli sandbox")
     p_review_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
+    p_run_exec = subparsers.add_parser("run-exec", help="Run 문서를 codex-cli 또는 claude-cli 작업자 runner로 실행")
+    p_run_exec.add_argument("--run-id", required=True, help="실행할 Run ID (예: RUN-010)")
+    p_run_exec.add_argument("--runner", choices=EXEC_RUNNERS, help="작업자 실행 런타임")
+    p_run_exec.add_argument("--model", default="", help="runner 모델")
+    p_run_exec.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
+    p_run_exec.add_argument("--timeout-seconds", type=int, default=0, help="runner timeout seconds")
+    p_run_exec.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex-cli sandbox")
+    p_run_exec.add_argument("--worktree", dest="worktree", action="store_true", help="브랜치 worktree에서 실행")
+    p_run_exec.add_argument("--no-worktree", dest="worktree", action="store_false", help="현재 worktree에서 실행")
+    p_run_exec.set_defaults(worktree=None)
+    p_run_exec.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
+    p_run_exec.add_argument("--branch", default="", help="worktree 생성 시 사용할 branch 이름")
+    p_run_exec.add_argument("--allow-dirty", action="store_true", help="미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
+    p_run_exec.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -6010,6 +6461,20 @@ def main():
             reasoning_effort=args.reasoning_effort or None,
             timeout_seconds=args.timeout_seconds or None,
             sandbox=args.sandbox or None,
+            dry_run=args.dry_run,
+        )
+    elif args.command == "run-exec":
+        cmd_run_exec(
+            run_id=args.run_id,
+            runner=args.runner,
+            model=args.model or None,
+            reasoning_effort=args.reasoning_effort or None,
+            timeout_seconds=args.timeout_seconds or None,
+            sandbox=args.sandbox or None,
+            create_worktree=args.worktree,
+            worktree_dir=args.worktree_dir,
+            branch_name=args.branch,
+            allow_dirty=args.allow_dirty,
             dry_run=args.dry_run,
         )
     elif args.command == "backlog":
