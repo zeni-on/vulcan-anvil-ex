@@ -1,147 +1,105 @@
 # Codex/GPT Gate Prompts
 
-> 목적: Gate별 Codex/GPT 실행 체크리스트를 짧게 제공한다. 상세 규칙은 `docs/core/`와 관련 skill을 읽는다.
+> 목적: Codex/GPT runner가 Vulcan-Anvil Ex Core 규칙을 실행할 때 사용할 얇은 Gate별 체크리스트를 제공한다.
 
-## 1. 공통 규칙
+## 1. 사용 방식
 
-- 먼저 `session.json.current_gate`와 사용자 요청을 확인한다.
+이 문서는 Core 규칙을 대체하지 않는다.
+Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필요한 Core 문서와 skill 카드만 읽는다.
+
+필수 Core:
+
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/AGENT_PERSONAS.md`
+- `docs/core/INDEPENDENT_EXECUTION_PROCESS.md`
+
+출력은 `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`를 따른다.
+
+## 2. 공통 체크
+
+- `session.json.current_gate`, 사용자 요청, 관련 Run을 먼저 확인한다.
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, 증적을 사용자 승인 없이 만들지 않는다.
-- 모든 의미 있는 변경은 관련 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI/FIND/CR/RUN`과 연결한다.
-- 실행하지 않은 테스트를 통과로 보고하지 않는다.
-- 각 Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 산출물 요약, 미해결 항목, 다음 Gate 제안, 사용자 승인 질문을 남기고 대기한다.
-- 대화상 명시 승인 없이 Run 또는 승인 문서에 User Approved로 기록하지 않는다.
-- 운영 상태를 요구사항, 제약, 성공 기준에 쓰지 않는다.
-- `docs/ref-docs/`는 민감 자료일 수 있으므로 커밋하지 않는다.
+- 의미 있는 변경은 관련 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI/FIND/CR/RUN`과 연결한다.
+- 실행하지 않은 테스트를 Pass로 기록하지 않는다.
+- Gate 산출물 완료 후에는 요약, 미해결 항목, 다음 제안, 사용자 승인 질문을 남기고 멈춘다.
+- `docs/ref-docs/`는 민감 자료일 수 있으므로 커밋하거나 원문 인용하지 않는다.
 - Claude 전용 `.claude/` 문서는 Codex 실행 계약으로 보지 않는다.
 
-## 2. Phase 0 Discovery
+## 3. Gate별 체크리스트
 
-목표: 아이디어, 문제, 범위, 질문, 위험을 정리한다.
+| Gate | 목표 | 확인할 Core/Skill |
+| --- | --- | --- |
+| Phase 0 | 목표, 사용자, 제약, 질문, 위험, 가정을 정리한다 | `AGENT_RUN_PROTOCOL.md`, `DELIVERY_PROFILES.md` |
+| Gate 1 | 테스트 가능한 `REQ/NREQ/AC`와 추적표를 만든다 | `TRACEABILITY_RULES.md`, `ID_SYSTEM.md` |
+| Gate 2 | 요구사항을 아키텍처, 화면, 기능, API, DB, 보안, 개발표준으로 전개한다 | `GATE2_DESIGN_SEQUENCE.md`, `screen-design`, `security-review`, `development-standard-review`, `data-standard-review` |
+| Gate 3 | 요구사항, 보안, UI 계약을 검증 가능한 테스트와 증적 기준으로 전개한다 | `TRACEABILITY_RULES.md`, `RUN_INPUT_CONTRACT.md` |
+| Impl | 승인된 Build Wave 범위 안에서 구현하고 테스트, 증적, 추적성 delta를 남긴다 | `implementation-plan`, `build-wave`, `TECH_STACK_BASELINES.md` |
+| Gate 4 | 테스트 결과, Playwright 증적, 추적성, FIND/CR/ISSUE를 검수한다 | `CHANGE_CONTROL_PROCESS.md`, `traceability-review`, `ui-review` |
+| Gate 5 | 릴리즈 승인 근거, 잔여 위험, 인수인계 항목을 정리한다 | `DOCUMENT_METADATA.md`, `CHANGE_CONTROL_PROCESS.md` |
 
-해야 할 일:
-- 프로젝트 배경과 사용자를 정리한다.
-- 요구사항 후보, 질문, 위험, 가정을 구분한다.
-- 확정되지 않은 항목은 Backlog 또는 질문으로 남긴다.
+## 4. Gate별 핵심 주의
 
-하지 않을 일:
-- 구현, 테스트 코드, 상세 설계를 만들지 않는다.
+### Phase 0
 
-완료 기준:
-- Project Brief, Scope, As-Is/To-Be, Risk/Assumption 또는 관련 Run 갱신
-- Gate 1 후보와 미결 질문 정리
+- 즉시 구현하지 않는다.
+- 확정되지 않은 내용은 질문, 가정, 위험, Backlog 후보로 분리한다.
 
-## 3. Gate 1 Requirements
+### Gate 1
 
-목표: 테스트 가능한 요구사항과 인수기준을 확정한다.
+- 요구사항과 인수기준을 설계/구현 상세로 밀어 넣지 않는다.
+- `Given/When/Then`, 선행조건, 테스트 데이터는 Gate 3 입력으로 넘긴다.
 
-해야 할 일:
-- `REQ/NREQ/AC`를 분리한다.
-- 요구사항정의서와 추적표를 갱신한다.
-- 보안/비기능 요구 후보를 누락하지 않는다.
+### Gate 2
 
-주의:
-- 설계와 구현 상세로 내려가지 않는다.
-- `Given/When/Then`, 선행조건, 테스트 데이터는 Gate 3 테스트케이스로 넘긴다.
+- `docs/core/GATE2_DESIGN_SEQUENCE.md`의 순서를 따른다.
+- SW Architecture는 Draft로 시작하고 상세 설계를 거쳐 Baseline 후보로 보강한다.
+- 화면 퍼블리싱 산출물이나 UIREF가 있으면 단순 참고인지 구현 기준인지 분류하고, 구현 기준이면 UI Implementation Contract를 작성한다.
+- 보안가이드와 개발표준은 구현자가 바로 사용할 수 있는 정책값, 적용 위치, 검증 명령을 가진다.
 
-완료 기준:
-- 모든 상세 요구사항에 AC 또는 명시적 제외 사유가 있다.
-- Gate 2로 넘길 질문과 승인 필요 사항이 정리되어 있다.
+### Gate 3
 
-## 4. Gate 2 Design
-
-목표: 승인된 요구사항을 아키텍처, 기능, 화면, 프로그램/API, DB, 보안, 개발표준으로 전개한다.
-
-해야 할 일:
-- `docs/core/GATE2_DESIGN_SEQUENCE.md`를 읽고 이번 Run이 Gate 2 설계 순서의 어디에 있는지 기록한다.
-- 권장 순서는 Kickoff/범위 고정 -> SW Architecture Draft -> 화면/사용자 흐름 -> 기능 -> 프로그램/API -> 데이터/DB -> 보안 -> 개발표준 -> SW Architecture Baseline 보강 -> 설계 검수다.
-- SW 아키텍처는 큰 그림과 Pending/ADR 후보를 먼저 잡고, 상세 설계와 함께 보강한다.
-- 화면이 있으면 `SCR-ID`, 화면 상태, 와이어프레임/시안, UI 증적 기준을 기록한다.
-- 화면 퍼블리싱 산출물, Figma, 이미지 시안, 기존 화면 캡처가 있으면 단순 참고자료인지 구현 기준인지 구분하고, 구현 기준이면 UI Implementation Contract를 작성한다.
-- UI Implementation Contract에는 기준 파일/CSS, 필수 유지 요소, 변경 허용 항목, 변경 금지 항목, 비교 방식을 포함한다.
-- UI 증적 기준은 화면 단위가 아니라 기본/오류/성공/전환 상태별 `UI-001-01` 형식으로 분리한다.
-- 보안가이드는 구현 가능한 구체 값, 정책, 오류 메시지, 검증 ID를 가진다.
-- 개발표준은 구현 전에 확정하고, 필수 검증 명령의 실행 위치(cwd), 성공 기준, 로그/증적 경로, Not Run/Skipped 처리 기준을 포함한다.
-- 필요한 skill: `screen-design`, `screen-review`, `ui-review`, `security-review`, `development-standard-review`, `data-standard-review`
-
-하지 않을 일:
-- 사용자 승인 없이 구현으로 넘어가지 않는다.
-- 보안 정책값을 코드나 테스트에서 임의로 만들지 않는다.
-
-완료 기준:
-- 설계 산출물과 추적표가 연결되어 있다.
-- SW 아키텍처의 Draft/Baseline Candidate/Baseline 성숙도와 Pending/ADR 상태가 기록되어 있다.
-- 이번 Run의 Gate 2 순서 위치와 다음 Gate 2 Run 후보가 남아 있다.
-- UIREF/ui-baseline이 구현 계약으로 전환되었고 Gate 3/Impl/Gate 4에서 검증 가능한 비교 기준이 있다.
-- Gate 3 테스트 설계로 넘길 AC/SEC/NREQ가 식별되어 있다.
-
-## 5. Gate 3 Test Planning
-
-목표: 요구사항, 보안가이드, 화면 기준을 검증 가능한 테스트로 전개한다.
-
-해야 할 일:
-- `UT/IT/PT/UI` ID를 정의한다.
-- UI 테스트는 상태/시나리오 단위로 작성하고 각 UI-ID에 기대 화면과 캡처 경로를 1:1로 둔다.
-- 화면 퍼블리싱 기반 화면 테스트는 UI Implementation Contract의 필수 유지/변경 허용/금지 항목을 기대결과와 비교 방식에 반영한다.
-- 테스트는 `AC/SEC/NREQ/SCR` 중 하나 이상과 연결한다.
-- 화면 테스트는 viewport, 기준 시안, 캡처 경로, 비교 기준을 가진다.
-- 명령 기반 테스트는 실행 위치(cwd), Windows/POSIX 명령, 성공 기준, 로그/증적 경로를 가진다.
-
-주의:
+- UI 테스트는 화면 단위가 아니라 상태/시나리오 단위로 나눈다.
+- 명령 기반 테스트는 cwd, Windows/POSIX 명령, 성공 기준, 로그/증적 경로를 가진다.
 - 보안가이드에 없는 정책값을 테스트가 새로 만들지 않는다.
-- 추적표의 테스트 컬럼에 `미정`을 남기지 않는다. 불필요하면 `해당없음`과 사유를 쓴다.
 
-완료 기준:
-- 테스트케이스 정의서와 추적표가 갱신되어 있다.
-- 구현자가 실행할 검증 명령과 기준이 분명하다.
+### Impl
 
-## 6. Impl / Gate 4 Build And QA
-
-목표: 승인된 설계를 구현하고 테스트, 증적, 추적표를 함께 갱신한다.
-
-해야 할 일:
-- 구현 전 `implementation-plan` 또는 단일 구현 Run의 생략 사유를 확인한다.
-- 개발표준정의서는 구현 계약으로 취급한다. 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령 기준이 비어 있으면 구현하지 않고 FIND/CR로 보고한다.
-- Spring Boot 구현은 개발표준의 base package와 feature 우선 구조를 따른다. `domain/{feature}` 래퍼는 DDD 구조 선택 사유가 개발표준에 있을 때만 사용한다.
-- 화면 구현 전 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
+- Orchestrator는 구현 주 작성자가 아니다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
-- 구현, 테스트, 증적, 추적표, Run 결과를 분리하지 않는다.
-- 개발표준과 테스트케이스에 지정된 필수 명령을 실행하고, cwd, 명령, exit code, 성공 기준, 로그/증적 경로를 테스트결과서에 남긴다.
-- 화면이 있으면 Playwright로 실제 화면을 확인하고 상태별 캡처 증적을 남긴다.
-- Playwright가 설치되어 있지 않으면 `npm install -D @playwright/test`와 `npx playwright install`을 실행한 뒤 `npx playwright test`로 재검증한다.
-- CDP 캡처, 브라우저 수동 캡처, 런타임 Preview 캡처만으로 UI 테스트 Pass를 확정하지 않는다. Playwright를 실행하지 못하면 `Not Run` 또는 `FIND`로 남긴다.
-- 화면 퍼블리싱 기반 화면은 기준 UIREF screenshot과 구현 screenshot의 차이를 기록하고 허용 여부를 판정한다.
-- 캡처가 기대 화면을 보여주지 못하면 Pass로 기록하지 않고 FIND 또는 Not Run으로 남긴다.
+- 개발표준, 보안가이드, 테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
+- 화면 구현 전 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
 
-주의:
-- Orchestrator는 구현 주 작성자가 아니다. 구현은 `build` persona/subagent가 맡고 Orchestrator는 검토와 통합을 책임진다.
-- 개발표준/보안가이드/테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
+### Gate 4
 
-완료 기준:
-- 관련 테스트와 린트 결과가 실행 위치, exit code, 성공 기준, 로그/증적 경로와 함께 기록되어 있다.
-- 구현 파일, 테스트 파일, 증적 경로가 추적표와 결과서에 연결되어 있다.
+- 화면 증적 Pass는 Playwright 결과를 기준으로 한다.
+- CDP 캡처, 브라우저 수동 캡처, Preview 캡처만으로 UI Pass를 확정하지 않는다.
+- 승인된 범위 안의 결함은 `FIND`, 기준선 변경은 `CR`, 판단 보류는 `ISSUE`로 남긴다.
 
-## 7. Change Control
+### Gate 5
 
-목표: 변경 후보를 FIND, CR, ISSUE, Backlog로 분류하고 승인된 변경만 필요한 Gate로 다시 진행한다.
+- Release Approval과 CR을 혼동하지 않는다.
+- 미해결 Open 항목이 있으면 승인 완료로 선언하지 않는다.
 
-해야 할 일:
-- 기준선 변경이면 `DOC-PM-CR-NNN_*` 상세서와 CR 관리대장을 갱신한다.
-- 승인된 CR을 처리할 때는 `gate-start` 후 관련 Run 문서를 반드시 만든다.
-- scope는 CR 상세서와 Run 문서에 기록한다.
-- 문서/설계 검토는 scope 중심으로 하되, 자동화된 단위테스트는 원칙적으로 전체 실행한다.
+## 5. 완료 응답 형식
 
-하지 않을 일:
-- 별도 되돌림 흐름을 사용하지 않는다.
-- Gate 통과를 막는 Blocker/Major FIND를 Backlog로 미루지 않는다.
+```text
+완료 요약:
+- ...
 
-## 8. Gate 5 Approval
+변경 파일:
+- ...
 
-목표: 산출물, 테스트 결과, 미해결 항목, 승인 조건을 정리한다.
+검증:
+- cwd / command / exit code / result / evidence
 
-해야 할 일:
-- Release Approval 문서를 갱신한다.
-- Open FIND/CR/ISSUE/Backlog가 승인 가능한 상태인지 확인한다.
-- 릴리즈 또는 인수인계 증적을 연결한다.
+미해결:
+- ...
 
-완료 기준:
-- 승인 여부, 승인 조건, 잔여 위험 수용 여부가 기록되어 있다.
+다음 제안:
+- ...
+
+승인 질문:
+- ...
+```

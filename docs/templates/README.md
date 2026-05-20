@@ -2,6 +2,9 @@
 
 이 디렉토리는 Vulcan-Anvil Ex Core 규칙을 따르는 공식 산출물 템플릿을 보관한다.
 
+루트의 `templates/` 디렉터리는 `vulcan.py init`이 새 프로젝트 골격을 만들 때 복사하는 시드 파일 영역이다.
+이 디렉터리(`docs/templates/`)는 Gate 산출물의 공식 문서 양식만 다룬다.
+
 `0.2.2` 기준 공식 템플릿:
 
 - `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서

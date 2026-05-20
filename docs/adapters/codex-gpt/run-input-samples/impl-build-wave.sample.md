@@ -9,6 +9,10 @@ gate: "impl"
 skill: "implementation-plan"
 persona: "build-planning"
 related_ids: [REQ-001, PGM-001, UT-001, IT-001]
+runner_hint:
+  frontend: "claude-cli"
+  backend: "codex-cli"
+  evidence: "codex-cli"
 source_documents:
   read_first:
     - AGENTS.md
@@ -42,6 +46,7 @@ completion_criteria:
   - "Java/Spring 주요 클래스와 public 업무 메서드는 개발표준의 JavaDoc/추적 ID 기준을 따른다."
   - "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다."
   - "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다."
+  - "Frontend Wave와 Backend Wave가 분리되어 있고, 기본 runner가 각각 claude-cli/codex-cli로 제안되어 있다."
   - "구현 변경은 테스트 코드, 테스트 결과, 추적표 갱신과 연결된다."
   - "동시에 active 상태인 Build Wave가 하나만 유지된다."
 development_standard_policy:

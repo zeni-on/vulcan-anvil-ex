@@ -1,63 +1,65 @@
 # Vulcan-Anvil Ex Adapters
 
-이 디렉토리는 Vulcan-Anvil Ex Core 규약을 실제 에이전트 도구에 연결하기 위한 Adapter 문서를 둔다.
+이 디렉터리는 Vulcan-Anvil Ex Core 규칙을 Codex, Claude 같은 실제 실행 환경에 연결하는 얇은 변환층이다.
 
-Core는 모델 독립 규칙을 정의하고, Adapter는 이를 Codex/GPT, Claude, Cursor, Copilot 같은 실행 환경에 맞게 변환한다.
+## 1. 원칙
 
-## 1. Adapter의 위치
+Core는 두껍게 유지하고 Adapter는 얇게 유지한다.
 
-Adapter는 다음 질문에 답한다.
+- Core는 Gate, Run, traceability, approval, security, data, development standard, independent execution 같은 모델 독립 규칙을 가진다.
+- Adapter는 특정 runner가 Core 규칙을 읽고 실행할 수 있도록 입력, 출력, 프롬프트, 명령 옵션만 변환한다.
+- Adapter는 Core 규칙을 길게 복사하지 않는다.
+- Core와 Adapter의 내용이 충돌하면 Core가 우선이다.
 
-- 이 에이전트에게 어떤 문서를 어떤 순서로 제공할 것인가?
-- Gate별 프롬프트 또는 실행 명령은 어떻게 구성할 것인가?
-- 에이전트가 만든 결과를 Core 산출물 형식으로 어떻게 되돌릴 것인가?
-- 실패, 질문, 승인요청을 어떻게 기록할 것인가?
-- 컨텍스트 한계가 있을 때 어떤 문서를 우선 제공할 것인가?
+## 2. Adapter가 해야 하는 일
 
-## 2. 공통 전제
+Adapter는 다음 질문에만 답한다.
 
-모든 Adapter는 다음 Core 문서를 준수한다.
+- 이 runner에게 어떤 Core 문서와 Run 입력을 어떤 순서로 제공할 것인가?
+- runner별 프롬프트 또는 CLI 옵션은 무엇인가?
+- runner 결과를 Core Run 출력 계약으로 어떻게 정규화할 것인가?
+- runner 한계, 권한, 컨텍스트 제한은 무엇인가?
+- 실패, 질문, 승인요청을 어떤 파일과 필드에 남길 것인가?
 
-- `docs/core/ID_SYSTEM.md`
-- `docs/core/TRACEABILITY_RULES.md`
-- `docs/core/DOCUMENT_METADATA.md`
-- `docs/core/REFERENCE_STANDARDS.md`
-- `docs/core/SECURITY_BASELINE.md`
-- `docs/core/DATA_STANDARD_RULES.md`
-- `docs/core/AGENT_PERSONAS.md`
-- `docs/core/AGENT_RUN_PROTOCOL.md`
+## 3. Adapter가 피해야 하는 일
 
-## 3. 우선 구현 순서
+다음 내용은 Adapter가 아니라 Core에 둔다.
 
-권장 순서:
+- Gate 전환과 사용자 승인 정책
+- Run lifecycle과 Build Wave 운영 원칙
+- FIND, CR, ISSUE, Backlog 분류 규칙
+- UI Implementation Contract 원칙
+- Playwright 증적 필수 기준
+- 보안, 데이터, 개발표준의 공통 기준선
+- 독립 실행, worktree, PR, 교차검토의 공통 절차
 
-1. `codex-gpt`: 현재 샘플 개발 흐름을 기준으로 첫 Adapter를 만든다.
-2. `claude`: 같은 Run Protocol과 persona 체계를 Claude 실행 방식에 매핑한다.
-3. `dashboard`: Run 상태, 산출물 상태, 추적표 상태를 시각화한다.
+Adapter에 이런 내용이 필요하면 요약만 두고 Core 문서를 링크한다.
 
-## 4. Adapter 산출물
+## 4. 현재 Adapter
 
-Adapter는 최소 다음 산출물을 가진다.
+| Adapter | 목적 |
+| --- | --- |
+| `codex-gpt/` | Codex/GPT 실행 환경에서 사용할 Run 입력/출력 계약, Gate prompt, skill 카드 |
+| `claude/` | Claude CLI, Claude subagent, Claude 프로젝트 파일과 Ex persona의 매핑 |
+
+## 5. 최소 산출물
+
+각 Adapter는 다음 문서를 가진다.
 
 | 문서 | 목적 |
 | --- | --- |
 | `README.md` | Adapter의 범위와 사용 방식 |
-| `RUN_INPUT_CONTRACT.md` | 해당 에이전트에 전달할 입력 형식 |
-| `RUN_OUTPUT_CONTRACT.md` | 해당 에이전트 결과를 정규화하는 형식 |
-| `GATE_PROMPTS.md` | Gate별 기본 프롬프트 또는 실행 지침 |
-| `PERSONA_MAPPING.md` | Core persona와 도구별 agent/subagent 이름의 매핑 |
-| `LIMITATIONS.md` | 모델/도구 한계, 보안 주의사항 |
+| `RUN_INPUT_CONTRACT.md` | runner에 전달할 입력 형식 |
+| `RUN_OUTPUT_CONTRACT.md` | runner 결과를 정규화하는 출력 형식 |
+| `GATE_PROMPTS.md` | Core 규칙을 짧게 환기하는 runner별 실행 프롬프트 |
+| `PERSONA_MAPPING.md` 또는 `PERSONA_DELEGATION.md` | Core persona와 runner별 agent/subagent 이름의 매핑 |
+| `LIMITATIONS.md` | runner 한계, 보안 주의사항, 보조 도구 기준 |
 
-## 5. 다음 작업
+## 6. 관련 Core 문서
 
-다음 단계에서는 `codex-gpt` Adapter를 만든다.
-
-첫 목표는 로그인 게시판 샘플을 대상으로 다음 흐름을 재현하는 것이다.
-
-```text
-Run 입력 생성
--> Codex/GPT 실행 지침 구성
--> 구현/테스트/증적 수행
--> Run 결과 정규화
--> 추적표 갱신
-```
+- `docs/core/ORCHESTRATOR_PROTOCOL.md`
+- `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/AGENT_PERSONAS.md`
+- `docs/core/TRACEABILITY_RULES.md`
+- `docs/core/INDEPENDENT_EXECUTION_PROCESS.md`
+- `docs/core/CHANGE_CONTROL_PROCESS.md`

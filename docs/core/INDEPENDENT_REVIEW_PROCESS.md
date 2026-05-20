@@ -5,6 +5,9 @@
 
 ## 1. 개념
 
+독립 검수는 `INDEPENDENT_EXECUTION_PROCESS.md`의 `review` 유형에 해당한다.
+즉 독립 검수와 독립 구현은 별도 세션/worktree 실행이라는 같은 실행 모델을 공유하되, 이 문서는 읽기 중심 검수 절차만 상세히 정의한다.
+
 Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 | 구분 | 의미 | 예 |
@@ -30,11 +33,22 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 ```json
 {
+  "runtime": {
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high"
+      }
+    ]
+  },
   "review": {
     "independent_enabled": true,
-    "independent_runner": "codex-cli",
-    "independent_model": "gpt-5.5",
-    "independent_reasoning_effort": "high",
     "independent_sandbox": "workspace-write",
     "independent_exec_timeout_seconds": 1800,
     "independent_triggers": ["gate2", "gate4"],
@@ -48,16 +62,26 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 ## 4. 모델과 추론 강도
 
-독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
+독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 Codex 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
+Claude runner 기본값은 `claude-opus-4-7`과 `high` effort를 사용한다.
 
-프로젝트 기본값은 `vulcan.config.json`에서 정한다.
+프로젝트 기본 모델과 effort는 `runtime.available_runners`에서 정한다.
 
 ```json
 {
-  "review": {
-    "independent_runner": "codex-cli",
-    "independent_model": "gpt-5.5",
-    "independent_reasoning_effort": "high"
+  "runtime": {
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high"
+      }
+    ]
   }
 }
 ```
@@ -71,12 +95,27 @@ python vulcan.py review-run \
   --reasoning-effort high
 ```
 
+Claude CLI로 실행할 때는 runner만 바꾼다.
+
+```bash
+python vulcan.py review-run \
+  --review-id RV-001 \
+  --runner claude-cli \
+  --model claude-opus-4-7 \
+  --reasoning-effort high
+```
+
 `review-run`은 실제 실행 증적을 Independent Review Run에 남긴다.
 
 ```yaml
 runner: codex-cli
 model: gpt-5.5
 reasoning_effort: high
+deadline_at: "2026-05-20T23:30:00"
+duration_seconds: 420
+timeout_seconds: 1800
+timed_out: false
+status: completed
 exit_code: 0
 json_log: docs/reviews/RV-001_codex-exec.jsonl
 last_message: docs/reviews/RV-001_codex-last-message.md
@@ -85,9 +124,13 @@ result_file_changed: true
 
 운영 기준:
 
-- Gate 2 설계 검수와 Gate 4 QA 검수는 `gpt-5.5` + `high`를 기본으로 사용한다.
+- Gate 2 설계 검수와 Gate 4 QA 검수는 Codex runner 기준 `gpt-5.5` + `high`를 기본으로 사용한다.
+- Claude runner 기준 기본값은 `claude-opus-4-7` + `high`다.
 - 빠른 예비 검토나 로컬 스모크 확인만 필요하면 일회성으로 `--reasoning-effort low`를 사용할 수 있다.
 - 검수 완료 보고에는 실제 사용된 `model`과 `reasoning_effort`를 남긴다.
+- timeout은 `review.independent_exec_timeout_seconds`를 따르며 기본값은 1800초다.
+- timeout이면 `status: timeout`, `timed_out: true`, `exit_code: 124`로 기록한다.
+- token/사용량 한도 종료는 runner마다 표현이 달라서 직접 판정하지 않는다. stderr/stdout, last_message, `result_file_changed`를 근거로 Orchestrator가 실패 원인을 확인한다.
 
 ## 5. 생성 명령
 
@@ -116,11 +159,12 @@ python vulcan.py review-run --review-id RV-001
 
 기본 동작:
 
-- `codex exec`를 새 비대화형 세션으로 실행한다.
+- `codex-cli`는 `codex exec`를 새 비대화형 세션으로 실행한다.
+- `claude-cli`는 `claude -p`를 새 비대화형 실행으로 사용한다.
 - worktree가 있으면 해당 worktree를 `--cd`로 사용한다.
 - 모델과 reasoning effort는 기본적으로 `vulcan.config.json.review` 값을 사용하며, `--model`, `--reasoning-effort`로 실행 단위 override가 가능하다.
-- JSONL 실행 로그를 `docs/reviews/RV-NNN_codex-exec.jsonl`에 남긴다.
-- 마지막 응답을 `docs/reviews/RV-NNN_codex-last-message.md`에 남긴다.
+- 실행 로그를 `docs/reviews/RV-NNN_{runner}-exec.*`에 남긴다.
+- 마지막 응답을 `docs/reviews/RV-NNN_{runner}-last-message.md`에 남긴다.
 - result 파일 변경 여부와 exit code를 Independent Review Run에 기록한다.
 
 주의:

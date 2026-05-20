@@ -196,6 +196,8 @@ Codex Orchestrator
 ## 2단계: `run-exec` 추가
 
 멀티에이전트 느낌을 크게 키울 수 있는 최소 기능이다.
+`review-run`은 `run-exec`의 특수한 review 실행으로 볼 수 있다.
+따라서 Codex와 Claude 모두 같은 runner 추상화를 사용하고, 실행 유형만 `review`, `build`, `evidence`로 나누는 방향이 맞다.
 
 예상 명령:
 
@@ -217,9 +219,10 @@ python vulcan.py run-exec --persona review --runner claude-cli
 
 ```text
 RUN-010 build-backend    -> codex-cli
-RUN-011 ui-review        -> claude-cli
-RUN-012 security-review  -> codex-cli
-RUN-013 evidence         -> claude-cli
+RUN-011 build-frontend   -> claude-cli
+RUN-012 ui-review        -> claude-cli
+RUN-013 security-review  -> codex-cli
+RUN-014 evidence         -> codex-cli
 ```
 
 핵심 원칙:
@@ -256,12 +259,19 @@ Dispatcher의 역할:
 
 ```json
 {
-  "runners": {
-    "build-backend": "codex-cli",
-    "build-frontend": "claude-cli",
-    "review": "claude-cli",
-    "security-review": "codex-cli",
-    "evidence": "codex-cli"
+  "runtime": {
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high"
+      }
+    ]
   },
   "concurrency": 2,
   "isolation": {
@@ -282,6 +292,7 @@ docs/runs/RUN-xxx
   ↓
 Dispatcher
   ├─ Codex worker: build-backend
+  ├─ Claude worker: build-frontend
   ├─ Claude worker: ui-review
   ├─ Codex worker: test/evidence
   └─ Claude worker: final review
@@ -305,20 +316,41 @@ Orchestrator 통합 판단
 python vulcan.py run-exec --run-id RUN-001 --runner codex-cli
 ```
 
-### 2. runner map
+### 2. runner selection
 
-persona 또는 Run type을 runner에 매핑한다.
+persona 또는 Run type의 runner는 `runtime.available_runners`에서 자동 선택한다.
+프로젝트 설정에는 가능한 runner 목록만 둔다.
 
 예:
 
 ```json
 {
-  "persona_runners": {
-    "build-backend": "codex-cli",
-    "review": "claude-cli",
-    "evidence": "codex-cli"
+  "runtime": {
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high"
+      }
+    ]
   }
 }
+```
+
+선택 규칙:
+
+```text
+runner 0개 -> manual
+runner 1개 -> 모든 실행을 해당 runner로 수행
+codex-cli + claude-cli ->
+  build-backend/evidence = codex-cli 우선
+  build-frontend/review/pr-cross-validation = claude-cli 우선
+  PR/Gate 교차검증 = 작성 runner와 다른 runner 우선
 ```
 
 ### 3. `dispatch`
@@ -353,6 +385,27 @@ Run lifecycle을 명시한다.
 - writable path 제한
 - review 계열 Run은 readonly 모드
 - 동일 파일 수정 Run은 병렬 실행 금지
+- build 계열 Run은 브랜치 worktree를 사용한다.
+- review 계열 Run은 detached/readonly worktree를 사용하고 PR을 만들지 않는다.
+- build worktree 결과는 Orchestrator 검증 후 draft PR로 만든다.
+- PR은 작성 runner와 다른 runner가 교차검토한다.
+
+권장 PR 흐름:
+
+```text
+RUN-010 build-backend / codex-cli
+  -> branch worktree
+  -> Orchestrator 검증
+  -> draft PR
+  -> claude-cli 교차검토
+
+RUN-011 build-frontend / claude-cli
+  -> backend API 계약 반영
+  -> branch worktree
+  -> Orchestrator 검증
+  -> draft PR
+  -> codex-cli 교차검토
+```
 
 ### 6. fan-in review
 
@@ -365,6 +418,37 @@ RUN-010 build-backend 완료
 RUN-011 build-frontend 완료
   -> RUN-012 integration-review 자동 생성
 ```
+
+### 7. PR cross validation
+
+Build Run이 PR을 만들면 PR 자체도 교차검증 대상이 된다.
+
+```text
+RUN-010 build-backend 완료
+  -> draft PR 생성
+  -> RUN-012 pr-cross-validation / claude-cli
+
+RUN-011 build-frontend 완료
+  -> draft PR 생성
+  -> RUN-013 pr-cross-validation / codex-cli
+```
+
+PR 교차검증은 다음을 입력으로 본다.
+
+- PR diff
+- 관련 Build Wave Run
+- CI 결과
+- 테스트 결과서
+- Playwright 증적
+- 추적표 delta
+- unresolved review thread
+
+PR 교차검증 결과는 merge가 아니라 Orchestrator 판단 후보로 남긴다.
+
+- merge 후보
+- `FIND`
+- `CR`
+- `ISSUE`
 
 ---
 

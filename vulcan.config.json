@@ -1,13 +1,25 @@
 {
   "version": "0.2.2",
   "runtime": {
-    "primary": null
+    "primary": null,
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high",
+        "sandbox": "workspace-write",
+        "version": "codex-cli 0.130.0"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high",
+        "version": "2.1.142 (Claude Code)"
+      }
+    ]
   },
   "review": {
     "independent_enabled": true,
-    "independent_runner": "codex-cli",
-    "independent_model": "gpt-5.5",
-    "independent_reasoning_effort": "high",
     "independent_sandbox": "workspace-write",
     "independent_exec_timeout_seconds": 1800,
     "independent_triggers": [
@@ -16,5 +28,10 @@
     ],
     "independent_worktree": true,
     "independent_readonly": true
+  },
+  "execution": {
+    "independent_enabled": true,
+    "default_worktree": true,
+    "default_timeout_seconds": 2400
   }
 }

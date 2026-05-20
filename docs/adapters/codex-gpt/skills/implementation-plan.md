@@ -28,7 +28,10 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 2. 구현 제외 범위와 후속 Backlog 후보를 분리한다.
 3. 의존성을 기준으로 `Build Wave`를 정의한다.
 4. 각 Wave에 목표, 관련 ID, 수정 파일 후보, 테스트, 추적표 갱신 항목, 커밋 후보를 연결한다.
-5. subagent 위임이 가능한 Wave와 메인 Orchestrator가 직접 통합해야 할 Wave를 구분한다.
+5. subagent 또는 독립 runner 위임이 가능한 Wave와 메인 Orchestrator가 직접 통합해야 할 Wave를 구분한다.
+   - Frontend Build Wave는 기본 후보 runner를 `claude-cli`로 둔다.
+   - Backend Build Wave는 기본 후보 runner를 `codex-cli`로 둔다.
+   - 같은 Wave 안에서 frontend/backend 파일을 동시에 수정해야 하면 runner를 하나로 합치거나 Wave를 다시 나눈다.
 6. Wave 간 순서, 병렬 가능성, 중단 조건을 기록한다.
 7. 구현 시작 전 필요한 사용자 승인 또는 미해결 질문을 남긴다.
 8. 구현 실행 시에는 한 번에 하나의 Wave만 active 상태로 둘 것을 명시한다.
@@ -44,7 +47,7 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 | 테스트 | Wave 종료 시 실행할 테스트를 적는다. |
 | 추적표 갱신 | 상태, 증적, 테스트 결과 갱신 항목을 적는다. |
 | 커밋 후보 | Wave 완료 후 사용할 커밋 메시지 후보를 적는다. |
-| 위임 | subagent 위임 여부와 책임 범위를 적는다. |
+| 위임 | subagent/runner 위임 여부, 권장 runner, 책임 범위를 적는다. |
 
 ## 실행 운영 기준
 
@@ -60,11 +63,20 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 
 ```text
 BW-001 프로젝트 뼈대와 공통 설정
-BW-002 인증/회원가입/로그인
-BW-003 TODO 데이터와 CRUD
-BW-004 UI 상태와 오류/빈 상태
-BW-005 테스트 결과, 화면 증적, 추적표 정리
+BW-002 Backend 인증/회원가입/로그인 API와 보안
+BW-003 Backend TODO 데이터와 CRUD
+BW-004 Frontend UI 상태와 오류/빈 상태
+BW-005 Playwright 화면 증적, 테스트 결과, 추적표 정리
 ```
+
+권장 runner 예:
+
+| BW-ID | 영역 | 권장 runner |
+| --- | --- | --- |
+| BW-002 | Backend | codex-cli |
+| BW-003 | Backend | codex-cli |
+| BW-004 | Frontend | claude-cli |
+| BW-005 | Evidence/QA | codex-cli 또는 claude-cli |
 
 ## 완료 조건
 
@@ -84,6 +96,7 @@ BW-005 테스트 결과, 화면 증적, 추적표 정리
 - Wave별 관련 ID
 - Wave별 수정 파일 후보
 - Wave별 테스트/검증 명령
+- Wave별 권장 runner
 - Wave별 커밋 메시지 후보
 - subagent 위임 계획
 - 중단 조건

@@ -101,16 +101,19 @@ my-project/
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
-| `review-run` | 생성된 독립 검수 요청을 codex-cli로 실행 |
-
-독립 검수 기본 모델과 추론 강도는 `vulcan.config.json`의 `independent_model`, `independent_reasoning_effort`로 정한다. 감리/QA 목적의 Gate 2, Gate 4 검수는 `gpt-5.5` + `high`를 권장한다.
-
-새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 독립 검수를 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
+| `review-run` | 생성된 독립 검수 요청을 codex-cli 또는 claude-cli로 실행 |
 | `check-trace` | Gate별 추적성 검사 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |
 | `upgrade` | 기존 프로젝트에 최신 framework 문서 반영 |
 | `version` | 현재 Vulcan-Anvil Ex 버전 확인 |
+
+독립 검수와 교차검증의 기본 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`에서 정한다. 감리/QA 목적의 Gate 2, Gate 4 검수는 Codex 기준 `gpt-5.5` + `high`를 권장한다.
+Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude CLI는 `claude -p` 기반 비대화형 실행을 사용하며 기본값은 `claude-opus-4-7` + `high` effort다.
+
+새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 교차검증을 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
+독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
+`init`은 현재 PC의 `codex`와 `claude` CLI 설치 여부를 감지해 `vulcan.config.json.runtime.available_runners`에 기록한다. Codex만 있으면 같은 runner 기반 독립검수/동시 worktree 작업으로 운영하고, Codex와 Claude가 모두 있으면 Gate/PR/QA 교차검증과 cross-runner 작업을 기본 후보로 둔다.
 
 ### Run 생성 예시
 

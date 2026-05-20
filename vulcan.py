@@ -33,7 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 # Windows 콘솔 UTF-8 출력 보장
 if sys.platform == "win32":
@@ -168,7 +168,7 @@ GATE_DEFAULT_PERSONAS = {
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
 INDEPENDENT_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
-INDEPENDENT_REVIEW_EXEC_RUNNERS = ["codex-cli", "codex"]
+INDEPENDENT_REVIEW_EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude"]
 INDEPENDENT_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
@@ -4950,11 +4950,14 @@ def cmd_review_run(
 ):
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
-    runner = runner or review_config_get(review_config, "runner", "codex-cli")
-    runner_normalized = "codex-cli" if runner == "codex" else runner
+    runner = runner or review_config_get(review_config, "runner", "") or runtime_role_runner(config, "review")
+    runner_normalized = {
+        "codex": "codex-cli",
+        "claude": "claude-cli",
+    }.get(runner, runner)
     if runner_normalized not in INDEPENDENT_REVIEW_EXEC_RUNNERS:
         print(f"오류: review-run에서 아직 지원하지 않는 runner입니다: {runner}")
-        print("현재 지원 runner: codex-cli")
+        print("현재 지원 runner: codex-cli, claude-cli")
         sys.exit(1)
 
     project_abs = os.path.abspath(project_dir)
@@ -4981,20 +4984,34 @@ def cmd_review_run(
     if not os.path.exists(exec_result_abs):
         exec_result_abs = result_abs
 
-    model = model or review_config_get(review_config, "model", "gpt-5.5")
-    reasoning_effort = reasoning_effort or review_config_get(review_config, "reasoning_effort", "high")
-    sandbox = sandbox or review_config_get(review_config, "sandbox", "workspace-write")
+    runner_config = runtime_runner_config(config, runner_normalized)
+    if runner_normalized == "codex-cli":
+        model = model or review_config_get(review_config, "model", "") or runner_config.get("model") or "gpt-5.5"
+        reasoning_effort = (
+            reasoning_effort
+            or review_config_get(review_config, "reasoning_effort", "")
+            or runner_config.get("reasoning_effort")
+            or runner_config.get("effort")
+            or "high"
+        )
+    else:
+        model = model or review_config_get(review_config, "claude_model", "") or runner_config.get("model") or "claude-opus-4-7"
+        reasoning_effort = (
+            reasoning_effort
+            or review_config_get(review_config, "claude_effort", "")
+            or runner_config.get("effort")
+            or runner_config.get("reasoning_effort")
+            or "high"
+        )
+    sandbox = sandbox or review_config_get(review_config, "sandbox", "") or runner_config.get("sandbox") or "workspace-write"
     timeout_seconds = int(timeout_seconds or review_config_get(review_config, "exec_timeout_seconds", 1800))
 
-    codex_exe = shutil.which("codex")
-    if not codex_exe:
-        print("오류: codex CLI를 찾을 수 없습니다. `codex --version`이 실행되는지 확인하세요.")
-        sys.exit(1)
-
     review_rel_dir = reviews_rel_dir(project_dir)
-    log_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-exec.jsonl")
-    stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-exec.stderr.txt")
-    last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_codex-last-message.md")
+    runner_log_slug = "codex" if runner_normalized == "codex-cli" else "claude"
+    log_ext = "jsonl" if runner_normalized == "codex-cli" else "json"
+    log_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-exec.{log_ext}")
+    stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-exec.stderr.txt")
+    last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-last-message.md")
     log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
     stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
@@ -5021,38 +5038,65 @@ Rules:
 - In your final response, summarize what you wrote to the result file and mention the result verdict.
 """
 
-    cmd = [
-        codex_exe,
-        "-a",
-        "never",
-        "exec",
-        "--cd",
-        exec_dir,
-        "-m",
-        model,
-        "-c",
-        f"model_reasoning_effort={format_yaml_scalar(reasoning_effort)}",
-        "--sandbox",
-        sandbox,
-        "--json",
-        "--output-last-message",
-        last_message_abs,
-        prompt,
-    ]
+    if runner_normalized == "codex-cli":
+        runner_exe = shutil.which("codex")
+        if not runner_exe:
+            print("오류: codex CLI를 찾을 수 없습니다. `codex --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        cmd = [
+            runner_exe,
+            "-a",
+            "never",
+            "exec",
+            "--cd",
+            exec_dir,
+            "-m",
+            model,
+            "-c",
+            f"model_reasoning_effort={format_yaml_scalar(reasoning_effort)}",
+            "--sandbox",
+            sandbox,
+            "--json",
+            "--output-last-message",
+            last_message_abs,
+            prompt,
+        ]
+    else:
+        runner_exe = shutil.which("claude")
+        if not runner_exe:
+            print("오류: Claude CLI를 찾을 수 없습니다. `claude --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        cmd = [
+            runner_exe,
+            "-p",
+            prompt,
+            "--output-format",
+            "json",
+            "--effort",
+            reasoning_effort,
+            "--permission-mode",
+            "acceptEdits",
+        ]
+        if model:
+            cmd.extend(["--model", model])
 
     printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
     if dry_run:
         print("Independent review run dry-run")
         print(f"  review_id: {review_id}")
         print(f"  runner: {runner_normalized}")
-        print(f"  model: {model}")
+        print(f"  model: {model or '(runner default)'}")
         print(f"  reasoning_effort: {reasoning_effort}")
         print(f"  exec_dir: {exec_dir}")
         print(f"  command: {printable_cmd}")
         return
 
     before_hash = file_sha256(exec_result_abs)
-    started_at = datetime.now().isoformat(timespec="seconds")
+    started_dt = datetime.now()
+    deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
+    started_at = started_dt.isoformat(timespec="seconds")
+    deadline_at = deadline_dt.isoformat(timespec="seconds")
+    timed_out = False
     try:
         result = subprocess.run(
             cmd,
@@ -5068,18 +5112,42 @@ Rules:
         stdout = result.stdout or ""
         stderr = result.stderr or ""
     except subprocess.TimeoutExpired as e:
+        timed_out = True
         exit_code = 124
         stdout = e.stdout or ""
         stderr = (e.stderr or "") + f"\nTIMEOUT after {timeout_seconds} seconds"
-    completed_at = datetime.now().isoformat(timespec="seconds")
+    completed_dt = datetime.now()
+    completed_at = completed_dt.isoformat(timespec="seconds")
+    duration_seconds = int((completed_dt - started_dt).total_seconds())
 
     with open(log_abs, "w", encoding="utf-8") as f:
         f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
+    if runner_normalized == "claude-cli":
+        with open(last_message_abs, "w", encoding="utf-8") as f:
+            try:
+                parsed_stdout = json.loads(stdout) if stdout.strip() else {}
+                message = (
+                    parsed_stdout.get("result")
+                    or parsed_stdout.get("text")
+                    or parsed_stdout.get("message")
+                    or stdout
+                )
+            except json.JSONDecodeError:
+                message = stdout
+            f.write(message if isinstance(message, str) else json.dumps(message, ensure_ascii=False, indent=2))
 
     after_hash = file_sha256(exec_result_abs)
     result_changed = bool(before_hash and after_hash and before_hash != after_hash)
+    if timed_out:
+        run_status = "timeout"
+    elif exit_code != 0:
+        run_status = "failed"
+    elif not result_changed:
+        run_status = "completed_no_result_change"
+    else:
+        run_status = "completed"
     if os.path.normcase(exec_result_abs) != os.path.normcase(result_abs) and os.path.exists(exec_result_abs):
         os.makedirs(os.path.dirname(result_abs), exist_ok=True)
         shutil.copy2(exec_result_abs, result_abs)
@@ -5091,9 +5159,14 @@ Rules:
 
 ```yaml
 executed_at: {started_at}
+deadline_at: {deadline_at}
 completed_at: {completed_at}
+duration_seconds: {duration_seconds}
+timeout_seconds: {timeout_seconds}
+timed_out: {str(timed_out).lower()}
+status: {run_status}
 runner: {runner_normalized}
-model: {model}
+model: {model or "(runner default)"}
 reasoning_effort: {reasoning_effort}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
@@ -5110,14 +5183,16 @@ result_file_changed: {str(result_changed).lower()}
     print("\n독립 검수 실행 완료")
     print(f"  review_id: {review_id}")
     print(f"  runner: {runner_normalized}")
-    print(f"  model: {model}")
+    print(f"  model: {model or '(runner default)'}")
     print(f"  reasoning_effort: {reasoning_effort}")
+    print(f"  status: {run_status}")
+    print(f"  duration_seconds: {duration_seconds}")
     print(f"  exit_code: {exit_code}")
     print(f"  result_changed: {str(result_changed).lower()}")
     print(f"  json_log: {log_rel_path}")
     print(f"  last_message: {last_message_rel_path}")
     if exit_code != 0:
-        print(f"오류: codex exec가 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
+        print(f"오류: {runner_normalized} 실행이 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
         sys.exit(exit_code)
     if not result_changed:
         print("경고: result 파일 변경이 감지되지 않았습니다. 독립 검수 결과를 확인하세요.")
@@ -5241,24 +5316,154 @@ def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFI
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
-def default_vulcan_config():
+def command_version(command, timeout_seconds=10):
+    exe = shutil.which(command)
+    if not exe:
+        return None
+    try:
+        result = subprocess.run(
+            [exe, "--version"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return (result.stdout or result.stderr or "").strip()
+
+
+def runner_default_config(name, version=None):
+    if name == "codex-cli":
+        return {
+            "name": "codex-cli",
+            "model": "gpt-5.5",
+            "effort": "high",
+            "sandbox": "workspace-write",
+            "version": version
+        }
+    if name == "claude-cli":
+        return {
+            "name": "claude-cli",
+            "model": "claude-opus-4-7",
+            "effort": "high",
+            "version": version
+        }
     return {
+        "name": name,
+        "model": None,
+        "effort": "high",
+        "version": version
+    }
+
+
+def detect_runtime_runners():
+    runners = []
+    codex_version = command_version("codex")
+    claude_version = command_version("claude")
+    if codex_version is not None:
+        runners.append(runner_default_config("codex-cli", codex_version or None))
+    if claude_version is not None:
+        runners.append(runner_default_config("claude-cli", claude_version or None))
+    return runners
+
+
+def normalize_runtime_runners(runtime_config):
+    available = runtime_config.get("available_runners", [])
+    if isinstance(available, list):
+        return [runner for runner in available if isinstance(runner, dict) and runner.get("name")]
+    if isinstance(available, dict):
+        normalized = []
+        for name, values in available.items():
+            if not isinstance(values, dict) or not values.get("available"):
+                continue
+            runner = runner_default_config(name, values.get("version"))
+            for key in ("model", "effort", "reasoning_effort", "sandbox"):
+                if key in values:
+                    runner[key] = values[key]
+            normalized.append(runner)
+        return normalized
+    return []
+
+
+def runtime_runner_names(config):
+    return [runner["name"] for runner in normalize_runtime_runners(config.get("runtime", {}))]
+
+
+def runtime_runner_config(config, runner_name):
+    for runner in normalize_runtime_runners(config.get("runtime", {})):
+        if runner.get("name") == runner_name:
+            return runner
+    return runner_default_config(runner_name)
+
+
+def runtime_default_runner(config):
+    names = runtime_runner_names(config)
+    if "codex-cli" in names:
+        return "codex-cli"
+    if names:
+        return names[0]
+    return "manual"
+
+
+def runtime_role_runner(config, role):
+    names = runtime_runner_names(config)
+    default_runner = runtime_default_runner(config)
+    if default_runner == "manual":
+        return "manual"
+    if role in ("build-backend", "build", "evidence") and "codex-cli" in names:
+        return "codex-cli"
+    if role in ("build-frontend", "review", "pr-cross-validation") and "claude-cli" in names:
+        return "claude-cli"
+    return default_runner
+
+
+def runtime_capability(config, capability):
+    names = runtime_runner_names(config)
+    if capability == "same_runner_independent_review":
+        return bool(names)
+    if capability == "cross_model_validation":
+        return "codex-cli" in names and "claude-cli" in names
+    if capability == "parallel_worktrees":
+        return bool(names)
+    if capability == "parallel_cross_runner_work":
+        return "codex-cli" in names and "claude-cli" in names
+    return False
+
+
+def deep_merge_dict(base, updates):
+    for key, value in updates.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            deep_merge_dict(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def default_vulcan_config(available_runners=None):
+    has_runner = bool(available_runners) if available_runners is not None else True
+    config = {
         "version": VULCAN_VERSION,
         "runtime": {
-            "primary": None
+            "primary": None,
+            "available_runners": available_runners or []
         },
         "review": {
-            "independent_enabled": True,
-            "independent_runner": "codex-cli",
-            "independent_model": "gpt-5.5",
-            "independent_reasoning_effort": "high",
+            "independent_enabled": has_runner,
             "independent_sandbox": "workspace-write",
             "independent_exec_timeout_seconds": 1800,
             "independent_triggers": INDEPENDENT_REVIEW_DEFAULT_GATES,
             "independent_worktree": True,
             "independent_readonly": True
+        },
+        "execution": {
+            "independent_enabled": has_runner,
+            "default_worktree": True,
+            "default_timeout_seconds": 2400
         }
     }
+    return config
 
 
 def create_vulcan_config(target_dir):
@@ -5266,7 +5471,8 @@ def create_vulcan_config(target_dir):
     path = os.path.join(target_dir, rel_path)
     if os.path.exists(path):
         return
-    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(), ensure_ascii=False, indent=2))
+    available_runners = detect_runtime_runners()
+    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners), ensure_ascii=False, indent=2))
 
 
 def load_vulcan_config(project_dir="."):
@@ -5280,11 +5486,7 @@ def load_vulcan_config(project_dir="."):
     except (OSError, json.JSONDecodeError):
         return config
     if isinstance(user_config, dict):
-        for key, value in user_config.items():
-            if isinstance(value, dict) and isinstance(config.get(key), dict):
-                config[key].update(value)
-            else:
-                config[key] = value
+        deep_merge_dict(config, user_config)
     return config
 
 
@@ -5525,13 +5727,13 @@ def main():
     p_review_request.set_defaults(worktree=None)
     p_review_request.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
 
-    p_review_run = subparsers.add_parser("review-run", help="독립 검수 요청을 codex-cli로 실행")
+    p_review_run = subparsers.add_parser("review-run", help="독립 검수 요청을 codex-cli 또는 claude-cli로 실행")
     p_review_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
     p_review_run.add_argument("--runner", choices=INDEPENDENT_REVIEW_RUNNERS, help="독립 검수 실행 런타임")
-    p_review_run.add_argument("--model", default="", help="codex-cli 모델")
+    p_review_run.add_argument("--model", default="", help="runner 모델")
     p_review_run.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
-    p_review_run.add_argument("--timeout-seconds", type=int, default=0, help="codex exec timeout seconds")
-    p_review_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex exec sandbox")
+    p_review_run.add_argument("--timeout-seconds", type=int, default=0, help="runner timeout seconds")
+    p_review_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex-cli sandbox")
     p_review_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")

@@ -46,14 +46,18 @@ Gate 2 독립 검수는 Gate 2 산출물만 보는 검수가 아니다.
 
 Gate 2 result에는 `Phase0 -> Gate1`, `Gate1 -> Gate2`, `Scope Drift`, `Open Decisions`, `Design Internal Consistency` 판정을 남긴다.
 
-## codex-cli 실행
+## 독립 runner 실행
 
-Orchestrator가 `python vulcan.py review-run --review-id RV-NNN`로 실행한 경우 이 skill은 `codex exec`의 새 비대화형 세션에서 적용된다.
+Orchestrator가 `python vulcan.py review-run --review-id RV-NNN`로 실행한 경우 이 skill은 선택된 CLI runner의 새 비대화형 세션에서 적용된다.
 
+- `codex-cli` runner는 `codex exec`를 사용한다.
+- `claude-cli` runner는 `claude -p`를 사용한다.
 - Desktop 대화창을 새로 여는 것이 아니라 별도 CLI 실행 세션이다.
-- 모델, reasoning effort, sandbox는 기본적으로 `vulcan.config.json.review` 값을 따른다.
-- Gate 2 설계 검수와 Gate 4 QA 검수는 `gpt-5.5` + `high` reasoning effort를 권장한다.
-- 실행 단위로 바꿔야 하면 Orchestrator는 `review-run --model ... --reasoning-effort ...`를 사용한다.
+- 모델, reasoning/effort, sandbox는 기본적으로 `vulcan.config.json.review` 값을 따른다.
+- Gate 2 설계 검수와 Gate 4 QA 검수는 높은 추론 강도를 권장한다.
+- Codex 기준 기본값은 `gpt-5.5` + `high` reasoning effort다.
+- Claude 기준 기본값은 `claude-opus-4-7` + `high` effort다.
+- 실행 단위로 바꿔야 하면 Orchestrator는 `review-run --runner ... --model ... --reasoning-effort ...`를 사용한다.
 - 리뷰어는 result 파일만 갱신하고, 최종 응답에는 판정과 작성한 내용을 요약한다.
 
 ## 판정 기준
