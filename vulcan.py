@@ -46,6 +46,45 @@ if sys.platform == "win32":
 VULCAN_VERSION = "0.2.2"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _bootstrap_vulcan_core():
+    local_core = os.path.join(VULCAN_DIR, "vulcan_core")
+    if os.path.isdir(local_core):
+        return
+    session_path = os.path.join(VULCAN_DIR, "session.json")
+    try:
+        with open(session_path, encoding="utf-8") as f:
+            session = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return
+    source_root = session.get("vulcan_src")
+    if not source_root:
+        return
+    source_core = os.path.join(source_root, "vulcan_core")
+    if os.path.isdir(source_core) and source_root not in sys.path:
+        sys.path.insert(0, source_root)
+
+
+_bootstrap_vulcan_core()
+
+from vulcan_core.runners import (
+    EXEC_RUNNERS,
+    INDEPENDENT_REVIEW_EXEC_RUNNERS,
+    INDEPENDENT_REVIEW_RUNNERS,
+    antigravity_executable,
+    default_execution_branch,
+    default_execution_worktree_path,
+    detect_runtime_runners,
+    normalize_exec_runner,
+    runner_empty_output,
+    runner_log_ext,
+    runner_log_slug,
+    runner_model_source,
+    runtime_role_runner,
+    runtime_runner_config,
+)
+
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
 PROJECT_DOC_SETS = [
     "docs/core",
@@ -170,26 +209,6 @@ GATE_DEFAULT_PERSONAS = {
     "gate5": "release",
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
-INDEPENDENT_REVIEW_RUNNERS = [
-    "codex-cli",
-    "codex",
-    "claude-cli",
-    "claude",
-    "antigravity-cli",
-    "antigravity",
-    "agy",
-    "manual",
-]
-INDEPENDENT_REVIEW_EXEC_RUNNERS = [
-    "codex-cli",
-    "codex",
-    "claude-cli",
-    "claude",
-    "antigravity-cli",
-    "antigravity",
-    "agy",
-]
-EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "antigravity-cli", "antigravity", "agy"]
 INDEPENDENT_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
@@ -4385,7 +4404,7 @@ def _copy_tree_filtered(src_dir, dst_dir, excludes):
 def cmd_release(target):
     """Vulcan-Dev에서 Vulcan-Anvil 경로로 배포 대상 파일을 복사합니다.
 
-    배포 대상: vulcan.py, templates/, dashboard/, README.md
+    배포 대상: vulcan.py, vulcan_core/, templates/, dashboard/, README.md
     배포 제외: docs/, session.json, .claude/, node_modules/, .env.local, .git/
 
     Args:
@@ -4414,6 +4433,12 @@ def cmd_release(target):
     if os.path.isfile(src_vulcan):
         shutil.copy2(src_vulcan, os.path.join(target_abs, "vulcan.py"))
         print(f"  생성/업데이트: vulcan.py")
+
+    src_core = os.path.join(VULCAN_DIR, "vulcan_core")
+    if os.path.isdir(src_core):
+        dst_core = os.path.join(target_abs, "vulcan_core")
+        _copy_tree_filtered(src_core, dst_core, excludes={"__pycache__"})
+        print(f"  생성/업데이트: vulcan_core/")
 
     # templates/ 복사
     src_templates = os.path.join(VULCAN_DIR, "templates")
@@ -4565,6 +4590,12 @@ def cmd_upgrade(project_dir="."):
     if os.path.exists(src_vulcan):
         shutil.copy2(src_vulcan, os.path.join(project_dir, "vulcan.py"))
         print(f"  업데이트: vulcan.py")
+
+    src_core = os.path.join(vulcan_src, "vulcan_core")
+    if os.path.isdir(src_core):
+        dst_core = os.path.join(project_dir, "vulcan_core")
+        _copy_tree_filtered(src_core, dst_core, excludes={"__pycache__"})
+        print(f"  업데이트: vulcan_core/")
 
     # v1.1+: Backlog 공식 문서가 없으면 생성하고, legacy BACKLOG.md는 보존한다.
     backlog_dst = os.path.join(project_dir, BACKLOG_PATH)
@@ -4946,47 +4977,6 @@ def git_status_porcelain(project_dir="."):
         return ""
 
 
-def normalize_exec_runner(runner):
-    return {
-        "codex": "codex-cli",
-        "claude": "claude-cli",
-        "antigravity": "antigravity-cli",
-        "agy": "antigravity-cli",
-    }.get(runner, runner)
-
-
-def runner_log_slug(runner):
-    return {
-        "codex-cli": "codex",
-        "claude-cli": "claude",
-        "antigravity-cli": "antigravity",
-    }.get(normalize_exec_runner(runner), slugify(runner))
-
-
-def runner_log_ext(runner):
-    return {
-        "codex-cli": "jsonl",
-        "claude-cli": "json",
-        "antigravity-cli": "txt",
-    }.get(normalize_exec_runner(runner), "txt")
-
-
-def runner_model_source(runner):
-    return {
-        "codex-cli": "cli-argument",
-        "claude-cli": "cli-argument",
-        "antigravity-cli": "agy-config-inherited",
-    }.get(normalize_exec_runner(runner), "runner-config")
-
-
-def runner_empty_output(stdout, stderr):
-    return not (stdout or "").strip() and not (stderr or "").strip()
-
-
-def antigravity_executable():
-    return shutil.which("agy.exe") or shutil.which("agy")
-
-
 def execution_rel_dir(project_dir="."):
     return os.path.join(runs_rel_dir(project_dir), "_exec")
 
@@ -5004,16 +4994,6 @@ def write_agent_activity(project_dir, activity):
         json.dump(activity, f, ensure_ascii=False, indent=2)
         f.write("\n")
     return rel_path
-
-
-def default_execution_branch(run_id, runner):
-    runner_slug = slugify(normalize_exec_runner(runner))
-    return f"codex/run-{run_id.lower()}-{runner_slug}"
-
-
-def default_execution_worktree_path(project_dir, run_id, runner):
-    runner_slug = slugify(normalize_exec_runner(runner))
-    return os.path.abspath(os.path.join(project_dir, ".vulcan", "worktrees", f"{run_id}-{runner_slug}"))
 
 
 def create_execution_worktree(project_dir, run_id, runner, branch_name=None, worktree_dir=None):
@@ -6675,160 +6655,6 @@ def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFI
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
-def command_version(command, timeout_seconds=10):
-    exe = shutil.which(command)
-    if not exe:
-        return None
-    try:
-        result = subprocess.run(
-            [exe, "--version"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    return (result.stdout or result.stderr or "").strip()
-
-
-def runner_default_config(name, version=None):
-    if name == "codex-cli":
-        return {
-            "name": "codex-cli",
-            "model": "gpt-5.5",
-            "effort": "high",
-            "sandbox": "workspace-write",
-            "version": version
-        }
-    if name == "claude-cli":
-        return {
-            "name": "claude-cli",
-            "model": "claude-opus-4-7",
-            "effort": "high",
-            "version": version
-        }
-    if name == "antigravity-cli":
-        return {
-            "name": "antigravity-cli",
-            "model": "gemini-3.5-flash",
-            "effort": "high",
-            "sandbox": "workspace-write",
-            "version": version
-        }
-    return {
-        "name": name,
-        "model": None,
-        "effort": "high",
-        "version": version
-    }
-
-
-def detect_runtime_runners():
-    runners = []
-    codex_version = command_version("codex")
-    claude_version = command_version("claude")
-    antigravity_version = command_version("antigravity")
-    if antigravity_version is None:
-        antigravity_version = command_version("agy")
-    if codex_version is not None:
-        runners.append(runner_default_config("codex-cli", codex_version or None))
-    if claude_version is not None:
-        runners.append(runner_default_config("claude-cli", claude_version or None))
-    if antigravity_version is not None:
-        runners.append(runner_default_config("antigravity-cli", antigravity_version or None))
-    return runners
-
-
-def normalize_runtime_runners(runtime_config):
-    available = runtime_config.get("available_runners", [])
-    if isinstance(available, list):
-        return [runner for runner in available if isinstance(runner, dict) and runner.get("name")]
-    if isinstance(available, dict):
-        normalized = []
-        for name, values in available.items():
-            if not isinstance(values, dict) or not values.get("available"):
-                continue
-            runner = runner_default_config(name, values.get("version"))
-            for key in ("model", "effort", "reasoning_effort", "sandbox"):
-                if key in values:
-                    runner[key] = values[key]
-            normalized.append(runner)
-        return normalized
-    return []
-
-
-def runtime_runner_names(config):
-    return [runner["name"] for runner in normalize_runtime_runners(config.get("runtime", {}))]
-
-
-def runtime_runner_config(config, runner_name):
-    target = normalize_exec_runner(runner_name)
-    for runner in normalize_runtime_runners(config.get("runtime", {})):
-        if normalize_exec_runner(runner.get("name")) == target:
-            return runner
-    return runner_default_config(target)
-
-
-def runtime_default_runner(config):
-    names = runtime_runner_names(config)
-    normalized_names = [normalize_exec_runner(name) for name in names]
-    if "codex-cli" in normalized_names:
-        return "codex-cli"
-    if "claude-cli" in normalized_names:
-        return "claude-cli"
-    if "antigravity-cli" in normalized_names:
-        return "antigravity-cli"
-    if names:
-        return normalize_exec_runner(names[0])
-    return "manual"
-
-
-def runtime_role_runner(config, role):
-    names = runtime_runner_names(config)
-    normalized_names = [normalize_exec_runner(name) for name in names]
-    default_runner = runtime_default_runner(config)
-    if default_runner == "manual":
-        return "manual"
-    if role in ("build-backend", "build", "evidence") and "codex-cli" in normalized_names:
-        return "codex-cli"
-    if role in ("build-frontend", "review", "pr-cross-validation") and "claude-cli" in normalized_names:
-        return "claude-cli"
-    if role in ("review", "pr-cross-validation", "build-frontend") and "antigravity-cli" in normalized_names:
-        return "antigravity-cli"
-    return default_runner
-
-
-def runtime_runner_families(config):
-    families = set()
-    for name in runtime_runner_names(config):
-        normalized = normalize_exec_runner(name)
-        if normalized == "codex-cli":
-            families.add("codex")
-        elif normalized == "claude-cli":
-            families.add("claude")
-        elif normalized == "antigravity-cli":
-            families.add("gemini")
-        else:
-            families.add(normalized)
-    return families
-
-
-def runtime_capability(config, capability):
-    names = runtime_runner_names(config)
-    families = runtime_runner_families(config)
-    if capability == "same_runner_independent_review":
-        return bool(names)
-    if capability == "cross_model_validation":
-        return len(families) >= 2
-    if capability == "parallel_worktrees":
-        return bool(names)
-    if capability == "parallel_cross_runner_work":
-        return len(families) >= 2
-    return False
-
-
 def deep_merge_dict(base, updates):
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -6958,6 +6784,11 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     # vulcan.py 자신을 프로젝트에 복사
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
     print(f"  생성: vulcan.py")
+
+    src_core = os.path.join(VULCAN_DIR, "vulcan_core")
+    if os.path.isdir(src_core):
+        _copy_tree_filtered(src_core, os.path.join(target_dir, "vulcan_core"), excludes={"__pycache__"})
+        print(f"  생성: vulcan_core/")
 
     # .gitignore
     gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n"
