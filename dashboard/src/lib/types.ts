@@ -192,6 +192,22 @@ export interface RuntimeActivity {
   result_file?: string
 }
 
+export interface RuntimeWorktree {
+  id: string
+  path: string
+  branch?: string | null
+  runner?: string | null
+  target_id?: string | null
+  target_type?: 'review' | 'run' | null
+  status: string
+  exists: boolean
+  changed_files: string[]
+  changed_count: number
+  activity_status?: string | null
+  deadline_at?: string | null
+  stale?: boolean
+}
+
 export interface RuntimeCapabilities {
   same_runner_independent_review: boolean
   cross_model_validation: boolean
@@ -202,6 +218,7 @@ export interface ProjectRuntime {
   primary?: string | null
   available_runners: RuntimeRunner[]
   active_executions: RuntimeActivity[]
+  worktrees: RuntimeWorktree[]
   capabilities: RuntimeCapabilities
 }
 

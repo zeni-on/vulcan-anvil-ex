@@ -150,6 +150,20 @@ describe('runtime runner capability parsing', () => {
           reasoning_effort: 'high',
         },
       ],
+      worktrees: [
+        {
+          id: 'RUN-010-codex-cli',
+          path: '.vulcan/worktrees/RUN-010-codex-cli',
+          branch: 'codex/run-run-010-codex-cli',
+          runner: 'codex-cli',
+          target_id: 'RUN-010',
+          target_type: 'run',
+          status: 'review_needed',
+          exists: true,
+          changed_files: ['backend/src/App.java'],
+          changed_count: 1,
+        },
+      ],
     })
 
     expect(result.success).toBe(true)
@@ -158,5 +172,6 @@ describe('runtime runner capability parsing', () => {
     expect(result.data.capabilities.cross_model_validation).toBe(true)
     expect(result.data.capabilities.parallel_cross_runner_work).toBe(true)
     expect(result.data.active_executions[0].status).toBe('running')
+    expect(result.data.worktrees[0].changed_count).toBe(1)
   })
 })

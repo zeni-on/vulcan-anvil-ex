@@ -138,10 +138,12 @@ export class LocalDataSource implements DataSource {
 
       const runtime = result.data.runtime ?? null
       if (!runtime) return null
+      const activeExecutions = this.readRuntimeActivities()
 
       return {
         ...runtime,
-        active_executions: this.readRuntimeActivities(),
+        active_executions: activeExecutions,
+        worktrees: this.readRuntimeWorktrees(activeExecutions),
       }
     } catch (err) {
       console.warn('[LocalDataSource] vulcan.config.json 읽기 실패:', err)
@@ -178,6 +180,121 @@ export class LocalDataSource implements DataSource {
     } catch (err) {
       console.warn('[LocalDataSource] runner activity 읽기 실패:', err)
       return []
+    }
+  }
+
+  private readRuntimeWorktrees(activities: ProjectRuntime['active_executions']): ProjectRuntime['worktrees'] {
+    const worktreeRoot = path.join(this.resolvedBasePath, '.vulcan', 'worktrees')
+    this.assertSafePath(worktreeRoot)
+
+    const byPath = new Map<string, ProjectRuntime['worktrees'][number]>()
+    const now = Date.now()
+
+    const addWorktree = (
+      worktreePath: string,
+      activity?: ProjectRuntime['active_executions'][number],
+      existsOverride?: boolean,
+    ) => {
+      const resolved = path.resolve(worktreePath)
+      if (!resolved.startsWith(this.resolvedBasePath)) return
+
+      const exists = existsOverride ?? fs.existsSync(resolved)
+      const changedFiles = exists ? this.readGitChangedFiles(resolved) : []
+      const activityStatus = activity?.status ?? null
+      const deadlineTime = activity?.deadline_at ? Date.parse(activity.deadline_at) : NaN
+      const stale = activityStatus === 'running' && Number.isFinite(deadlineTime) && deadlineTime < now
+      const status = stale
+        ? 'stale'
+        : activityStatus === 'running'
+          ? 'running'
+          : !exists
+            ? 'missing'
+            : changedFiles.length > 0
+              ? 'review_needed'
+              : activityStatus ?? 'clean'
+
+      if (!exists && activityStatus !== 'running') return
+
+      byPath.set(resolved, {
+        id: path.basename(resolved),
+        path: path.relative(this.resolvedBasePath, resolved).replace(/\\/g, '/'),
+        branch: activity?.branch ?? (exists ? this.readGitBranch(resolved) : null),
+        runner: activity?.runner ?? null,
+        target_id: activity?.target_id ?? null,
+        target_type: activity?.target_type ?? null,
+        status,
+        exists,
+        changed_files: changedFiles,
+        changed_count: changedFiles.length,
+        activity_status: activityStatus,
+        deadline_at: activity?.deadline_at ?? null,
+        stale,
+      })
+    }
+
+    for (const activity of activities) {
+      if (activity.worktree_path) {
+        addWorktree(activity.worktree_path, activity)
+      }
+    }
+
+    if (fs.existsSync(worktreeRoot)) {
+      try {
+        for (const name of fs.readdirSync(worktreeRoot)) {
+          const candidate = path.join(worktreeRoot, name)
+          this.assertSafePath(candidate)
+          if (!fs.existsSync(candidate) || !fs.statSync(candidate).isDirectory()) continue
+          const matchedActivity = activities.find((activity) => {
+            if (!activity.worktree_path) return false
+            return path.resolve(activity.worktree_path) === path.resolve(candidate)
+          })
+          addWorktree(candidate, matchedActivity, true)
+        }
+      } catch (err) {
+        console.warn('[LocalDataSource] worktree 목록 읽기 실패:', err)
+      }
+    }
+
+    return Array.from(byPath.values()).sort((a, b) => {
+      const aRunning = a.status === 'running' || a.status === 'stale'
+      const bRunning = b.status === 'running' || b.status === 'stale'
+      if (aRunning !== bRunning) return aRunning ? -1 : 1
+      return a.id.localeCompare(b.id)
+    })
+  }
+
+  private readGitChangedFiles(worktreePath: string): string[] {
+    try {
+      const raw = execSync('git status --porcelain', {
+        cwd: worktreePath,
+        encoding: 'utf-8',
+        timeout: 3000,
+      })
+      return raw
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const value = line.length > 3 ? line.slice(3) : line
+          if (!value.includes(' -> ')) return value
+          const parts = value.split(' -> ')
+          return parts[parts.length - 1] ?? value
+        })
+    } catch {
+      return []
+    }
+  }
+
+  private readGitBranch(worktreePath: string): string | null {
+    try {
+      const branch = execSync('git branch --show-current', {
+        cwd: worktreePath,
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim()
+      return branch || null
+    } catch {
+      return null
     }
   }
 

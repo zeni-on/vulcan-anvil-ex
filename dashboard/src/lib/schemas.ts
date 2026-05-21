@@ -177,10 +177,27 @@ export const RuntimeActivitySchema = z.object({
   result_file: z.string().optional(),
 })
 
+export const RuntimeWorktreeSchema = z.object({
+  id: z.string().min(1),
+  path: z.string().min(1),
+  branch: z.string().nullable().optional(),
+  runner: z.string().nullable().optional(),
+  target_id: z.string().nullable().optional(),
+  target_type: z.enum(['review', 'run']).nullable().optional(),
+  status: z.string().min(1),
+  exists: z.boolean(),
+  changed_files: z.array(z.string()).default([]),
+  changed_count: z.number().nonnegative(),
+  activity_status: z.string().nullable().optional(),
+  deadline_at: z.string().nullable().optional(),
+  stale: z.boolean().optional(),
+})
+
 export const ProjectRuntimeSchema = z.object({
   primary: z.string().nullable().optional(),
   available_runners: z.array(RuntimeRunnerSchema).default([]),
   active_executions: z.array(RuntimeActivitySchema).default([]),
+  worktrees: z.array(RuntimeWorktreeSchema).default([]),
 }).transform((runtime) => {
   const names = runtime.available_runners.map((runner) => runner.name)
   const hasRunner = names.length > 0
