@@ -249,6 +249,11 @@ RUN-014_build-wave-BW-004_...md
 작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 담당 증적 경로, 자기 Run 문서만 포함한다.
 `session.json`, Gate 상태, 전체 추적표 갱신, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
 
+Orchestrator는 worker worktree의 파일을 손으로 복사하지 않는다.
+worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 변경 파일을 수집하고, `scope.writable`/`scope.excluded` 위반 여부를 먼저 판정한다.
+위반 파일이나 충돌이 있으면 Orchestrator가 직접 수정하지 않고 재작업 Run, QA Fix Run, Traceability Run, FIND/CR/ISSUE 중 하나로 돌려보낸다.
+`run-integrate --apply`는 허용 diff를 반영하는 팬인 동작일 뿐이며, 테스트 작성, 코드 보정, 추적표 보정, Gate/session 갱신을 대신하지 않는다.
+
 Codex desktop의 `spawn_agent` 같은 같은 세션 계열 subagent는 보조 작업자로 쓸 수 있지만, 공식 Build Wave 자동화에서는 `run-exec`/worker Run 기록을 남기는 방식을 우선한다.
 subagent가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 정규화하고, 변경 파일과 검증 결과를 다시 확인한다.
 

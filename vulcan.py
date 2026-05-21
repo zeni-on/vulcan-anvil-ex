@@ -26,6 +26,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 """
 
 import argparse
+import fnmatch
 import hashlib
 import io
 import json
@@ -5063,6 +5064,140 @@ def parse_git_status_files(status_text):
     return files
 
 
+def git_status_porcelain_all(project_dir="."):
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "-uall"],
+            cwd=project_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return result.stdout.rstrip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def parse_git_status_entries(status_text):
+    entries = []
+    for line in (status_text or "").splitlines():
+        if not line.strip():
+            continue
+        status = line[:2]
+        value = line[3:] if len(line) > 3 else line.strip()
+        old_path = ""
+        path = value.strip()
+        if " -> " in value:
+            old_path, path = [part.strip() for part in value.split(" -> ", 1)]
+        entries.append({
+            "status": status.strip() or status,
+            "path": path,
+            "old_path": old_path,
+            "raw": line,
+            "untracked": status == "??",
+        })
+    return entries
+
+
+def filter_ignorable_status_entries(entries):
+    ignorable_prefixes = [
+        ".vulcan/",
+        "docs/runs/_exec/",
+    ]
+    kept = []
+    for entry in entries:
+        paths = [normalize_repo_path(entry.get("path", ""))]
+        if entry.get("old_path"):
+            paths.append(normalize_repo_path(entry.get("old_path", "")))
+        if paths and all(any(path.startswith(prefix) for prefix in ignorable_prefixes) for path in paths):
+            continue
+        kept.append(entry)
+    return kept
+
+
+def has_blocking_dirty_status(project_dir="."):
+    entries = parse_git_status_entries(git_status_porcelain_all(project_dir))
+    return bool(filter_ignorable_status_entries(entries))
+
+
+def normalize_repo_path(path):
+    normalized = path.replace("\\", "/").strip().strip('"').strip("'")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def extract_nested_yaml_list(content, parent_key, child_key):
+    lines = content.splitlines()
+    in_parent = False
+    in_child = False
+    items = []
+    for line in lines:
+        if not in_parent:
+            if re.match(rf"^{re.escape(parent_key)}\s*:\s*$", line):
+                in_parent = True
+            continue
+        if re.match(r"^\S", line):
+            break
+        if not in_child:
+            if re.match(rf"^\s{{2}}{re.escape(child_key)}\s*:\s*$", line):
+                in_child = True
+            continue
+        if re.match(r"^\s{0,2}\S", line):
+            break
+        match = re.match(r"^\s*-\s+(.+?)\s*$", line)
+        if match:
+            items.append(normalize_repo_path(match.group(1)))
+    return items
+
+
+def scope_pattern_matches(path, pattern):
+    path = normalize_repo_path(path)
+    pattern = normalize_repo_path(pattern)
+    if not pattern:
+        return False
+    if pattern.endswith("/"):
+        return path.startswith(pattern)
+    if pattern.endswith("/**"):
+        return path.startswith(pattern[:-2])
+    if any(ch in pattern for ch in "*?[]"):
+        return fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch("/" + path, pattern)
+    return path == pattern or path.startswith(pattern.rstrip("/") + "/")
+
+
+def path_matches_any_scope(path, patterns):
+    return any(scope_pattern_matches(path, pattern) for pattern in patterns or [])
+
+
+def run_integration_report_rel_path(project_dir, run_id):
+    return os.path.join(execution_rel_dir(project_dir), f"{run_id}_integrate-report.json")
+
+
+def load_latest_run_exec_summary(project_dir, run_id, runner=None):
+    exec_dir = os.path.join(project_dir, execution_rel_dir(project_dir))
+    if not os.path.isdir(exec_dir):
+        return None, ""
+    runner_slug = runner_log_slug(normalize_exec_runner(runner)) if runner else ""
+    candidates = []
+    for name in os.listdir(exec_dir):
+        if not name.startswith(f"{run_id}_") or not name.endswith("-summary.json"):
+            continue
+        if runner_slug and not name.startswith(f"{run_id}_{runner_slug}-"):
+            continue
+        path = os.path.join(exec_dir, name)
+        candidates.append((os.path.getmtime(path), path))
+    if not candidates:
+        return None, ""
+    _, path = sorted(candidates, reverse=True)[0]
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f), os.path.relpath(path, project_dir)
+    except (OSError, json.JSONDecodeError):
+        return None, os.path.relpath(path, project_dir)
+
+
 def review_config_get(review_config, key, default=None):
     new_key = f"independent_{key}"
     if new_key in review_config:
@@ -5836,7 +5971,8 @@ def cmd_run_exec(
         create_worktree = bool(execution_config.get("default_worktree", True))
 
     dirty_status = git_status_porcelain(project_abs)
-    if create_worktree and dirty_status and not allow_dirty and not dry_run:
+    blocking_dirty = has_blocking_dirty_status(project_abs)
+    if create_worktree and blocking_dirty and not allow_dirty and not dry_run:
         print("오류: 현재 worktree에 미커밋 변경이 있어 실행 worktree를 만들 수 없습니다.")
         print("  run-exec worktree는 HEAD 기준으로 생성되므로 미커밋 변경이 누락될 수 있습니다.")
         print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
@@ -5967,7 +6103,7 @@ Rules:
         if create_worktree:
             print(f"  worktree_path: {worktree_path}")
             print(f"  branch: {execution_branch}")
-            if dirty_status and not allow_dirty:
+            if blocking_dirty and not allow_dirty:
                 print("  warning: current worktree is dirty; non-dry-run would require commit or --allow-dirty")
         print(f"  command: {printable_cmd}")
         return
@@ -6183,6 +6319,184 @@ changed_files:
         sys.exit(1)
     if not run_file_changed:
         print("경고: Run 문서 변경이 감지되지 않았습니다. runner 출력과 summary를 확인하세요.")
+
+
+def cmd_run_integrate(
+    run_id,
+    runner=None,
+    worktree_dir="",
+    apply=False,
+    allow_dirty=False,
+    dry_run=False,
+    project_dir=".",
+):
+    project_abs = os.path.abspath(project_dir)
+    run_path = find_run_file(project_abs, run_id)
+    if not run_path:
+        print(f"오류: {run_id}에 해당하는 Run 문서를 찾을 수 없습니다.")
+        print(f"  검색 위치: {runs_rel_dir(project_abs)}")
+        sys.exit(1)
+
+    run_abs = os.path.abspath(run_path)
+    run_rel_path = os.path.relpath(run_abs, project_abs).replace("\\", "/")
+    with open(run_abs, encoding="utf-8") as f:
+        run_content = f.read()
+
+    summary, summary_rel = load_latest_run_exec_summary(project_abs, run_id, runner=runner)
+    summary_worktree = ""
+    summary_branch = ""
+    summary_runner = normalize_exec_runner(runner) if runner else ""
+    if summary:
+        summary_worktree = summary.get("worktree_path") or ""
+        summary_branch = summary.get("branch") or ""
+        summary_runner = normalize_exec_runner(summary.get("runner") or summary_runner)
+
+    worktree_path = os.path.abspath(worktree_dir or summary_worktree or "")
+    if not worktree_path or not os.path.isdir(worktree_path):
+        print("오류: 통합할 worker worktree를 찾을 수 없습니다.")
+        print("  --worktree-dir를 지정하거나, run-exec summary에 worktree_path가 있어야 합니다.")
+        if summary_rel:
+            print(f"  summary: {summary_rel}")
+        sys.exit(1)
+
+    writable_scope = extract_nested_yaml_list(run_content, "scope", "writable")
+    excluded_scope = extract_nested_yaml_list(run_content, "scope", "excluded")
+    if not writable_scope:
+        print("오류: Run 입력 계약에서 scope.writable을 찾을 수 없습니다.")
+        print(f"  run_file: {run_rel_path}")
+        sys.exit(1)
+
+    status_text = git_status_porcelain_all(worktree_path)
+    entries = parse_git_status_entries(status_text)
+    allowed = []
+    violations = []
+    for entry in entries:
+        paths_to_check = [entry["path"]]
+        if entry.get("old_path"):
+            paths_to_check.append(entry["old_path"])
+        excluded = any(path_matches_any_scope(path, excluded_scope) for path in paths_to_check)
+        writable = all(path_matches_any_scope(path, writable_scope) for path in paths_to_check)
+        classified = dict(entry)
+        classified["path"] = normalize_repo_path(classified["path"])
+        classified["old_path"] = normalize_repo_path(classified.get("old_path", ""))
+        if excluded or not writable:
+            classified["reason"] = "excluded_scope" if excluded else "outside_writable_scope"
+            violations.append(classified)
+        else:
+            allowed.append(classified)
+
+    report_runner = summary_runner or (normalize_exec_runner(runner) if runner else "")
+    report = {
+        "run_id": run_id,
+        "run_file": run_rel_path,
+        "runner": report_runner,
+        "summary": (summary_rel or "").replace("\\", "/"),
+        "worktree_path": worktree_path,
+        "branch": summary_branch,
+        "status": "blocked_scope_violation" if violations else "ready_to_apply",
+        "apply_requested": bool(apply),
+        "dry_run": bool(dry_run),
+        "writable_scope": writable_scope,
+        "excluded_scope": excluded_scope,
+        "allowed_files": allowed,
+        "violations": violations,
+        "orchestrator_next_actions": [
+            "위반 파일이 있으면 worker 재작업 Run 또는 FIND로 돌려보낸다.",
+            "허용 파일만 반영한 뒤 별도 Review/QA worker로 검수한다.",
+            "추적표, session, wave-complete, check-trace는 Orchestrator 통합 단계에서 별도 처리한다.",
+        ],
+    }
+
+    print("Run integration analysis")
+    print(f"  run_id: {run_id}")
+    print(f"  run_file: {run_rel_path}")
+    print(f"  worktree: {worktree_path}")
+    if summary_rel:
+        print(f"  summary: {summary_rel}")
+    if summary_branch:
+        print(f"  branch: {summary_branch}")
+    print(f"  changed_files: {len(entries)}")
+    print(f"  allowed_files: {len(allowed)}")
+    print(f"  violations: {len(violations)}")
+    if violations:
+        print("  status: blocked_scope_violation")
+        for item in violations[:20]:
+            print(f"    - {item['status']} {item['path']} ({item['reason']})")
+    else:
+        print("  status: ready_to_apply")
+
+    report_rel = run_integration_report_rel_path(project_abs, run_id)
+    report_abs = os.path.join(project_abs, report_rel)
+    main_dirty_before_apply = has_blocking_dirty_status(project_abs)
+
+    if dry_run:
+        print("  dry_run: true")
+        print(f"  report_target: {report_rel}")
+        return
+
+    os.makedirs(os.path.dirname(report_abs), exist_ok=True)
+    with open(report_abs, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print(f"  report: {report_rel}")
+
+    if not apply:
+        print("  apply: false")
+        print("  다음 단계: 위반이 없으면 --apply로 허용 diff만 반영할 수 있습니다.")
+        return
+
+    if violations:
+        print("오류: scope 위반 파일이 있어 적용하지 않았습니다.")
+        print("  worker 재작업 또는 Run scope 조정 후 다시 실행하세요.")
+        sys.exit(1)
+
+    if main_dirty_before_apply and not allow_dirty:
+        print("오류: 현재 main worktree에 미커밋 변경이 있어 적용하지 않았습니다.")
+        print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
+        sys.exit(1)
+
+    allowed_paths = [item["path"] for item in allowed]
+    tracked_paths = []
+    for item in allowed:
+        if item.get("untracked"):
+            continue
+        if item.get("old_path"):
+            tracked_paths.append(item["old_path"])
+        tracked_paths.append(item["path"])
+    tracked_paths = merge_unique(tracked_paths)
+    untracked_paths = [item["path"] for item in allowed if item.get("untracked")]
+
+    if tracked_paths:
+        diff_result = subprocess.run(
+            ["git", "diff", "--binary", "HEAD", "--"] + tracked_paths,
+            cwd=worktree_path,
+            check=True,
+            capture_output=True,
+        )
+        if diff_result.stdout:
+            apply_result = subprocess.run(
+                ["git", "apply", "--whitespace=nowarn", "-"],
+                cwd=project_abs,
+                input=diff_result.stdout,
+                capture_output=True,
+            )
+            if apply_result.returncode != 0:
+                detail = coerce_process_output(apply_result.stderr).strip()
+                print(f"오류: 허용 diff 적용 실패 - {detail}")
+                sys.exit(1)
+
+    for rel_path in untracked_paths:
+        src = os.path.join(worktree_path, rel_path)
+        dst = os.path.join(project_abs, rel_path)
+        if os.path.isdir(src):
+            copy_tree(src, dst)
+        elif os.path.exists(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+
+    print("  apply: true")
+    print(f"  applied_files: {len(allowed_paths)}")
+    print("  다음 단계: Review/QA worker 검수와 Orchestrator 상태 갱신을 별도 Run으로 진행하세요.")
 
 
 def cmd_agent_run(
@@ -6837,6 +7151,14 @@ def main():
     p_run_exec.add_argument("--allow-dirty", action="store_true", help="미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
     p_run_exec.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
+    p_run_integrate = subparsers.add_parser("run-integrate", help="worker worktree diff를 Run scope 기준으로 수집/검사/반영")
+    p_run_integrate.add_argument("--run-id", required=True, help="통합할 worker Run ID (예: RUN-010)")
+    p_run_integrate.add_argument("--runner", choices=EXEC_RUNNERS, help="summary 선택에 사용할 runner")
+    p_run_integrate.add_argument("--worktree-dir", default="", help="통합할 worker worktree 경로")
+    p_run_integrate.add_argument("--apply", action="store_true", help="scope 허용 diff를 현재 worktree에 반영")
+    p_run_integrate.add_argument("--allow-dirty", action="store_true", help="현재 worktree가 dirty여도 적용 허용")
+    p_run_integrate.add_argument("--dry-run", action="store_true", help="보고서/파일 변경 없이 분석만 출력")
+
     p_agent_run = subparsers.add_parser("agent-run", help="별도 세션 runner 실행 통합 명령")
     p_agent_run.add_argument("--mode", required=True, choices=["review", "work"], help="실행 유형: review=검수/교차검증, work=작업 실행")
     p_agent_run.add_argument("--target-id", default="", help="실행 대상 ID (review: RV-NNN, work: RUN-NNN)")
@@ -6974,6 +7296,15 @@ def main():
             create_worktree=args.worktree,
             worktree_dir=args.worktree_dir,
             branch_name=args.branch,
+            allow_dirty=args.allow_dirty,
+            dry_run=args.dry_run,
+        )
+    elif args.command == "run-integrate":
+        cmd_run_integrate(
+            run_id=args.run_id,
+            runner=args.runner,
+            worktree_dir=args.worktree_dir,
+            apply=args.apply,
             allow_dirty=args.allow_dirty,
             dry_run=args.dry_run,
         )

@@ -100,6 +100,7 @@ ui_implementation_contract_policy:
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
 - 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 검증과 review Run을 분리한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 구현 범위, 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
+- worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
 
 ## Worker Build Wave 예시
 
