@@ -26,7 +26,7 @@ import {
   PathTraversalError,
   EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
-import { SessionDataSchema, VulcanConfigSchema } from '../schemas'
+import { RuntimeActivitySchema, SessionDataSchema, VulcanConfigSchema } from '../schemas'
 
 /** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
 const ALLOWED_DOC_EXTENSIONS = new Set<string>([
@@ -136,10 +136,48 @@ export class LocalDataSource implements DataSource {
         return null
       }
 
-      return result.data.runtime ?? null
+      const runtime = result.data.runtime ?? null
+      if (!runtime) return null
+
+      return {
+        ...runtime,
+        active_executions: this.readRuntimeActivities(),
+      }
     } catch (err) {
       console.warn('[LocalDataSource] vulcan.config.json 읽기 실패:', err)
       return null
+    }
+  }
+
+  private readRuntimeActivities(): ProjectRuntime['active_executions'] {
+    const execPath = path.join(this.resolvedBasePath, 'docs', 'runs', '_exec')
+    this.assertSafePath(execPath)
+
+    if (!fs.existsSync(execPath)) return []
+
+    try {
+      return fs.readdirSync(execPath)
+        .filter((name) => name.endsWith('-activity.json'))
+        .map((name) => path.join(execPath, name))
+        .filter((filePath) => {
+          this.assertSafePath(filePath)
+          return fs.statSync(filePath).isFile()
+        })
+        .map((filePath) => {
+          try {
+            const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+            const result = RuntimeActivitySchema.safeParse(parsed)
+            return result.success ? result.data : null
+          } catch {
+            return null
+          }
+        })
+        .filter((activity): activity is ProjectRuntime['active_executions'][number] => Boolean(activity))
+        .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))
+        .slice(0, 8)
+    } catch (err) {
+      console.warn('[LocalDataSource] runner activity 읽기 실패:', err)
+      return []
     }
   }
 

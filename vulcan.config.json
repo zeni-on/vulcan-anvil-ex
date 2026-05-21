@@ -15,6 +15,13 @@
         "model": "claude-opus-4-7",
         "effort": "high",
         "version": "2.1.142 (Claude Code)"
+      },
+      {
+        "name": "antigravity-cli",
+        "model": "gemini-3.5-flash",
+        "effort": "high",
+        "sandbox": "workspace-write",
+        "version": "1.0.0"
       }
     ]
   },

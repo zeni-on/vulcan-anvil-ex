@@ -1,12 +1,20 @@
 'use client'
 
-import { AlertCircle, Bot, Cpu, GitBranch, Sparkles, type LucideIcon } from 'lucide-react'
-import { ProjectRuntime, RuntimeRunner } from '@/lib/types'
+import { AlertCircle, Bot, Cpu, GitBranch, Loader2, Sparkles, type LucideIcon } from 'lucide-react'
+import { ProjectRuntime, RuntimeActivity, RuntimeRunner } from '@/lib/types'
 
 function runnerLabel(runner: RuntimeRunner): string {
   if (runner.name === 'codex-cli' || runner.name === 'codex') return 'Codex'
   if (runner.name === 'claude-cli' || runner.name === 'claude') return 'Claude'
+  if (runner.name === 'antigravity-cli' || runner.name === 'antigravity' || runner.name === 'agy') return 'Gemini'
   return runner.name.replace(/-cli$/, '')
+}
+
+function runnerFamily(name: string): string {
+  if (name === 'codex-cli' || name === 'codex') return 'codex'
+  if (name === 'claude-cli' || name === 'claude') return 'claude'
+  if (name === 'antigravity-cli' || name === 'antigravity' || name === 'agy') return 'gemini'
+  return name.replace(/-cli$/, '')
 }
 
 function runnerVisual(runner: RuntimeRunner): {
@@ -28,6 +36,13 @@ function runnerVisual(runner: RuntimeRunner): {
       iconClass: 'text-amber-200',
     }
   }
+  if (runner.name === 'antigravity-cli' || runner.name === 'antigravity' || runner.name === 'agy') {
+    return {
+      Icon: Cpu,
+      badgeClass: 'border-violet-500/35 bg-violet-500/10',
+      iconClass: 'text-violet-200',
+    }
+  }
   return {
     Icon: Cpu,
     badgeClass: 'border-slate-600 bg-slate-800/70',
@@ -38,6 +53,11 @@ function runnerVisual(runner: RuntimeRunner): {
 function runnerDetail(runner: RuntimeRunner): string {
   const effort = runner.effort ?? runner.reasoning_effort
   return [runner.model, effort].filter(Boolean).join(' / ') || runner.version || '설정값 없음'
+}
+
+function activityLabel(activity: RuntimeActivity): string {
+  const type = activity.target_type === 'review' ? 'Review' : 'Run'
+  return `${type} ${activity.target_id}`
 }
 
 function capabilityLabel(runtime: ProjectRuntime): { label: string; tone: 'green' | 'yellow' | 'gray' } {
@@ -82,6 +102,8 @@ export default function RunnerStatusPanel({
   }
 
   const runners = runtime?.available_runners ?? []
+  const activities = runtime?.active_executions ?? []
+  const runningActivities = activities.filter((activity) => activity.status === 'running')
   const capability = runtime ? capabilityLabel(runtime) : { label: '설정 없음', tone: 'gray' as const }
   const badgeClass = {
     green: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
@@ -111,28 +133,43 @@ export default function RunnerStatusPanel({
           {runners.map((runner) => {
             const visual = runnerVisual(runner)
             const RunnerIcon = visual.Icon
+            const runningActivity = runningActivities.find(
+              (activity) => runnerFamily(activity.runner) === runnerFamily(runner.name),
+            )
 
             return (
               <li
                 key={runner.name}
-                className="flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5"
+                className={
+                  runningActivity
+                    ? 'flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.08)]'
+                    : 'flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5'
+                }
               >
                 <span
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${visual.badgeClass}`}
                   title={`${runnerLabel(runner)} runner`}
                   aria-label={`${runnerLabel(runner)} runner`}
                 >
-                  <RunnerIcon className={`h-4 w-4 ${visual.iconClass}`} />
+                  {runningActivity ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-emerald-200" />
+                  ) : (
+                    <RunnerIcon className={`h-4 w-4 ${visual.iconClass}`} />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-semibold text-slate-100">
                     {runnerLabel(runner)}
                   </div>
                   <div className="truncate text-[11px] text-slate-500">
-                    {runnerDetail(runner)}
+                    {runningActivity ? `작업중 · ${activityLabel(runningActivity)}` : runnerDetail(runner)}
                   </div>
                 </div>
-                {runner.name === runtime?.primary && (
+                {runningActivity ? (
+                  <span className="shrink-0 rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-200">
+                    running
+                  </span>
+                ) : runner.name === runtime?.primary && (
                   <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">
                     primary
                   </span>

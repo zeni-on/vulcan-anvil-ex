@@ -159,6 +159,39 @@ export interface RuntimeRunner {
   version?: string
 }
 
+export interface RuntimeActivity {
+  target_type?: 'review' | 'run'
+  target_id: string
+  review_id?: string
+  run_id?: string
+  run_file?: string
+  inferred_role?: string
+  status: string
+  runner: string
+  model?: string
+  reasoning_effort?: string
+  model_source?: string
+  sandbox?: string
+  exec_dir?: string
+  worktree_path?: string | null
+  branch?: string | null
+  started_at?: string
+  deadline_at?: string
+  completed_at?: string
+  duration_seconds?: number
+  timeout_seconds?: number
+  timed_out?: boolean
+  exit_code?: number
+  result_file_changed?: boolean
+  run_file_changed?: boolean
+  changed_files?: string[]
+  log?: string
+  stderr_log?: string
+  last_message?: string
+  summary?: string
+  result_file?: string
+}
+
 export interface RuntimeCapabilities {
   same_runner_independent_review: boolean
   cross_model_validation: boolean
@@ -168,6 +201,7 @@ export interface RuntimeCapabilities {
 export interface ProjectRuntime {
   primary?: string | null
   available_runners: RuntimeRunner[]
+  active_executions: RuntimeActivity[]
   capabilities: RuntimeCapabilities
 }
 

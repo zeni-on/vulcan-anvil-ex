@@ -144,21 +144,61 @@ export const RuntimeRunnerSchema = z.object({
   version: z.string().optional(),
 })
 
+export const RuntimeActivitySchema = z.object({
+  target_type: z.enum(['review', 'run']).optional(),
+  target_id: z.string().min(1),
+  review_id: z.string().optional(),
+  run_id: z.string().optional(),
+  run_file: z.string().optional(),
+  inferred_role: z.string().optional(),
+  status: z.string().min(1),
+  runner: z.string().min(1),
+  model: z.string().optional(),
+  reasoning_effort: z.string().optional(),
+  model_source: z.string().optional(),
+  sandbox: z.string().optional(),
+  exec_dir: z.string().optional(),
+  worktree_path: z.string().nullable().optional(),
+  branch: z.string().nullable().optional(),
+  started_at: z.string().optional(),
+  deadline_at: z.string().optional(),
+  completed_at: z.string().optional(),
+  duration_seconds: z.number().optional(),
+  timeout_seconds: z.number().optional(),
+  timed_out: z.boolean().optional(),
+  exit_code: z.number().optional(),
+  result_file_changed: z.boolean().optional(),
+  run_file_changed: z.boolean().optional(),
+  changed_files: z.array(z.string()).optional(),
+  log: z.string().optional(),
+  stderr_log: z.string().optional(),
+  last_message: z.string().optional(),
+  summary: z.string().optional(),
+  result_file: z.string().optional(),
+})
+
 export const ProjectRuntimeSchema = z.object({
   primary: z.string().nullable().optional(),
   available_runners: z.array(RuntimeRunnerSchema).default([]),
+  active_executions: z.array(RuntimeActivitySchema).default([]),
 }).transform((runtime) => {
   const names = runtime.available_runners.map((runner) => runner.name)
   const hasRunner = names.length > 0
-  const hasCodex = names.includes('codex-cli') || names.includes('codex')
-  const hasClaude = names.includes('claude-cli') || names.includes('claude')
+  const families = new Set(
+    names.map((name) => {
+      if (name === 'codex-cli' || name === 'codex') return 'codex'
+      if (name === 'claude-cli' || name === 'claude') return 'claude'
+      if (name === 'antigravity-cli' || name === 'antigravity' || name === 'agy') return 'gemini'
+      return name
+    })
+  )
 
   return {
     ...runtime,
     capabilities: {
       same_runner_independent_review: hasRunner,
-      cross_model_validation: hasCodex && hasClaude,
-      parallel_cross_runner_work: hasCodex && hasClaude,
+      cross_model_validation: families.size >= 2,
+      parallel_cross_runner_work: families.size >= 2,
     },
   }
 })

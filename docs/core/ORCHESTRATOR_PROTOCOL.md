@@ -158,7 +158,7 @@ Handoff는 기본적으로 강제 절차가 아니다. Orchestrator는 Gate 4로
 
 독립 검수는 handoff보다 더 좁은 검수 절차다. 목적은 다른 세션 또는 detached worktree에서 산출물과 증적을 읽기 중심으로 재검토하고, 결과를 `PASS`, `FIND`, `CR`, `ISSUE` 후보로 남기는 것이다.
 
-`vulcan.py agent-run --mode review --target-id RV-NNN`은 `codex-cli` 또는 `claude-cli` runner로 요청을 실제 실행한다. 이때 새 Desktop 대화창을 여는 것이 아니라 `codex exec` 또는 `claude -p` 기반의 새 비대화형 실행을 만들고, 실행 로그와 마지막 응답, result 파일 변경 여부를 증적으로 남긴다.
+`vulcan.py agent-run --mode review --target-id RV-NNN`은 `codex-cli`, `claude-cli`, `antigravity-cli` runner로 요청을 실제 실행한다. 이때 새 Desktop 대화창을 여는 것이 아니라 `codex exec`, `claude -p`, `agy.exe --print` 기반의 분리 실행을 만들고, 실행 로그와 마지막 응답, result 파일 변경 여부를 증적으로 남긴다.
 
 PR도 교차검증 대상이다. Build runner가 만든 브랜치나 draft PR은 작성 runner와 다른 runner가 PR diff, CI, 관련 Run, 테스트 결과, Playwright 증적, 추적표 delta를 검토한 뒤 Orchestrator가 merge 후보, `FIND`, `CR`, `ISSUE`로 확정한다. PR 교차검증 결과도 자동 승인이나 자동 merge 권한을 갖지 않는다.
 

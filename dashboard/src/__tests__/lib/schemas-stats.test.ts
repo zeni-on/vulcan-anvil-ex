@@ -10,7 +10,7 @@
  * @see docs/02-design/req-011-design.md §5
  */
 
-import { SessionDataSchema } from '@/lib/schemas'
+import { ProjectRuntimeSchema, SessionDataSchema } from '@/lib/schemas'
 
 // ── 공통 픽스처 ──────────────────────────────────────────────────────────────
 
@@ -130,5 +130,33 @@ describe('UT-011-11: stats 내 음수 필드', () => {
     }
     const result = SessionDataSchema.safeParse({ ...baseSession, stats: invalidStats })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('runtime runner capability parsing', () => {
+  it('Antigravity runner를 Gemini 계열로 인식하고 교차검증 가능 여부를 계산한다', () => {
+    const result = ProjectRuntimeSchema.safeParse({
+      available_runners: [
+        { name: 'codex-cli', model: 'gpt-5.5', effort: 'high' },
+        { name: 'antigravity-cli', model: 'gemini-3.5-flash', effort: 'high' },
+      ],
+      active_executions: [
+        {
+          target_type: 'review',
+          target_id: 'RV-003',
+          status: 'running',
+          runner: 'antigravity-cli',
+          model: 'gemini-3.5-flash',
+          reasoning_effort: 'high',
+        },
+      ],
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) throw new Error('파싱 실패')
+    expect(result.data.capabilities.same_runner_independent_review).toBe(true)
+    expect(result.data.capabilities.cross_model_validation).toBe(true)
+    expect(result.data.capabilities.parallel_cross_runner_work).toBe(true)
+    expect(result.data.active_executions[0].status).toBe('running')
   })
 })

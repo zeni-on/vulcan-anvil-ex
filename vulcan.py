@@ -168,9 +168,26 @@ GATE_DEFAULT_PERSONAS = {
     "gate5": "release",
 }
 HANDOFF_TARGETS = ["cli", "desktop", "github", "codex-review", "claude", "manual"]
-INDEPENDENT_REVIEW_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "manual"]
-INDEPENDENT_REVIEW_EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude"]
-EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude"]
+INDEPENDENT_REVIEW_RUNNERS = [
+    "codex-cli",
+    "codex",
+    "claude-cli",
+    "claude",
+    "antigravity-cli",
+    "antigravity",
+    "agy",
+    "manual",
+]
+INDEPENDENT_REVIEW_EXEC_RUNNERS = [
+    "codex-cli",
+    "codex",
+    "claude-cli",
+    "claude",
+    "antigravity-cli",
+    "antigravity",
+    "agy",
+]
+EXEC_RUNNERS = ["codex-cli", "codex", "claude-cli", "claude", "antigravity-cli", "antigravity", "agy"]
 INDEPENDENT_REVIEW_DEFAULT_GATES = ["gate2", "gate4"]
 RUN_REQUIRED_KEYS = [
     "run_id",
@@ -4820,11 +4837,60 @@ def normalize_exec_runner(runner):
     return {
         "codex": "codex-cli",
         "claude": "claude-cli",
+        "antigravity": "antigravity-cli",
+        "agy": "antigravity-cli",
     }.get(runner, runner)
+
+
+def runner_log_slug(runner):
+    return {
+        "codex-cli": "codex",
+        "claude-cli": "claude",
+        "antigravity-cli": "antigravity",
+    }.get(normalize_exec_runner(runner), slugify(runner))
+
+
+def runner_log_ext(runner):
+    return {
+        "codex-cli": "jsonl",
+        "claude-cli": "json",
+        "antigravity-cli": "txt",
+    }.get(normalize_exec_runner(runner), "txt")
+
+
+def runner_model_source(runner):
+    return {
+        "codex-cli": "cli-argument",
+        "claude-cli": "cli-argument",
+        "antigravity-cli": "agy-config-inherited",
+    }.get(normalize_exec_runner(runner), "runner-config")
+
+
+def runner_empty_output(stdout, stderr):
+    return not (stdout or "").strip() and not (stderr or "").strip()
+
+
+def antigravity_executable():
+    return shutil.which("agy.exe") or shutil.which("agy")
 
 
 def execution_rel_dir(project_dir="."):
     return os.path.join(runs_rel_dir(project_dir), "_exec")
+
+
+def agent_activity_rel_path(project_dir, target_id, runner):
+    slug = runner_log_slug(runner)
+    return os.path.join(execution_rel_dir(project_dir), f"{target_id}_{slug}-activity.json")
+
+
+def write_agent_activity(project_dir, activity):
+    rel_path = agent_activity_rel_path(project_dir, activity["target_id"], activity["runner"])
+    abs_path = os.path.abspath(os.path.join(project_dir, rel_path))
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        json.dump(activity, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return rel_path
 
 
 def default_execution_branch(run_id, runner):
@@ -5240,13 +5306,10 @@ def cmd_review_run(
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
     runner = runner or review_config_get(review_config, "runner", "") or runtime_role_runner(config, "review")
-    runner_normalized = {
-        "codex": "codex-cli",
-        "claude": "claude-cli",
-    }.get(runner, runner)
+    runner_normalized = normalize_exec_runner(runner)
     if runner_normalized not in INDEPENDENT_REVIEW_EXEC_RUNNERS:
         print(f"오류: review-run에서 아직 지원하지 않는 runner입니다: {runner}")
-        print("현재 지원 runner: codex-cli, claude-cli")
+        print("현재 지원 runner: codex-cli, claude-cli, antigravity-cli")
         sys.exit(1)
 
     project_abs = os.path.abspath(project_dir)
@@ -5283,7 +5346,7 @@ def cmd_review_run(
             or runner_config.get("effort")
             or "high"
         )
-    else:
+    elif runner_normalized == "claude-cli":
         model = model or review_config_get(review_config, "claude_model", "") or runner_config.get("model") or "claude-opus-4-7"
         reasoning_effort = (
             reasoning_effort
@@ -5292,15 +5355,23 @@ def cmd_review_run(
             or runner_config.get("reasoning_effort")
             or "high"
         )
+    else:
+        model = model or runner_config.get("model") or "gemini-3.5-flash"
+        reasoning_effort = (
+            reasoning_effort
+            or runner_config.get("effort")
+            or runner_config.get("reasoning_effort")
+            or "high"
+        )
     sandbox = sandbox or review_config_get(review_config, "sandbox", "") or runner_config.get("sandbox") or "workspace-write"
     timeout_seconds = int(timeout_seconds or review_config_get(review_config, "exec_timeout_seconds", 1800))
 
     review_rel_dir = reviews_rel_dir(project_dir)
-    runner_log_slug = "codex" if runner_normalized == "codex-cli" else "claude"
-    log_ext = "jsonl" if runner_normalized == "codex-cli" else "json"
-    log_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-exec.{log_ext}")
-    stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-exec.stderr.txt")
-    last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_{runner_log_slug}-last-message.md")
+    log_slug = runner_log_slug(runner_normalized)
+    log_ext = runner_log_ext(runner_normalized)
+    log_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-exec.{log_ext}")
+    stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-exec.stderr.txt")
+    last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-last-message.md")
     log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
     stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
@@ -5351,7 +5422,7 @@ Rules:
             last_message_abs,
             prompt,
         ]
-    else:
+    elif runner_normalized == "claude-cli":
         runner_exe = shutil.which("claude")
         if not runner_exe:
             print("오류: Claude CLI를 찾을 수 없습니다. `claude --version`이 실행되는지 확인하세요.")
@@ -5364,11 +5435,34 @@ Rules:
             "json",
             "--effort",
             reasoning_effort,
-            "--permission-mode",
-            "acceptEdits",
+            "--dangerously-skip-permissions",
         ]
         if model:
             cmd.extend(["--model", model])
+    else:
+        runner_exe = antigravity_executable()
+        if not runner_exe:
+            print("오류: Antigravity headless CLI(agy.exe)를 찾을 수 없습니다. `agy.exe --help`가 실행되는지 확인하세요.")
+            sys.exit(1)
+        prompt = f"""Antigravity/Gemini runner settings:
+- Requested model: {model}
+- Requested reasoning effort: {reasoning_effort}
+- Model source: inherit current Antigravity CLI configuration
+
+{prompt}
+"""
+        cmd = [
+            runner_exe,
+            "--add-dir",
+            exec_dir,
+            "--print-timeout",
+            f"{timeout_seconds}s",
+        ]
+        if sandbox == "read-only":
+            cmd.append("--sandbox")
+        else:
+            cmd.append("--dangerously-skip-permissions")
+        cmd.extend(["--print", prompt])
 
     printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
     if dry_run:
@@ -5377,6 +5471,9 @@ Rules:
         print(f"  runner: {runner_normalized}")
         print(f"  model: {model or '(runner default)'}")
         print(f"  reasoning_effort: {reasoning_effort}")
+        if runner_normalized == "antigravity-cli":
+            print("  model_source: agy-config-inherited")
+            print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
         print(f"  exec_dir: {exec_dir}")
         print(f"  command: {printable_cmd}")
         return
@@ -5386,6 +5483,27 @@ Rules:
     deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
     started_at = started_dt.isoformat(timespec="seconds")
     deadline_at = deadline_dt.isoformat(timespec="seconds")
+    activity = {
+        "target_type": "review",
+        "target_id": review_id,
+        "review_id": review_id,
+        "status": "running",
+        "runner": runner_normalized,
+        "model": model or "(runner default)",
+        "reasoning_effort": reasoning_effort,
+        "model_source": runner_model_source(runner_normalized),
+        "sandbox": sandbox,
+        "exec_dir": exec_dir,
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "timeout_seconds": timeout_seconds,
+        "timed_out": False,
+        "log": log_rel_path.replace("\\", "/"),
+        "stderr_log": stderr_rel_path.replace("\\", "/"),
+        "last_message": last_message_rel_path.replace("\\", "/"),
+        "result_file": result_rel_path.replace("\\", "/"),
+    }
+    activity_rel_path = write_agent_activity(project_abs, activity)
     timed_out = False
     try:
         result = subprocess.run(
@@ -5414,7 +5532,7 @@ Rules:
         f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
-    if runner_normalized == "claude-cli":
+    if runner_normalized in ("claude-cli", "antigravity-cli"):
         with open(last_message_abs, "w", encoding="utf-8") as f:
             try:
                 parsed_stdout = json.loads(stdout) if stdout.strip() else {}
@@ -5430,14 +5548,27 @@ Rules:
 
     after_hash = file_sha256(exec_result_abs)
     result_changed = bool(before_hash and after_hash and before_hash != after_hash)
+    empty_output = runner_normalized == "antigravity-cli" and runner_empty_output(stdout, stderr)
     if timed_out:
         run_status = "timeout"
     elif exit_code != 0:
         run_status = "failed"
+    elif empty_output and not result_changed:
+        run_status = "failed_empty_output"
     elif not result_changed:
         run_status = "completed_no_result_change"
     else:
         run_status = "completed"
+    activity.update({
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "timed_out": timed_out,
+        "status": run_status,
+        "exit_code": exit_code,
+        "empty_output": empty_output,
+        "result_file_changed": result_changed,
+    })
+    write_agent_activity(project_abs, activity)
     if os.path.normcase(exec_result_abs) != os.path.normcase(result_abs) and os.path.exists(exec_result_abs):
         os.makedirs(os.path.dirname(result_abs), exist_ok=True)
         shutil.copy2(exec_result_abs, result_abs)
@@ -5454,16 +5585,19 @@ completed_at: {completed_at}
 duration_seconds: {duration_seconds}
 timeout_seconds: {timeout_seconds}
 timed_out: {str(timed_out).lower()}
+empty_output: {str(empty_output).lower()}
 status: {run_status}
 runner: {runner_normalized}
 model: {model or "(runner default)"}
 reasoning_effort: {reasoning_effort}
+model_source: {runner_model_source(runner_normalized)}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 exit_code: {exit_code}
 json_log: {log_rel_path}
 stderr_log: {stderr_rel_path}
 last_message: {last_message_rel_path}
+activity: {activity_rel_path}
 result_file_changed: {str(result_changed).lower()}
 ```
 """
@@ -5478,12 +5612,18 @@ result_file_changed: {str(result_changed).lower()}
     print(f"  status: {run_status}")
     print(f"  duration_seconds: {duration_seconds}")
     print(f"  exit_code: {exit_code}")
+    print(f"  empty_output: {str(empty_output).lower()}")
     print(f"  result_changed: {str(result_changed).lower()}")
     print(f"  json_log: {log_rel_path}")
     print(f"  last_message: {last_message_rel_path}")
+    print(f"  activity: {activity_rel_path}")
     if exit_code != 0:
         print(f"오류: {runner_normalized} 실행이 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
         sys.exit(exit_code)
+    if empty_output and not result_changed:
+        print(f"오류: {runner_normalized} 실행이 exit code 0으로 종료됐지만 stdout/stderr와 result 변경이 모두 없습니다.")
+        print(f"  wrapper 또는 인증/세션 문제일 수 있습니다. 로그를 확인하세요: {log_rel_path}, {stderr_rel_path}")
+        sys.exit(1)
     if not result_changed:
         print("경고: result 파일 변경이 감지되지 않았습니다. 독립 검수 결과를 확인하세요.")
 
@@ -5537,7 +5677,7 @@ def cmd_run_exec(
     runner_normalized = normalize_exec_runner(runner)
     if runner_normalized not in [normalize_exec_runner(name) for name in EXEC_RUNNERS]:
         print(f"오류: run-exec에서 아직 지원하지 않는 runner입니다: {runner}")
-        print("현재 지원 runner: codex-cli, claude-cli")
+        print("현재 지원 runner: codex-cli, claude-cli, antigravity-cli")
         sys.exit(1)
 
     runner_config = runtime_runner_config(config, runner_normalized)
@@ -5549,8 +5689,16 @@ def cmd_run_exec(
             or runner_config.get("effort")
             or "high"
         )
-    else:
+    elif runner_normalized == "claude-cli":
         model = model or runner_config.get("model") or "claude-opus-4-7"
+        reasoning_effort = (
+            reasoning_effort
+            or runner_config.get("effort")
+            or runner_config.get("reasoning_effort")
+            or "high"
+        )
+    else:
+        model = model or runner_config.get("model") or "gemini-3.5-flash"
         reasoning_effort = (
             reasoning_effort
             or runner_config.get("effort")
@@ -5581,12 +5729,12 @@ def cmd_run_exec(
     exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
 
     exec_rel_dir = execution_rel_dir(project_abs)
-    runner_log_slug = "codex" if runner_normalized == "codex-cli" else "claude"
-    log_ext = "jsonl" if runner_normalized == "codex-cli" else "json"
-    log_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-exec.{log_ext}")
-    stderr_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-exec.stderr.txt")
-    last_message_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-last-message.md")
-    summary_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{runner_log_slug}-summary.json")
+    log_slug = runner_log_slug(runner_normalized)
+    log_ext = runner_log_ext(runner_normalized)
+    log_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-exec.{log_ext}")
+    stderr_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-exec.stderr.txt")
+    last_message_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-last-message.md")
+    summary_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-summary.json")
     log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
     stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
@@ -5635,7 +5783,7 @@ Rules:
             last_message_abs,
             prompt,
         ]
-    else:
+    elif runner_normalized == "claude-cli":
         runner_exe = shutil.which("claude")
         if not runner_exe:
             print("오류: Claude CLI를 찾을 수 없습니다. `claude --version`이 실행되는지 확인하세요.")
@@ -5648,11 +5796,34 @@ Rules:
             "json",
             "--effort",
             reasoning_effort,
-            "--permission-mode",
-            "acceptEdits",
+            "--dangerously-skip-permissions",
         ]
         if model:
             cmd.extend(["--model", model])
+    else:
+        runner_exe = antigravity_executable()
+        if not runner_exe:
+            print("오류: Antigravity headless CLI(agy.exe)를 찾을 수 없습니다. `agy.exe --help`가 실행되는지 확인하세요.")
+            sys.exit(1)
+        prompt = f"""Antigravity/Gemini runner settings:
+- Requested model: {model}
+- Requested reasoning effort: {reasoning_effort}
+- Model source: inherit current Antigravity CLI configuration
+
+{prompt}
+"""
+        cmd = [
+            runner_exe,
+            "--add-dir",
+            exec_dir,
+            "--print-timeout",
+            f"{timeout_seconds}s",
+        ]
+        if sandbox == "read-only":
+            cmd.append("--sandbox")
+        else:
+            cmd.append("--dangerously-skip-permissions")
+        cmd.extend(["--print", prompt])
 
     printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
     if dry_run:
@@ -5663,6 +5834,9 @@ Rules:
         print(f"  runner: {runner_normalized}")
         print(f"  model: {model or '(runner default)'}")
         print(f"  reasoning_effort: {reasoning_effort}")
+        if runner_normalized == "antigravity-cli":
+            print("  model_source: agy-config-inherited")
+            print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
         print(f"  sandbox: {sandbox}")
         print(f"  timeout_seconds: {timeout_seconds}")
         print(f"  worktree: {str(create_worktree).lower()}")
@@ -5696,6 +5870,31 @@ Rules:
     deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
     started_at = started_dt.isoformat(timespec="seconds")
     deadline_at = deadline_dt.isoformat(timespec="seconds")
+    activity = {
+        "target_type": "run",
+        "target_id": run_id,
+        "run_id": run_id,
+        "run_file": run_rel_path.replace("\\", "/"),
+        "inferred_role": role,
+        "status": "running",
+        "runner": runner_normalized,
+        "model": model or "(runner default)",
+        "reasoning_effort": reasoning_effort,
+        "model_source": runner_model_source(runner_normalized),
+        "sandbox": sandbox,
+        "exec_dir": exec_dir,
+        "worktree_path": worktree_path or None,
+        "branch": execution_branch or None,
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "timeout_seconds": timeout_seconds,
+        "timed_out": False,
+        "log": log_rel_path.replace("\\", "/"),
+        "stderr_log": stderr_rel_path.replace("\\", "/"),
+        "last_message": last_message_rel_path.replace("\\", "/"),
+        "summary": summary_rel_path.replace("\\", "/"),
+    }
+    activity_rel_path = write_agent_activity(project_abs, activity)
     timed_out = False
     try:
         result = subprocess.run(
@@ -5725,20 +5924,34 @@ Rules:
     after_hash = file_sha256(exec_run_abs)
     run_file_changed = bool(before_hash and after_hash and before_hash != after_hash)
 
+    empty_output = runner_normalized == "antigravity-cli" and runner_empty_output(stdout, stderr)
     if timed_out:
         run_status = "timeout"
     elif exit_code != 0:
         run_status = "failed"
+    elif empty_output and not run_file_changed:
+        run_status = "failed_empty_output"
     elif not run_file_changed:
         run_status = "completed_no_result_change"
     else:
         run_status = "completed"
+    activity.update({
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "timed_out": timed_out,
+        "status": run_status,
+        "exit_code": exit_code,
+        "empty_output": empty_output,
+        "run_file_changed": run_file_changed,
+        "changed_files": changed_files,
+    })
+    write_agent_activity(project_abs, activity)
 
     with open(log_abs, "w", encoding="utf-8") as f:
         f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
-    if runner_normalized == "claude-cli":
+    if runner_normalized in ("claude-cli", "antigravity-cli"):
         with open(last_message_abs, "w", encoding="utf-8") as f:
             try:
                 parsed_stdout = json.loads(stdout) if stdout.strip() else {}
@@ -5768,14 +5981,17 @@ Rules:
         "runner": runner_normalized,
         "model": model or "(runner default)",
         "reasoning_effort": reasoning_effort,
+        "model_source": runner_model_source(runner_normalized),
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
         "branch": execution_branch or None,
         "exit_code": exit_code,
+        "empty_output": empty_output,
         "json_log": log_rel_path.replace("\\", "/"),
         "stderr_log": stderr_rel_path.replace("\\", "/"),
         "last_message": last_message_rel_path.replace("\\", "/"),
+        "activity": activity_rel_path.replace("\\", "/"),
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     }
@@ -5794,10 +6010,12 @@ completed_at: {completed_at}
 duration_seconds: {duration_seconds}
 timeout_seconds: {timeout_seconds}
 timed_out: {str(timed_out).lower()}
+empty_output: {str(empty_output).lower()}
 status: {run_status}
 runner: {runner_normalized}
 model: {model or "(runner default)"}
 reasoning_effort: {reasoning_effort}
+model_source: {runner_model_source(runner_normalized)}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 worktree_path: {worktree_path or ""}
@@ -5807,6 +6025,7 @@ json_log: {log_rel_path}
 stderr_log: {stderr_rel_path}
 last_message: {last_message_rel_path}
 summary: {summary_rel_path}
+activity: {activity_rel_path}
 run_file_changed: {str(run_file_changed).lower()}
 changed_files:
 {format_yaml_sequence(changed_files, indent=2)}
@@ -5823,15 +6042,21 @@ changed_files:
     print(f"  status: {run_status}")
     print(f"  duration_seconds: {duration_seconds}")
     print(f"  exit_code: {exit_code}")
+    print(f"  empty_output: {str(empty_output).lower()}")
     print(f"  run_file_changed: {str(run_file_changed).lower()}")
     print(f"  changed_files: {len(changed_files)}")
     print(f"  summary: {summary_rel_path}")
+    print(f"  activity: {activity_rel_path}")
     if worktree_path:
         print(f"  worktree: {worktree_path}")
         print(f"  branch: {execution_branch}")
     if exit_code != 0:
         print(f"오류: {runner_normalized} 실행이 비정상 종료되었습니다. stderr 로그를 확인하세요: {stderr_rel_path}")
         sys.exit(exit_code)
+    if empty_output and not run_file_changed:
+        print(f"오류: {runner_normalized} 실행이 exit code 0으로 종료됐지만 stdout/stderr와 Run 변경이 모두 없습니다.")
+        print(f"  wrapper 또는 인증/세션 문제일 수 있습니다. 로그를 확인하세요: {log_rel_path}, {stderr_rel_path}")
+        sys.exit(1)
     if not run_file_changed:
         print("경고: Run 문서 변경이 감지되지 않았습니다. runner 출력과 summary를 확인하세요.")
 
@@ -6046,6 +6271,14 @@ def runner_default_config(name, version=None):
             "effort": "high",
             "version": version
         }
+    if name == "antigravity-cli":
+        return {
+            "name": "antigravity-cli",
+            "model": "gemini-3.5-flash",
+            "effort": "high",
+            "sandbox": "workspace-write",
+            "version": version
+        }
     return {
         "name": name,
         "model": None,
@@ -6058,10 +6291,15 @@ def detect_runtime_runners():
     runners = []
     codex_version = command_version("codex")
     claude_version = command_version("claude")
+    antigravity_version = command_version("antigravity")
+    if antigravity_version is None:
+        antigravity_version = command_version("agy")
     if codex_version is not None:
         runners.append(runner_default_config("codex-cli", codex_version or None))
     if claude_version is not None:
         runners.append(runner_default_config("claude-cli", claude_version or None))
+    if antigravity_version is not None:
+        runners.append(runner_default_config("antigravity-cli", antigravity_version or None))
     return runners
 
 
@@ -6088,43 +6326,68 @@ def runtime_runner_names(config):
 
 
 def runtime_runner_config(config, runner_name):
+    target = normalize_exec_runner(runner_name)
     for runner in normalize_runtime_runners(config.get("runtime", {})):
-        if runner.get("name") == runner_name:
+        if normalize_exec_runner(runner.get("name")) == target:
             return runner
-    return runner_default_config(runner_name)
+    return runner_default_config(target)
 
 
 def runtime_default_runner(config):
     names = runtime_runner_names(config)
-    if "codex-cli" in names:
+    normalized_names = [normalize_exec_runner(name) for name in names]
+    if "codex-cli" in normalized_names:
         return "codex-cli"
+    if "claude-cli" in normalized_names:
+        return "claude-cli"
+    if "antigravity-cli" in normalized_names:
+        return "antigravity-cli"
     if names:
-        return names[0]
+        return normalize_exec_runner(names[0])
     return "manual"
 
 
 def runtime_role_runner(config, role):
     names = runtime_runner_names(config)
+    normalized_names = [normalize_exec_runner(name) for name in names]
     default_runner = runtime_default_runner(config)
     if default_runner == "manual":
         return "manual"
-    if role in ("build-backend", "build", "evidence") and "codex-cli" in names:
+    if role in ("build-backend", "build", "evidence") and "codex-cli" in normalized_names:
         return "codex-cli"
-    if role in ("build-frontend", "review", "pr-cross-validation") and "claude-cli" in names:
+    if role in ("build-frontend", "review", "pr-cross-validation") and "claude-cli" in normalized_names:
         return "claude-cli"
+    if role in ("review", "pr-cross-validation", "build-frontend") and "antigravity-cli" in normalized_names:
+        return "antigravity-cli"
     return default_runner
+
+
+def runtime_runner_families(config):
+    families = set()
+    for name in runtime_runner_names(config):
+        normalized = normalize_exec_runner(name)
+        if normalized == "codex-cli":
+            families.add("codex")
+        elif normalized == "claude-cli":
+            families.add("claude")
+        elif normalized == "antigravity-cli":
+            families.add("gemini")
+        else:
+            families.add(normalized)
+    return families
 
 
 def runtime_capability(config, capability):
     names = runtime_runner_names(config)
+    families = runtime_runner_families(config)
     if capability == "same_runner_independent_review":
         return bool(names)
     if capability == "cross_model_validation":
-        return "codex-cli" in names and "claude-cli" in names
+        return len(families) >= 2
     if capability == "parallel_worktrees":
         return bool(names)
     if capability == "parallel_cross_runner_work":
-        return "codex-cli" in names and "claude-cli" in names
+        return len(families) >= 2
     return False
 
 
@@ -6426,7 +6689,7 @@ def main():
     p_review_request.set_defaults(worktree=None)
     p_review_request.add_argument("--worktree-dir", default="", help="worktree 생성 경로")
 
-    p_review_run = subparsers.add_parser("review-run", help="독립 검수 요청을 codex-cli 또는 claude-cli로 실행")
+    p_review_run = subparsers.add_parser("review-run", help="독립 검수 요청을 CLI runner로 실행")
     p_review_run.add_argument("--review-id", required=True, help="실행할 리뷰 ID (예: RV-001)")
     p_review_run.add_argument("--runner", choices=INDEPENDENT_REVIEW_RUNNERS, help="독립 검수 실행 런타임")
     p_review_run.add_argument("--model", default="", help="runner 모델")
@@ -6435,7 +6698,7 @@ def main():
     p_review_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex-cli sandbox")
     p_review_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
-    p_run_exec = subparsers.add_parser("run-exec", help="Run 문서를 codex-cli 또는 claude-cli 작업자 runner로 실행")
+    p_run_exec = subparsers.add_parser("run-exec", help="Run 문서를 CLI 작업자 runner로 실행")
     p_run_exec.add_argument("--run-id", required=True, help="실행할 Run ID (예: RUN-010)")
     p_run_exec.add_argument("--runner", choices=EXEC_RUNNERS, help="작업자 실행 런타임")
     p_run_exec.add_argument("--model", default="", help="runner 모델")

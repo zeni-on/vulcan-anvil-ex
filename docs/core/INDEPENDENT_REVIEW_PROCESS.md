@@ -44,6 +44,11 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
         "name": "claude-cli",
         "model": "claude-opus-4-7",
         "effort": "high"
+      },
+      {
+        "name": "antigravity-cli",
+        "model": "gemini-3.5-flash",
+        "effort": "high"
       }
     ]
   },
@@ -64,6 +69,8 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 Codex 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
 Claude runner 기본값은 `claude-opus-4-7`과 `high` effort를 사용한다.
+Antigravity runner 기본값은 `gemini-3.5-flash`와 `high` effort를 사용한다.
+Claude runner는 worktree 또는 독립 실행 디렉터리 격리를 전제로 `--dangerously-skip-permissions`를 사용해 권한 확인 대기 없이 검수 명령을 끝까지 수행한다. Orchestrator는 결과 파일과 diff를 다시 확인한 뒤 반영 여부를 판단한다.
 
 프로젝트 기본 모델과 effort는 `runtime.available_runners`에서 정한다.
 
@@ -79,6 +86,11 @@ Claude runner 기본값은 `claude-opus-4-7`과 `high` effort를 사용한다.
       {
         "name": "claude-cli",
         "model": "claude-opus-4-7",
+        "effort": "high"
+      },
+      {
+        "name": "antigravity-cli",
+        "model": "gemini-3.5-flash",
         "effort": "high"
       }
     ]
@@ -105,6 +117,18 @@ python vulcan.py agent-run --mode review \
   --reasoning-effort high
 ```
 
+Antigravity CLI로 실행할 때도 runner만 바꾼다. 현재 Ex는 IDE 창을 열지 않는 `agy.exe --print`를 사용하며, model/effort 전용 플래그가 없을 수 있으므로 Antigravity CLI에 설정된 기본 모델/effort를 따른다.
+Ex는 요청 모델과 effort를 프롬프트 및 실행 기록에 남기고, 실행 기록에는 `model_source: agy-config-inherited`를 함께 남긴다.
+Antigravity runner가 exit code 0으로 종료됐더라도 stdout/stderr와 result 변경이 모두 없으면 `failed_empty_output`으로 처리한다.
+
+```bash
+python vulcan.py agent-run --mode review \
+  --review-id RV-001 \
+  --runner antigravity-cli \
+  --model gemini-3.5-flash \
+  --reasoning-effort high
+```
+
 `agent-run --mode review`는 실제 실행 증적을 Independent Review Run에 남긴다.
 기존 `review-run`은 호환 명령으로 유지한다.
 
@@ -127,6 +151,7 @@ result_file_changed: true
 
 - Gate 2 설계 검수와 Gate 4 QA 검수는 Codex runner 기준 `gpt-5.5` + `high`를 기본으로 사용한다.
 - Claude runner 기준 기본값은 `claude-opus-4-7` + `high`다.
+- Antigravity runner 기준 기본값은 `gemini-3.5-flash` + `high`다.
 - 빠른 예비 검토나 로컬 스모크 확인만 필요하면 일회성으로 `--reasoning-effort low`를 사용할 수 있다.
 - 검수 완료 보고에는 실제 사용된 `model`과 `reasoning_effort`를 남긴다.
 - timeout은 `review.independent_exec_timeout_seconds`를 따르며 기본값은 1800초다.
@@ -162,10 +187,13 @@ python vulcan.py agent-run --mode review --review-id RV-001
 
 - `codex-cli`는 `codex exec`를 새 비대화형 세션으로 실행한다.
 - `claude-cli`는 `claude -p`를 새 비대화형 실행으로 사용한다.
+- `antigravity-cli`는 `agy.exe --print`를 새 headless 실행으로 사용한다.
 - worktree가 있으면 해당 worktree를 `--cd`로 사용한다.
 - 모델과 reasoning effort는 기본적으로 `vulcan.config.json.review` 값을 사용하며, `--model`, `--reasoning-effort`로 실행 단위 override가 가능하다.
+- Antigravity runner는 `--add-dir <worktree>`와 프롬프트에 포함된 review request/result 경로를 기본 입력으로 사용한다. 나머지 상류/작업 문서는 request 안의 계약을 따라 worker가 직접 읽는다.
 - 실행 로그를 `docs/reviews/RV-NNN_{runner}-exec.*`에 남긴다.
 - 마지막 응답을 `docs/reviews/RV-NNN_{runner}-last-message.md`에 남긴다.
+- 실행 시작과 종료 상태를 `docs/runs/_exec/RV-NNN_{runner}-activity.json`에 남긴다. 로컬 대시보드는 이 파일로 `running`, `completed`, `failed`, `timeout` 상태를 표시한다.
 - result 파일 변경 여부와 exit code를 Independent Review Run에 기록한다.
 
 주의:
