@@ -14,7 +14,7 @@ import GateStatusStepper from '@/components/GateStatusStepper'
 import DocList from '@/components/DocList'
 import CommitList from '@/components/CommitList'
 import OpenFolderButton from '@/components/OpenFolderButton'
-import RunnerStatusPanel from '@/components/RunnerStatusPanel'
+import AgentPanel from '@/components/AgentPanel'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
 import { LayoutProps } from '@/components/LayoutA'
 import { CommitEntry, DocEntry, DocNode, ProjectStats } from '@/lib/types'
@@ -516,7 +516,12 @@ export default function LayoutA2({
   onDocSelect,
   onExternalOpen,
 }: LayoutProps) {
-  const [sideView, setSideView] = useState<'stats' | 'commits'>('stats')
+  const [sideView, setSideView] = useState<'agent' | 'stats' | 'commits'>('agent')
+  const sideTitle = {
+    agent: 'Agent',
+    stats: '진행 통계',
+    commits: '최근 커밋',
+  }[sideView]
 
   return (
     <div
@@ -615,9 +620,16 @@ export default function LayoutA2({
               id="layout-a2-side-label"
               className="text-xs font-semibold uppercase tracking-widest text-[#9CA3AF]"
             >
-              {sideView === 'stats' ? '진행 통계' : '최근 커밋'}
+              {sideTitle}
             </h2>
-            <div className="grid grid-cols-2 rounded-lg border border-slate-700 bg-slate-950/40 p-0.5 text-[11px]">
+            <div className="grid grid-cols-3 rounded-lg border border-slate-700 bg-slate-950/40 p-0.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setSideView('agent')}
+                className={`rounded-md px-2 py-1 transition-colors ${sideView === 'agent' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-500 hover:text-slate-200'}`}
+              >
+                Agent
+              </button>
               <button
                 type="button"
                 onClick={() => setSideView('stats')}
@@ -636,13 +648,15 @@ export default function LayoutA2({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-500">
+            {sideView === 'agent' && (
+              <AgentPanel
+                runtime={runtime ?? null}
+                isLoading={runtimeLoading}
+                error={runtimeError}
+              />
+            )}
             {sideView === 'stats' && (
               <div className="space-y-4">
-                <RunnerStatusPanel
-                  runtime={runtime ?? null}
-                  isLoading={runtimeLoading}
-                  error={runtimeError}
-                />
                 {session?.stats ? <CompactStats stats={session.stats} /> : <A2StatsEmptyPanel />}
               </div>
             )}
