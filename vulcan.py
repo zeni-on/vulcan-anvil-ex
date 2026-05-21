@@ -5836,6 +5836,64 @@ changed_files:
         print("경고: Run 문서 변경이 감지되지 않았습니다. runner 출력과 summary를 확인하세요.")
 
 
+def cmd_agent_run(
+    mode,
+    target_id="",
+    review_id="",
+    run_id="",
+    runner=None,
+    model=None,
+    reasoning_effort=None,
+    timeout_seconds=None,
+    sandbox=None,
+    create_worktree=None,
+    worktree_dir="",
+    branch_name="",
+    allow_dirty=False,
+    dry_run=False,
+    project_dir=".",
+):
+    if mode == "review":
+        resolved_review_id = review_id or target_id
+        if not resolved_review_id:
+            print("오류: agent-run --mode review에는 --target-id RV-NNN 또는 --review-id RV-NNN이 필요합니다.")
+            sys.exit(1)
+        return cmd_review_run(
+            review_id=resolved_review_id,
+            runner=runner,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            timeout_seconds=timeout_seconds,
+            sandbox=sandbox,
+            dry_run=dry_run,
+            project_dir=project_dir,
+        )
+
+    if mode == "work":
+        resolved_run_id = run_id or target_id
+        if not resolved_run_id:
+            print("오류: agent-run --mode work에는 --target-id RUN-NNN 또는 --run-id RUN-NNN이 필요합니다.")
+            sys.exit(1)
+        return cmd_run_exec(
+            run_id=resolved_run_id,
+            runner=runner,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            timeout_seconds=timeout_seconds,
+            sandbox=sandbox,
+            create_worktree=create_worktree,
+            worktree_dir=worktree_dir,
+            branch_name=branch_name,
+            allow_dirty=allow_dirty,
+            dry_run=dry_run,
+            project_dir=project_dir,
+        )
+
+    print(f"오류: 지원하지 않는 agent-run mode입니다: {mode}")
+    print("현재 지원 mode: review, work")
+    sys.exit(1)
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -6392,6 +6450,24 @@ def main():
     p_run_exec.add_argument("--allow-dirty", action="store_true", help="미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
     p_run_exec.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
+    p_agent_run = subparsers.add_parser("agent-run", help="별도 세션 runner 실행 통합 명령")
+    p_agent_run.add_argument("--mode", required=True, choices=["review", "work"], help="실행 유형: review=검수/교차검증, work=작업 실행")
+    p_agent_run.add_argument("--target-id", default="", help="실행 대상 ID (review: RV-NNN, work: RUN-NNN)")
+    p_agent_run.add_argument("--review-id", default="", help="review mode 대상 리뷰 ID")
+    p_agent_run.add_argument("--run-id", default="", help="work mode 대상 Run ID")
+    p_agent_run.add_argument("--runner", choices=EXEC_RUNNERS, help="작업자 실행 런타임")
+    p_agent_run.add_argument("--model", default="", help="runner 모델")
+    p_agent_run.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high", "xhigh"], help="추론 강도")
+    p_agent_run.add_argument("--timeout-seconds", type=int, default=0, help="runner timeout seconds")
+    p_agent_run.add_argument("--sandbox", default="", choices=["", "read-only", "workspace-write", "danger-full-access"], help="codex-cli sandbox")
+    p_agent_run.add_argument("--worktree", dest="worktree", action="store_true", help="work mode에서 브랜치 worktree 실행")
+    p_agent_run.add_argument("--no-worktree", dest="worktree", action="store_false", help="work mode에서 현재 worktree 실행")
+    p_agent_run.set_defaults(worktree=None)
+    p_agent_run.add_argument("--worktree-dir", default="", help="work mode worktree 생성 경로")
+    p_agent_run.add_argument("--branch", default="", help="work mode worktree 생성 시 사용할 branch 이름")
+    p_agent_run.add_argument("--allow-dirty", action="store_true", help="work mode에서 미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
+    p_agent_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -6502,6 +6578,23 @@ def main():
         )
     elif args.command == "run-exec":
         cmd_run_exec(
+            run_id=args.run_id,
+            runner=args.runner,
+            model=args.model or None,
+            reasoning_effort=args.reasoning_effort or None,
+            timeout_seconds=args.timeout_seconds or None,
+            sandbox=args.sandbox or None,
+            create_worktree=args.worktree,
+            worktree_dir=args.worktree_dir,
+            branch_name=args.branch,
+            allow_dirty=args.allow_dirty,
+            dry_run=args.dry_run,
+        )
+    elif args.command == "agent-run":
+        cmd_agent_run(
+            mode=args.mode,
+            target_id=args.target_id,
+            review_id=args.review_id,
             run_id=args.run_id,
             runner=args.runner,
             model=args.model or None,

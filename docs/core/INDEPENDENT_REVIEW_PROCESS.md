@@ -58,7 +58,7 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 }
 ```
 
-`independent_enabled`가 `true`이면 Orchestrator는 `independent_triggers`에 포함된 Gate 종료 전 독립 검수를 기본 권장 절차로 제안한다. 다만 `review-run` 자동 실행은 하지 않는다. 사용자의 명시 지시 또는 Orchestrator의 별도 실행 판단이 있을 때 `vulcan.py review-run`을 실행한다.
+`independent_enabled`가 `true`이면 Orchestrator는 `independent_triggers`에 포함된 Gate 종료 전 독립 검수를 기본 권장 절차로 제안한다. 다만 자동 실행은 하지 않는다. 사용자의 명시 지시 또는 Orchestrator의 별도 실행 판단이 있을 때 `vulcan.py agent-run --mode review`를 실행한다.
 
 ## 4. 모델과 추론 강도
 
@@ -86,10 +86,10 @@ Claude runner 기본값은 `claude-opus-4-7`과 `high` effort를 사용한다.
 }
 ```
 
-특정 리뷰 실행에서만 바꾸려면 `review-run` 옵션으로 override한다.
+특정 리뷰 실행에서만 바꾸려면 `agent-run --mode review` 옵션으로 override한다.
 
 ```bash
-python vulcan.py review-run \
+python vulcan.py agent-run --mode review \
   --review-id RV-001 \
   --model gpt-5.5 \
   --reasoning-effort high
@@ -98,14 +98,15 @@ python vulcan.py review-run \
 Claude CLI로 실행할 때는 runner만 바꾼다.
 
 ```bash
-python vulcan.py review-run \
+python vulcan.py agent-run --mode review \
   --review-id RV-001 \
   --runner claude-cli \
   --model claude-opus-4-7 \
   --reasoning-effort high
 ```
 
-`review-run`은 실제 실행 증적을 Independent Review Run에 남긴다.
+`agent-run --mode review`는 실제 실행 증적을 Independent Review Run에 남긴다.
+기존 `review-run`은 호환 명령으로 유지한다.
 
 ```yaml
 runner: codex-cli
@@ -154,7 +155,7 @@ python vulcan.py review-request \
 `codex-cli` runner를 사용할 수 있으면 Orchestrator가 독립 검수 세션을 비대화형으로 실행할 수 있다.
 
 ```bash
-python vulcan.py review-run --review-id RV-001
+python vulcan.py agent-run --mode review --review-id RV-001
 ```
 
 기본 동작:
@@ -169,7 +170,7 @@ python vulcan.py review-run --review-id RV-001
 
 주의:
 
-- `review-run`은 Desktop 대화창을 새로 여는 기능이 아니다.
+- `agent-run --mode review`는 Desktop 대화창을 새로 여는 기능이 아니다.
 - `codex exec` 기반의 독립 실행 세션을 만든다.
 - result 파일이 변경되었더라도 Orchestrator가 다시 검토한 뒤 본선 산출물 반영 여부를 결정한다.
 
