@@ -24,7 +24,7 @@ export type GateKey = 'phase0' | 'gate1' | 'gate2' | 'gate3' | 'impl' | 'gate4' 
 export type GateStatusKey = Exclude<GateKey, 'phase0' | 'completed'>
 
 /** Gate 단위 상태 값 */
-export type GateStatus = 'done' | 'in-progress' | 'pending' | 'blocked'
+export type GateStatus = 'done' | 'in-progress' | 'pending' | 'awaiting-approval' | 'blocked'
 
 // ── projects.json 타입 ────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ export interface Session {
   project: string
   vulcan_version?: string
   current_gate: string
-  gate_status: Record<string, 'pending' | 'done'>
+  gate_status: Record<string, 'pending' | 'done' | 'awaiting-approval'>
   feature: string
   started: string
   completed: string[]

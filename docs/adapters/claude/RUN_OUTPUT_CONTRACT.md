@@ -217,8 +217,9 @@ Gate N의 마지막 Run(다음 Gate 진입 직전)은 다음 두 필드를 **반
 
 승인 흐름:
 1. Run 종료 시 `status: AwaitingApproval` + `approval_request.pending=true` + 질문 문장
-2. 사용자가 명시 승인하면 다음 Run(또는 `session --status done` 처리 Run)에서 `approval_recorded=true`, `user_approved_at`, `approval_evidence` 채움
-3. **명시 승인 없이는 `approval_recorded=true` 기록 금지** (대화상 승인 없는 상태에서 Run 또는 Release Approval 산출물에 "User Approved" 자동 기록 불가)
+2. Orchestrator는 승인 전 `session --status awaiting-approval`로 현재 Gate에 머문다.
+3. 사용자가 명시 승인하면 다음 Run(또는 `session --status done --approved --approval-evidence "<승인 근거>"` 처리 Run)에서 `approval_recorded=true`, `user_approved_at`, `approval_evidence` 채움
+4. **명시 승인 없이는 `approval_recorded=true` 기록 금지** (대화상 승인 없는 상태에서 Run 또는 Release Approval 산출물에 "User Approved" 자동 기록 불가)
 
 ## 4.2 UI 증적 / Contract diff 작성 규칙
 

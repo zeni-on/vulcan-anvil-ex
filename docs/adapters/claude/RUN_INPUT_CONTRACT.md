@@ -132,6 +132,7 @@ gate_exit_policy:
     - "사용자의 명시 승인 없이 다음 Gate 산출물을 작성하지 않는다."
     - "사용자의 명시 승인 없이 구현·테스트 실행·QA 승인·릴리즈 승인을 선언하지 않는다."
     - "대화상 명시 승인 없이 Run 또는 릴리즈 승인서에 'User Approved'로 기록하지 않는다."
+    - "사용자 명시 승인 전 `session --status done`을 실행하지 않는다."
 
 # Gate 2 Run인 경우에만 사용. docs/core/GATE2_DESIGN_SEQUENCE.md §2 참조.
 design_sequence:

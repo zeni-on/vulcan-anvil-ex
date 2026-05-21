@@ -29,6 +29,7 @@ const GATES: Array<{ key: StepKey; label: string; sub: string }> = [
 function getCircleClass(status: GateStatus, isCurrent: boolean): string {
   if (status === 'done') return 'bg-green-500 text-white'
   if (status === 'blocked') return 'bg-red-500 text-white'
+  if (status === 'awaiting-approval') return 'bg-amber-500 text-white ring-2 ring-amber-300 ring-offset-2 ring-offset-gray-950'
   if (isCurrent) return 'bg-blue-500 text-white ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-950'
   return 'bg-gray-800 text-gray-500'
 }
@@ -37,6 +38,7 @@ function getCircleClass(status: GateStatus, isCurrent: boolean): string {
 function getLabelClass(status: GateStatus, isCurrent: boolean): string {
   if (status === 'done') return 'text-green-400'
   if (status === 'blocked') return 'text-red-400'
+  if (status === 'awaiting-approval') return 'text-amber-300'
   if (isCurrent) return 'text-blue-400'
   return 'text-gray-500'
 }
@@ -50,6 +52,7 @@ function getConnectorClass(status: GateStatus): string {
 function GateIcon({ status, index }: { status: GateStatus; index: number }) {
   if (status === 'done') return <span aria-hidden="true">✓</span>
   if (status === 'blocked') return <span aria-hidden="true">!</span>
+  if (status === 'awaiting-approval') return <span aria-hidden="true">?</span>
   if (index === 0) return <span aria-hidden="true">0</span>
   return <span aria-hidden="true">{index}</span>
 }
@@ -59,6 +62,7 @@ function getStatusLabel(status: GateStatus): string {
   switch (status) {
     case 'done': return '완료'
     case 'in-progress': return '진행중'
+    case 'awaiting-approval': return '승인대기'
     case 'pending': return '대기'
     case 'blocked': return '블로커'
   }
@@ -83,6 +87,9 @@ export default function GateStatusStepper({ session }: GateStatusStepperProps) {
       if (session.current_gate === 'phase0') return 'in-progress'
       if (currentIndex > 0 || session.gate_status.gate1 !== 'pending') return 'done'
       return 'pending'
+    }
+    if (session.gate_status[gate.key] === 'awaiting-approval') {
+      return 'awaiting-approval'
     }
     if (session.current_gate === gate.key && session.gate_status[gate.key] === 'pending') {
       return 'in-progress'
@@ -117,7 +124,7 @@ export default function GateStatusStepper({ session }: GateStatusStepperProps) {
               <div className="flex flex-col items-center gap-2 min-w-[64px]">
                 {/* 원 — 진행중이면 ping 애니메이션 */}
                 <div className="relative">
-                  {isCurrent && (
+                  {(isCurrent && status !== 'awaiting-approval') && (
                     <span
                       aria-hidden="true"
                       className="absolute inset-0 rounded-full bg-blue-400 opacity-40 animate-ping"

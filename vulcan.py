@@ -19,7 +19,8 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 
   # 이하 명령은 프로젝트 디렉토리에서 실행
   python vulcan.py check-trace
-  python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
+  python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
+  python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py export [--output snapshot.json]
   python vulcan.py upgrade
 """
@@ -3786,7 +3787,7 @@ def cmd_backlog_reject(bl_id, reason="", project_dir="."):
 
 # ── session ────────────────────────────────────────────────────────────────
 
-def cmd_session(gate, status, feature, project_dir="."):
+def cmd_session(gate, status, feature, approved=False, approval_evidence="", project_dir="."):
     session = load_session(project_dir)
 
     if gate not in GATE_LABELS:
@@ -3799,6 +3800,14 @@ def cmd_session(gate, status, feature, project_dir="."):
 
     gate_order = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
     next_gate = None
+    if status == "done" and not approved:
+        print("오류: Gate 완료(done)는 사용자 명시 승인 후에만 기록할 수 있습니다.")
+        print("  승인 대기 상태로 멈추려면:")
+        print(f"  python vulcan.py session --gate {gate} --status awaiting-approval --feature \"{session.get('feature', feature or '')}\"")
+        print("  사용자가 다음 Gate 진행을 명시 승인한 뒤에만:")
+        print(f"  python vulcan.py session --gate {gate} --status done --approved --approval-evidence \"<승인 근거>\"")
+        sys.exit(1)
+
     if status == "done":
         current_idx = gate_order.index(gate)
         if current_idx + 1 < len(gate_order):
@@ -3808,7 +3817,7 @@ def cmd_session(gate, status, feature, project_dir="."):
         if next_gate != "completed":
             require_gate_start_prerequisites(project_dir, next_gate)
 
-    session["gate_status"][gate] = status
+    session.setdefault("gate_status", {})[gate] = status
 
     if status == "done":
         session["current_gate"] = next_gate
@@ -3816,16 +3825,35 @@ def cmd_session(gate, status, feature, project_dir="."):
         entry = f"{GATE_LABELS[gate]} - {session.get('feature', '')}"
         if entry not in session.get("completed", []):
             session.setdefault("completed", []).append(entry)
+        session.setdefault("approvals", {})[gate] = {
+            "approved_at": datetime.now().isoformat(timespec="seconds"),
+            "approval_evidence": approval_evidence or "CLI --approved",
+        }
+        if gate in session.get("approval_requests", {}):
+            session["approval_requests"][gate]["approval_status"] = "approved"
+            session["approval_requests"][gate]["approval_evidence"] = approval_evidence or "CLI --approved"
+    elif status == "awaiting-approval":
+        session["current_gate"] = gate
+        session.setdefault("approval_requests", {})[gate] = {
+            "requested_at": datetime.now().isoformat(timespec="seconds"),
+            "next_gate_candidate": gate_order[gate_order.index(gate) + 1] if gate_order.index(gate) + 1 < len(gate_order) else "completed",
+            "approval_status": "pending",
+        }
 
     save_session(session, project_dir)
     print(f"  session.json 업데이트: {gate} → {status}")
 
     feature_label = session.get("feature", "")
-    commit_msg = f"session: {gate} done - {GATE_LABELS[gate]}"
+    if status == "awaiting-approval":
+        commit_msg = f"session: {gate} awaiting approval - {GATE_LABELS[gate]}"
+    elif status == "pending":
+        commit_msg = f"session: {gate} pending - {GATE_LABELS[gate]}"
+    else:
+        commit_msg = f"session: {gate} done - {GATE_LABELS[gate]}"
     if feature_label:
         commit_msg += f" ({feature_label})"
     # 구현(impl), Gate 4(QA리뷰), Gate 5(최종승인): 소스코드 포함 커밋
-    include_source = gate in ("impl", "gate4", "gate5")
+    include_source = status == "done" and gate in ("impl", "gate4", "gate5")
     committed = git_commit(commit_msg, project_dir, include_source=include_source)
     if committed:
         git_push_if_remote(project_dir)
@@ -6254,7 +6282,8 @@ def main():
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git --require-remote
   python vulcan.py check-trace
   python vulcan.py gate-start gate1 --feature "로그인 기능"
-  python vulcan.py session --gate gate1 --status done --feature "로그인 기능"
+  python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
+  python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py sync-session
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
@@ -6283,8 +6312,10 @@ def main():
 
     p_session = subparsers.add_parser("session", help="Gate 상태 업데이트 + git commit")
     p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
-    p_session.add_argument("--status", required=True, choices=["done", "pending"], help="상태")
+    p_session.add_argument("--status", required=True, choices=["done", "pending", "awaiting-approval"], help="상태")
     p_session.add_argument("--feature", default="", help="작업 기능명")
+    p_session.add_argument("--approved", action="store_true", help="사용자 명시 승인 후 Gate 완료/다음 Gate 전환 허용")
+    p_session.add_argument("--approval-evidence", default="", help="사용자 승인 근거 또는 대화 메모")
 
     subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
 
@@ -6407,7 +6438,13 @@ def main():
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
-        cmd_session(gate=args.gate, status=args.status, feature=args.feature)
+        cmd_session(
+            gate=args.gate,
+            status=args.status,
+            feature=args.feature,
+            approved=args.approved,
+            approval_evidence=args.approval_evidence,
+        )
     elif args.command == "sync-session":
         cmd_sync_session()
     elif args.command == "wave-start":

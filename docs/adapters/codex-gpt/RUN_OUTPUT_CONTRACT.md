@@ -290,6 +290,7 @@ evidence:
 | 값 | 의미 |
 | --- | --- |
 | `pending` | 승인 질문을 남기고 대기 중 |
+| `awaiting-approval` | Gate 산출물 완료 후 사용자 승인 대기 중 |
 | `approved` | 대화상 사용자가 명시 승인함 |
 | `rejected` | 사용자가 반려함 |
 | `deferred` | 보완 후 재확인 필요 |

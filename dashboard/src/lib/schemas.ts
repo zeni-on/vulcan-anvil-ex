@@ -48,7 +48,7 @@ export const ProjectsListSchema = z.array(ProjectSchema)
 
 // ── Session 스키마 ────────────────────────────────────────────────────────────
 
-export const GateStatusSchema = z.enum(['done', 'in-progress', 'pending', 'blocked'])
+export const GateStatusSchema = z.enum(['done', 'in-progress', 'pending', 'awaiting-approval', 'blocked'])
 
 export const GateKeySchema = z.enum(['phase0', 'gate1', 'gate2', 'gate3', 'impl', 'gate4', 'gate5', 'completed'])
 

@@ -65,6 +65,8 @@ Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한
 
 Gate 작업은 Run 문서 생성 뒤에 시작한다. `vulcan.py gate-start`는 Gate 상태를 갱신한 뒤 해당 Gate의 기본 `orchestrator-plan` Run 초안을 자동 생성한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
 
+Gate 산출물이 완료되어도 사용자 승인 전에는 `done`으로 닫지 않는다. 산출물 요약과 다음 Gate 진행 질문을 남긴 뒤 `python vulcan.py session --gate <현재 Gate> --status awaiting-approval`로 현재 Gate에 머무른다. 사용자가 명시 승인한 뒤에만 `python vulcan.py session --gate <현재 Gate> --status done --approved --approval-evidence "<승인 근거>"`를 실행해 다음 Gate로 전환한다.
+
 이 기본 Run은 Gate 작업의 시작 계약이다. 에이전트는 이 Run을 읽고 필요한 세부 persona Run을 제안하거나 `run-new`로 추가 생성한 뒤 산출물 작성, 구현, 테스트, QA를 진행한다. Gate 종료 시에는 시작 시 만든 Run 또는 세부 Run을 완료 보고 형식으로 갱신한다.
 
 | 입력 | 필수 여부 | 설명 |

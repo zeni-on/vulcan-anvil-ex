@@ -29,6 +29,7 @@ import { SessionData, GateKey, GateStatusKey, GateStatus } from '@/lib/types'
 const STATUS_COLOR: Record<GateStatus, string> = {
   done:          '#10B981', // gate-done
   'in-progress': '#3B82F6', // gate-in-progress
+  'awaiting-approval': '#F59E0B', // gate-awaiting-approval
   pending:       '#374151', // gate-pending
   blocked:       '#EF4444', // gate-blocked
 }
@@ -64,6 +65,7 @@ function statusToValue(status: GateStatus): number {
   switch (status) {
     case 'done': return 1.0
     case 'in-progress': return 0.6
+    case 'awaiting-approval': return 0.85
     case 'blocked': return 1.0
     case 'pending': return 0.2
   }
@@ -83,6 +85,7 @@ function CustomTooltip({
   const statusLabel: Record<GateStatus, string> = {
     done: '완료',
     'in-progress': '진행중',
+    'awaiting-approval': '승인대기',
     pending: '대기',
     blocked: '블로커',
   }
