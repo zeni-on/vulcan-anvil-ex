@@ -244,6 +244,14 @@ RUN-014_build-wave-BW-004_...md
 
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다.
 
+작업자 runner에게 전달하는 `Build Wave Run`은 Orchestrator 통합 Run보다 얇아야 한다.
+작업자 Run의 `working_documents`에는 현재 Run 문서, 담당 구현에 직접 필요한 개발표준/테스트케이스/UI 기준선만 두고, 요구사항정의서와 전체 설계 산출물은 `reference_on_demand`에 둔다.
+작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 담당 증적 경로, 자기 Run 문서만 포함한다.
+`session.json`, Gate 상태, 전체 추적표 갱신, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
+
+Codex desktop의 `spawn_agent` 같은 같은 세션 계열 subagent는 보조 작업자로 쓸 수 있지만, 공식 Build Wave 자동화에서는 `run-exec`/worker Run 기록을 남기는 방식을 우선한다.
+subagent가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 정규화하고, 변경 파일과 검증 결과를 다시 확인한다.
+
 Build Wave를 생략하는 경우 구현 Run은 다음을 남긴다.
 
 - 생략 이유
