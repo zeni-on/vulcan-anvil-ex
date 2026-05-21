@@ -135,6 +135,10 @@ describe('UT-012-18: template=A2일 때 LayoutA2 렌더링, LayoutA/LayoutB 미�
 
     expect(screen.getByTestId('layout-a2-gate-empty')).toBeInTheDocument()
     expect(screen.getByText('Discovery 준비 중')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Agent' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '통계' }))
+
     expect(screen.getByTestId('layout-a2-stats-empty')).toBeInTheDocument()
     expect(screen.getByText('통계 대기 중')).toBeInTheDocument()
   })
