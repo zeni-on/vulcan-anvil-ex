@@ -135,8 +135,9 @@ Build Execution은 같은 독립 실행 모델을 구현에 적용한 것이다.
 2. Build Wave별 Run을 만든다.
 3. 각 Build Wave에 runner, writable scope, 관련 ID, 검증 명령을 부여한다.
 4. runner가 별도 세션/worktree에서 수행한다.
-5. Orchestrator가 변경 파일, 테스트 결과, traceability delta, FIND/ISSUE를 회수한다.
-6. 필요한 경우 review/evidence Run을 만든다.
+5. Orchestrator가 `run-integrate`로 worker worktree diff를 수집하고 Run scope 위반 여부를 판정한다.
+6. scope 위반이나 충돌이 있으면 직접 수정하지 않고 재작업 Run 또는 FIND로 돌려보낸다.
+7. 허용 diff만 반영한 뒤 필요한 경우 review/evidence/traceability Run을 만든다.
 
 Worktree와 PR은 같은 것이 아니다.
 
@@ -158,6 +159,8 @@ python vulcan.py agent-run --mode work --target-id RUN-010 --runner codex-cli
 python vulcan.py agent-run --mode work --target-id RUN-011 --runner claude-cli
 python vulcan.py agent-run --mode work --target-id RUN-012 --runner antigravity-cli
 python vulcan.py agent-run --mode work --target-id RUN-010 --runner codex-cli --dry-run
+python vulcan.py run-integrate --run-id RUN-010 --dry-run
+python vulcan.py run-integrate --run-id RUN-010 --apply
 ```
 
 `agent-run --mode work`는 한 번에 하나의 Run을 실행한다.
@@ -170,6 +173,9 @@ python vulcan.py agent-run --mode work --target-id RUN-010 --runner codex-cli --
 - 기본 worktree 예: `.vulcan/worktrees/RUN-010-codex-cli`
 - 현재 worktree에 미커밋 변경이 있으면 기본 차단한다. HEAD 기준 worktree 생성을 감수할 때만 `--allow-dirty`를 사용한다.
 - runner가 만든 코드와 문서는 자동 merge하지 않는다. Orchestrator가 worktree diff, Run 문서, 검증 결과를 확인한 뒤 반영한다.
+- Orchestrator는 worker 결과를 손으로 복사하지 않고 `run-integrate`로 diff를 수집한다.
+- `run-integrate`는 Run의 `scope.writable`과 `scope.excluded`를 기준으로 허용/위반 파일을 분류하고, `--apply`가 있을 때만 허용 diff를 현재 worktree에 반영한다.
+- `run-integrate`는 코드 수정, 테스트 작성, 추적표 보정, Gate/session 갱신을 수행하지 않는다. 실패나 누락은 재작업 worker, Review/QA worker, Traceability worker로 넘긴다.
 - 실행 로그와 요약은 `docs/runs/_exec/`에 남긴다.
 - 실행 시작 시 `docs/runs/_exec/<TARGET-ID>_<runner>-activity.json`에 `status: running`을 기록하고, 종료 시 `completed`, `failed`, `timeout`, `completed_no_result_change`로 갱신한다. 로컬 대시보드는 이 파일을 읽어 runner 실행 중 상태를 표시한다.
 

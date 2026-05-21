@@ -26,6 +26,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 """
 
 import argparse
+import fnmatch
 import hashlib
 import io
 import json
@@ -34,6 +35,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import date, datetime, timedelta
 
 # Windows 콘솔 UTF-8 출력 보장
@@ -353,12 +355,12 @@ AUDIT_UI_EVIDENCE_POLICY = {
         "결과",
     ],
     "examples": [
-        "UI-001-01 회원가입 기본 화면",
-        "UI-001-02 약한 비밀번호 오류",
-        "UI-001-03 비밀번호 확인 불일치",
-        "UI-001-04 중복 이메일 오류",
-        "UI-001-05 회원가입 성공 메시지",
-        "UI-001-06 성공 후 로그인 연계",
+        "UI-001-01 기본 화면 또는 빈 상태",
+        "UI-001-02 입력/작성 중 상태",
+        "UI-001-03 목록/결과 표시 상태",
+        "UI-001-04 완료 또는 상태 변경",
+        "UI-001-05 삭제/취소 후 상태",
+        "UI-001-06 입력 오류 또는 검증 오류",
     ],
 }
 
@@ -740,15 +742,19 @@ AUDIT_GATE_SKILL_PRESETS = {
         ],
     },
     ("impl", "build-wave"): {
+        "worker_run": True,
+        "working": [
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
         "writable": [
             "docs/runs/",
             "docs/artifacts/04-review/evidence/",
-            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
         ],
         "completion_criteria": [
             "Wave 하나의 범위만 수정하고 다른 Wave 범위는 건드리지 않는다.",
             "화면 구현은 UI Implementation Contract의 필수 유지 요소, 허용 변경, 금지 변경을 준수한다.",
-            "구현 결과, 테스트 결과, 증적, 추적표 갱신이 같은 Run에 기록되어 있다.",
+            "구현 결과, 테스트 결과, 증적, 추적표 갱신 필요 항목이 같은 Run에 기록되어 있다.",
         ],
     },
     ("gate4", "qa-fix-loop"): {
@@ -953,6 +959,45 @@ def next_run_id(project_dir="."):
     return f"RUN-{max_num + 1:03d}"
 
 
+def acquire_run_generation_lock(project_dir=".", timeout_seconds=10):
+    runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
+    os.makedirs(runs_dir, exist_ok=True)
+    lock_path = os.path.join(runs_dir, ".run-new.lock")
+    deadline = time.monotonic() + timeout_seconds
+
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            payload = f"pid={os.getpid()} created_at={datetime.now().isoformat()}\n"
+            os.write(fd, payload.encode("utf-8", errors="replace"))
+            return lock_path, fd
+        except FileExistsError:
+            try:
+                age = time.time() - os.path.getmtime(lock_path)
+                if age > 600:
+                    os.remove(lock_path)
+                    continue
+            except OSError:
+                pass
+            if time.monotonic() >= deadline:
+                print("오류: 다른 run-new 작업이 실행 중이어서 Run ID를 생성할 수 없습니다.")
+                print(f"  lock: {lock_path}")
+                sys.exit(1)
+            time.sleep(0.2)
+
+
+def release_run_generation_lock(lock):
+    lock_path, fd = lock
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+    try:
+        os.remove(lock_path)
+    except OSError:
+        pass
+
+
 def reviews_rel_dir(project_dir="."):
     docs_reviews = os.path.join(project_dir, "docs", "reviews")
     if os.path.isdir(docs_reviews):
@@ -1037,6 +1082,21 @@ def merge_unique(*item_lists):
     return merged
 
 
+def is_orchestrator_only_command(command):
+    normalized = command.strip().lower()
+    return any(
+        token in normalized
+        for token in (
+            "check-trace",
+            "sync-session",
+            "wave-start",
+            "wave-complete",
+            "session ",
+            "gate-start",
+        )
+    )
+
+
 def is_working_document(path):
     normalized = path.replace("\\", "/")
     return normalized.startswith("docs/artifacts/")
@@ -1100,6 +1160,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     gate_sample = gate_preset.get("sample")
     skill_sample = skill_preset.get("sample")
     skill_required = skill_preset.get("required", [])
+    worker_run = bool(skill_preset.get("worker_run"))
     skill_has_working_docs = any(is_working_document(path) for path in skill_required)
     focused_source = skill in AUDIT_FOCUSED_SOURCE_SKILLS
     preset_working_documents = skill_preset.get("working") or gate_preset.get("working", [])
@@ -1117,7 +1178,14 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         source_candidates = merge_unique(AUDIT_GATE_ANCHOR_DOCS.get(gate, []), skill_required)
     else:
         source_candidates = merge_unique(gate_preset.get("required", []), skill_required)
-    if scoped_working_documents:
+    run_rel_path = run_rel_path.replace("\\", "/")
+    if worker_run:
+        working_documents = merge_unique([run_rel_path], scoped_working_documents)
+        reference_documents = [
+            path for path in source_candidates
+            if path not in working_documents and path not in scoped_working_documents
+        ]
+    elif scoped_working_documents:
         working_documents = scoped_working_documents
         reference_documents = [
             path for path in source_candidates
@@ -1137,14 +1205,24 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         reference_documents,
     )
     source_reference = [path for path in source_reference if path not in source_read_first]
-    run_rel_path = run_rel_path.replace("\\", "/")
+    base_verification_commands = [f"python vulcan.py run-check {run_rel_path}"]
+    if not worker_run:
+        base_verification_commands.append("python vulcan.py check-trace")
     verification_commands = merge_unique(
-        [f"python vulcan.py run-check {run_rel_path}", "python vulcan.py check-trace"],
+        base_verification_commands,
         gate_preset.get("verification_commands", []),
         skill_preset.get("verification_commands", []),
     )
+    if worker_run:
+        verification_commands = [
+            command for command in verification_commands
+            if not is_orchestrator_only_command(command)
+        ]
+    base_evidence_targets = [run_rel_path]
+    if not worker_run:
+        base_evidence_targets.append("docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md")
     evidence_targets = merge_unique(
-        [run_rel_path, "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"],
+        base_evidence_targets,
         gate_preset.get("evidence_targets", []),
         skill_preset.get("evidence_targets", []),
     )
@@ -1157,6 +1235,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     return {
         "profile": profile,
         "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
+        "worker_run": worker_run,
         "focused_source": focused_source,
         "source_documents": {
             "read_first": source_read_first,
@@ -1233,6 +1312,7 @@ def render_run_input_preset(preset, ids, persona, gate):
     ui_evidence = preset["ui_evidence_policy"]
     ui_contract = preset["ui_implementation_contract_policy"]
     worker_policy = preset["worker_execution_policy"]
+    worker_run = bool(preset.get("worker_run"))
     design_sequence = preset.get("design_sequence", [])
     design_sequence_block = ""
     design_sequence_instruction = ""
@@ -1262,22 +1342,62 @@ ui_implementation_contract_policy:
 {format_yaml_sequence(ui_contract["impl_checklist"], 4)}
   gate4_required_evidence:
 {format_yaml_sequence(ui_contract["gate4_required_evidence"], 4)}"""
-        ui_instruction_block = """
+        gate_finish_instruction = (
+            "12. 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
+            if worker_run
+            else "12. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
+        )
+        ui_instruction_block = f"""
 8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
 9. UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
 10. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
 11. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
-12. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."""
+{gate_finish_instruction}"""
     else:
-        ui_instruction_block = """
+        gate_finish_instruction = (
+            "10. 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
+            if worker_run
+            else "10. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
+        )
+        ui_instruction_block = f"""
 8. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
 9. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
-10. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."""
+{gate_finish_instruction}"""
 
     read_first_docs = source.get("read_first", [])
     working_docs = source.get("working_documents", [])
     reference_docs = source.get("reference_on_demand", [])
     optional_docs = source.get("optional", [])
+    if worker_run:
+        completion_action_line = "5. `completion_criteria`를 모두 만족하도록 담당 코드, 테스트, 증적, 자기 Run 기록을 갱신한다."
+        completion_policy_section = """## 5. Worker 완료 및 Orchestrator 반환
+
+Run을 완료할 때 다음 항목을 반드시 남긴다.
+
+| 항목 | 작성 기준 |
+| --- | --- |
+| 담당 Wave 산출물 요약 | 담당 범위에서 작성/수정한 코드, 테스트, 증적과 관련 ID |
+| 검증 결과 | 실제 실행한 담당 영역 테스트, 빌드, 린트, Run check |
+| Orchestrator 결정 필요 | 추적표 갱신, session 갱신, wave-complete, check-trace, Gate 진행 판단 필요 항목 |
+| 미해결 항목 | `open_issues`, `findings`, `change_requests` |
+| 범위 밖 요청 | `scope.writable` 밖 수정이 필요한 이유와 후보 경로 |
+
+작업자 runner는 사용자 승인 질문, Gate 완료 선언, QA Pass, 릴리즈 승인, merge 가능 판단을 직접 하지 않는다."""
+    else:
+        completion_action_line = "5. `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다."
+        completion_policy_section = """## 5. Gate 종료 및 승인 대기
+
+Run을 완료할 때 다음 항목을 반드시 남긴다.
+
+| 항목 | 작성 기준 |
+| --- | --- |
+| 현재 Gate 산출물 요약 | 이번 Gate에서 작성/수정한 산출물과 관련 ID |
+| 미해결 항목 | `open_issues`, `findings`, `change_requests` |
+| 다음 Gate 제안 | 다음 Gate에서 수행할 Run 후보 |
+| 사용자 승인 질문 | "다음 Gate로 진행해도 되는지"를 명시적으로 질문 |
+| 승인 증적 | 대화에서 사용자가 명시 승인한 문구 또는 승인 보류 사유 |
+
+사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
     return f"""## 3. Run 입력 계약
 
 ```yaml
@@ -1347,24 +1467,12 @@ security_policy:
 2. `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
 3. `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
 4. `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
-5. `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다.
+{completion_action_line}
 6. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
 7. `verification.commands`를 실행하고 결과를 이 Run 기록에 남긴다.
 {ui_instruction_block}
 
-## 5. Gate 종료 및 승인 대기
-
-Run을 완료할 때 다음 항목을 반드시 남긴다.
-
-| 항목 | 작성 기준 |
-| --- | --- |
-| 현재 Gate 산출물 요약 | 이번 Gate에서 작성/수정한 산출물과 관련 ID |
-| 미해결 항목 | `open_issues`, `findings`, `change_requests` |
-| 다음 Gate 제안 | 다음 Gate에서 수행할 Run 후보 |
-| 사용자 승인 질문 | "다음 Gate로 진행해도 되는지"를 명시적으로 질문 |
-| 승인 증적 | 대화에서 사용자가 명시 승인한 문구 또는 승인 보류 사유 |
-
-사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
+{completion_policy_section}"""
 
 
 def default_persona_for_run(gate, skill):
@@ -1693,9 +1801,10 @@ def find_wave_run_file(project_dir, bw_id):
 
 
 def find_run_file(project_dir, run_id):
-    pattern = re.compile(rf"\b{re.escape(run_id)}\b", re.IGNORECASE)
+    target = run_id.lower()
     for path in find_run_files(project_dir):
-        if pattern.search(os.path.basename(path)):
+        stem = os.path.splitext(os.path.basename(path))[0].lower()
+        if stem == target or stem.startswith(f"{target}_") or stem.startswith(f"{target}-"):
             return path
 
     for path in find_run_files(project_dir):
@@ -1705,7 +1814,7 @@ def find_run_file(project_dir, run_id):
         except OSError:
             continue
         metadata = parse_simple_yaml_block(content)
-        if metadata.get("run_id", "").lower() == run_id.lower() or pattern.search(content):
+        if metadata.get("run_id", "").lower() == target:
             return path
     return None
 
@@ -4517,22 +4626,24 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
             print(f"  - {name}")
         sys.exit(1)
 
-    run_id = next_run_id(project_dir)
-    rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
-    ids = split_csv(related_ids)
-    skill_path = RUN_SKILLS[skill]
-    profile = load_delivery_profile(project_dir)
-    preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
-    run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
-    completion_section_number = "6" if preset else "5"
-    first_read_docs = preset["source_documents"]["read_first"] if preset else [
-        "AGENTS.md",
-        "session.json",
-        "docs/core/TRACEABILITY_RULES.md",
-        skill_path,
-    ]
-    first_read_section = "\n".join(f"- `{path}`" for path in first_read_docs)
-    input_sections = render_run_input_preset(preset, ids, persona, gate) if preset else f"""## 3. 입력 범위
+    lock = acquire_run_generation_lock(project_dir)
+    try:
+        run_id = next_run_id(project_dir)
+        rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
+        ids = split_csv(related_ids)
+        skill_path = RUN_SKILLS[skill]
+        profile = load_delivery_profile(project_dir)
+        preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
+        run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
+        completion_section_number = "6" if preset else "5"
+        first_read_docs = preset["source_documents"]["read_first"] if preset else [
+            "AGENTS.md",
+            "session.json",
+            "docs/core/TRACEABILITY_RULES.md",
+            skill_path,
+        ]
+        first_read_section = "\n".join(f"- `{path}`" for path in first_read_docs)
+        input_sections = render_run_input_preset(preset, ids, persona, gate) if preset else f"""## 3. 입력 범위
 
 | 항목 | 내용 |
 | --- | --- |
@@ -4551,7 +4662,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
 5. 검증 명령을 실행하고 결과를 기록한다.
 6. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다."""
 
-    content = f"""# {run_id} {title}
+        content = f"""# {run_id} {title}
 
 ```yaml
 run_id: {run_id}
@@ -4603,7 +4714,9 @@ Draft 상태. 작업 완료 후 실제 실행한 검증 명령과 결과를 기�
 
 Draft 상태. 작업 완료 후 후속 조치나 다음 Run 제안을 기록한다.
 """
-    write_file(project_dir, rel_path, content)
+        write_file(project_dir, rel_path, content)
+    finally:
+        release_run_generation_lock(lock)
     print(f"\nRun 초안 생성 완료: {rel_path}")
     version_run_document(rel_path, f"run: create {run_id} - {title}", project_dir)
     print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
@@ -4949,6 +5062,140 @@ def parse_git_status_files(status_text):
             value = value.split(" -> ", 1)[1]
         files.append(value.strip())
     return files
+
+
+def git_status_porcelain_all(project_dir="."):
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "-uall"],
+            cwd=project_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return result.stdout.rstrip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def parse_git_status_entries(status_text):
+    entries = []
+    for line in (status_text or "").splitlines():
+        if not line.strip():
+            continue
+        status = line[:2]
+        value = line[3:] if len(line) > 3 else line.strip()
+        old_path = ""
+        path = value.strip()
+        if " -> " in value:
+            old_path, path = [part.strip() for part in value.split(" -> ", 1)]
+        entries.append({
+            "status": status.strip() or status,
+            "path": path,
+            "old_path": old_path,
+            "raw": line,
+            "untracked": status == "??",
+        })
+    return entries
+
+
+def filter_ignorable_status_entries(entries):
+    ignorable_prefixes = [
+        ".vulcan/",
+        "docs/runs/_exec/",
+    ]
+    kept = []
+    for entry in entries:
+        paths = [normalize_repo_path(entry.get("path", ""))]
+        if entry.get("old_path"):
+            paths.append(normalize_repo_path(entry.get("old_path", "")))
+        if paths and all(any(path.startswith(prefix) for prefix in ignorable_prefixes) for path in paths):
+            continue
+        kept.append(entry)
+    return kept
+
+
+def has_blocking_dirty_status(project_dir="."):
+    entries = parse_git_status_entries(git_status_porcelain_all(project_dir))
+    return bool(filter_ignorable_status_entries(entries))
+
+
+def normalize_repo_path(path):
+    normalized = path.replace("\\", "/").strip().strip('"').strip("'")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def extract_nested_yaml_list(content, parent_key, child_key):
+    lines = content.splitlines()
+    in_parent = False
+    in_child = False
+    items = []
+    for line in lines:
+        if not in_parent:
+            if re.match(rf"^{re.escape(parent_key)}\s*:\s*$", line):
+                in_parent = True
+            continue
+        if re.match(r"^\S", line):
+            break
+        if not in_child:
+            if re.match(rf"^\s{{2}}{re.escape(child_key)}\s*:\s*$", line):
+                in_child = True
+            continue
+        if re.match(r"^\s{0,2}\S", line):
+            break
+        match = re.match(r"^\s*-\s+(.+?)\s*$", line)
+        if match:
+            items.append(normalize_repo_path(match.group(1)))
+    return items
+
+
+def scope_pattern_matches(path, pattern):
+    path = normalize_repo_path(path)
+    pattern = normalize_repo_path(pattern)
+    if not pattern:
+        return False
+    if pattern.endswith("/"):
+        return path.startswith(pattern)
+    if pattern.endswith("/**"):
+        return path.startswith(pattern[:-2])
+    if any(ch in pattern for ch in "*?[]"):
+        return fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch("/" + path, pattern)
+    return path == pattern or path.startswith(pattern.rstrip("/") + "/")
+
+
+def path_matches_any_scope(path, patterns):
+    return any(scope_pattern_matches(path, pattern) for pattern in patterns or [])
+
+
+def run_integration_report_rel_path(project_dir, run_id):
+    return os.path.join(execution_rel_dir(project_dir), f"{run_id}_integrate-report.json")
+
+
+def load_latest_run_exec_summary(project_dir, run_id, runner=None):
+    exec_dir = os.path.join(project_dir, execution_rel_dir(project_dir))
+    if not os.path.isdir(exec_dir):
+        return None, ""
+    runner_slug = runner_log_slug(normalize_exec_runner(runner)) if runner else ""
+    candidates = []
+    for name in os.listdir(exec_dir):
+        if not name.startswith(f"{run_id}_") or not name.endswith("-summary.json"):
+            continue
+        if runner_slug and not name.startswith(f"{run_id}_{runner_slug}-"):
+            continue
+        path = os.path.join(exec_dir, name)
+        candidates.append((os.path.getmtime(path), path))
+    if not candidates:
+        return None, ""
+    _, path = sorted(candidates, reverse=True)[0]
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f), os.path.relpath(path, project_dir)
+    except (OSError, json.JSONDecodeError):
+        return None, os.path.relpath(path, project_dir)
 
 
 def review_config_get(review_config, key, default=None):
@@ -5630,15 +5877,27 @@ result_file_changed: {str(result_changed).lower()}
 
 def infer_execution_role(run_content, metadata):
     persona = (metadata.get("persona") or "").lower()
+    skill = (metadata.get("skill") or "").lower()
+    title_hint = (metadata.get("run_id") or "").lower()
     text = run_content.lower()
-    if "review" in persona or "review" in text or "검수" in run_content:
+
+    if skill == "build-wave" or persona in ("build", "frontend", "backend", "ui", "screen"):
+        if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend"):
+            return "build-frontend"
+        if "backend" in text or "back-end" in text or "백엔드" in run_content or persona == "backend":
+            return "build-backend"
+        return "build"
+
+    if "independent-review" in skill or skill.endswith("-review") or "review" in persona:
         return "review"
-    if "evidence" in persona or "evidence" in text or "증적" in run_content:
+    if "evidence" in persona or "evidence" in skill:
         return "evidence"
-    if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend"):
+    if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend") or "frontend" in title_hint:
         return "build-frontend"
-    if "backend" in text or "back-end" in text or "백엔드" in run_content:
+    if "backend" in text or "back-end" in text or "백엔드" in run_content or "backend" in title_hint:
         return "build-backend"
+    if "review" in text or "검수" in run_content:
+        return "review"
     return "build"
 
 
@@ -5712,7 +5971,8 @@ def cmd_run_exec(
         create_worktree = bool(execution_config.get("default_worktree", True))
 
     dirty_status = git_status_porcelain(project_abs)
-    if create_worktree and dirty_status and not allow_dirty and not dry_run:
+    blocking_dirty = has_blocking_dirty_status(project_abs)
+    if create_worktree and blocking_dirty and not allow_dirty and not dry_run:
         print("오류: 현재 worktree에 미커밋 변경이 있어 실행 worktree를 만들 수 없습니다.")
         print("  run-exec worktree는 HEAD 기준으로 생성되므로 미커밋 변경이 누락될 수 있습니다.")
         print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
@@ -5843,7 +6103,7 @@ Rules:
         if create_worktree:
             print(f"  worktree_path: {worktree_path}")
             print(f"  branch: {execution_branch}")
-            if dirty_status and not allow_dirty:
+            if blocking_dirty and not allow_dirty:
                 print("  warning: current worktree is dirty; non-dry-run would require commit or --allow-dirty")
         print(f"  command: {printable_cmd}")
         return
@@ -6059,6 +6319,184 @@ changed_files:
         sys.exit(1)
     if not run_file_changed:
         print("경고: Run 문서 변경이 감지되지 않았습니다. runner 출력과 summary를 확인하세요.")
+
+
+def cmd_run_integrate(
+    run_id,
+    runner=None,
+    worktree_dir="",
+    apply=False,
+    allow_dirty=False,
+    dry_run=False,
+    project_dir=".",
+):
+    project_abs = os.path.abspath(project_dir)
+    run_path = find_run_file(project_abs, run_id)
+    if not run_path:
+        print(f"오류: {run_id}에 해당하는 Run 문서를 찾을 수 없습니다.")
+        print(f"  검색 위치: {runs_rel_dir(project_abs)}")
+        sys.exit(1)
+
+    run_abs = os.path.abspath(run_path)
+    run_rel_path = os.path.relpath(run_abs, project_abs).replace("\\", "/")
+    with open(run_abs, encoding="utf-8") as f:
+        run_content = f.read()
+
+    summary, summary_rel = load_latest_run_exec_summary(project_abs, run_id, runner=runner)
+    summary_worktree = ""
+    summary_branch = ""
+    summary_runner = normalize_exec_runner(runner) if runner else ""
+    if summary:
+        summary_worktree = summary.get("worktree_path") or ""
+        summary_branch = summary.get("branch") or ""
+        summary_runner = normalize_exec_runner(summary.get("runner") or summary_runner)
+
+    worktree_path = os.path.abspath(worktree_dir or summary_worktree or "")
+    if not worktree_path or not os.path.isdir(worktree_path):
+        print("오류: 통합할 worker worktree를 찾을 수 없습니다.")
+        print("  --worktree-dir를 지정하거나, run-exec summary에 worktree_path가 있어야 합니다.")
+        if summary_rel:
+            print(f"  summary: {summary_rel}")
+        sys.exit(1)
+
+    writable_scope = extract_nested_yaml_list(run_content, "scope", "writable")
+    excluded_scope = extract_nested_yaml_list(run_content, "scope", "excluded")
+    if not writable_scope:
+        print("오류: Run 입력 계약에서 scope.writable을 찾을 수 없습니다.")
+        print(f"  run_file: {run_rel_path}")
+        sys.exit(1)
+
+    status_text = git_status_porcelain_all(worktree_path)
+    entries = parse_git_status_entries(status_text)
+    allowed = []
+    violations = []
+    for entry in entries:
+        paths_to_check = [entry["path"]]
+        if entry.get("old_path"):
+            paths_to_check.append(entry["old_path"])
+        excluded = any(path_matches_any_scope(path, excluded_scope) for path in paths_to_check)
+        writable = all(path_matches_any_scope(path, writable_scope) for path in paths_to_check)
+        classified = dict(entry)
+        classified["path"] = normalize_repo_path(classified["path"])
+        classified["old_path"] = normalize_repo_path(classified.get("old_path", ""))
+        if excluded or not writable:
+            classified["reason"] = "excluded_scope" if excluded else "outside_writable_scope"
+            violations.append(classified)
+        else:
+            allowed.append(classified)
+
+    report_runner = summary_runner or (normalize_exec_runner(runner) if runner else "")
+    report = {
+        "run_id": run_id,
+        "run_file": run_rel_path,
+        "runner": report_runner,
+        "summary": (summary_rel or "").replace("\\", "/"),
+        "worktree_path": worktree_path,
+        "branch": summary_branch,
+        "status": "blocked_scope_violation" if violations else "ready_to_apply",
+        "apply_requested": bool(apply),
+        "dry_run": bool(dry_run),
+        "writable_scope": writable_scope,
+        "excluded_scope": excluded_scope,
+        "allowed_files": allowed,
+        "violations": violations,
+        "orchestrator_next_actions": [
+            "위반 파일이 있으면 worker 재작업 Run 또는 FIND로 돌려보낸다.",
+            "허용 파일만 반영한 뒤 별도 Review/QA worker로 검수한다.",
+            "추적표, session, wave-complete, check-trace는 Orchestrator 통합 단계에서 별도 처리한다.",
+        ],
+    }
+
+    print("Run integration analysis")
+    print(f"  run_id: {run_id}")
+    print(f"  run_file: {run_rel_path}")
+    print(f"  worktree: {worktree_path}")
+    if summary_rel:
+        print(f"  summary: {summary_rel}")
+    if summary_branch:
+        print(f"  branch: {summary_branch}")
+    print(f"  changed_files: {len(entries)}")
+    print(f"  allowed_files: {len(allowed)}")
+    print(f"  violations: {len(violations)}")
+    if violations:
+        print("  status: blocked_scope_violation")
+        for item in violations[:20]:
+            print(f"    - {item['status']} {item['path']} ({item['reason']})")
+    else:
+        print("  status: ready_to_apply")
+
+    report_rel = run_integration_report_rel_path(project_abs, run_id)
+    report_abs = os.path.join(project_abs, report_rel)
+    main_dirty_before_apply = has_blocking_dirty_status(project_abs)
+
+    if dry_run:
+        print("  dry_run: true")
+        print(f"  report_target: {report_rel}")
+        return
+
+    os.makedirs(os.path.dirname(report_abs), exist_ok=True)
+    with open(report_abs, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print(f"  report: {report_rel}")
+
+    if not apply:
+        print("  apply: false")
+        print("  다음 단계: 위반이 없으면 --apply로 허용 diff만 반영할 수 있습니다.")
+        return
+
+    if violations:
+        print("오류: scope 위반 파일이 있어 적용하지 않았습니다.")
+        print("  worker 재작업 또는 Run scope 조정 후 다시 실행하세요.")
+        sys.exit(1)
+
+    if main_dirty_before_apply and not allow_dirty:
+        print("오류: 현재 main worktree에 미커밋 변경이 있어 적용하지 않았습니다.")
+        print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
+        sys.exit(1)
+
+    allowed_paths = [item["path"] for item in allowed]
+    tracked_paths = []
+    for item in allowed:
+        if item.get("untracked"):
+            continue
+        if item.get("old_path"):
+            tracked_paths.append(item["old_path"])
+        tracked_paths.append(item["path"])
+    tracked_paths = merge_unique(tracked_paths)
+    untracked_paths = [item["path"] for item in allowed if item.get("untracked")]
+
+    if tracked_paths:
+        diff_result = subprocess.run(
+            ["git", "diff", "--binary", "HEAD", "--"] + tracked_paths,
+            cwd=worktree_path,
+            check=True,
+            capture_output=True,
+        )
+        if diff_result.stdout:
+            apply_result = subprocess.run(
+                ["git", "apply", "--whitespace=nowarn", "-"],
+                cwd=project_abs,
+                input=diff_result.stdout,
+                capture_output=True,
+            )
+            if apply_result.returncode != 0:
+                detail = coerce_process_output(apply_result.stderr).strip()
+                print(f"오류: 허용 diff 적용 실패 - {detail}")
+                sys.exit(1)
+
+    for rel_path in untracked_paths:
+        src = os.path.join(worktree_path, rel_path)
+        dst = os.path.join(project_abs, rel_path)
+        if os.path.isdir(src):
+            copy_tree(src, dst)
+        elif os.path.exists(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+
+    print("  apply: true")
+    print(f"  applied_files: {len(allowed_paths)}")
+    print("  다음 단계: Review/QA worker 검수와 Orchestrator 상태 갱신을 별도 Run으로 진행하세요.")
 
 
 def cmd_agent_run(
@@ -6713,6 +7151,14 @@ def main():
     p_run_exec.add_argument("--allow-dirty", action="store_true", help="미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
     p_run_exec.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
+    p_run_integrate = subparsers.add_parser("run-integrate", help="worker worktree diff를 Run scope 기준으로 수집/검사/반영")
+    p_run_integrate.add_argument("--run-id", required=True, help="통합할 worker Run ID (예: RUN-010)")
+    p_run_integrate.add_argument("--runner", choices=EXEC_RUNNERS, help="summary 선택에 사용할 runner")
+    p_run_integrate.add_argument("--worktree-dir", default="", help="통합할 worker worktree 경로")
+    p_run_integrate.add_argument("--apply", action="store_true", help="scope 허용 diff를 현재 worktree에 반영")
+    p_run_integrate.add_argument("--allow-dirty", action="store_true", help="현재 worktree가 dirty여도 적용 허용")
+    p_run_integrate.add_argument("--dry-run", action="store_true", help="보고서/파일 변경 없이 분석만 출력")
+
     p_agent_run = subparsers.add_parser("agent-run", help="별도 세션 runner 실행 통합 명령")
     p_agent_run.add_argument("--mode", required=True, choices=["review", "work"], help="실행 유형: review=검수/교차검증, work=작업 실행")
     p_agent_run.add_argument("--target-id", default="", help="실행 대상 ID (review: RV-NNN, work: RUN-NNN)")
@@ -6850,6 +7296,15 @@ def main():
             create_worktree=args.worktree,
             worktree_dir=args.worktree_dir,
             branch_name=args.branch,
+            allow_dirty=args.allow_dirty,
+            dry_run=args.dry_run,
+        )
+    elif args.command == "run-integrate":
+        cmd_run_integrate(
+            run_id=args.run_id,
+            runner=args.runner,
+            worktree_dir=args.worktree_dir,
+            apply=args.apply,
             allow_dirty=args.allow_dirty,
             dry_run=args.dry_run,
         )

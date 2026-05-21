@@ -1,6 +1,7 @@
 # Implementation Build Wave Run Input Sample
 
 > 목적: Audit Profile에서 구현 단계가 승인된 설계와 테스트 범위 안에서만 움직이게 하는 기준 예시다.
+> 이 샘플은 두 단계로 본다. 먼저 Orchestrator가 Wave를 나누는 `implementation-plan`을 만들고, 실제 작업자에게는 더 얇은 `build-wave` 계약을 전달한다.
 
 ```yaml
 profile: "audit"
@@ -99,3 +100,71 @@ ui_implementation_contract_policy:
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
 - 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 검증과 review Run을 분리한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 구현 범위, 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
+- worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
+
+## Worker Build Wave 예시
+
+작업자 runner에게 전달되는 실제 `build-wave` Run은 더 좁아야 한다.
+아래 예시는 frontend 담당 worker 기준이며, backend worker라면 `frontend/`를 `backend/`와 해당 테스트 경로로 바꾼다.
+
+```yaml
+profile: "audit"
+run_type: "Implementation"
+gate: "impl"
+skill: "build-wave"
+persona: "build"
+related_ids: [REQ-001, SCR-001, UI-001, UT-001]
+source_documents:
+  read_first:
+    - AGENTS.md
+    - session.json
+    - docs/adapters/codex-gpt/skills/build-wave.md
+  working_documents:
+    - docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md
+    - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
+    - docs/artifacts/02-design/screen/ui-baseline/
+  reference_on_demand:
+    - docs/core/AGENT_RUN_PROTOCOL.md
+    - docs/core/TRACEABILITY_RULES.md
+    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
+    - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
+    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+scope:
+  writable:
+    - frontend/
+    - docs/artifacts/04-review/evidence/ui/
+    - docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md
+  readonly:
+    - docs/core/
+    - docs/templates/
+    - docs/seed-docs/reference-standards/
+  excluded:
+    - session.json
+    - docs/ref-docs/
+    - backend/
+    - "**/node_modules/"
+    - "**/.next/"
+completion_criteria:
+  - "담당 Wave 범위만 구현하고 다른 worker 범위는 수정하지 않는다."
+  - "UI Implementation Contract와 Gate 3 UI 테스트 기준을 구현 전 확인한다."
+  - "담당 테스트, 린트, 빌드를 실행하고 결과를 현재 Run에 남긴다."
+  - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
+verification:
+  commands:
+    - "npm run lint"
+    - "npm run build"
+    - "python vulcan.py run-check docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md"
+  evidence:
+    required: true
+    target_documents:
+      - docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md
+      - docs/artifacts/04-review/evidence/ui/
+worker_execution_policy:
+  forbidden_actions:
+    - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
+    - "사용자 승인, QA Pass, merge 가능 여부를 최종 판단하지 않는다."
+    - "scope.writable 밖 파일을 수정하지 않는다."
+```
