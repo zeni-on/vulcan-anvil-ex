@@ -1517,6 +1517,13 @@ def save_session(session, project_dir="."):
         json.dump(session, f, ensure_ascii=False, indent=2)
 
 
+def refresh_session_stats(session, project_dir="."):
+    session["implementation"] = compute_implementation_progress(project_dir, session=session)
+    session["stats"] = compute_stats(project_dir)
+    session["stats"]["implementation"] = session["implementation"]
+    return session
+
+
 def git_commit(message, project_dir=".", include_source=False, paths=None):
     try:
         if paths is None:
@@ -3985,6 +3992,7 @@ def cmd_session(gate, status, feature, approved=False, approval_evidence="", pro
             "approval_status": "pending",
         }
 
+    refresh_session_stats(session, project_dir)
     save_session(session, project_dir)
     print(f"  session.json 업데이트: {gate} → {status}")
 
@@ -4024,6 +4032,7 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
 
     session["current_gate"] = gate
     session.setdefault("gate_status", {})[gate] = "pending"
+    refresh_session_stats(session, project_dir)
     save_session(session, project_dir)
     print(f"  Gate 시작: {gate} - {GATE_LABELS[gate]}")
 
@@ -4048,9 +4057,7 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
 
 def sync_session(project_dir="."):
     session = load_session(project_dir)
-    session["implementation"] = compute_implementation_progress(project_dir, session=session)
-    session["stats"] = compute_stats(project_dir)
-    session["stats"]["implementation"] = session["implementation"]
+    refresh_session_stats(session, project_dir)
     save_session(session, project_dir)
     return session
 
@@ -4242,6 +4249,8 @@ TBD
     waves["current"] = bw_id
     session["implementation"] = compute_implementation_progress(project_dir, session=session)
     session["implementation"]["waves"]["current"] = bw_id
+    session["stats"] = compute_stats(project_dir)
+    session["stats"]["implementation"] = session["implementation"]
     save_session(session, project_dir)
     print(f"  Build Wave 시작: {bw_id}")
     print(f"  Run 문서: {rel_run}")

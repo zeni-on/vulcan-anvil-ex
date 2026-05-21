@@ -162,6 +162,7 @@ open_issues: []
 에이전트는 현재 Gate의 완료 조건을 만족하지 못하면 다음 Gate로 넘어갔다고 선언하지 않는다.
 
 에이전트는 `session.json.current_gate`보다 앞선 Gate의 작업을 임의로 수행하지 않는다. Run 문서의 `gate:` 값은 실제 진행 상태를 바꾸지 않는다. Gate 진행 상태는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py check-trace`를 통해 확인하고 갱신한다.
+`vulcan.py gate-start`, `vulcan.py session`, `vulcan.py wave-start`, `vulcan.py wave-complete` 같은 상태 변경 명령은 대시보드용 stats 캐시를 함께 갱신해야 한다. `vulcan.py sync-session`은 수동 복구 또는 재계산이 필요할 때 사용하는 보조 명령이다.
 
 현재 Gate별 금지 예시는 다음과 같다.
 
