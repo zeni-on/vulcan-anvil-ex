@@ -3584,6 +3584,53 @@ def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
     sys.exit(1)
 
 
+def require_gate_start_sequence(session, target_gate):
+    """Gate 시작이 현재 Gate 바로 다음 단계인지와 이전 Gate 승인 근거를 확인한다."""
+    if target_gate not in GATE_ORDER:
+        return
+
+    current_gate = session.get("current_gate", "phase0")
+    if current_gate == target_gate:
+        return
+
+    if current_gate not in GATE_ORDER:
+        print(f"오류: session.json의 current_gate가 유효하지 않습니다: {current_gate}")
+        print(f"  사용 가능: {', '.join(GATE_ORDER)}")
+        sys.exit(1)
+
+    current_idx = GATE_ORDER.index(current_gate)
+    target_idx = GATE_ORDER.index(target_gate)
+    if target_idx != current_idx + 1:
+        print("오류: Gate는 순차적으로만 시작할 수 있습니다.")
+        print(f"  현재 Gate: {current_gate}")
+        print(f"  요청 Gate: {target_gate}")
+        next_gate = GATE_ORDER[current_idx + 1] if current_idx + 1 < len(GATE_ORDER) else "completed"
+        print(f"  다음에 시작 가능한 Gate: {next_gate}")
+        sys.exit(1)
+
+    previous_gate = current_gate
+    previous_status = session.get("gate_status", {}).get(previous_gate)
+    previous_approval = session.get("approvals", {}).get(previous_gate, {})
+    approval_evidence = previous_approval.get("approval_evidence")
+    if previous_status != "done" or not approval_evidence:
+        print("오류: 다음 Gate를 시작하려면 현재 Gate 완료와 사용자 승인 근거가 필요합니다.")
+        print(f"  현재 Gate: {previous_gate}")
+        print(f"  현재 상태: {previous_status or 'missing'}")
+        print("  완료 처리 예:")
+        print(f"  python vulcan.py session --gate {previous_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
+        sys.exit(1)
+
+
+def require_current_gate_for_command(project_dir, command_name, allowed_gates):
+    session = load_session(project_dir)
+    current_gate = session.get("current_gate", "phase0")
+    if current_gate not in allowed_gates:
+        print(f"오류: {command_name} 명령은 {', '.join(allowed_gates)} 단계에서만 실행할 수 있습니다.")
+        print(f"  현재 Gate: {current_gate}")
+        sys.exit(1)
+    return session
+
+
 # ── backlog ────────────────────────────────────────────────────────────────
 
 BACKLOG_PATH = "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md"
@@ -4081,6 +4128,7 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
     if feature:
         session["feature"] = feature
 
+    require_gate_start_sequence(session, gate)
     require_gate_start_prerequisites(project_dir, gate)
 
     session["current_gate"] = gate
@@ -6813,6 +6861,8 @@ def cmd_run_integrate(
     dry_run=False,
     project_dir=".",
 ):
+    require_current_gate_for_command(project_dir, "run-integrate", ("impl", "gate4"))
+
     project_abs = os.path.abspath(project_dir)
     run_path = find_run_file(project_abs, run_id)
     if not run_path:
