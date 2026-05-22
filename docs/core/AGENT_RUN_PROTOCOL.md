@@ -234,6 +234,20 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 곧바로 구현하지 않는다. 먼저 단일 worker Run 또는 Build Wave Run으로 작업 범위와 검증 기준을 만든다.
 - Wave 시작과 완료는 `session.json` 수동 편집이 아니라 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 처리한다.
 
+Wave 완료 검증은 전체 Gate 4 QA와 구분한다.
+
+| 구분 | 책임 | 목적 | 예 |
+| --- | --- | --- | --- |
+| Worker self-check | worker | 자기 Run 범위가 깨지지 않았는지 확인 | 단위 테스트, API 계약 테스트, 컴포넌트 테스트, lint/build |
+| Wave 종료 검증 | Orchestrator | 통합된 현재 코드가 Wave 계약과 기존 회귀 기준을 깨지 않았는지 확인 | worker 테스트 재실행, 전체 build, 관련 run-check |
+| Gate 4 QA 검증 | QA/review/evidence | 사용자 시나리오, 화면 증적, 최종 테스트 결과를 판정 | Playwright E2E, 상태/시나리오별 UI 증적, QA Finding/Test Result |
+
+Wave가 전체 사용자 시나리오를 완성하지 않았다면 Wave 종료 시 전체 E2E나 최종 화면 증적을 요구하지 않는다.
+Wave 검증은 Gate 3 테스트 설계 중 해당 Wave의 `target_contracts`에 매핑된 `UT/IT/UI` 또는 smoke 기준까지만 수행한다.
+전체 통합 시나리오, 화면 상태별 증적, QA Pass 판정은 Gate 4에서 수행한다.
+단, 하나의 Wave가 vertical slice를 완성했다면 해당 slice의 smoke 또는 제한된 E2E를 실행할 수 있다.
+이 경우에도 보고 문구는 "전체 통합 테스트 완료"가 아니라 "해당 Wave 범위의 계약 테스트와 가능한 회귀 검증 완료"로 쓴다.
+
 Implementation Plan이 Wave 4개를 정의했다면, 실행 기록은 보통 다음처럼 1:N 구조가 된다.
 
 ```text

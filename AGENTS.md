@@ -115,6 +115,8 @@ docs/adapters/codex-gpt/skills/
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
 - Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent에게 전달할 최소 입력 계약이 된다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
+- Wave 완료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다.
+- 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계

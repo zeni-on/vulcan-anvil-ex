@@ -95,6 +95,8 @@ subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 
 - 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
 - 다음 Wave의 분석, 읽기 전용 검토, 질문 정리는 허용할 수 있지만 코드 수정은 금지한다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
+- Wave 종료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에서 매핑된 검증 범위까지만 완료 판정한다.
+- 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4 검증으로 남긴다. Wave가 vertical slice를 완성한 경우에만 제한된 smoke/E2E를 추가 실행할 수 있다.
 
 권장 흐름:
 
@@ -103,7 +105,7 @@ Implementation Plan Run
 → vulcan.py wave-start BW-001
 → BW-001 Build Wave Run을 subagent 작업지시서로 전달
 → subagent 결과 검토와 통합
-→ 테스트, 추적표, Run 기록 갱신
+→ Wave 범위 테스트 재실행, 추적표 갱신 필요 항목 정리, Run 기록 갱신
 → vulcan.py wave-complete BW-001
 → vulcan.py wave-start BW-002
 ```

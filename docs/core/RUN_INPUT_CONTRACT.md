@@ -239,6 +239,7 @@ completion_criteria:
   - "target_contracts의 기능/프로그램/API/DB/보안/테스트 계약을 완결된 조각으로 닫는다."
   - "interface_contract의 public signature, schema, error contract와 구현이 모순되지 않는다."
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 검증 명령을 남긴다."
+  - "Wave/worker 검증은 담당 계약 테스트와 가능한 회귀 검증까지만 의미하며, 전체 E2E/QA Pass로 보고하지 않는다."
   - "추적표, session, Gate 전환 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
 
 verification:

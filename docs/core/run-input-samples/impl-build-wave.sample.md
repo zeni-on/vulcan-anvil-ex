@@ -124,6 +124,7 @@ ui_implementation_contract_policy:
 - 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 작업 중간에 끊지 않고, 예상 범위가 크면 시작 전에 Run을 더 작게 나눈다.
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
 - 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 worker 결과를 통합하고 worker가 만든 테스트케이스를 재실행한다.
+- Wave 종료 검증은 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다. 전체 사용자 시나리오, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 Orchestrator가 구현 범위, 재실행한 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
 - worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
 
@@ -183,6 +184,7 @@ completion_criteria:
   - "UI Implementation Contract와 Gate 3 UI 테스트 기준을 구현 전 확인한다."
   - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 깨진 중간 구현을 완료 처리하지 않는다."
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."
+  - "Wave 검증은 담당 계약 테스트와 가능한 회귀 검증까지만 의미하며, 전체 E2E/QA Pass로 보고하지 않는다."
   - "가능하면 worker self-check를 실행하고, 실행하지 못하면 Not Run 사유를 남긴다."
   - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
 verification:

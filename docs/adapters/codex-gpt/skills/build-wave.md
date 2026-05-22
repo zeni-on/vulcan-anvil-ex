@@ -39,6 +39,21 @@ Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다.
 12. 작업자 runner로 실행 중이면 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `vulcan.py check-trace`를 직접 실행하지 않고 Orchestrator에게 실행 필요 여부를 보고한다. Orchestrator는 worker 결과를 통합하고, worker가 만든 테스트케이스를 재실행한 뒤 `wave-complete`와 `sync-session`으로 session 상태를 갱신하고 `check-trace`를 실행한다.
 13. 커밋 후보 메시지를 보고한다. 사용자가 승인하거나 자동 커밋 정책이 있으면 Wave 단위로 커밋한다.
 
+## 검증 경계
+
+Build Wave는 전체 Gate 4 QA가 아니다.
+
+| 구분 | 수행자 | Wave에서의 의미 |
+| --- | --- | --- |
+| worker self-check | worker | 자기 수정 범위의 단위 테스트, API/컴포넌트 테스트, lint/build를 가능한 만큼 실행한다. |
+| Wave 종료 검증 | Orchestrator | worker 테스트를 재실행하고, 현재까지 가능한 build/run-check/회귀 검증으로 통합 깨짐을 확인한다. |
+| Gate 4 QA | QA/review/evidence | 전체 사용자 시나리오, Playwright 화면 증적, Test Result, QA Finding을 확정한다. |
+
+Wave가 전체 사용자 시나리오를 완성하지 않았다면 전체 E2E나 최종 화면 증적을 Wave 완료 조건으로 요구하지 않는다.
+Gate 3 테스트 설계에서 이 Wave의 `target_contracts`에 매핑된 `UT/IT/UI`와 필요한 smoke 기준만 Wave 검증으로 수행한다.
+Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행할 수 있지만, 최종 QA Pass는 Gate 4에서만 판정한다.
+완료 보고에는 "전체 통합 테스트 완료" 대신 "Wave 범위 계약 테스트와 가능한 회귀 검증 완료"처럼 범위를 명확히 쓴다.
+
 ## Orchestrator와 subagent 책임
 
 - Orchestrator는 Wave 작업지시서 작성, subagent/worker 위임, 결과 검토, 통합, worker 테스트케이스 재실행, 상태 갱신을 담당한다.
@@ -71,7 +86,8 @@ Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다.
 - 구현 파일의 패키지 구조, logger 선언, 주석/JavaDoc, 예외/메시지 처리가 개발표준정의서와 모순되지 않는다.
 - 담당 테스트케이스와 Orchestrator 재실행 명령이 남아 있으며, worker self-check 결과 또는 Not Run 사유가 기록되어 있다.
 - 실패한 테스트는 숨기지 않고 `FIND` 또는 `ISSUE`로 남긴다.
-- Orchestrator가 worker 테스트케이스를 재실행하고 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `python vulcan.py check-trace`로 session/추적성을 갱신했거나, 작업자 runner가 갱신 필요 항목으로 보고했다.
+- Orchestrator가 worker 테스트케이스와 현재 Wave 범위에서 가능한 회귀 검증을 재실행하고 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `python vulcan.py check-trace`로 session/추적성을 갱신했거나, 작업자 runner가 갱신 필요 항목으로 보고했다.
+- Wave 완료를 Gate 4 QA Pass나 전체 E2E 완료로 표현하지 않는다.
 - 다음 Wave 진행 가능 여부와 남은 위험을 보고한다.
 
 ## 출력

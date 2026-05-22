@@ -4289,6 +4289,12 @@ worker_run_sizing_policy:
     - "Run 하나만 반영해도 빌드 또는 담당 테스트가 깨지지 않아야 한다."
     - "15분을 넘길 것으로 예상되면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 분리한다."
     - "시간이 끝났다는 이유로 컴파일/테스트가 깨진 반쪽 구현을 완료 처리하지 않는다."
+wave_verification_boundary:
+  scope:
+    - "Gate 3 테스트 설계 중 이 Wave의 target_contracts에 매핑된 UT/IT/UI 또는 smoke 기준만 Wave 검증으로 수행한다."
+    - "Wave가 전체 사용자 시나리오를 완성하지 않았다면 전체 E2E, 상태별 화면 증적, QA Pass를 Wave 완료 조건으로 요구하지 않는다."
+    - "전체 통합 시나리오와 Playwright 화면 증적 판정은 Gate 4 QA에서 수행한다."
+  reporting_rule: "완료 보고는 전체 통합 테스트 완료가 아니라 Wave 범위 계약 테스트와 가능한 회귀 검증 완료로 쓴다."
 verification_results: []
 evidence: []
 traceability_updates: []
@@ -4314,6 +4320,7 @@ open_issues: []
 - `scope.writable`에 `TBD`가 남아 있으면 코드 수정 전에 Orchestrator에게 수정 허용 경로를 요청한다.
 - 작업 단위는 기능/계약 단위로 완결되어야 하며, 목표 10분 내외/최대 15분 기준은 쪼개기 보조 기준이다.
 - 시간이 부족하다는 이유로 빌드/테스트가 깨지는 중간 구현을 완료 처리하지 않는다.
+- Wave 검증은 담당 계약 테스트와 현재까지 가능한 회귀 검증까지만 의미한다. 전체 E2E, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
 
 ## 4. Orchestrator 지시
 
@@ -4322,6 +4329,7 @@ open_issues: []
 - 다른 Build Wave의 코드 수정은 하지 않는다.
 - subagent를 병렬 실행하더라도 이 Wave의 수정 허용 범위 안에서만 작업한다.
 - 구현 결과는 Orchestrator가 검토하고 통합한다.
+- Orchestrator는 worker 테스트케이스와 해당 Wave 범위의 가능한 회귀 검증을 재실행한다. 전체 시나리오 검증이 불가능한 Wave를 전체 통합 테스트 완료로 보고하지 않는다.
 - 작업자 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
 - `session.json`의 `current_gate`, `gate_status`, `completed`는 직접 변경하지 않는다.
 - 완료 시 테스트, 추적표, Run 기록을 갱신하고 Orchestrator에게 `wave-complete {bw_id}` 실행 필요 여부를 보고한다.
