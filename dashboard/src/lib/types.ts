@@ -201,6 +201,14 @@ export interface RuntimeActivity {
   last_message?: string
   summary?: string
   result_file?: string
+  events: RuntimeActivityEvent[]
+}
+
+export interface RuntimeActivityEvent {
+  at?: string
+  phase?: string
+  status?: string
+  message?: string
 }
 
 export interface RuntimeWorktree {

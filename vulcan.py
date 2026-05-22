@@ -5128,6 +5128,9 @@ def agent_status_rel_path(project_dir, target_id, runner):
 
 
 def write_agent_activity(project_dir, activity):
+    events = activity.get("events")
+    if isinstance(events, list) and len(events) > 100:
+        activity["events"] = events[-100:]
     rel_path = agent_activity_rel_path(project_dir, activity["target_id"], activity["runner"])
     abs_path = os.path.abspath(os.path.join(project_dir, rel_path))
     os.makedirs(os.path.dirname(abs_path), exist_ok=True)
@@ -5135,6 +5138,27 @@ def write_agent_activity(project_dir, activity):
         json.dump(activity, f, ensure_ascii=False, indent=2)
         f.write("\n")
     return rel_path
+
+
+def append_agent_event(activity, phase, message, status=None):
+    clean_message = truncate_dashboard_message(message or phase or status or "worker activity")
+    event = {
+        "at": datetime.now().isoformat(timespec="seconds"),
+        "phase": phase or activity.get("phase") or status or "running",
+        "message": clean_message,
+    }
+    if status:
+        event["status"] = status
+    events = activity.setdefault("events", [])
+    if not isinstance(events, list):
+        events = []
+        activity["events"] = events
+    if events and events[-1].get("phase") == event["phase"] and events[-1].get("message") == event["message"]:
+        events[-1] = event
+    else:
+        events.append(event)
+    if len(events) > 100:
+        activity["events"] = events[-100:]
 
 
 def write_agent_status(project_dir, status):
@@ -5579,6 +5603,8 @@ def make_runner_resume_capture(project_dir, activity, current_task):
                 status_task = log_update.get("current_task") or status_task
             if not should_update:
                 return
+            event_message = activity.get("current_message") or status_task or status_phase
+            append_agent_event(activity, status_phase or "running", event_message, status="running")
             write_agent_activity(project_dir, activity)
             status = activity_status_payload(activity)
             status.update({
@@ -6316,6 +6342,7 @@ Rules:
         "result_file": result_rel_path.replace("\\", "/"),
         "status_file": status_rel_path.replace("\\", "/"),
     }
+    append_agent_event(activity, "started", f"{review_id} 독립 검수 시작", status="running")
     activity_rel_path = write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
         "target_type": "review",
@@ -6402,6 +6429,12 @@ Rules:
     })
     activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
+    append_agent_event(
+        activity,
+        "completed" if run_status == "completed" else run_status,
+        f"{review_id} 검수 결과 작성 완료" if result_changed else f"{review_id} 결과 파일 미갱신",
+        status=run_status,
+    )
     write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
         "target_type": "review",
@@ -6788,6 +6821,7 @@ Rules:
         "summary": summary_rel_path.replace("\\", "/"),
         "status_file": status_rel_path.replace("\\", "/"),
     }
+    append_agent_event(activity, "started", f"{run_id} worker 실행 시작", status="running")
     activity_rel_path = write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
         "target_type": "run",
@@ -6866,6 +6900,12 @@ Rules:
     })
     activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
+    append_agent_event(
+        activity,
+        "completed" if run_status == "completed" else run_status,
+        f"{run_id} worker 결과 작성 완료" if run_file_changed or changed_files else f"{run_id} 변경 없음",
+        status=run_status,
+    )
     write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
         "target_type": "run",

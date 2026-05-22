@@ -92,6 +92,13 @@ describe('LocalDataSource.getRuntime() — worker status heartbeat', () => {
         status: 'running',
         started_at: '2026-05-21T22:00:00',
         status_file: 'docs/runs/_exec/RV-001_codex-status.json',
+        events: [
+          {
+            at: '2026-05-21T22:00:00',
+            phase: 'started',
+            message: 'RV-001 독립 검수 시작',
+          },
+        ],
       }),
       'utf-8',
     )
@@ -115,6 +122,9 @@ describe('LocalDataSource.getRuntime() — worker status heartbeat', () => {
       target_id: 'RV-001',
       current_task: 'Gate2 상류 정합성 검토 중',
       phase: 'reviewing',
+      events: expect.arrayContaining([
+        expect.objectContaining({ message: 'RV-001 독립 검수 시작' }),
+      ]),
     }))
   })
 })

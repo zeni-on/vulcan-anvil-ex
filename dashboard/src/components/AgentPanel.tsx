@@ -1,8 +1,9 @@
 'use client'
 
-import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, XCircle, type LucideIcon } from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, X, XCircle, type LucideIcon } from 'lucide-react'
 import RunnerStatusPanel from '@/components/RunnerStatusPanel'
-import { ProjectRuntime, RuntimeActivity, RuntimeWorktree } from '@/lib/types'
+import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeWorktree } from '@/lib/types'
 
 function worktreeTone(status: string): {
   label: string
@@ -90,7 +91,31 @@ function activityTask(activity: RuntimeActivity): string {
   return activity.phase || activity.status
 }
 
-function ActivityRow({ activity }: { activity: RuntimeActivity }) {
+function activityEvents(activity: RuntimeActivity): RuntimeActivityEvent[] {
+  const events = activity.events ?? []
+  if (events.length > 0) return events
+  return [{
+    at: activity.last_update,
+    phase: activity.phase || activity.status,
+    status: activity.status,
+    message: activityTask(activity),
+  }]
+}
+
+function eventTime(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function ActivityRow({
+  activity,
+  onSelect,
+}: {
+  activity: RuntimeActivity
+  onSelect: (activity: RuntimeActivity) => void
+}) {
   const tone = activityTone(activity)
   const age = formatAge(activity.last_update_age_seconds)
   const targetType = activity.target_type === 'review' ? 'Review' : 'Run'
@@ -103,8 +128,10 @@ function ActivityRow({ activity }: { activity: RuntimeActivity }) {
   ].filter(Boolean).join('\n')
 
   return (
-    <li
-      className="min-w-0 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5"
+    <button
+      type="button"
+      onClick={() => onSelect(activity)}
+      className="block w-full min-w-0 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5 text-left hover:border-cyan-700/70 hover:bg-slate-900/70"
       title={title}
       data-testid="agent-worker-line"
     >
@@ -123,7 +150,101 @@ function ActivityRow({ activity }: { activity: RuntimeActivity }) {
         </p>
       )}
       <span className="sr-only">{tone.label}</span>
-    </li>
+    </button>
+  )
+}
+
+function ActivityDrawer({
+  activity,
+  onClose,
+}: {
+  activity: RuntimeActivity | null
+  onClose: () => void
+}) {
+  if (!activity) return null
+
+  const tone = activityTone(activity)
+  const targetType = activity.target_type === 'review' ? 'Review' : 'Run'
+  const events = activityEvents(activity).slice(-100).reverse()
+  const identity = activity.thread_id || activity.session_id || activity.resume_hint
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="worker activity detail">
+      <div className="ml-auto flex h-full w-full max-w-xl flex-col rounded-lg border border-slate-700 bg-slate-950 shadow-2xl">
+        <header className="border-b border-slate-800 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${tone.dotClassName}`} aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-sm font-semibold text-slate-100">
+                  {runnerLabel(activity.runner)} · {targetType} {activity.target_id}
+                </h2>
+                <span className="shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                  {activity.status}
+                </span>
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-400">
+                {activityTask(activity)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-slate-700 p-1 text-slate-400 hover:border-slate-500 hover:text-slate-100"
+              aria-label="닫기"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+
+        <div className="grid gap-2 border-b border-slate-800 px-4 py-3 text-[11px] text-slate-400">
+          <div className="grid grid-cols-[80px_1fr] gap-2">
+            <span className="text-slate-600">target</span>
+            <span className="truncate">{activity.target_id}</span>
+          </div>
+          <div className="grid grid-cols-[80px_1fr] gap-2">
+            <span className="text-slate-600">runner</span>
+            <span className="truncate">{activity.runner}</span>
+          </div>
+          {identity && (
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <span className="text-slate-600">session</span>
+              <span className="truncate">{identity}</span>
+            </div>
+          )}
+          {activity.log && (
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <span className="text-slate-600">log</span>
+              <span className="truncate">{activity.log}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          <ol className="space-y-2">
+            {events.map((event, index) => (
+              <li key={`${event.at ?? 'event'}-${index}`} className="rounded-md border border-slate-800 bg-slate-900/45 px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2 text-[11px]">
+                  <span className="shrink-0 text-slate-500">{eventTime(event.at)}</span>
+                  {event.phase && (
+                    <span className="min-w-0 truncate rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                      {event.phase}
+                    </span>
+                  )}
+                  {event.status && (
+                    <span className="ml-auto shrink-0 text-[10px] text-slate-500">{event.status}</span>
+                  )}
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-xs leading-4 text-slate-200">
+                  {event.message || event.phase || event.status || 'worker activity'}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -183,6 +304,7 @@ export default function AgentPanel({
   isLoading?: boolean
   error?: unknown
 }) {
+  const [selectedActivity, setSelectedActivity] = useState<RuntimeActivity | null>(null)
   const activities = runtime?.active_executions ?? []
   const worktrees = runtime?.worktrees ?? []
   const visibleActivities = activities
@@ -191,7 +313,8 @@ export default function AgentPanel({
 
   return (
     <div className="space-y-4" data-testid="agent-panel">
-      <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} />
+      <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={setSelectedActivity} />
+      <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
 
       <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
@@ -202,7 +325,9 @@ export default function AgentPanel({
         ) : (
           <ul className="space-y-1.5">
             {visibleActivities.map((activity) => (
-              <ActivityRow key={`${activity.runner}-${activity.target_id}`} activity={activity} />
+              <li key={`${activity.runner}-${activity.target_id}`}>
+                <ActivityRow activity={activity} onSelect={setSelectedActivity} />
+              </li>
             ))}
           </ul>
         )}

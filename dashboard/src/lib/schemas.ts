@@ -186,6 +186,12 @@ export const RuntimeActivitySchema = z.object({
   last_message: z.string().optional(),
   summary: z.string().optional(),
   result_file: z.string().optional(),
+  events: z.array(z.object({
+    at: z.string().optional(),
+    phase: z.string().optional(),
+    status: z.string().optional(),
+    message: z.string().optional(),
+  })).default([]),
 })
 
 export const RuntimeWorktreeSchema = z.object({

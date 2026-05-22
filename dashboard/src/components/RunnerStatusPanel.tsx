@@ -80,11 +80,13 @@ export default function RunnerStatusPanel({
   isLoading,
   error,
   compact = false,
+  onActivitySelect,
 }: {
   runtime: ProjectRuntime | null
   isLoading?: boolean
   error?: unknown
   compact?: boolean
+  onActivitySelect?: (activity: RuntimeActivity) => void
 }) {
   if (isLoading) {
     return (
@@ -141,13 +143,23 @@ export default function RunnerStatusPanel({
             const runningActivity = runningActivities.find(
               (activity) => runnerFamily(activity.runner) === runnerFamily(runner.name),
             )
+            const selectable = Boolean(runningActivity && onActivitySelect)
 
             return (
               <li
                 key={runner.name}
+                role={selectable ? 'button' : undefined}
+                tabIndex={selectable ? 0 : undefined}
+                onClick={selectable ? () => onActivitySelect?.(runningActivity!) : undefined}
+                onKeyDown={selectable ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onActivitySelect?.(runningActivity!)
+                  }
+                } : undefined}
                 className={
                   runningActivity
-                    ? 'flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.08)]'
+                    ? `flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.08)] ${selectable ? 'cursor-pointer hover:border-emerald-300/60 hover:bg-emerald-500/15' : ''}`
                     : 'flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5'
                 }
               >
