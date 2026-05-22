@@ -19,11 +19,9 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { X, AlertCircle, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
-import { isQaDoc, parseQaDoc } from '@/lib/qaDoc'
 import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
 import { isTraceabilityDoc, parseTraceabilityDoc } from '@/lib/traceabilityDoc'
 import MermaidBlock from './MermaidBlock'
-import QaDocView from './QaDocView'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
 
@@ -184,8 +182,6 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
         <TraceabilityDocView model={parseTraceabilityDoc(content)} />
       ) : content && isScreenSpecDoc(doc, content) ? (
         <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
-      ) : content && isQaDoc(doc, content) ? (
-        <QaDocView model={parseQaDoc(content)} projectId={projectId} />
       ) : (
         <div className="rounded-md bg-slate-100 p-4 text-slate-800">
           {hasMetadataHeader && (

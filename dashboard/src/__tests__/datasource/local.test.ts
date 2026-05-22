@@ -71,6 +71,54 @@ describe('UT-002-04: LocalDataSource.getSession() — 파일 존재 시 정상 �
   })
 })
 
+describe('LocalDataSource.getRuntime() — worker status heartbeat', () => {
+  it('activity와 status 파일을 병합해 worker 한 줄 상태를 반환한다', async () => {
+    fs.mkdirSync(path.join(tmpDir, 'docs', 'runs', '_exec'), { recursive: true })
+    fs.writeFileSync(
+      path.join(tmpDir, 'vulcan.config.json'),
+      JSON.stringify({
+        runtime: {
+          available_runners: [{ name: 'codex-cli', model: 'gpt-5.5', effort: 'high' }],
+        },
+      }),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', 'runs', '_exec', 'RV-001_codex-activity.json'),
+      JSON.stringify({
+        target_type: 'review',
+        target_id: 'RV-001',
+        runner: 'codex-cli',
+        status: 'running',
+        started_at: '2026-05-21T22:00:00',
+        status_file: 'docs/runs/_exec/RV-001_codex-status.json',
+      }),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', 'runs', '_exec', 'RV-001_codex-status.json'),
+      JSON.stringify({
+        target_type: 'review',
+        target_id: 'RV-001',
+        runner: 'codex-cli',
+        status: 'running',
+        phase: 'reviewing',
+        current_task: 'Gate2 상류 정합성 검토 중',
+      }),
+      'utf-8',
+    )
+
+    const ds = new LocalDataSource({ path: tmpDir })
+    const runtime = await ds.getRuntime()
+
+    expect(runtime?.active_executions[0]).toEqual(expect.objectContaining({
+      target_id: 'RV-001',
+      current_task: 'Gate2 상류 정합성 검토 중',
+      phase: 'reviewing',
+    }))
+  })
+})
+
 // ── UT-002-05: 파일 부재 시 기본값 Session 반환 ───────────────────────────────
 
 describe('UT-002-05: LocalDataSource.getSession() — 파일 부재 시 기본값 반환', () => {

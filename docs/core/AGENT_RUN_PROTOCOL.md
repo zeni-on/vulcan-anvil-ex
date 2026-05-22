@@ -28,7 +28,7 @@ Run은 다음 중 하나의 목적을 가진다.
 | Run 유형 | 목적 | 대표 산출물 |
 | --- | --- | --- |
 | Discovery Run | 요구사항, 참조문서, 현행 코드 분석 | 분석 메모, 질문 목록, `DEC`, `RISK` |
-| Design Run | 요구사항을 설계 산출물로 전개 | SW 아키텍처 정의서, 기능명세, 화면명세, 프로그램명세, DB명세 |
+| Design Run | 요구사항을 설계 산출물로 전개 | SW 아키텍처 정의서, 기능명세, 화면명세, 프로그램 설계, DB명세 |
 | Screen Design Run | 화면 구조와 시안을 `SCR-ID`에 연결 | 화면설계서, 와이어프레임, 시안 이미지, 기준 viewport |
 | Design Review Run | Gate 3 진입 전 설계 완성도를 검수 | 보안 검토, 화면 검토, 개발표준 검토 |
 | Implementation Run | 승인된 설계를 코드로 구현 | 소스 코드, 설정, 리소스, 마이그레이션 |
@@ -97,7 +97,7 @@ scope:
     - app/services/work_item_service.py
   readonly:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
-    - docs/artifacts/02-design/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
     - docs/seed-docs/reference-standards/
   excluded:
     - docs/ref-docs/
@@ -214,7 +214,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 
 ## 5.3 Implementation Plan과 Build Wave
 
-구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 여러 `Build Wave`로 나눈다. 작은 단일 Run 구현은 Build Wave를 생략할 수 있다.
+구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행한다.
 
 | 개념 | 의미 | 산출물 |
 | --- | --- | --- |
@@ -231,6 +231,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 - 구현 중 active Wave는 하나만 둔다. 여러 Wave를 동시에 코드 수정 상태로 진행하지 않는다.
 - 하나의 Wave 내부에서는 수정 범위가 겹치지 않는 subagent 병렬 작업을 허용할 수 있다.
 - Orchestrator는 기능 구현의 주 작성자가 아니라 작업지시, 검토, 통합, 검증, 상태 갱신 책임자다.
+- 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 곧바로 구현하지 않는다. 먼저 단일 worker Run 또는 Build Wave Run으로 작업 범위와 검증 기준을 만든다.
 - Wave 시작과 완료는 `session.json` 수동 편집이 아니라 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 처리한다.
 
 Implementation Plan이 Wave 4개를 정의했다면, 실행 기록은 보통 다음처럼 1:N 구조가 된다.
@@ -247,8 +248,9 @@ RUN-014_build-wave-BW-004_...md
 
 작업자 runner에게 전달하는 `Build Wave Run`은 Orchestrator 통합 Run보다 얇아야 한다.
 작업자 Run의 `working_documents`에는 현재 Run 문서, 담당 구현에 직접 필요한 개발표준/테스트케이스/UI 기준선만 두고, 요구사항정의서와 전체 설계 산출물은 `reference_on_demand`에 둔다.
-작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 담당 증적 경로, 자기 Run 문서만 포함한다.
-`session.json`, Gate 상태, 전체 추적표 갱신, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
+작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 자기 Run 문서만 포함한다.
+화면 증적처럼 worker가 직접 만들어야 하는 파일이 있을 때만 담당 증적 경로를 추가한다.
+`session.json`, Gate 상태, 전체 추적표 갱신, 테스트 결과서 확정, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
 
 Orchestrator는 worker worktree의 파일을 손으로 복사하지 않는다.
 worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 변경 파일을 수집하고, `scope.writable`/`scope.excluded` 위반 여부를 먼저 판정한다.
@@ -256,12 +258,25 @@ worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으
 `run-integrate --apply`는 허용 diff를 반영하는 팬인 동작일 뿐이며, 테스트 작성, 코드 보정, 추적표 보정, Gate/session 갱신을 대신하지 않는다.
 
 Codex desktop의 `spawn_agent` 같은 같은 세션 계열 subagent는 보조 작업자로 쓸 수 있지만, 공식 Build Wave 자동화에서는 `run-exec`/worker Run 기록을 남기는 방식을 우선한다.
-subagent가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 정규화하고, 변경 파일과 검증 결과를 다시 확인한다.
+subagent가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 정규화하고, 변경 파일을 확인한 뒤 worker가 만든 테스트케이스를 재실행한다.
 
-Build Wave를 생략하는 경우 구현 Run은 다음을 남긴다.
+Orchestrator 직접 수정 예외:
+
+- 허용 예외: worker 결과 통합 중 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 보정, 명백한 오타나 경로 오류 수정.
+- 금지 기본값: 신규 기능 코드 작성, API/DB/UI 동작 구현, 테스트 케이스 본문 작성, 개발표준 위반 리팩터링을 Orchestrator가 혼자 완료 처리하는 것.
+- 예외 사용 시 Run에 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 worker 또는 QA 검수 필요 여부를 남긴다.
+
+CLI worker 실행에서는 `docs/runs/_exec/<TARGET-ID>_<runner>-status.json` heartbeat를 남긴다.
+worker는 정확한 시간 간격을 맞추는 대신 시작, 컨텍스트 로딩, 편집, 테스트, 결과 작성, 완료/차단/실패처럼 단계가 바뀔 때 `phase`와 `current_task`를 갱신한다.
+Orchestrator와 대시보드는 이 파일의 수정시각과 한 줄 `current_task`를 보고 worker가 실제로 움직이는지 판단한다.
+Codex/Claude처럼 resume 가능한 runner는 `thread_id` 또는 `session_id`가 남아 있으면 무결과/준비응답 실패를 1회 재지시로 회수할 수 있다.
+resume도 대시보드에 보이게 하려면 원시 CLI 명령을 직접 실행하지 않고 `python vulcan.py agent-resume --target-id RV-NNN|RUN-NNN --runner codex-cli|claude-cli`로 실행한다.
+
+Build Wave 분할을 생략하는 경우에도 구현 Run은 worker 실행 단위여야 하며 다음을 남긴다.
 
 - 생략 이유
 - 단일 Run으로 처리할 구현 범위
+- 담당 worker 또는 subagent
 - 관련 ID
 - 실행할 테스트와 검증 명령
 - 추적표 갱신 기준
@@ -329,10 +344,14 @@ Implementation Run은 다음 조건을 만족해야 완료할 수 있다.
 구현 착수 전에 build persona 또는 Build Wave Run은 개발표준정의서의 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령 기준을 확인하고 작업지시서에 준수 항목을 남겨야 한다.
 Spring Boot 프로젝트에서 `domain/{feature}` 래퍼를 쓰려면 DDD 구조 선택 사유가 개발표준정의서에 있어야 하며, 사유가 없으면 base package 바로 아래 `auth/`, `user/`, `{feature}/`, `security/`, `common/` 구조를 기준으로 구현한다.
 로깅과 주석 기준이 비어 있거나 구현자가 바로 적용할 수 없으면 코딩으로 넘어가지 않고 개발표준 보완 `FIND` 또는 범위 변경 `CR`로 분류한다.
+프로그램 설계서는 구현 계약이다. 구현 worker는 관련 `PGM-ID`, 컴포넌트 책임, Interface Contract, Abstract Base Contract, Public Method Contract, DTO/Entity/Data Contract, 오류/예외/메시지, 트랜잭션/보안/로깅 기준을 확인한 뒤 작업한다.
+Build Wave와 worker Run은 시간이나 파일 개수가 아니라 닫힌 기능/프로그램 계약 단위로 나눈다. 10분 내외, 최대 15분 권장은 보조 기준이며, 시간이 부족하다는 이유로 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다.
 
 | 조건 | 최소 확인 |
 | --- | --- |
 | 개발표준 준수 | 개발표준정의서가 Draft가 아니고 언어, 기술스택 베이스라인, 구조, 메시지, 주석, 테스트, 보안 기준, 필수 검증 명령을 가진다. |
+| 프로그램 계약 준수 | 관련 프로그램 설계서의 컴포넌트, 인터페이스, public method, DTO/Entity, 오류/보안/로깅 계약과 구현이 모순되지 않는다. |
+| Run 분할 적정성 | worker Run의 `target_contracts`가 완료 가능한 기능/프로그램 계약 단위이고 시간 기준은 보조 기준으로만 사용된다. |
 | 구현 파일 연결 | 요구사항추적표의 증적에 실제 구현 파일 경로가 연결된다. |
 | 추적 ID 표시 | 구현 또는 테스트 파일 안에 관련 `REQ`, `PGM`, `SCR`, `SEC`, `UT`, `IT` 중 하나 이상의 ID가 남는다. |
 | 테스트 실행 | Gate 3에서 정의한 테스트와 개발표준정의서의 필수 검증 명령이 실행되고 Pass/Fail/Skip/Not Run 상태가 기록된다. |
@@ -364,7 +383,7 @@ Spring Boot 프로젝트에서 `domain/{feature}` 래퍼를 쓰려면 DDD 구조
 
 에이전트가 코드를 변경하면 최소한 다음 항목을 점검한다.
 
-- 관련 프로그램명세의 `PGM` 설명과 실제 구현이 맞는가
+- 관련 프로그램 설계의 `PGM` 설명과 실제 구현이 맞는가
 - 관련 화면명세의 `SCR` 설명과 실제 화면이 맞는가
 - 관련 테스트케이스의 `UT`, `IT`, `PT`, `UI`가 존재하는가
 - 테스트 결과서가 최신 실행 결과를 반영하는가

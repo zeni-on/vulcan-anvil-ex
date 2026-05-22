@@ -10,6 +10,12 @@ gate: "impl"
 skill: "implementation-plan"
 persona: "build-planning"
 related_ids: [REQ-001, PGM-001, UT-001, IT-001]
+target_contracts:
+  func: [FUNC-001]
+  pgm: [PGM-001]
+  api: [API-001]
+  db: [DB-001]
+  test: [UT-001, IT-001]
 runner_hint:
   frontend: "claude-cli"
   backend: "codex-cli"
@@ -22,19 +28,23 @@ source_documents:
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/adapters/codex-gpt/skills/implementation-plan.md
   working_documents:
-    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
-    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   reference_on_demand:
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/ID_SYSTEM.md
     - docs/core/ORCHESTRATOR_PROTOCOL.md
     - docs/core/AGENT_PERSONAS.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
+    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
+    - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
+    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
 scope:
   writable:
     - docs/runs/
@@ -48,8 +58,19 @@ completion_criteria:
   - "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다."
   - "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다."
   - "Frontend Wave와 Backend Wave가 분리되어 있고, 기본 runner가 각각 claude-cli/codex-cli로 제안되어 있다."
-  - "구현 변경은 테스트 코드, 테스트 결과, 추적표 갱신과 연결된다."
+  - "각 worker Run은 기능/프로그램 계약 단위로 분리되고 target_contracts가 명확하다."
+  - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
+  - "구현 변경은 작성/갱신한 테스트케이스, Orchestrator 재실행 명령, 추적표 갱신 필요 항목과 연결된다."
   - "동시에 active 상태인 Build Wave가 하나만 유지된다."
+worker_run_sizing_policy:
+  primary_split_basis: "feature_contract_unit"
+  target_minutes: 10
+  max_minutes: 15
+  time_is_secondary: true
+  rules:
+    - "Run은 닫힌 FUNC/PGM/API/DB/SEC/TEST 계약 묶음이어야 한다."
+    - "15분을 넘길 것으로 예상되면 작업을 시작하기 전에 더 작은 계약 단위로 분리한다."
+    - "시간이 부족해도 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
 development_standard_policy:
   required: true
   block_implementation_when_missing:
@@ -95,11 +116,15 @@ ui_implementation_contract_policy:
 ## Review Notes
 
 - 중간 이상 구현은 `implementation-plan`으로 Wave를 먼저 나눈 뒤 `build-wave`로 실행한다.
-- 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 테스트케이스, 추적표를 우선 작업 문서로 둔다.
+- 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. 단일 worker Run 또는 `agent-run --mode work`로 실행한다.
+- Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
+- 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
 - API/화면/프로그램/DB/보안 설계는 related ID나 기준 충돌이 있을 때 필요한 문서만 `reference_on_demand`에서 확인한다.
+- 작업 범위는 문서 목록이 아니라 `target_contracts`의 기능/프로그램 계약 단위로 닫는다.
+- 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 작업 중간에 끊지 않고, 예상 범위가 크면 시작 전에 Run을 더 작게 나눈다.
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
-- 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 검증과 review Run을 분리한다.
-- 구현 완료 후 Gate 4 QA로 넘어가기 전 구현 범위, 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
+- 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 worker 결과를 통합하고 worker가 만든 테스트케이스를 재실행한다.
+- 구현 완료 후 Gate 4 QA로 넘어가기 전 Orchestrator가 구현 범위, 재실행한 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
 - worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
 
 ## Worker Build Wave 예시
@@ -114,6 +139,11 @@ gate: "impl"
 skill: "build-wave"
 persona: "build"
 related_ids: [REQ-001, SCR-001, UI-001, UT-001]
+target_contracts:
+  func: [FUNC-001]
+  scr: [SCR-001]
+  ui: [UI-001]
+  test: [UT-001]
 source_documents:
   read_first:
     - AGENTS.md
@@ -149,10 +179,14 @@ scope:
     - "**/.next/"
 completion_criteria:
   - "담당 Wave 범위만 구현하고 다른 worker 범위는 수정하지 않는다."
+  - "target_contracts의 기능/화면/UI/테스트 계약을 완결된 조각으로 닫는다."
   - "UI Implementation Contract와 Gate 3 UI 테스트 기준을 구현 전 확인한다."
-  - "담당 테스트, 린트, 빌드를 실행하고 결과를 현재 Run에 남긴다."
+  - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 깨진 중간 구현을 완료 처리하지 않는다."
+  - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."
+  - "가능하면 worker self-check를 실행하고, 실행하지 못하면 Not Run 사유를 남긴다."
   - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
 verification:
+  owner: "orchestrator-rerun"
   commands:
     - "npm run lint"
     - "npm run build"
@@ -167,4 +201,14 @@ worker_execution_policy:
     - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
     - "사용자 승인, QA Pass, merge 가능 여부를 최종 판단하지 않는다."
     - "scope.writable 밖 파일을 수정하지 않는다."
+worker_run_sizing_policy:
+  primary_split_basis: "feature_contract_unit"
+  target_minutes: 10
+  max_minutes: 15
+  time_is_secondary: true
+  rules:
+    - "Run은 닫힌 FUNC/SCR/UI/TEST 계약 묶음이어야 한다."
+    - "15분을 넘길 것으로 예상되면 시작 전에 더 작은 Run으로 분리하도록 보고한다."
+    - "시간이 부족해도 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
 ```
+

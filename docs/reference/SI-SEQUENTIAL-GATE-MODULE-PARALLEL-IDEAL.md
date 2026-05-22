@@ -157,7 +157,7 @@ Ex는 SI형 순차 Gate를 유지하되, 설계가 고정된 뒤 모듈 단위 B
 - SW Architecture
 - Function Spec
 - Screen Spec
-- Program Spec
+- Program Design
 - Database Spec
 - API Spec
 - Security Guide

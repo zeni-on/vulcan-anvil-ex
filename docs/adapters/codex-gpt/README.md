@@ -5,7 +5,7 @@
 
 ## 1. 범위
 
-Codex/GPT Adapter는 사람이 Codex 또는 GPT 계열 에이전트와 함께 개발할 때 필요한 입력, 실행 지침, 출력 정규화 방식을 정의한다.
+Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출, 실행 지침, 출력 정규화 방식으로 변환한다.
 
 이 Adapter는 다음 작업을 우선 지원한다.
 
@@ -44,22 +44,19 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 ## 4. 기본 실행 순서
 
 ```text
-1. Run 입력 확인
-2. 관련 문서 읽기
-3. 추적표에서 관련 ID 확인
-4. 구현 또는 문서 수정
-5. 테스트 실행
-6. 증적 생성
-7. 추적표와 결과서 갱신
-8. Run 출력 정리
+1. `docs/core/RUN_INPUT_CONTRACT.md` 형식의 Run 입력 확인
+2. Codex/GPT runner에 맞는 프롬프트와 실행 옵션 구성
+3. 관련 문서와 scope를 runner에게 전달
+4. runner 실행 로그, 상태, 마지막 메시지 수집
+5. Run 출력 정리
 ```
 
 ## 5. 다음 작성 대상
 
 본 Adapter는 다음 문서를 기준으로 구체화한다.
 
-- `RUN_INPUT_CONTRACT.md`
-- `RUN_OUTPUT_CONTRACT.md`
+- `docs/core/RUN_INPUT_CONTRACT.md`
+- `docs/core/RUN_OUTPUT_CONTRACT.md`
 - `GATE_PROMPTS.md`
 - `LIMITATIONS.md`
 
@@ -67,12 +64,13 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 
 | 문서 | 용도 |
 | --- | --- |
-| `RUN_INPUT_CONTRACT.md` | Codex/GPT에게 전달할 표준 작업지시서 형식 |
-| `RUN_OUTPUT_CONTRACT.md` | Codex/GPT가 반환해야 하는 표준 완료보고서 형식 |
 | `PERSONA_DELEGATION.md` | Codex/GPT subagent 위임과 persona 적용 규칙 |
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 |
 | `LIMITATIONS.md` | Codex/GPT Adapter 한계와 승인 필요 상황 |
 | `skills/` | Codex/GPT가 상황별로 명시적으로 읽는 작업 절차 카드 |
+
+Run 입력/출력 형식은 adapter별로 정의하지 않는다.
+Codex, Claude, Gemini worker는 모두 `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md`를 동일하게 사용한다.
 
 ## 7. Skill 카드
 

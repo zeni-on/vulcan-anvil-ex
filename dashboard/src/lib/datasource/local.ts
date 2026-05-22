@@ -168,7 +168,7 @@ export class LocalDataSource implements DataSource {
         .map((filePath) => {
           try {
             const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-            const result = RuntimeActivitySchema.safeParse(parsed)
+            const result = RuntimeActivitySchema.safeParse(this.mergeRuntimeStatus(parsed))
             return result.success ? result.data : null
           } catch {
             return null
@@ -180,6 +180,40 @@ export class LocalDataSource implements DataSource {
     } catch (err) {
       console.warn('[LocalDataSource] runner activity 읽기 실패:', err)
       return []
+    }
+  }
+
+  private mergeRuntimeStatus(activity: unknown): unknown {
+    if (!activity || typeof activity !== 'object') return activity
+    const base = activity as Record<string, unknown>
+    const statusFile = typeof base.status_file === 'string' ? base.status_file : ''
+    if (!statusFile) return base
+
+    try {
+      const statusPath = path.resolve(this.resolvedBasePath, statusFile)
+      this.assertSafePath(statusPath)
+      if (!fs.existsSync(statusPath) || !fs.statSync(statusPath).isFile()) return base
+
+      const statusStat = fs.statSync(statusPath)
+      const statusJson = JSON.parse(fs.readFileSync(statusPath, 'utf-8')) as Record<string, unknown>
+      const ageSeconds = Math.max(0, Math.floor((Date.now() - statusStat.mtimeMs) / 1000))
+      const merged: Record<string, unknown> = {
+        ...base,
+        ...statusJson,
+        status_file: statusFile.replace(/\\/g, '/'),
+        last_update: typeof statusJson.last_update === 'string'
+          ? statusJson.last_update
+          : statusStat.mtime.toISOString(),
+        last_update_age_seconds: ageSeconds,
+        status_stale: base.status === 'running' && ageSeconds > 300,
+      }
+      if (merged.status_stale && merged.status === 'running') {
+        merged.status = 'stale'
+      }
+      return merged
+    } catch (err) {
+      console.warn('[LocalDataSource] runner status 읽기 실패:', err)
+      return base
     }
   }
 

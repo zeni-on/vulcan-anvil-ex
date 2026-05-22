@@ -22,7 +22,7 @@ source_documents:
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
     - docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
     - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
@@ -35,14 +35,14 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 design_sequence:
   - "G2-01 Kickoff / 설계 범위 고정"
   - "G2-02 SW Architecture Draft"
   - "G2-03 Screen / User Flow"
   - "G2-04 Function Spec"
-  - "G2-05 Program / API Spec"
+  - "G2-05 Program Design / API Spec"
   - "G2-06 Data / DB Spec"
   - "G2-07 Security Guide"
   - "G2-08 Development Standard"
@@ -87,6 +87,7 @@ verification:
 
 - 단순히 "Python 사용"처럼 선택만 적는 것은 부족하다. 왜 그 스택을 쓰는지, 어떤 기준선을 따르는지, 구현자가 지켜야 할 구조와 검증 명령이 있어야 한다.
 - 검증 명령은 명령 문자열만으로 충분하지 않다. 실행 위치, 성공 기준, exit code, 로그/증적 위치, 미실행 판정 기준까지 있어야 Gate 4에서 에이전트별 해석 차이를 줄일 수 있다.
-- 감리 대응 프로젝트에서는 개발표준이 아키텍처, 프로그램명세, 보안가이드, 테스트케이스로 이어져야 한다.
+- 감리 대응 프로젝트에서는 개발표준이 아키텍처, 프로그램 설계, 보안가이드, 테스트케이스로 이어져야 한다.
 - 개발표준 검토는 권장 순서상 G2-08이므로, 아키텍처/프로그램/API/보안 설계가 부족하면 먼저 보완 Run을 제안한다.
 - Gate 3로 넘어가기 전 개발표준 보완 결과와 승인 질문을 남긴다.
+

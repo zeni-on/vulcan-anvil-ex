@@ -22,7 +22,7 @@ source_documents:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
     - docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md
     - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
     - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
     - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
     - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
@@ -32,14 +32,14 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 design_sequence:
   - "G2-01 Kickoff / 설계 범위 고정"
   - "G2-02 SW Architecture Draft"
   - "G2-03 Screen / User Flow"
   - "G2-04 Function Spec"
-  - "G2-05 Program / API Spec"
+  - "G2-05 Program Design / API Spec"
   - "G2-06 Data / DB Spec"
   - "G2-07 Security Guide"
   - "G2-08 Development Standard"
@@ -81,3 +81,4 @@ ui_implementation_contract_policy:
 - 화면 퍼블리싱 산출물이 있으면 `참고자료`인지 `구현 기준`인지 먼저 판정하고, 구현 기준이면 UI Implementation Contract로 승격한다.
 - Run 종료 시 현재 Gate 2 순서 위치, 누락된 이전 단계, 다음 Gate 2 Run 후보를 남긴다.
 - Gate 3 테스트 설계로 넘어가기 전 설계 산출물 요약과 승인 질문을 남긴다.
+

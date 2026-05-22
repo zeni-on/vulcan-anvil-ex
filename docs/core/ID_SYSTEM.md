@@ -132,7 +132,7 @@ DOC-PM-OPS-001
 
 ```text
 DOC-CORE-G1-001_Requirements-Spec_v0.1.md
-DOC-CORE-G2-001_Program-Spec_v0.9.md
+DOC-CORE-G2-002_Program-Design_v0.9.md
 DOC-QA-G4-001_Test-Result_v1.0.xlsx
 ```
 

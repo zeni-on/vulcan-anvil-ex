@@ -178,6 +178,8 @@ python vulcan.py run-integrate --run-id RUN-010 --apply
 - `run-integrate`는 코드 수정, 테스트 작성, 추적표 보정, Gate/session 갱신을 수행하지 않는다. 실패나 누락은 재작업 worker, Review/QA worker, Traceability worker로 넘긴다.
 - 실행 로그와 요약은 `docs/runs/_exec/`에 남긴다.
 - 실행 시작 시 `docs/runs/_exec/<TARGET-ID>_<runner>-activity.json`에 `status: running`을 기록하고, 종료 시 `completed`, `failed`, `timeout`, `completed_no_result_change`로 갱신한다. 로컬 대시보드는 이 파일을 읽어 runner 실행 중 상태를 표시한다.
+- 실행 시작 시 `docs/runs/_exec/<TARGET-ID>_<runner>-status.json`도 만든다. worker는 wall-clock 타이머를 정확히 맞추려고 하지 않고, 시작, 컨텍스트 로딩, 편집, 테스트, 결과 작성, 완료, 차단, 실패 같은 단계가 바뀔 때 이 파일의 `phase`와 `current_task`를 갱신한다.
+- `current_task`는 대시보드에 한 줄로 보이는 짧은 문장이어야 한다. 너무 긴 설명, 전체 로그, 사고 과정은 기록하지 않는다.
 
 Context attach 기본값:
 
@@ -268,6 +270,12 @@ status: completed
 exit_code: 0
 result_file_changed: true
 activity: docs/runs/_exec/RV-001_codex-activity.json
+status_file: docs/runs/_exec/RV-001_codex-status.json
+phase: reviewing
+current_task: "Gate2 상류 정합성 검토 중"
+last_update: "2026-05-20T22:58:10"
+resume_supported: true
+thread_id: "019e..."
 ```
 
 상태 해석:
@@ -285,7 +293,59 @@ activity: docs/runs/_exec/RV-001_codex-activity.json
 runner가 토큰 또는 사용량 한도 때문에 종료하면 보통 `failed`나 `completed_no_result_change`로 남고, Orchestrator가 로그에서 원인을 확인한다.
 
 장시간 build/evidence 실행은 현재 timeout, exit code, stderr/stdout, 마지막 응답, Run 문서 변경 여부로 판정한다.
-향후 heartbeat 또는 streaming log의 `last_output_at`을 추가하면 멈춤 상태를 더 빨리 감지할 수 있다.
+heartbeat status 파일이 있으면 Orchestrator와 대시보드는 파일 수정시각을 기준으로 멈춤 상태를 더 빨리 감지한다.
+worker가 `running` 상태인데 status 파일이 오래 갱신되지 않으면 `stale`로 보고 로그와 마지막 메시지를 확인한다.
+
+## 8.1 Worker Heartbeat와 Resume
+
+Worker heartbeat는 작업 로그가 아니라 상태 신호다.
+
+```json
+{
+  "target_type": "review",
+  "target_id": "RV-001",
+  "runner": "codex-cli",
+  "status": "running",
+  "phase": "reviewing",
+  "current_task": "Gate2 상류 정합성 검토 중",
+  "last_update": "2026-05-20T22:58:10"
+}
+```
+
+규칙:
+
+- worker는 정확한 분 단위 타이머를 가진 존재로 가정하지 않는다.
+- worker는 단계가 바뀔 때 status 파일을 갱신한다.
+- Orchestrator는 `last_update`보다 OS 파일 수정시각을 더 신뢰한다.
+- 대시보드는 `current_task` 한 줄과 신호등 상태만 보여준다.
+- `status: running`인데 status 파일이 오래 갱신되지 않으면 stale로 본다.
+- `result_file_changed=false` 또는 `run_file_changed=false`이면 exit code 0이어도 성공으로 보지 않는다.
+
+Resume 가능한 runner는 같은 실행 세션을 1회 회수할 수 있다.
+
+| Runner | Resume 기준 |
+| --- | --- |
+| `codex-cli` | `codex exec resume <thread_id> "<prompt>"` |
+| `claude-cli` | `claude --resume <session_id> -p "<prompt>"` 또는 `claude --continue -p "<prompt>"` |
+
+대시보드 상태를 남기려면 원시 CLI 명령을 직접 실행하지 않고 다음 프레임워크 명령을 사용한다.
+
+```powershell
+python vulcan.py agent-resume --target-id RV-001 --runner codex-cli
+python vulcan.py agent-resume --target-id RUN-010 --runner claude-cli --prompt "이전 작업을 계속 진행하고 Run 문서를 갱신해줘"
+```
+
+`agent-resume`은 기존 `activity.json`에서 `thread_id` 또는 `session_id`를 읽고, resume 실행 전에 activity/status를 `running`으로 갱신한다.
+따라서 로컬 대시보드는 resume 중인 worker도 진행 작업으로 표시할 수 있다.
+
+Orchestrator는 다음 조건에서만 resume을 사용한다.
+
+- 이전 실행이 준비 응답, 무변경, 결과 파일 미갱신, 부분 종료로 끝났다.
+- `activity.json`에 `thread_id` 또는 `session_id` 같은 resume 식별자가 남아 있다.
+- worktree와 Run/Review 파일이 아직 삭제되지 않았다.
+- resume은 기존 실행을 회수하기 위한 1회 재지시로 제한한다.
+
+resume 후에도 결과 파일 또는 Run 문서가 갱신되지 않으면 `invalid runner result`로 보고 재실행, 다른 runner 교차검증, 수동 정리 중 하나를 선택한다.
 
 ## 9. Orchestrator 책임
 

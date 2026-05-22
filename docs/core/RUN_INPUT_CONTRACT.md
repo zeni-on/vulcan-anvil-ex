@@ -1,0 +1,514 @@
+# Run Input Contract
+
+> 상태: v0.4
+> 목적: Codex, Claude, Gemini 등 모든 worker runner가 동일하게 읽는 공통 작업지시서 형식을 정의한다.
+
+## 1. 개념
+
+Run Input Contract는 Orchestrator가 worker에게 전달하는 공통 작업지시서다.
+
+Runner 종류가 달라도 worker는 같은 계약을 읽고 같은 방식으로 움직여야 한다.
+Adapter는 이 계약을 런타임별 CLI 호출, 프롬프트, 로그, 상태파일로 변환할 뿐이며 계약 형식을 따로 정의하지 않는다.
+
+이 계약의 목적은 다음을 줄이는 것이다.
+
+```text
+작업 범위 확장
+문서 누락
+임의의 class/method/schema 생성
+테스트 없는 완료 선언
+worker별 다른 구현 구조
+```
+
+## 2. 문서 사용 경계
+
+이 문서는 하나만 유지한다.
+다만 내부에서 두 영역을 명확히 나눈다.
+
+| 영역 | 대상 | 용도 |
+| --- | --- | --- |
+| Worker 입력 계약 | worker runner | 실제 Run 문서의 YAML 또는 작업지시 블록으로 전달한다. |
+| Orchestrator 작성/검증 규칙 | Orchestrator, `vulcan.py`, adapter | worker 입력 계약을 생성, 축약, 검증, 전달할 때 사용한다. worker payload에 장문으로 반복하지 않는다. |
+
+worker에게는 가능한 한 `3. Worker 입력 계약`과 해당 Run에 필요한 보조 블록만 전달한다.
+`6. 작성/검증 규칙` 이후의 내용은 Orchestrator와 도구가 보는 작성 기준이다.
+
+## 3. Worker 입력 계약
+
+### 3.1 필수 필드
+
+| 필드 | 필수 | 설명 |
+| --- | --- | --- |
+| `run_id` | 예 | 실행 단위 ID. 예: `RUN-001` |
+| `persona` | 예 | 표준 작업 persona. 예: `requirements`, `design`, `build`, `review` |
+| `skill` | 권장 | worker가 사용할 작업 절차 카드. 예: `build-wave`, `traceability-review` |
+| `run_type` | 예 | `Discovery`, `Design`, `Implementation`, `Test`, `Evidence`, `Review` |
+| `gate` | 예 | 현재 Gate. 예: `gate2`, `impl`, `gate4` |
+| `goal` | 예 | 이번 Run에서 달성할 구체 목표 |
+| `related_ids` | 예 | 요구사항, 설계, 보안, 테스트 ID |
+| `target_contracts` | 구현/검수 Run 필수 | 이번 Run이 닫을 기능/프로그램/API/DB/보안/테스트 계약 묶음 |
+| `source_documents` | 예 | 먼저 읽을 문서, 작업 대상 문서, 필요 시 참고 문서 |
+| `scope` | 예 | 수정 가능/읽기 전용/제외 경로 |
+| `completion_criteria` | 예 | 완료 판정 조건 |
+| `verification` | 예 | worker self-check 또는 Orchestrator 재실행 검증 명령 |
+| `development_standards_applied` | 구현 Run 권장 | 이번 Run에 직접 적용할 개발표준 규칙 ID |
+| `output_requirements` | 예 | 결과 보고 형식과 포함 항목 |
+
+### 3.2 보조 필드
+
+| 필드 | 넣는 경우 |
+| --- | --- |
+| `target_contracts.interface_contract` | worker가 구현할 public interface, method signature, schema를 명확히 고정해야 할 때 |
+| `verification.test_cases_stub` | worker가 작성하거나 통과시켜야 할 테스트 함수/파일/검증 의도를 고정해야 할 때 |
+| `ui_evidence_policy` | UI 테스트, 화면 캡처, Playwright 증적이 이번 Run의 직접 결과일 때 |
+| `ui_implementation_contract_policy` | UIREF/ui-baseline을 기준으로 구현 또는 검수할 때 |
+| `gate_exit_policy` | Orchestrator Run이 Gate 종료와 사용자 승인 질문을 직접 다룰 때 |
+| `worker_execution_policy` | 기본 worker 금지사항을 Run 안에 명시적으로 재기입해야 할 때 |
+| `question_policy` / `security_policy` | 프로젝트별 질문/보안 예외가 기본 Core 규칙보다 더 좁거나 다를 때 |
+
+## 4. 권장 YAML 골격
+
+권장 YAML은 Run 문서 전체가 아니라 worker가 바로 실행할 수 있는 입력 계약 골격이다.
+실제 Run에는 이번 작업에 필요한 값만 채우고, 장문의 정책 전문은 반복해서 넣지 않는다.
+
+```yaml
+run_id: RUN-000
+persona: <persona>
+skill: <skill>
+run_type: <Discovery|Design|Implementation|Test|Evidence|Review>
+gate: <phase0|gate1|gate2|gate3|impl|gate4|gate5>
+goal: "<이번 Run의 한 문장 목표>"
+
+related_ids:
+  req: []
+  ac: []
+  func: []
+  scr: []
+  pgm: []
+  api: []
+  db: []
+  sec: []
+  test: []
+
+target_contracts:
+  func: []
+  pgm: []
+  api: []
+  db: []
+  sec: []
+  test: []
+  interface_contract:
+    language: ""
+    signatures: []
+    schemas: []
+    error_contracts: []
+
+development_standards_applied:
+  - standard_id: DEV-000
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "<이번 Run에서 반드시 지킬 개발표준 규칙>"
+
+source_documents:
+  read_first:
+    - AGENTS.md
+    - session.json
+  working_documents:
+    - <이번 Run에서 직접 작성/갱신/실행 기준으로 삼을 문서>
+  reference_on_demand:
+    - <필요할 때만 펼칠 상위 산출물 또는 Core 규칙>
+
+scope:
+  writable:
+    - <수정 허용 경로>
+  readonly:
+    - docs/core/
+  excluded:
+    - session.json
+    - docs/ref-docs/
+
+completion_criteria:
+  - "<완료 판정 기준>"
+
+verification:
+  owner: orchestrator-rerun
+  commands:
+    - "<검증 명령>"
+  test_cases_stub:
+    - id: UT-000
+      file: "<테스트 파일 경로>"
+      test_name: "<테스트 함수명>"
+      description: "<검증 의도>"
+      required_assertions: []
+
+output_requirements:
+  format: RUN_OUTPUT_CONTRACT.md
+  include:
+    - changed_files
+    - related_ids
+    - verification_results
+    - standard_compliance_report
+    - open_issues
+    - orchestrator_decision_needed
+```
+
+## 5. 구현 worker 예시
+
+구현 worker 예시는 실제 구현에 필요한 문서만 넣는다.
+요구사항정의서, 기능명세서, 프로그램 설계서, API/DB/보안 설계서, 추적표는 `target_contracts` 확인이 필요할 때만 `reference_on_demand`에서 펼친다.
+
+```yaml
+run_id: RUN-021
+persona: build
+skill: build-wave
+run_type: Implementation
+gate: impl
+goal: "PGM-005 게시글 작성 기능을 구현하고 담당 테스트케이스를 만든다."
+
+related_ids:
+  func: [FUNC-005]
+  pgm: [PGM-005]
+  api: [API-005]
+  db: [DB-002]
+  sec: [SEC-002, SEC-004]
+  test: [UT-007, IT-004]
+
+target_contracts:
+  func: [FUNC-005]
+  pgm: [PGM-005]
+  api: [API-005]
+  db: [DB-002]
+  sec: [SEC-002, SEC-004]
+  test: [UT-007, IT-004]
+  interface_contract:
+    language: python
+    signatures:
+      - name: create_post
+        signature: "def create_post(db: Session, request: PostCreateRequest) -> PostResponse"
+        rules:
+          - "제목과 본문은 빈 값일 수 없다."
+          - "작성 성공 시 생성된 게시글 ID와 생성 시각을 반환한다."
+    schemas:
+      - name: PostCreateRequest
+        fields:
+          title: "str, required, max_length=100"
+          body: "str, required, max_length=4000"
+    error_contracts:
+      - code: VALIDATION_FAILED
+        condition: "title 또는 body가 비어 있거나 길이 제한을 초과한다."
+        status: 422
+
+development_standards_applied:
+  - standard_id: DEV-DIR-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "정해진 Router -> Service -> Repository 구조를 따른다."
+  - standard_id: DEV-ERR-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "공통 오류 응답 포맷과 글로벌 예외 매핑을 사용한다."
+
+source_documents:
+  read_first:
+    - AGENTS.md
+    - session.json
+    - docs/adapters/codex-gpt/skills/build-wave.md
+  working_documents:
+    - docs/runs/RUN-021_pgm-005-게시글-작성-구현_v0.1.md
+    - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - tests/test_posts.py
+  reference_on_demand:
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
+
+scope:
+  writable:
+    - src/api/posts.py
+    - src/services/post_service.py
+    - tests/test_posts.py
+    - docs/runs/RUN-021_pgm-005-게시글-작성-구현_v0.1.md
+  readonly:
+    - docs/core/
+    - docs/templates/
+  excluded:
+    - session.json
+    - docs/ref-docs/
+    - "**/*.db"
+    - "**/__pycache__/"
+
+completion_criteria:
+  - "target_contracts의 기능/프로그램/API/DB/보안/테스트 계약을 완결된 조각으로 닫는다."
+  - "interface_contract의 public signature, schema, error contract와 구현이 모순되지 않는다."
+  - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 검증 명령을 남긴다."
+  - "추적표, session, Gate 전환 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
+
+verification:
+  owner: orchestrator-rerun
+  commands:
+    - "python -m pytest tests/test_posts.py -p no:cacheprovider"
+    - "python vulcan.py run-check docs/runs/RUN-021_pgm-005-게시글-작성-구현_v0.1.md"
+  test_cases_stub:
+    - id: UT-007
+      file: tests/test_posts.py
+      test_name: test_create_post_success
+      description: "정상 제목/본문 입력 시 게시글 생성과 응답 DTO를 검증한다."
+      required_assertions:
+        - "응답에 id, title, body, created_at이 있다."
+        - "저장소에 동일 게시글이 존재한다."
+    - id: UT-008
+      file: tests/test_posts.py
+      test_name: test_create_post_validation_error
+      description: "빈 제목 또는 길이 초과 입력 시 VALIDATION_FAILED를 반환한다."
+      required_assertions:
+        - "오류 코드가 VALIDATION_FAILED다."
+        - "HTTP 상태 또는 예외 타입이 error_contract와 일치한다."
+
+output_requirements:
+  format: RUN_OUTPUT_CONTRACT.md
+  include:
+    - changed_files
+    - related_ids
+    - verification_results
+    - standard_compliance_report
+    - open_issues
+    - orchestrator_decision_needed
+```
+
+## 6. 필드 작성 규칙
+
+### 6.1 `goal`
+
+`goal`은 한 문장으로 쓴다.
+
+좋은 예:
+
+```text
+SCR-003 게시글 목록 화면을 구현하고 UI-003 캡처 증적을 생성한다.
+```
+
+나쁜 예:
+
+```text
+화면 좀 정리
+```
+
+### 6.2 `related_ids`와 `target_contracts`
+
+`related_ids`는 전체 관련 맥락이다.
+`target_contracts`는 이번 Run에서 worker가 실제로 닫아야 하는 구현/검수 경계다.
+
+구현 Run은 `FUNC`, `PGM`, `API`, `DB`, `SEC`, `UT/IT/UI` 중 가능한 항목을 좁게 묶는다.
+worker는 이 묶음 밖의 기능을 확장하지 않는다.
+
+`target_contracts.interface_contract`는 worker가 작성할 코드의 뼈대다.
+Orchestrator는 구현 Run을 만들 때 임의의 네이밍, 타입, schema, 오류 응답 편차를 막을 수 있도록 이 블록을 작성해야 한다.
+worker는 이 블록에 명시된 public signature, schema, error contract를 따라야 하며, 다른 이름이나 다른 타입으로 대체하지 않는다.
+
+| 대상 | 작성 내용 |
+| --- | --- |
+| API endpoint | OpenAPI Spec JSON/YAML의 method/path, request/response DTO, status/error mapping을 삽입한다. |
+| Backend method/class | 선택 언어의 type hint, interface, abstract class, public function/method signature, docstring, DTO/schema, error contract, transaction boundary를 명시한다. |
+| Frontend component/hook/client | Props interface, state type, event handler signature, API client signature, rollback/refetch rule을 명시한다. |
+| DB/repository | entity/table, query method signature, constraint, transaction owner를 명시한다. |
+
+private helper의 내부 알고리즘까지 고정하지 않는다.
+공개 계약과 외부에서 관찰되는 동작을 고정한다.
+
+### 6.3 `development_standards_applied`
+
+`development_standards_applied`는 worker가 개발표준 전체를 매번 정독하지 않아도 이번 Run에 해당되는 표준을 바로 확인하게 하는 바인딩이다.
+Orchestrator는 개발표준정의서의 규칙 ID를 직접 매핑해야 한다.
+worker는 이 목록을 준수 체크리스트로 사용하고, 결과 보고에 `standard_compliance_report`를 남긴다.
+
+예:
+
+```yaml
+development_standards_applied:
+  - standard_id: DEV-LOG-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "표준 logger를 사용하고 민감정보를 로그에 남기지 않는다."
+```
+
+로깅 작업이면 `DEV-LOG-001`, REST API 오류 응답 작업이면 `DEV-API-001` 또는 `DEV-ERR-001`처럼 이번 Run의 직접 구현 판단에 필요한 규칙만 넣는다.
+개발표준 문서에 아직 규칙 ID가 없으면 Orchestrator는 Gate 2에서 규칙 ID를 먼저 보강하거나, Run 안에 임시 `standard_id`와 출처를 명시한다.
+
+### 6.4 `source_documents`
+
+`source_documents.read_first`는 worker가 작업 시작 전에 반드시 먼저 읽는 최소 문서다.
+보통 `AGENTS.md`, `session.json`, 현재 skill 문서만 둔다.
+
+`source_documents.working_documents`는 이번 Run에서 실제로 작성하거나 검토할 산출물이다.
+worker는 이 문서에 가장 많은 주의를 둔다.
+일반적으로 `scope.writable`의 산출물 문서와 일치해야 하며, 요구사항/설계/테스트 기준처럼 입력으로만 쓰는 문서는 여기 넣지 않는다.
+
+`source_documents.reference_on_demand`는 항상 정독하는 문서가 아니다.
+기준 충돌, 작성 규칙 확인, 보안/데이터/개발표준 판단처럼 필요할 때만 펼쳐본다.
+
+### 6.5 `verification`
+
+`verification.commands`에는 Orchestrator가 worker 결과를 받은 뒤 재실행할 담당 테스트케이스 명령, 빌드/린트, `python vulcan.py run-check <현재 Run>`처럼 작업자 범위에서 재현 가능한 명령만 넣는다.
+
+worker는 가능하면 같은 명령을 self-check로 실행하고 결과를 보고한다.
+다만 권위 있는 테스트 결과와 테스트 결과서 반영은 Orchestrator가 재실행한 결과를 기준으로 한다.
+
+`verification.test_cases_stub`는 worker가 구현하거나 통과시킬 테스트의 최소 골격이다.
+Orchestrator는 "테스트를 작성한다"처럼 포괄적으로 쓰지 않고, `file`, `test_name`, `description`, `required_assertions`를 명시해야 한다.
+worker는 테스트 스터브를 기반으로 테스트 코드를 작성하거나 기존 테스트를 갱신해야 한다.
+테스트 이름만 쓰지 말고 검증 의도와 필수 assertion을 함께 쓴다.
+
+## 7. Worker 실행 경계
+
+작업자 runner는 Run 계약 수행자가 될 수 있지만 Orchestrator가 아니다.
+
+worker는 다음을 직접 수행하지 않는다.
+
+```text
+Gate 전환
+session.json current_gate/gate_status/completed 변경
+wave-start/wave-complete
+sync-session
+check-trace를 통한 최종 Gate 완료 판단
+전체 추적표 통합 확정
+테스트 결과서 최종 확정
+QA Pass 최종 선언
+릴리즈 승인
+merge 가능 여부 최종 판단
+```
+
+worker가 위 항목이 필요하다고 판단하면 직접 실행하지 않고 완료 보고의 `orchestrator_decision_needed`에 반환한다.
+
+`scope.writable` 밖의 파일 수정은 원칙적으로 금지한다.
+
+## 8. Worker Run 분할 기준
+
+이 섹션은 worker에게 전달하는 입력 payload가 아니라 Orchestrator가 Run을 작성할 때 사용하는 분할 기준이다.
+worker는 이미 분할된 Run을 수행하며, 범위가 과도하다고 판단하면 작업을 임의로 반쪽 완료하지 않고 `orchestrator_decision_needed`로 반환한다.
+
+Run 하나는 끝났을 때 빌드/테스트/리뷰 가능한 완결 조각이어야 한다.
+
+| 기준 | 규칙 |
+| --- | --- |
+| 1차 기준 | 기능/계약 단위로 나눈다. |
+| 완결성 | Run 하나가 끝나면 담당 테스트와 리뷰가 가능해야 한다. |
+| 머지 가능성 | 해당 Run만 반영해도 코드베이스가 깨지지 않아야 한다. |
+| 시간 기준 | 목표 10분 내외, 최대 15분 권장. 시간은 Orchestrator의 분할 보조 기준이다. |
+| 분리 기준 | 15분을 넘길 것 같으면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 나눈다. |
+| 금지 | 컴파일/테스트가 깨지는 반쪽 구현, 시간 종료에 따른 미완성 종료, unrelated 리팩터링 |
+
+## 9. UI 작업 보조 계약
+
+UI 검증이 포함된 Run은 화면 단위가 아니라 상태/시나리오 단위로 테스트와 증적을 분리한다.
+각 UI 테스트는 기대 화면과 실제 캡처 파일이 1:1로 연결되어야 한다.
+
+```yaml
+ui_evidence_policy:
+  test_by_state: true
+  required_evidence:
+    - ui_id: UI-001-01
+      state: "기본 화면"
+      expected_visual_elements:
+        - "가입 버튼"
+        - "이메일 입력"
+        - "비밀번호 입력"
+      evidence_file: docs/artifacts/04-review/evidence/ui/UI-001-01.png
+```
+
+`ui_implementation_contract_policy`는 화면 퍼블리싱 산출물 또는 외부 시안이 있는 화면 작업에서 사용한다.
+Gate 2에서는 시안을 참고자료로 둘지 구현 계약으로 둘지 분류하고, 구현 계약이면 필수 유지, 변경 허용, 변경 금지, 비교 방식을 작성한다.
+Gate 3에서는 이 계약을 UI 테스트 기대결과에 반영한다.
+Impl에서는 구현 전 체크리스트로 확인하고, Gate 4에서는 기준 UIREF와 구현 screenshot의 차이를 `Pass`, `FIND`, `CR`로 판정한다.
+
+## 10. Worker 전달 프롬프트 기본형
+
+Adapter는 YAML 입력 뒤에 다음 실행 지침을 붙일 수 있다.
+호출 방식과 세션/로그 처리는 adapter가 담당하지만, 지침 내용은 runner 공통이다.
+
+```text
+너는 Vulcan-Anvil Ex worker runner다.
+Runner 종류가 Codex, Claude, Gemini 중 무엇이든 아래 Run 입력 계약을 기준으로만 작업한다.
+
+작업 순서:
+1. source_documents.read_first를 먼저 읽고 관련 ID와 현재 Gate를 확인한다.
+2. target_contracts의 FUNC/PGM/API/DB/SEC/TEST 묶음을 실제 작업 경계로 삼는다.
+3. target_contracts.interface_contract가 있으면 public signature, schema, error contract를 우선 지킨다.
+4. source_documents.working_documents를 중심으로 실제 산출물을 작성하거나 검토한다.
+5. source_documents.reference_on_demand는 target_contracts 확인, 기준 충돌, 상세 설계 판단이 필요할 때만 참고한다.
+6. scope.writable 안에서만 수정한다.
+7. completion_criteria를 모두 만족하도록 구현/문서/테스트를 갱신한다.
+8. verification.test_cases_stub가 있으면 지정된 테스트 파일, 테스트 이름, 필수 assertion을 반영한다.
+9. 가능한 경우 verification.commands를 self-check로 실행하고 결과를 보고한다.
+10. UI 검증이 있으면 상태/시나리오별 UI-ID와 캡처 증적을 1:1로 연결한다.
+11. 범위가 너무 커서 완결 구현이 어렵다면 중간 구현을 완료 처리하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
+12. Gate 전환, session 변경, 최종 승인 판단을 하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
+13. RUN_OUTPUT_CONTRACT 형식으로 결과를 보고한다.
+
+금지:
+- docs/ref-docs/를 읽거나 커밋하지 않는다.
+- 관련 없는 리팩터링을 하지 않는다.
+- 테스트를 실행하지 못했으면 통과로 보고하지 않는다.
+- worker self-check 결과를 최종 테스트 결과로 확정하지 않는다.
+- 추적표/결과서/session/Gate 갱신이 필요하면 Orchestrator 결정 필요 항목으로 반환한다.
+- 시간이 끝났다는 이유로 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다.
+- 기대 화면과 다른 캡처를 UI 증적으로 Pass 처리하지 않는다.
+```
+
+## 11. Worker 출력 요구
+
+worker는 `RUN_OUTPUT_CONTRACT.md`를 따른다.
+구현 Run은 가능한 한 다음 항목을 포함한다.
+
+```markdown
+### 개발 표준 준수 보고
+
+| 표준 ID | 준수 여부 | 구현 및 준수 방식 | 미준수 사유 및 대체 방식 |
+| --- | --- | --- | --- |
+| DEV-DIR-001 | Pass | 지정된 패키지 구조에 파일을 배치했다. | - |
+| DEV-ERR-001 | Pass | 공통 오류 응답 포맷을 사용했다. | - |
+```
+
+`standard_compliance_report`는 worker가 자기 구현의 준수 여부를 보고하는 참고 자료다.
+최종 승인과 Gate 통과 판단은 Orchestrator 재검증 결과를 기준으로 한다.
+
+## 12. Orchestrator 작성/검증 규칙
+
+Run 시작 전 Orchestrator 또는 `vulcan.py`는 다음을 확인한다.
+
+| 체크 | 기준 |
+| --- | --- |
+| 관련 ID 존재 | 추적표 또는 산출물에 관련 ID가 존재한다 |
+| target 계약 명확 | `target_contracts`가 이번 Run의 실제 경계를 좁게 정의한다 |
+| interface 계약 명확 | 구현 Run이면 필요한 public signature/schema/error contract가 있다 |
+| 테스트 stub 명확 | 구현 Run이면 테스트 파일, 테스트 이름, 검증 의도, 필수 assertion이 있다 |
+| 개발표준 연결 | 이번 Run에 적용할 개발표준 규칙이 식별되어 있다 |
+| 먼저 읽을 문서 존재 | `source_documents.read_first` 파일이 존재한다 |
+| 작업 대상 명확 | `source_documents.working_documents`가 이번 Run 산출물 중심으로 작성되어 있다 |
+| 참고문서 분리 | Core/Template/Sample/상류 산출물이 `reference_on_demand`로 분리되어 있다 |
+| 수정 범위 명확 | `scope.writable`이 비어 있지 않다 |
+| 작업자 범위 제한 | worker Run에는 `session.json`, Gate 전환, 전체 추적표 통합, `sync-session`/`check-trace`가 포함되지 않는다 |
+| 제외 경로 포함 | `docs/ref-docs/`가 제외되어 있다 |
+| 완료 조건 명확 | 테스트 또는 증적 기준이 하나 이상 있다 |
+| 출력 형식 지정 | `RUN_OUTPUT_CONTRACT.md`를 참조한다 |
+
+초기 대화에서 사람이 최소 입력만 줄 수 있다.
+
+```yaml
+goal: "게시글 작성 기능 구현"
+related_ids: [REQ-005]
+```
+
+이 경우 Orchestrator 또는 도구는 추적표와 산출물을 읽어 완전 입력으로 확장한다.
+완전 입력을 만들 수 없으면 `Blocked` 상태로 질문한다.
+
+## 13. 통합 규칙
+
+worker worktree 결과는 손으로 복사하지 않는다.
+
+Orchestrator는 다음 흐름을 사용한다.
+
+```text
+1. run-integrate --dry-run으로 변경 파일과 scope 위반 확인
+2. 위반이 없으면 run-integrate --apply로 허용 diff 반영
+3. verification.commands 재실행
+4. 결과에 따라 Run, 테스트결과서, 추적표, session을 Orchestrator 책임으로 갱신
+```
+
+`run-integrate`가 실패하면 Orchestrator가 임의로 직접 고치지 않고 재작업 Run, QA Fix Run, Traceability Run, FIND/CR/ISSUE 중 하나로 분기한다.

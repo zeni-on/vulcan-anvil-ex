@@ -21,7 +21,7 @@
 - `PHYSICAL_ERD_DBML_TEMPLATE.dbml`: 물리 ERD DBML 원본
 - `API_SPEC_TEMPLATE.md`: API 정의서
 - `SECURITY_GUIDE_TEMPLATE.md`: 보안가이드
-- `PROGRAM_SPEC_TEMPLATE.md`: 프로그램명세서
+- `PROGRAM_SPEC_TEMPLATE.md`: 프로그램 설계서
 - `SCREEN_SPEC_TEMPLATE.md`: 화면설계서
 - `TEST_CASE_TEMPLATE.md`: 테스트케이스 정의서
 - `TEST_RESULT_TEMPLATE.md`: Gate 4 QA 테스트 결과서
@@ -37,7 +37,7 @@
 - 모든 ID는 `docs/core/ID_SYSTEM.md`의 Prefix 규칙을 따른다.
 - 모든 연결 관계는 `docs/core/TRACEABILITY_RULES.md`의 추적성 규칙을 따른다.
 - 보안항목은 `docs/core/SECURITY_BASELINE.md`의 기준선을 우선 적용하고, 프로젝트별 구현 규격은 보안가이드에 확정한다.
-- 화면설계서, 프로그램명세서, DB명세서, 테스트케이스는 보안가이드의 `SEC-ID`별 구체 규칙과 연결되어야 한다.
+- 화면설계서, 프로그램 설계서, DB명세서, 테스트케이스는 보안가이드의 `SEC-ID`별 구체 규칙과 연결되어야 한다.
 - 데이터 항목은 `docs/core/REFERENCE_STANDARDS.md`와 `docs/core/DATA_STANDARD_RULES.md`의 데이터 표준 규칙을 따른다.
 - 프로젝트 데이터 용어는 `docs/core/DATA_STANDARD_RULES.md`의 데이터 표준 규칙을 따른다.
 - 개발 언어, 패키지 구조, 코드/주석/테스트 컨벤션은 `docs/core/TECH_STACK_BASELINES.md`를 기준으로 개발표준정의서에 명시하고 구현 전에 확정한다.

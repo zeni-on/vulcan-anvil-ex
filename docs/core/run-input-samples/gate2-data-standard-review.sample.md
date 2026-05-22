@@ -37,14 +37,14 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 design_sequence:
   - "G2-01 Kickoff / 설계 범위 고정"
   - "G2-02 SW Architecture Draft"
   - "G2-03 Screen / User Flow"
   - "G2-04 Function Spec"
-  - "G2-05 Program / API Spec"
+  - "G2-05 Program Design / API Spec"
   - "G2-06 Data / DB Spec"
   - "G2-07 Security Guide"
   - "G2-08 Development Standard"
@@ -86,3 +86,4 @@ verification:
 - 감리 대응 프로젝트에서는 표준용어, 프로젝트 용어, 데이터 도메인, 보안 분류, 화면/API/DB 매핑을 함께 본다.
 - 데이터 표준 검토는 권장 순서상 G2-06이므로, G2-03~G2-05 설계 입력이 부족하면 먼저 보완 Run을 제안한다.
 - Gate 3로 넘어가기 전 데이터 표준 보완 결과와 승인 질문을 남긴다.
+

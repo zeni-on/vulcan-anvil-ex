@@ -25,7 +25,7 @@ Core 규칙 요약
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/INDEPENDENT_EXECUTION_PROCESS.md`
 
-Claude 출력은 `docs/adapters/claude/RUN_OUTPUT_CONTRACT.md`로 정규화한다.
+출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`로 정규화한다.
 
 ## 2. Claude 공통 지침
 

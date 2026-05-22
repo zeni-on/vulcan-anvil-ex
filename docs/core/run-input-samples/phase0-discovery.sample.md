@@ -30,8 +30,8 @@ source_documents:
     - docs/core/ID_SYSTEM.md
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - docs/artifacts/00-discovery/
@@ -54,3 +54,4 @@ gate_exit_policy:
 - 첫 대화가 방향 확인 수준이면 컨시어지로 응답하고, 산출물 작성을 시작하기 전에 필요한 질문을 정리한다.
 - 참고자료가 부족하면 임의로 요구사항을 확정하지 않는다.
 - Phase 0 산출물을 요약하고 Gate 1로 진행해도 되는지 명시적으로 물은 뒤 대기한다.
+

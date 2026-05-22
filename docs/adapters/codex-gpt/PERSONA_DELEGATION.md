@@ -41,8 +41,8 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 - docs/core/AGENT_PERSONAS.md
 - docs/core/AGENT_RUN_PROTOCOL.md
 - docs/core/TRACEABILITY_RULES.md
-- docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-- docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+- docs/core/RUN_INPUT_CONTRACT.md
+- docs/core/RUN_OUTPUT_CONTRACT.md
 
 이번 Run:
 <RUN_INPUT_YAML>
@@ -75,3 +75,4 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 3. 증적 경로가 실제로 존재하는지 확인한다.
 4. 필요한 경우 `vulcan.py run-check`로 Run 문서를 검사한다.
 5. 미해결 이슈가 있으면 `FIND`, `CR`, `ISSUE` 중 하나로 분류한다.
+

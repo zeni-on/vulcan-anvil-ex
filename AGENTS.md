@@ -49,7 +49,7 @@
 | 개발표준/기술스택 | `docs/core/TECH_STACK_BASELINES.md`, 개발표준정의서 |
 | 변경요청/백로그 | `docs/core/CHANGE_CONTROL_PROCESS.md`, CR 관리대장, Backlog |
 | 리팩토링/기술부채 | `docs/core/REFACTORING_PROCESS.md`, Backlog, 관련 설계문서 |
-| Codex Run 입출력 | `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`, `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md` |
+| Run 입력/출력 | `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md` |
 | persona/subagent | `docs/core/AGENT_PERSONAS.md`, `docs/adapters/codex-gpt/PERSONA_DELEGATION.md` |
 
 ## 4. Orchestrator 규칙
@@ -108,8 +108,10 @@ docs/adapters/codex-gpt/skills/
 - 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다.
 - 현재 Gate 안에서 허용된 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
 - 구현 파일, 테스트 코드, 테스트 결과서, 화면 증적은 `impl` 또는 `gate4` 범위가 승인된 뒤 작성한다. 단, 사용자가 명시적으로 화면 퍼블리싱 산출물을 요청하면 산출물에 `ISSUE` 또는 `DEC`로 예외 범위를 기록한다.
-- 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 Run 구현은 Wave를 생략할 수 있지만, 구현 Run에 생략 이유와 검증 범위를 남긴다.
-- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 구현은 `build` persona 또는 subagent가 수행하고, Orchestrator는 작업지시, 결과 검토, 통합, 검증, 추적성 갱신을 책임진다.
+- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona, subagent, 또는 `agent-run --mode work` worker에게 위임하는 것을 기본값으로 한다.
+- Orchestrator가 직접 수행할 수 있는 구현 관련 작업은 작업지시서 작성, worker 결과 통합, 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 실행으로 제한한다.
+- subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run에 `orchestrator_direct_edit_reason`, 수정 범위, 실행 검증, 후속 검수 필요 여부를 남긴다.
+- 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 구현은 Implementation Plan Wave 분할을 생략할 수 있지만, 구현 자체는 worker Run 또는 `agent-run --mode work`로 실행하고 생략 이유와 검증 범위를 남긴다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
 - Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent에게 전달할 최소 입력 계약이 된다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
@@ -132,5 +134,6 @@ docs/runs/
 출력 구조는 다음 문서를 따른다.
 
 ```text
-docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+docs/core/RUN_OUTPUT_CONTRACT.md
 ```
+

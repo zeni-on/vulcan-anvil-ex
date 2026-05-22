@@ -29,8 +29,8 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
@@ -52,3 +52,4 @@ gate_exit_policy:
 - 요구사항이 모호하면 구현으로 넘어가지 말고 질문 또는 `open_issues`로 남긴다.
 - Gate 1 완료는 문서 상태값만이 아니라 추적표 연결과 사용자 승인으로 판단한다.
 - Gate 2 설계로 넘어가기 전 요구사항/AC 요약과 승인 질문을 남긴다.
+

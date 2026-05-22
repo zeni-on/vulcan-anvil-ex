@@ -25,7 +25,7 @@ change_reason: 최초 초안 작성
 
 ## 1. 문서 목적
 
-본 문서는 요구사항, 기능명세, 프로그램명세, API 정의서, DB명세, 화면설계서, 보안가이드, 개발표준을 하나의 실행 가능한 구조로 묶는 SW 아키텍처 기준을 정의한다.
+본 문서는 요구사항, 기능명세, 프로그램 설계, API 정의서, DB명세, 화면설계서, 보안가이드, 개발표준을 하나의 실행 가능한 구조로 묶는 SW 아키텍처 기준을 정의한다.
 
 아키텍처 정의서는 Gate 2 설계의 중심 산출물이며, 이후 상세 설계와 구현 Wave는 본 문서의 Container, Component, Flow, ADR, 품질속성 기준을 따라야 한다.
 
@@ -273,11 +273,11 @@ sequenceDiagram
 
 | 보안 영역 | 적용 기준 | 관련 SEC | 관련 상세 설계 |
 | --- | --- | --- | --- |
-| 인증 |  | SEC- | 보안가이드 / API정의서 / 프로그램명세서 |
-| 인가 |  | SEC- | 보안가이드 / 프로그램명세서 |
+| 인증 |  | SEC- | 보안가이드 / API정의서 / 프로그램 설계서 |
+| 인가 |  | SEC- | 보안가이드 / 프로그램 설계서 |
 | 세션/토큰 |  | SEC- | 보안가이드 / API정의서 |
 | 암호화 |  | SEC- | 보안가이드 / DB명세서 |
-| 로깅/감사 |  | SEC- / NREQ- | 개발표준 / 프로그램명세서 |
+| 로깅/감사 |  | SEC- / NREQ- | 개발표준 / 프로그램 설계서 |
 | 네트워크 보안 |  | SEC- / NREQ- | 물리 아키텍처 / 운영 설계 |
 
 ## 10. 품질속성 설계
@@ -322,7 +322,7 @@ sequenceDiagram
 | 아키텍처 ID | 연결 설계문서 | 연결 ID | 설명 |
 | --- | --- | --- | --- |
 | CNT-001 | DOC-CORE-G2-001_Function-Spec_v0.1.md | FUNC- | 기능 설계 연결 |
-| CNT-001 | DOC-CORE-G2-002_Program-Spec_v0.1.md | PGM- / CMP- | 프로그램/컴포넌트 연결 |
+| CNT-001 | DOC-CORE-G2-002_Program-Design_v0.1.md | PGM- / CMP- | 프로그램/컴포넌트 연결 |
 | CNT-001 | DOC-API-G2-001_API-Spec_v0.1.md | API- | API 계약 연결 |
 | CNT-001 | DOC-DATA-G2-002_Database-Spec_v0.1.md | DB- | 데이터 저장소 연결 |
 | CNT-001 | DOC-CORE-G2-003_Screen-Spec_v0.1.md | SCR- / UIREF- | 화면 설계 연결 |

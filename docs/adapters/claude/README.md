@@ -5,7 +5,7 @@
 
 ## 1. 범위
 
-Claude Adapter는 사람이 Claude Code CLI 또는 IDE 확장과 함께 개발할 때 필요한 입력 계약, 실행 지침, 출력 정규화 방식을 정의한다.
+Claude Adapter는 공통 Run Input Contract를 Claude Code CLI 또는 IDE 확장 실행 방식으로 변환한다.
 
 `0.2.2` 기준 Claude Adapter는 Core persona, Build Wave, SW Architecture, DBML ERD, 변경관리/릴리즈 산출물, Gate 종료 승인, UI Implementation Contract, 검증 명령 메타 기록 흐름을 Claude의 `.claude/agents`와 `.claude/skills` 구조에 연결한다.
 
@@ -45,11 +45,11 @@ Claude Adapter는 다음 Claude 고유 특징을 고려한다.
 ```text
 1. CLAUDE.md → session.json 확인
 2. persona 판단 → PERSONA_MAPPING.md에서 agent 선택
-3. Run 입력 계약(RUN_INPUT_CONTRACT.md) 구성
+3. `docs/core/RUN_INPUT_CONTRACT.md` 형식의 Run 입력 구성
 4. subagent 위임 또는 Orchestrator 직접 실행
 5. 테스트/린트/캡처 실행
 6. 추적표와 결과서 갱신
-7. Run 출력 계약(RUN_OUTPUT_CONTRACT.md) 형식으로 완료 보고
+7. `docs/core/RUN_OUTPUT_CONTRACT.md` 형식으로 완료 보고
 ```
 
 ## 5. 현재 사용 가능한 문서
@@ -57,8 +57,6 @@ Claude Adapter는 다음 Claude 고유 특징을 고려한다.
 | 문서 | 용도 |
 | --- | --- |
 | `PERSONA_MAPPING.md` | Claude agent 파일명과 Ex persona 1:1 매핑 |
-| `RUN_INPUT_CONTRACT.md` | Claude subagent에게 전달할 표준 작업지시서 형식 |
-| `RUN_OUTPUT_CONTRACT.md` | Claude 에이전트가 반환해야 하는 표준 완료보고서 형식 |
 | `GATE_PROMPTS.md` | Gate별 기본 지침 |
 | `LIMITATIONS.md` | Claude Adapter 한계와 승인 필요 상황 |
 
@@ -66,5 +64,7 @@ Claude Adapter는 다음 Claude 고유 특징을 고려한다.
 
 - `docs/core/AGENT_PERSONAS.md` — 표준 persona 정의
 - `docs/core/AGENT_RUN_PROTOCOL.md` — Run 단위 실행 규칙
+- `docs/core/RUN_INPUT_CONTRACT.md` — 모든 runner가 동일하게 읽는 Run 입력 계약
+- `docs/core/RUN_OUTPUT_CONTRACT.md` — 모든 runner가 동일하게 남기는 Run 출력 계약
 - `docs/core/TRACEABILITY_RULES.md` — 추적성 갱신 규칙
 - `docs/core/ORCHESTRATOR_PROTOCOL.md` — Orchestrator 운영 규칙

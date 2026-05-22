@@ -43,7 +43,7 @@ docs/artifacts/01-requirements/
 docs/artifacts/02-design/
   architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md
   function/DOC-CORE-G2-001_Function-Spec_v0.1.md
-  program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+  program/DOC-CORE-G2-002_Program-Design_v0.1.md
   api/DOC-API-G2-001_API-Spec_v0.1.md
   data/DOC-DATA-G2-001_Project-Glossary_v0.1.md
   data/DOC-DATA-G2-002_Database-Spec_v0.1.md
@@ -74,7 +74,7 @@ docs/artifacts/02-traceability/
 | 사업/시스템 개요 | Project Brief, Stakeholder/Scope, As-Is/To-Be | 상위설계 요약 |
 | 요구사항 및 품질속성 요약 | Requirements Spec, Traceability Matrix | 기능/비기능 요구사항 요약 |
 | 시스템 구성 | SW Architecture | C1/C2, 시스템 경계, 컨테이너 구조 |
-| 논리 아키텍처 | SW Architecture, Function Spec, Program Spec | 주요 논리 영역과 책임 |
+| 논리 아키텍처 | SW Architecture, Function Spec, Program Design | 주요 논리 영역과 책임 |
 | 물리 아키텍처 | SW Architecture, Development Standard | 서버, 네트워크, 배포 단위, 런타임 |
 | 보안 아키텍처 | Security Guide, SW Architecture | 인증, 인가, 세션/토큰, 암호화, 로그/감사 |
 | 데이터 및 인터페이스 구조 | DB Spec, API Spec, SW Architecture | 데이터 저장소, API, 외부 연계 |

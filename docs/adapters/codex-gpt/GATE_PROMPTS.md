@@ -15,7 +15,7 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/INDEPENDENT_EXECUTION_PROCESS.md`
 
-출력은 `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`를 따른다.
+출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
 
 ## 2. 공통 체크
 
@@ -67,6 +67,8 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 ### Impl
 
 - Orchestrator는 구현 주 작성자가 아니다.
+- 작은 기능, 단일 파일, 단일 테스트 변경이라도 먼저 worker Run 또는 Build Wave Run을 만들고 `agent-run --mode work`나 명시적 subagent 위임으로 실행한다.
+- Orchestrator가 직접 코드를 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
 - 개발표준, 보안가이드, 테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
 - 화면 구현 전 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.

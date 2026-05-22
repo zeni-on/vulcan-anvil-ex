@@ -22,7 +22,7 @@ source_documents:
   reference_on_demand:
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
     - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
     - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
     - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
@@ -32,8 +32,8 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
@@ -74,3 +74,4 @@ ui_implementation_contract_policy:
 - Gate 3에서는 테스트를 실행하지 않더라도, Gate 4에서 동일하게 실행할 수 있도록 cwd, 명령, 성공 기준, 증적 경로를 정한다.
 - 회원가입, 로그인, TODO처럼 상태가 있는 화면은 기본/오류/성공/전환을 별도 UI-ID로 나눈다.
 - 화면 퍼블리싱 기반 화면은 `UI-ID -> SCR-ID -> UIREF-ID -> UICON-ID -> 증적 경로` 흐름으로 연결한다.
+

@@ -35,6 +35,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from datetime import date, datetime, timedelta
 
@@ -129,7 +130,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
     ("docs/templates/SW_ARCHITECTURE_TEMPLATE.md", "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md"),
     ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
-    ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md"),
+    ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md"),
     ("docs/templates/API_SPEC_TEMPLATE.md", "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md"),
     ("docs/templates/SCREEN_SPEC_TEMPLATE.md", "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md"),
     ("docs/templates/PROJECT_GLOSSARY_TEMPLATE.md", "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md"),
@@ -265,8 +266,8 @@ AUDIT_COMMON_REFERENCE_DOCS = [
     "docs/core/AGENT_PERSONAS.md",
     "docs/core/AGENT_RUN_PROTOCOL.md",
     "docs/core/DELIVERY_PROFILES.md",
-    "docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md",
-    "docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md",
+    "docs/core/RUN_INPUT_CONTRACT.md",
+    "docs/core/RUN_OUTPUT_CONTRACT.md",
 ]
 
 AUDIT_COMMON_READONLY_DOCS = [
@@ -427,12 +428,26 @@ AUDIT_WORKER_EXECUTION_POLICY = {
     ],
 }
 
+AUDIT_WORKER_RUN_SIZING_POLICY = {
+    "primary_split_basis": "기능/계약 단위",
+    "time_is_secondary": True,
+    "target_duration_minutes": 10,
+    "max_duration_minutes": 15,
+    "rules": [
+        "Run 하나는 FUNC/PGM/API/DB/SEC/TEST ID가 연결된 검증 가능한 완결 단위여야 한다.",
+        "Run 하나만 반영해도 빌드 또는 담당 테스트가 깨지지 않아야 한다.",
+        "15분을 넘길 것으로 예상되면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 분리한다.",
+        "시간이 끝났다는 이유로 컴파일/테스트가 깨진 반쪽 구현을 완료 처리하지 않는다.",
+        "파일/메소드 개수 제한은 시간 판단을 돕는 보조 기준이며 1차 기준이 아니다.",
+    ],
+}
+
 AUDIT_GATE2_DESIGN_SEQUENCE = [
     "G2-01 Kickoff / 설계 범위 고정: Gate 1 요구사항, AC, 미결 질문, 보류 항목을 확인한다.",
     "G2-02 SW Architecture Draft: 전체 구조, 주요 CNT, ADR 후보, 보안/데이터/배포 경계, Pending을 먼저 잡는다.",
     "G2-03 Screen / User Flow: SCR, UIREF, 화면 상태, 메시지 위치, 사용자 흐름을 확정한다.",
     "G2-04 Function Spec: 화면과 요구사항을 FUNC, 기능 흐름, 예외 흐름으로 전개한다.",
-    "G2-05 Program / API Spec: FUNC를 PGM, API, DTO, 오류코드, 서비스 흐름으로 내린다.",
+    "G2-05 Program Design / API Spec: FUNC를 PGM, 컴포넌트, 인터페이스, public method contract, API, DTO, 오류코드로 내린다.",
     "G2-06 Data / DB Spec: TERM, WORD, DOMAIN, DB, ERD/DBML, 제약조건을 확정한다.",
     "G2-07 Security Guide: SEC별 정책값, 적용 위치, 오류 메시지, 검증 후보를 확정한다.",
     "G2-08 Development Standard: 패키지 구조, 레이어 규칙, DTO/Entity, 빌드/테스트 명령을 확정한다.",
@@ -442,7 +457,7 @@ AUDIT_GATE2_DESIGN_SEQUENCE = [
 
 AUDIT_GATE_PRESETS = {
     "phase0": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/phase0-discovery.sample.md",
+        "sample": "docs/core/run-input-samples/phase0-discovery.sample.md",
         "required": [
             "docs/templates/PROJECT_BRIEF_TEMPLATE.md",
             "docs/templates/STAKEHOLDER_SCOPE_TEMPLATE.md",
@@ -465,7 +480,7 @@ AUDIT_GATE_PRESETS = {
         ],
     },
     "gate1": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate1-requirements-review.sample.md",
+        "sample": "docs/core/run-input-samples/gate1-requirements-review.sample.md",
         "required": [
             "docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md",
             "docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md",
@@ -489,13 +504,13 @@ AUDIT_GATE_PRESETS = {
         ],
     },
     "gate2": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-design-review.sample.md",
+        "sample": "docs/core/run-input-samples/gate2-design-review.sample.md",
         "required": [
             "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
             "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
             "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
             "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
             "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
@@ -518,13 +533,13 @@ AUDIT_GATE_PRESETS = {
         "design_sequence": AUDIT_GATE2_DESIGN_SEQUENCE,
     },
     "gate3": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate3-test-design.sample.md",
+        "sample": "docs/core/run-input-samples/gate3-test-design.sample.md",
         "required": [
             "docs/templates/TEST_CASE_TEMPLATE.md",
             "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
             "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
             "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
             "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
@@ -546,12 +561,12 @@ AUDIT_GATE_PRESETS = {
         ],
     },
     "impl": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/impl-build-wave.sample.md",
+        "sample": "docs/core/run-input-samples/impl-build-wave.sample.md",
         "required": [
             "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
         ],
         "writable": [
@@ -561,8 +576,12 @@ AUDIT_GATE_PRESETS = {
         ],
         "completion_criteria": [
             "승인된 Gate 2/3 범위 안에서만 구현 또는 구현 계획을 작성한다.",
+            "작은 기능이라도 실제 코드/테스트/UI/API 구현은 Orchestrator 직접 구현이 아니라 worker Run 또는 agent-run --mode work로 수행한다.",
+            "Orchestrator 직접 수정 예외가 있으면 orchestrator_direct_edit_reason, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.",
             "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다.",
+            "Build Wave와 worker Run은 기능/계약 단위로 나뉘며 target_contracts의 FUNC/PGM/API/DB/SEC/TEST 묶음이 명확하다.",
             "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다.",
+            "시간 기준은 10분 내외/최대 15분 권장 보조 기준이며, 미완성 중간 구현을 완료 처리하지 않는다.",
             "구현 변경은 테스트 코드, 테스트 결과, 추적표 갱신과 연결된다.",
             "동시에 active 상태인 Build Wave가 하나만 유지된다.",
         ],
@@ -571,7 +590,7 @@ AUDIT_GATE_PRESETS = {
         ],
     },
     "gate4": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate4-qa-review.sample.md",
+        "sample": "docs/core/run-input-samples/gate4-qa-review.sample.md",
         "required": [
             "docs/templates/QA_FINDING_TEMPLATE.md",
             "docs/templates/TEST_RESULT_TEMPLATE.md",
@@ -603,7 +622,7 @@ AUDIT_GATE_PRESETS = {
         ],
     },
     "gate5": {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate5-release-approval.sample.md",
+        "sample": "docs/core/run-input-samples/gate5-release-approval.sample.md",
         "required": [
             "docs/templates/RELEASE_APPROVAL_TEMPLATE.md",
             "docs/templates/CHANGE_REQUEST_TEMPLATE.md",
@@ -631,7 +650,7 @@ AUDIT_GATE_PRESETS = {
 
 AUDIT_GATE_SKILL_PRESETS = {
     ("gate2", "data-standard-review"): {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-data-standard-review.sample.md",
+        "sample": "docs/core/run-input-samples/gate2-data-standard-review.sample.md",
         "required": [
             "docs/core/DATA_STANDARD_RULES.md",
             "docs/core/REFERENCE_STANDARDS.md",
@@ -662,14 +681,14 @@ AUDIT_GATE_SKILL_PRESETS = {
         ],
     },
     ("gate2", "development-standard-review"): {
-        "sample": "docs/adapters/codex-gpt/run-input-samples/gate2-development-standard-review.sample.md",
+        "sample": "docs/core/run-input-samples/gate2-development-standard-review.sample.md",
         "required": [
             "docs/core/TECH_STACK_BASELINES.md",
             "docs/core/SECURITY_BASELINE.md",
             "docs/templates/DEVELOPMENT_STANDARD_TEMPLATE.md",
             "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
             "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
             "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
         ],
@@ -693,7 +712,7 @@ AUDIT_GATE_SKILL_PRESETS = {
             "docs/core/KISA_SECURITY_RULES.md",
             "docs/templates/SECURITY_GUIDE_TEMPLATE.md",
             "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
             "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
             "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
         ],
@@ -772,8 +791,9 @@ AUDIT_GATE_SKILL_PRESETS = {
         ],
         "completion_criteria": [
             "Wave 하나의 범위만 수정하고 다른 Wave 범위는 건드리지 않는다.",
+            "Wave는 기능/계약 단위로 검증 가능한 완결 조각이며, 시간은 쪼개기 보조 기준으로만 사용한다.",
             "화면 구현은 UI Implementation Contract의 필수 유지 요소, 허용 변경, 금지 변경을 준수한다.",
-            "구현 결과, 테스트 결과, 증적, 추적표 갱신 필요 항목이 같은 Run에 기록되어 있다.",
+            "구현 결과, 작성/갱신한 테스트케이스, Orchestrator가 재실행할 검증 명령, 추적표 갱신 필요 항목이 같은 Run에 기록되어 있다.",
         ],
     },
     ("gate4", "qa-fix-loop"): {
@@ -1073,6 +1093,43 @@ def format_yaml_scalar(value):
     return json.dumps(value, ensure_ascii=False)
 
 
+def classify_related_ids(ids):
+    groups = {
+        "req": [],
+        "nreq": [],
+        "ac": [],
+        "func": [],
+        "scr": [],
+        "pgm": [],
+        "api": [],
+        "db": [],
+        "sec": [],
+        "test": [],
+        "ui": [],
+        "other": [],
+    }
+    for item in ids or []:
+        value = item.strip()
+        if not value:
+            continue
+        prefix = value.split("-", 1)[0].lower()
+        if prefix in ("ut", "it", "pt", "tst"):
+            groups["test"].append(value)
+        elif prefix in groups:
+            groups[prefix].append(value)
+        else:
+            groups["other"].append(value)
+    return groups
+
+
+def format_yaml_mapping_sequences(mapping, indent=0):
+    lines = []
+    spaces = " " * indent
+    for key, values in mapping.items():
+        lines.append(f"{spaces}{key}: {format_yaml_list(values)}")
+    return "\n".join(lines)
+
+
 def file_sha256(path):
     if not os.path.exists(path):
         return ""
@@ -1285,6 +1342,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
         "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
         "worker_execution_policy": AUDIT_WORKER_EXECUTION_POLICY,
+        "worker_run_sizing_policy": AUDIT_WORKER_RUN_SIZING_POLICY,
         "output_requirements": {
             "format": "RUN_OUTPUT_CONTRACT.md",
             "include": [
@@ -1331,6 +1389,8 @@ def render_run_input_preset(preset, ids, persona, gate):
     ui_evidence = preset["ui_evidence_policy"]
     ui_contract = preset["ui_implementation_contract_policy"]
     worker_policy = preset["worker_execution_policy"]
+    sizing_policy = preset.get("worker_run_sizing_policy", AUDIT_WORKER_RUN_SIZING_POLICY)
+    target_contracts = classify_related_ids(ids)
     worker_run = bool(preset.get("worker_run"))
     design_sequence = preset.get("design_sequence", [])
     design_sequence_block = ""
@@ -1396,7 +1456,8 @@ Run을 완료할 때 다음 항목을 반드시 남긴다.
 | 항목 | 작성 기준 |
 | --- | --- |
 | 담당 Wave 산출물 요약 | 담당 범위에서 작성/수정한 코드, 테스트, 증적과 관련 ID |
-| 검증 결과 | 실제 실행한 담당 영역 테스트, 빌드, 린트, Run check |
+| Worker self-check | 가능하면 실행한 담당 영역 테스트, 빌드, 린트, Run check와 결과 |
+| Orchestrator 재검증 명령 | 구현 에이전트가 작성/갱신한 테스트케이스를 메인 에이전트가 재실행할 명령 |
 | Orchestrator 결정 필요 | 추적표 갱신, session 갱신, wave-complete, check-trace, Gate 진행 판단 필요 항목 |
 | 미해결 항목 | `open_issues`, `findings`, `change_requests` |
 | 범위 밖 요청 | `scope.writable` 밖 수정이 필요한 이유와 후보 경로 |
@@ -1424,6 +1485,8 @@ profile: {format_yaml_scalar(preset["profile"])}
 run_type: {format_yaml_scalar(preset["run_type"])}
 gate: {format_yaml_scalar(gate)}
 related_ids: {format_yaml_list(ids)}
+target_contracts:
+{format_yaml_mapping_sequences(target_contracts, 2)}
 persona: {format_yaml_scalar(persona)}
 source_documents:
   read_first:
@@ -1450,45 +1513,30 @@ verification:
     required: {str(evidence["required"]).lower()}
     target_documents:
 {format_yaml_sequence(evidence["target_documents"], 6)}
-gate_exit_policy:
-  stop_required: {str(gate_exit["stop_required"]).lower()}
-  next_gate_requires_user_approval: {str(gate_exit["next_gate_requires_user_approval"]).lower()}
-  approval_evidence_required: {str(gate_exit["approval_evidence_required"]).lower()}
-  allowed_next_action: {format_yaml_scalar(gate_exit["allowed_next_action"])}
-  forbidden_actions:
-{format_yaml_sequence(gate_exit["forbidden_actions"], 4)}{ui_evidence_block}{ui_contract_block}
-worker_execution_policy:
-  applies_when: {format_yaml_scalar(worker_policy["applies_when"])}
-  role: {format_yaml_scalar(worker_policy["role"])}
-  forbidden_actions:
-{format_yaml_sequence(worker_policy["forbidden_actions"], 4)}
-  required_outputs:
-{format_yaml_sequence(worker_policy["required_outputs"], 4)}
+worker_run_sizing_policy:
+  primary_split_basis: {format_yaml_scalar(sizing_policy["primary_split_basis"])}
+  time_is_secondary: {str(sizing_policy["time_is_secondary"]).lower()}
+  target_duration_minutes: {sizing_policy["target_duration_minutes"]}
+  max_duration_minutes: {sizing_policy["max_duration_minutes"]}
+  rules:
+{format_yaml_sequence(sizing_policy["rules"], 4)}
 output_requirements:
   format: {format_yaml_scalar(output["format"])}
   include:
 {format_yaml_sequence(output["include"], 4)}
-question_policy:
-  ask_when:
-{format_yaml_sequence(question["ask_when"], 4)}
-security_policy:
-  forbidden_paths:
-{format_yaml_sequence(security["forbidden_paths"], 4)}
-  allowed_reference_paths:
-{format_yaml_sequence(security["allowed_reference_paths"], 4)}
-  forbidden_actions:
-{format_yaml_sequence(security["forbidden_actions"], 4)}
 ```
 
 ## 4. 수행 지시
 
 1. `source_documents.read_first`만 먼저 읽고 현재 Gate, skill, 관련 ID를 확인한다.
+   - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다.
 2. `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
 3. `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
 4. `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
 {completion_action_line}
-6. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
-7. `verification.commands`를 실행하고 결과를 이 Run 기록에 남긴다.
+6. worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다.
+7. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
+8. 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다.
 {ui_instruction_block}
 
 {completion_policy_section}"""
@@ -2289,8 +2337,10 @@ def find_program_spec_file(project_dir="."):
     return find_artifact_file(
         project_dir,
         os.path.join("docs", "artifacts", "02-design", "program"),
-        r"(program.*spec|프로그램.*명세).*\.md$",
+        r"(program.*(design|spec)|프로그램.*(설계|명세)).*\.md$",
     ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "program-design.md"),
+        os.path.join("docs", "02-design", "Program-Design.md"),
         os.path.join("docs", "02-design", "program-spec.md"),
         os.path.join("docs", "02-design", "Program-Spec.md"),
     ])
@@ -2480,7 +2530,7 @@ def validate_program_spec(project_dir="."):
     issues = []
     path = find_program_spec_file(project_dir)
     if not path:
-        return [], ["프로그램명세서 없음"]
+        return [], ["프로그램 설계서 없음"]
 
     with open(path, encoding="utf-8") as f:
         content = f.read()
@@ -2493,13 +2543,16 @@ def validate_program_spec(project_dir="."):
 
     required_terms = [
         ("PGM-ID", r"PGM-\d{3}"),
-        ("인터페이스", r"호출 방식|엔드포인트|함수명|API 정의서"),
-        ("입력/출력", r"입력 파라미터|출력 항목|TERM-"),
-        ("처리 흐름", r"처리 흐름|처리 내용"),
+        ("컴포넌트 책임", r"Class / Component Responsibility|주요 책임|책임 제외"),
+        ("인터페이스 계약", r"Interface Contract|IF-\d{3}|interface"),
+        ("public method 계약", r"Public Method Contract|MTH-\d{3}|시그니처"),
+        ("DTO/Entity/Data 계약", r"DTO|Entity|Data Contract|Contract-ID"),
+        ("입력/출력", r"입력|출력|Request|Response|TERM-"),
+        ("처리/정책", r"검증/정책|처리 흐름|처리 내용|Policy|Validator"),
         ("예외/오류", r"ERR-\d{3}|오류 ID|예외"),
-        ("데이터 접근", r"DB-\d{3}|데이터 접근|트랜잭션"),
-        ("보안 설계", r"SEC-\d{3}|보안 설계|KISA|SR-"),
-        ("단위테스트 연결", r"UT-\d{3}|단위테스트|AC-|NREQ-"),
+        ("트랜잭션/보안/로깅", r"Transaction|트랜잭션|SEC-\d{3}|보안|로그|감사|KISA|SR-"),
+        ("테스트 연결", r"UT-\d{3}|IT-\d{3}|Test Mapping|AC-|NREQ-"),
+        ("Worker Run 분할 기준", r"Worker Run 분할 기준|기능/계약 단위|10분|15분"),
         ("상세 SW 설계 다이어그램 판단", r"상세 SW 설계 다이어그램|복잡도|상태 전이|생략 사유"),
     ]
     for label, pattern in required_terms:
@@ -2555,7 +2608,7 @@ def validate_api_spec(project_dir="."):
         return [], issues
 
     path = find_api_spec_file(project_dir)
-    program_rel = os.path.relpath(program_path, project_dir) if program_path else "프로그램명세서"
+    program_rel = os.path.relpath(program_path, project_dir) if program_path else "프로그램 설계서"
     if not path:
         return [], [f"{program_rel}에 API가 정의되어 있으나 API 정의서 없음"]
 
@@ -2619,7 +2672,7 @@ def validate_architecture_spec(project_dir=".", level="baseline"):
         ("품질속성", r"NREQ-\d{3}|QA-\d{3}|품질속성"),
         ("기술 스택 및 선택 근거", r"기술 스택|선택 근거|언어|프레임워크|DB|배포 방식"),
         ("아키텍처 결정", r"ADR-\d{3}|아키텍처 결정|Architecture Decision"),
-        ("추적성 및 상세 설계 연결", r"추적성|상세 설계 연결|프로그램명세서|API정의서|DB명세서|화면설계서|추적표"),
+        ("추적성 및 상세 설계 연결", r"추적성|상세 설계 연결|프로그램 설계서|API정의서|DB명세서|화면설계서|추적표"),
     ]
     required_terms = draft_required_terms
     if normalized_level == "baseline":
@@ -2691,7 +2744,7 @@ def validate_security_guide(project_dir="."):
         ("SEC-ID", r"SEC-\d{3}|SEC-[A-Z]+"),
         ("참조 표준", r"KISA|SR\d+-\d+|OWASP|CWE"),
         ("구현 규격", r"구현 규격|값 또는 규칙|적용 위치"),
-        ("화면/프로그램/DB 반영 기준", r"화면설계서|프로그램명세서|DB명세서|Screen Spec|Program Spec|Database Spec"),
+        ("화면/프로그램/DB 반영 기준", r"화면설계서|프로그램 설계서|DB명세서|Screen Spec|Program Design|Database Spec"),
         ("검증 ID", r"UT-|IT-|PT-|UI-|검증 ID|테스트 ID"),
     ]
     for label, pattern in required_terms:
@@ -3111,7 +3164,7 @@ def check_trace(project_dir="."):
         print("  Gate 2 산출물 유지 검사")
         prior_design_checks = [
             ("SW 아키텍처 정의서", validate_architecture_spec),
-            ("프로그램명세서", validate_program_spec),
+            ("프로그램 설계서", validate_program_spec),
             ("보안가이드", validate_security_guide),
             ("화면설계서", validate_screen_spec),
             ("API 정의서", validate_api_spec),
@@ -3229,10 +3282,10 @@ def check_trace(project_dir="."):
         for issue in security_guide_issues:
             issues.append(f"  X {issue}")
 
-        print("\n  Gate 2 검사: 프로그램명세서 상세 SW 설계 여부")
+        print("\n  Gate 2 검사: 프로그램 설계서 상세 SW 설계 여부")
         program_spec_files, program_spec_issues = validate_program_spec(project_dir)
         if program_spec_files and not program_spec_issues:
-            print(f"  O 프로그램명세서 확인 ({', '.join(program_spec_files)})")
+            print(f"  O 프로그램 설계서 확인 ({', '.join(program_spec_files)})")
         for issue in program_spec_issues:
             issues.append(f"  X {issue}")
 
@@ -3248,7 +3301,7 @@ def check_trace(project_dir="."):
         if api_spec_files and not api_spec_issues:
             print(f"  O API 정의서 확인 ({', '.join(api_spec_files)})")
         elif not api_spec_files and not api_spec_issues:
-            print("  - API 정의서 검사 제외 (프로그램명세서에 API 없음)")
+            print("  - API 정의서 검사 제외 (프로그램 설계서에 API 없음)")
         for issue in api_spec_issues:
             issues.append(f"  X {issue}")
 
@@ -3322,7 +3375,7 @@ def check_trace(project_dir="."):
         if has_completed_run(project_dir, gate="impl", skill="implementation-plan"):
             print("  O Implementation Plan Run 완료 확인")
         else:
-            print("  ! Implementation Plan Run 없음 - 작은 단일 Run 구현이면 생략 가능, 중간 이상 작업은 Build Wave 계획 권장")
+            print("  ! Implementation Plan Run 없음 - 작은 구현은 Wave 분할 생략 가능하지만 worker Run/agent-run 위임 기록 필요")
 
         print("\n  Impl 검사 (1): 개발표준정의서 확정 여부")
         dev_standard_files, dev_standard_issues = validate_development_standard(project_dir)
@@ -4115,26 +4168,30 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
             rel_path.replace("\\", "/"),
             "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
-            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
         ]
         wave_reference_documents = [
             "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
-            "docs/artifacts/02-design/",
+            "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/core/AGENT_RUN_PROTOCOL.md",
-            "docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md",
-            "docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md",
+            "docs/core/RUN_INPUT_CONTRACT.md",
+            "docs/core/RUN_OUTPUT_CONTRACT.md",
         ]
         wave_writable = [
             rel_path.replace("\\", "/"),
-            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/artifacts/04-review/evidence/",
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
+        wave_contracts = classify_related_ids(ids)
         content = f"""# {run_id} Build Wave {bw_id} - {run_title}
 
 ```yaml
 run_id: {run_id}
-adapter: codex-gpt
 gate: impl
 persona: build
 skill: build-wave
@@ -4143,6 +4200,8 @@ bw_id: {bw_id}
 status: In Progress
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
+target_contracts:
+{format_yaml_mapping_sequences(wave_contracts, 2)}
 runner_role: worker-runner
 source_documents:
   read_first:
@@ -4172,6 +4231,16 @@ worker_execution_policy:
   required_outputs:
     - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
     - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
+worker_run_sizing_policy:
+  primary_split_basis: "기능/계약 단위"
+  time_is_secondary: true
+  target_duration_minutes: 10
+  max_duration_minutes: 15
+  rules:
+    - "Run 하나는 FUNC/PGM/API/DB/SEC/TEST ID가 연결된 검증 가능한 완결 단위여야 한다."
+    - "Run 하나만 반영해도 빌드 또는 담당 테스트가 깨지지 않아야 한다."
+    - "15분을 넘길 것으로 예상되면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 분리한다."
+    - "시간이 끝났다는 이유로 컴파일/테스트가 깨진 반쪽 구현을 완료 처리하지 않는다."
 verification_results: []
 evidence: []
 traceability_updates: []
@@ -4191,19 +4260,24 @@ open_issues: []
 ## 3. 작업자 입력 계약
 
 - 먼저 `source_documents.read_first`만 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
+- `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음이 이 Run의 실제 작업 범위다.
 - `source_documents.working_documents`는 이번 Wave의 필수 작업 문서다.
 - `source_documents.reference_on_demand`는 설계 충돌, 기준 확인, 세부 판단이 필요할 때만 참고한다.
 - `scope.writable`에 `TBD`가 남아 있으면 코드 수정 전에 Orchestrator에게 수정 허용 경로를 요청한다.
+- 작업 단위는 기능/계약 단위로 완결되어야 하며, 목표 10분 내외/최대 15분 기준은 쪼개기 보조 기준이다.
+- 시간이 부족하다는 이유로 빌드/테스트가 깨지는 중간 구현을 완료 처리하지 않는다.
 
 ## 4. Orchestrator 지시
 
 - 이 Run은 `{bw_id}` 하나만 수행한다.
+- 실제 코드/테스트/UI/API 구현은 작업자 runner 또는 subagent가 수행한다. Orchestrator는 작업지시, 통합, 검증, 상태 갱신을 담당한다.
 - 다른 Build Wave의 코드 수정은 하지 않는다.
 - subagent를 병렬 실행하더라도 이 Wave의 수정 허용 범위 안에서만 작업한다.
 - 구현 결과는 Orchestrator가 검토하고 통합한다.
 - 작업자 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
 - `session.json`의 `current_gate`, `gate_status`, `completed`는 직접 변경하지 않는다.
 - 완료 시 테스트, 추적표, Run 기록을 갱신하고 Orchestrator에게 `wave-complete {bw_id}` 실행 필요 여부를 보고한다.
+- Orchestrator가 직접 수정한 예외가 있으면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 남긴다.
 
 ## 5. 수정 범위
 
@@ -4706,7 +4780,6 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
 
 ```yaml
 run_id: {run_id}
-adapter: {adapter}
 gate: {gate}
 persona: {persona}
 skill: {skill}
@@ -4779,7 +4852,6 @@ def cmd_orchestrator_plan(goal, gate, related_ids, persona=None, adapter="codex-
 
 ```yaml
 run_id: {run_id}
-adapter: {adapter}
 gate: {gate}
 persona: {persona}
 skill: {skill}
@@ -4808,8 +4880,8 @@ open_issues: []
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
 - `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
-- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/core/RUN_INPUT_CONTRACT.md`
+- `docs/core/RUN_OUTPUT_CONTRACT.md`
 
 ## 3. 판단 범위
 
@@ -4888,7 +4960,6 @@ def cmd_handoff(target, title, from_run, gate, related_ids, persona="review", ad
 
 ```yaml
 run_id: {run_id}
-adapter: {adapter}
 gate: {gate}
 persona: {persona}
 skill: {skill}
@@ -4936,7 +5007,7 @@ open_issues: []
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
-- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/core/RUN_OUTPUT_CONTRACT.md`
 
 ## 5. 완료 조건
 
@@ -4995,6 +5066,11 @@ def agent_activity_rel_path(project_dir, target_id, runner):
     return os.path.join(execution_rel_dir(project_dir), f"{target_id}_{slug}-activity.json")
 
 
+def agent_status_rel_path(project_dir, target_id, runner):
+    slug = runner_log_slug(runner)
+    return os.path.join(execution_rel_dir(project_dir), f"{target_id}_{slug}-status.json")
+
+
 def write_agent_activity(project_dir, activity):
     rel_path = agent_activity_rel_path(project_dir, activity["target_id"], activity["runner"])
     abs_path = os.path.abspath(os.path.join(project_dir, rel_path))
@@ -5003,6 +5079,153 @@ def write_agent_activity(project_dir, activity):
         json.dump(activity, f, ensure_ascii=False, indent=2)
         f.write("\n")
     return rel_path
+
+
+def write_agent_status(project_dir, status):
+    rel_path = status.get("status_file") or agent_status_rel_path(project_dir, status["target_id"], status["runner"])
+    status["status_file"] = rel_path.replace("\\", "/")
+    status["last_update"] = datetime.now().isoformat(timespec="seconds")
+    abs_path = os.path.abspath(os.path.join(project_dir, rel_path))
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        json.dump(status, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return rel_path
+
+
+def load_latest_agent_activity(project_dir, target_id, runner=None):
+    exec_dir = os.path.join(project_dir, execution_rel_dir(project_dir))
+    if not os.path.isdir(exec_dir):
+        return None, ""
+    runner_slug = runner_log_slug(normalize_exec_runner(runner)) if runner else ""
+    candidates = []
+    for name in os.listdir(exec_dir):
+        if not name.startswith(f"{target_id}_") or not name.endswith("-activity.json"):
+            continue
+        if runner_slug and not name.startswith(f"{target_id}_{runner_slug}-"):
+            continue
+        path = os.path.join(exec_dir, name)
+        candidates.append((os.path.getmtime(path), path))
+    if not candidates:
+        return None, ""
+    _, path = sorted(candidates, reverse=True)[0]
+    rel_path = os.path.relpath(path, project_dir)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f), rel_path
+    except (OSError, json.JSONDecodeError):
+        return None, rel_path
+
+
+def runner_resume_info(runner, stdout):
+    normalized = normalize_exec_runner(runner)
+    if normalized == "codex-cli":
+        for line in (stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            thread_id = event.get("thread_id") if event.get("type") == "thread.started" else ""
+            if thread_id:
+                return {
+                    "thread_id": thread_id,
+                    "resume_supported": True,
+                    "resume_hint": f"codex exec resume {thread_id}",
+                }
+    if normalized == "claude-cli":
+        lines = (stdout or "").splitlines()
+        if len(lines) <= 1:
+            try:
+                payload = json.loads(stdout) if (stdout or "").strip() else {}
+            except json.JSONDecodeError:
+                payload = {}
+            session_id = payload.get("session_id") or payload.get("sessionId") or payload.get("conversation_id")
+            if session_id:
+                return {
+                    "session_id": session_id,
+                    "resume_supported": True,
+                    "resume_hint": f"claude --resume {session_id}",
+                }
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            session_id = event.get("session_id") or event.get("sessionId") or event.get("conversation_id")
+            if session_id:
+                return {
+                    "session_id": session_id,
+                    "resume_supported": True,
+                    "resume_hint": f"claude --resume {session_id}",
+                }
+        return {
+            "resume_supported": True,
+            "resume_hint": "claude --continue",
+        }
+    return {
+        "resume_supported": False,
+    }
+
+
+def runner_last_message(runner, stdout):
+    normalized = normalize_exec_runner(runner)
+    if normalized == "claude-cli":
+        last_text = ""
+        for line in (stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "assistant":
+                content = ((event.get("message") or {}).get("content") or [])
+                text = "".join(part.get("text", "") for part in content if part.get("type") == "text")
+                if text:
+                    last_text = text
+            elif event.get("type") == "result":
+                result_text = event.get("result") or event.get("text") or event.get("message")
+                if isinstance(result_text, str) and result_text:
+                    last_text = result_text
+        if last_text:
+            return last_text
+    try:
+        parsed_stdout = json.loads(stdout) if (stdout or "").strip() else {}
+        message = (
+            parsed_stdout.get("result")
+            or parsed_stdout.get("text")
+            or parsed_stdout.get("message")
+            or stdout
+        )
+    except json.JSONDecodeError:
+        message = stdout
+    return message if isinstance(message, str) else json.dumps(message, ensure_ascii=False, indent=2)
+
+
+def truncate_dashboard_message(value, limit=220):
+    text = " ".join((value or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
+
+
+def extract_runner_stream_delta(runner, line):
+    normalized = normalize_exec_runner(runner)
+    try:
+        event = json.loads(line)
+    except json.JSONDecodeError:
+        return ""
+    if normalized == "codex-cli":
+        if event.get("type") == "item.completed":
+            item = event.get("item") or {}
+            if item.get("type") == "agent_message":
+                return item.get("text") or ""
+    if normalized == "claude-cli":
+        if event.get("type") == "stream_event":
+            stream_event = event.get("event") or {}
+            if stream_event.get("type") == "content_block_delta":
+                delta = stream_event.get("delta") or {}
+                if delta.get("type") == "text_delta":
+                    return delta.get("text") or ""
+    return ""
 
 
 def create_execution_worktree(project_dir, run_id, runner, branch_name=None, worktree_dir=None):
@@ -5039,6 +5262,168 @@ def coerce_process_output(value):
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return str(value)
+
+
+def run_command_with_status_heartbeat(
+    cmd,
+    cwd,
+    timeout_seconds,
+    project_dir,
+    status_payload,
+    current_task,
+    heartbeat_seconds=30,
+    on_stdout_line=None,
+):
+    stop_event = threading.Event()
+    process = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    def heartbeat():
+        while not stop_event.wait(heartbeat_seconds):
+            if process.poll() is not None:
+                break
+
+            status_rel = status_payload.get("status_file", "")
+            status_abs = os.path.abspath(os.path.join(project_dir, status_rel)) if status_rel else ""
+            if status_abs and os.path.exists(status_abs):
+                age_seconds = time.time() - os.path.getmtime(status_abs)
+                if age_seconds < max(5, heartbeat_seconds - 3):
+                    continue
+
+            payload = dict(status_payload)
+            payload.update({
+                "status": "running",
+                "phase": payload.get("phase") or "runner_waiting",
+                "current_task": current_task,
+                "heartbeat": True,
+            })
+            write_agent_status(project_dir, payload)
+
+    stdout_chunks = []
+    stderr_chunks = []
+
+    def read_stream(stream, chunks, callback=None):
+        if stream is None:
+            return
+        for line in stream:
+            chunks.append(line)
+            if callback:
+                try:
+                    callback(line)
+                except Exception:
+                    pass
+
+    heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
+    stdout_thread = threading.Thread(
+        target=read_stream,
+        args=(process.stdout, stdout_chunks, on_stdout_line),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=read_stream,
+        args=(process.stderr, stderr_chunks, None),
+        daemon=True,
+    )
+    heartbeat_thread.start()
+    stdout_thread.start()
+    stderr_thread.start()
+    timed_out = False
+    try:
+        exit_code = process.wait(timeout=timeout_seconds)
+        stdout_thread.join(timeout=5)
+        stderr_thread.join(timeout=5)
+        exit_code = process.returncode
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        process.kill()
+        process.wait(timeout=5)
+        stdout_thread.join(timeout=5)
+        stderr_thread.join(timeout=5)
+        exit_code = 124
+        stderr_chunks.append(f"\nTIMEOUT after {timeout_seconds} seconds")
+    finally:
+        stop_event.set()
+        heartbeat_thread.join(timeout=1)
+
+    stdout = "".join(stdout_chunks)
+    stderr = "".join(stderr_chunks)
+    return exit_code, stdout or "", stderr or "", timed_out
+
+
+def activity_status_payload(activity):
+    status = {}
+    for key in (
+        "target_type",
+        "target_id",
+        "review_id",
+        "run_id",
+        "runner",
+        "requested_runner",
+        "started_at",
+        "deadline_at",
+        "exec_dir",
+        "worktree_path",
+        "branch",
+        "status_file",
+        "resume",
+        "resume_started_at",
+    ):
+        if key in activity:
+            status[key] = activity[key]
+    return status
+
+
+def make_runner_resume_capture(project_dir, activity, current_task):
+    lock = threading.Lock()
+    message_chunks = []
+    last_message_status_at = 0.0
+
+    def capture(line):
+        nonlocal last_message_status_at
+        info = runner_resume_info(activity.get("runner", ""), line)
+        delta = extract_runner_stream_delta(activity.get("runner", ""), line)
+        with lock:
+            should_update = False
+            status_phase = ""
+            if info.get("thread_id") and activity.get("thread_id") != info.get("thread_id"):
+                activity.update(info)
+                should_update = True
+                status_phase = "session_started"
+            if info.get("session_id") and activity.get("session_id") != info.get("session_id"):
+                activity.update(info)
+                should_update = True
+                status_phase = "session_started"
+            if delta:
+                if delta != "".join(message_chunks):
+                    message_chunks.append(delta)
+                now = time.time()
+                if now - last_message_status_at >= 30:
+                    activity["current_message"] = truncate_dashboard_message("".join(message_chunks))
+                    should_update = True
+                    status_phase = status_phase or "message_stream"
+                    last_message_status_at = now
+            if not should_update:
+                return
+            write_agent_activity(project_dir, activity)
+            status = activity_status_payload(activity)
+            status.update({
+                "status": "running",
+                "phase": status_phase or "running",
+                "current_task": current_task,
+            })
+            if "current_message" in activity:
+                status["current_message"] = activity["current_message"]
+            status.update(info)
+            write_agent_status(project_dir, status)
+
+    return capture
 
 
 def parse_git_status_files(status_text):
@@ -5345,8 +5730,8 @@ created_at: {date.today()}
 - `docs/core/INDEPENDENT_REVIEW_PROCESS.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
-- `docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md`
-- `docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md`
+- `docs/core/RUN_INPUT_CONTRACT.md`
+- `docs/core/RUN_OUTPUT_CONTRACT.md`
 - `docs/adapters/codex-gpt/skills/independent-review.md`
 
 ## 3. 리뷰 대상
@@ -5458,7 +5843,6 @@ TBD
 
 ```yaml
 run_id: {run_id}
-adapter: codex-gpt
 gate: {gate}
 persona: review
 skill: independent-review
@@ -5541,13 +5925,6 @@ def cmd_review_run(
 ):
     config = load_vulcan_config(project_dir)
     review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
-    runner = runner or review_config_get(review_config, "runner", "") or runtime_role_runner(config, "review")
-    runner_normalized = normalize_exec_runner(runner)
-    if runner_normalized not in INDEPENDENT_REVIEW_EXEC_RUNNERS:
-        print(f"오류: review-run에서 아직 지원하지 않는 runner입니다: {runner}")
-        print("현재 지원 runner: codex-cli, claude-cli, antigravity-cli")
-        sys.exit(1)
-
     project_abs = os.path.abspath(project_dir)
     request_rel_path = find_review_file(project_abs, review_id, "_request.md")
     result_rel_path = find_review_file(project_abs, review_id, "_result.md")
@@ -5562,6 +5939,13 @@ def cmd_review_run(
     with open(request_abs, encoding="utf-8") as f:
         request_content = f.read()
     request_meta = parse_simple_yaml_block(request_content)
+    requested_runner = request_meta.get("runner", "")
+    runner = runner or requested_runner or review_config_get(review_config, "runner", "") or runtime_role_runner(config, "review")
+    runner_normalized = normalize_exec_runner(runner)
+    if runner_normalized not in INDEPENDENT_REVIEW_EXEC_RUNNERS:
+        print(f"오류: review-run에서 아직 지원하지 않는 runner입니다: {runner}")
+        print("현재 지원 runner: codex-cli, claude-cli, antigravity-cli")
+        sys.exit(1)
 
     worktree_path = request_meta.get("worktree_path", "TBD")
     exec_dir = os.path.abspath(worktree_path) if worktree_path and worktree_path != "TBD" and os.path.isdir(worktree_path) else project_abs
@@ -5608,12 +5992,18 @@ def cmd_review_run(
     log_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-exec.{log_ext}")
     stderr_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-exec.stderr.txt")
     last_message_rel_path = os.path.join(review_rel_dir, f"{review_id}_{log_slug}-last-message.md")
+    status_rel_path = agent_status_rel_path(project_abs, review_id, runner_normalized)
     log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
     stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
+    status_abs = os.path.abspath(os.path.join(project_abs, status_rel_path))
     os.makedirs(os.path.dirname(log_abs), exist_ok=True)
 
-    prompt = f"""You are an independent reviewer for Vulcan-Anvil Ex.
+    prompt = f"""You are executing an independent review for Vulcan-Anvil Ex right now.
+
+This is not a preparation request. Do not answer that you will review later.
+You must read the request file, perform the review in this run, and update the result file before exiting.
+If you cannot update the result file, write a failed/blocked result and explain why.
 
 Working directory:
 {exec_dir}
@@ -5624,12 +6014,18 @@ Read this independent review request:
 Write your review result only to:
 {result_rel_path}
 
+Update this worker status file at start and whenever the phase changes:
+{status_abs}
+
 Rules:
 - Treat this as a new independent review session.
 - Do not modify project artifacts, source code, requirements, design documents, test results, or traceability documents.
 - You may read files and run safe verification commands if needed.
 - You must update the result file with status, reviewed_by, result_verdict, reviewed documents, findings, CR candidates, ISSUE candidates, and evidence.
 - Use PASS, FIND, CR, or ISSUE as the result verdict.
+- Do not rely on wall-clock timers. Update the status file when you start, after loading context, while reviewing, while writing the result, and when completed/blocked/failed.
+- Keep status.current_task to one short dashboard line, 80 characters or fewer.
+- Status JSON shape: {{"target_id":"{review_id}","target_type":"review","runner":"{runner_normalized}","status":"running","phase":"context_loaded","current_task":"Gate2 review context loaded","last_update":"<ISO time>"}}.
 - Do not perform Gate transitions, edit session state, or make final approval/merge/release decisions.
 - Do not mark user approval unless the request/result contains explicit user approval evidence.
 - In your final response, summarize what you wrote to the result file and mention the result verdict.
@@ -5647,6 +6043,8 @@ Rules:
             "exec",
             "--cd",
             exec_dir,
+            "--add-dir",
+            project_abs,
             "-m",
             model,
             "-c",
@@ -5667,8 +6065,12 @@ Rules:
             runner_exe,
             "-p",
             prompt,
+            "--add-dir",
+            project_abs,
             "--output-format",
-            "json",
+            "stream-json",
+            "--verbose",
+            "--include-partial-messages",
             "--effort",
             reasoning_effort,
             "--dangerously-skip-permissions",
@@ -5691,6 +6093,8 @@ Rules:
             runner_exe,
             "--add-dir",
             exec_dir,
+            "--add-dir",
+            project_abs,
             "--print-timeout",
             f"{timeout_seconds}s",
         ]
@@ -5725,6 +6129,7 @@ Rules:
         "review_id": review_id,
         "status": "running",
         "runner": runner_normalized,
+        "requested_runner": requested_runner or runner_normalized,
         "model": model or "(runner default)",
         "reasoning_effort": reasoning_effort,
         "model_source": runner_model_source(runner_normalized),
@@ -5738,28 +6143,46 @@ Rules:
         "stderr_log": stderr_rel_path.replace("\\", "/"),
         "last_message": last_message_rel_path.replace("\\", "/"),
         "result_file": result_rel_path.replace("\\", "/"),
+        "status_file": status_rel_path.replace("\\", "/"),
     }
     activity_rel_path = write_agent_activity(project_abs, activity)
-    timed_out = False
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=exec_dir,
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
-        )
-        exit_code = result.returncode
-        stdout = result.stdout or ""
-        stderr = result.stderr or ""
-    except subprocess.TimeoutExpired as e:
-        timed_out = True
-        exit_code = 124
-        stdout = e.stdout or ""
-        stderr = (e.stderr or "") + f"\nTIMEOUT after {timeout_seconds} seconds"
+    write_agent_status(project_abs, {
+        "target_type": "review",
+        "target_id": review_id,
+        "review_id": review_id,
+        "runner": runner_normalized,
+        "requested_runner": requested_runner or runner_normalized,
+        "status": "running",
+        "phase": "started",
+        "current_task": f"{review_id} 독립 검수 시작",
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "exec_dir": exec_dir,
+        "status_file": status_rel_path,
+    })
+    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+        cmd=cmd,
+        cwd=exec_dir,
+        timeout_seconds=timeout_seconds,
+        project_dir=project_abs,
+        status_payload={
+            "target_type": "review",
+            "target_id": review_id,
+            "review_id": review_id,
+            "runner": runner_normalized,
+            "requested_runner": requested_runner or runner_normalized,
+            "started_at": started_at,
+            "deadline_at": deadline_at,
+            "exec_dir": exec_dir,
+            "status_file": status_rel_path,
+        },
+        current_task=f"{review_id} {runner_normalized} 응답 대기 중",
+        on_stdout_line=make_runner_resume_capture(
+            project_abs,
+            activity,
+            f"{review_id} {runner_normalized} 세션 연결됨",
+        ),
+    )
     completed_dt = datetime.now()
     completed_at = completed_dt.isoformat(timespec="seconds")
     duration_seconds = int((completed_dt - started_dt).total_seconds())
@@ -5770,17 +6193,7 @@ Rules:
         f.write(stderr)
     if runner_normalized in ("claude-cli", "antigravity-cli"):
         with open(last_message_abs, "w", encoding="utf-8") as f:
-            try:
-                parsed_stdout = json.loads(stdout) if stdout.strip() else {}
-                message = (
-                    parsed_stdout.get("result")
-                    or parsed_stdout.get("text")
-                    or parsed_stdout.get("message")
-                    or stdout
-                )
-            except json.JSONDecodeError:
-                message = stdout
-            f.write(message if isinstance(message, str) else json.dumps(message, ensure_ascii=False, indent=2))
+            f.write(runner_last_message(runner_normalized, stdout))
 
     after_hash = file_sha256(exec_result_abs)
     result_changed = bool(before_hash and after_hash and before_hash != after_hash)
@@ -5804,7 +6217,31 @@ Rules:
         "empty_output": empty_output,
         "result_file_changed": result_changed,
     })
+    activity.update(runner_resume_info(runner_normalized, stdout))
     write_agent_activity(project_abs, activity)
+    write_agent_status(project_abs, {
+        "target_type": "review",
+        "target_id": review_id,
+        "review_id": review_id,
+        "runner": runner_normalized,
+        "requested_runner": requested_runner or runner_normalized,
+        "status": run_status,
+        "phase": "completed" if run_status == "completed" else run_status,
+        "current_task": (
+            f"{review_id} 검수 결과 작성 완료"
+            if result_changed
+            else f"{review_id} 결과 파일 미갱신"
+        ),
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "exec_dir": exec_dir,
+        "status_file": status_rel_path,
+        "result_file_changed": result_changed,
+        "exit_code": exit_code,
+        **runner_resume_info(runner_normalized, stdout),
+    })
     if os.path.normcase(exec_result_abs) != os.path.normcase(result_abs) and os.path.exists(exec_result_abs):
         os.makedirs(os.path.dirname(result_abs), exist_ok=True)
         shutil.copy2(exec_result_abs, result_abs)
@@ -5984,18 +6421,27 @@ def cmd_run_exec(
     stderr_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-exec.stderr.txt")
     last_message_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-last-message.md")
     summary_rel_path = os.path.join(exec_rel_dir, f"{run_id}_{log_slug}-summary.json")
+    status_rel_path = agent_status_rel_path(project_abs, run_id, runner_normalized)
     log_abs = os.path.abspath(os.path.join(project_abs, log_rel_path))
     stderr_abs = os.path.abspath(os.path.join(project_abs, stderr_rel_path))
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
     summary_abs = os.path.abspath(os.path.join(project_abs, summary_rel_path))
+    status_abs = os.path.abspath(os.path.join(project_abs, status_rel_path))
 
-    prompt = f"""You are a worker runner for Vulcan-Anvil Ex.
+    prompt = f"""You are executing a worker Run for Vulcan-Anvil Ex right now.
+
+This is not a preparation request. Do not answer that you will work later.
+You must read the Run document, perform the requested work in this run, and update the Run document before exiting.
+If you cannot update the Run document, write blocked/failed details in the Run document and final response.
 
 Working directory:
 {exec_dir}
 
 Read and execute this Run document:
 {run_rel_path}
+
+Update this worker status file at start and whenever the phase changes:
+{status_abs}
 
 Rules:
 - You are a worker runner, not the Orchestrator.
@@ -6006,6 +6452,9 @@ Rules:
 - Do not make merge, release, or final acceptance decisions.
 - Do not mark user approval unless explicit user approval evidence already exists.
 - Record your work in the Run document: changed_files, verification_results, evidence, traceability_updates, open_issues, and orchestrator_decision_needed.
+- Do not rely on wall-clock timers. Update the status file when you start, after loading context, while editing, while testing, while writing the result, and when completed/blocked/failed.
+- Keep status.current_task to one short dashboard line, 80 characters or fewer.
+- Status JSON shape: {{"target_id":"{run_id}","target_type":"run","runner":"{runner_normalized}","status":"running","phase":"editing","current_task":"Backend tests running","last_update":"<ISO time>"}}.
 - In your final response, summarize changed files, verification commands/results, and any Orchestrator decision needed.
 """
 
@@ -6021,6 +6470,8 @@ Rules:
             "exec",
             "--cd",
             exec_dir,
+            "--add-dir",
+            project_abs,
             "-m",
             model,
             "-c",
@@ -6041,8 +6492,12 @@ Rules:
             runner_exe,
             "-p",
             prompt,
+            "--add-dir",
+            project_abs,
             "--output-format",
-            "json",
+            "stream-json",
+            "--verbose",
+            "--include-partial-messages",
             "--effort",
             reasoning_effort,
             "--dangerously-skip-permissions",
@@ -6065,6 +6520,8 @@ Rules:
             runner_exe,
             "--add-dir",
             exec_dir,
+            "--add-dir",
+            project_abs,
             "--print-timeout",
             f"{timeout_seconds}s",
         ]
@@ -6142,28 +6599,48 @@ Rules:
         "stderr_log": stderr_rel_path.replace("\\", "/"),
         "last_message": last_message_rel_path.replace("\\", "/"),
         "summary": summary_rel_path.replace("\\", "/"),
+        "status_file": status_rel_path.replace("\\", "/"),
     }
     activity_rel_path = write_agent_activity(project_abs, activity)
-    timed_out = False
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=exec_dir,
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
-        )
-        exit_code = result.returncode
-        stdout = result.stdout or ""
-        stderr = result.stderr or ""
-    except subprocess.TimeoutExpired as e:
-        timed_out = True
-        exit_code = 124
-        stdout = coerce_process_output(e.stdout)
-        stderr = coerce_process_output(e.stderr) + f"\nTIMEOUT after {timeout_seconds} seconds"
+    write_agent_status(project_abs, {
+        "target_type": "run",
+        "target_id": run_id,
+        "run_id": run_id,
+        "runner": runner_normalized,
+        "status": "running",
+        "phase": "started",
+        "current_task": f"{run_id} worker 실행 시작",
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "exec_dir": exec_dir,
+        "worktree_path": worktree_path or None,
+        "branch": execution_branch or None,
+        "status_file": status_rel_path,
+    })
+    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+        cmd=cmd,
+        cwd=exec_dir,
+        timeout_seconds=timeout_seconds,
+        project_dir=project_abs,
+        status_payload={
+            "target_type": "run",
+            "target_id": run_id,
+            "run_id": run_id,
+            "runner": runner_normalized,
+            "deadline_at": deadline_at,
+            "started_at": started_at,
+            "exec_dir": exec_dir,
+            "worktree_path": worktree_path or None,
+            "branch": execution_branch or None,
+            "status_file": status_rel_path,
+        },
+        current_task=f"{run_id} {runner_normalized} 응답 대기 중",
+        on_stdout_line=make_runner_resume_capture(
+            project_abs,
+            activity,
+            f"{run_id} {runner_normalized} 세션 연결됨",
+        ),
+    )
     completed_dt = datetime.now()
     completed_at = completed_dt.isoformat(timespec="seconds")
     duration_seconds = int((completed_dt - started_dt).total_seconds())
@@ -6194,7 +6671,33 @@ Rules:
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     })
+    activity.update(runner_resume_info(runner_normalized, stdout))
     write_agent_activity(project_abs, activity)
+    write_agent_status(project_abs, {
+        "target_type": "run",
+        "target_id": run_id,
+        "run_id": run_id,
+        "runner": runner_normalized,
+        "status": run_status,
+        "phase": "completed" if run_status == "completed" else run_status,
+        "current_task": (
+            f"{run_id} worker 결과 작성 완료"
+            if run_file_changed or changed_files
+            else f"{run_id} 변경 없음"
+        ),
+        "started_at": started_at,
+        "deadline_at": deadline_at,
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "exec_dir": exec_dir,
+        "worktree_path": worktree_path or None,
+        "branch": execution_branch or None,
+        "status_file": status_rel_path,
+        "run_file_changed": run_file_changed,
+        "changed_files": changed_files,
+        "exit_code": exit_code,
+        **runner_resume_info(runner_normalized, stdout),
+    })
 
     with open(log_abs, "w", encoding="utf-8") as f:
         f.write(stdout)
@@ -6202,17 +6705,7 @@ Rules:
         f.write(stderr)
     if runner_normalized in ("claude-cli", "antigravity-cli"):
         with open(last_message_abs, "w", encoding="utf-8") as f:
-            try:
-                parsed_stdout = json.loads(stdout) if stdout.strip() else {}
-                message = (
-                    parsed_stdout.get("result")
-                    or parsed_stdout.get("text")
-                    or parsed_stdout.get("message")
-                    or stdout
-                )
-            except json.JSONDecodeError:
-                message = stdout
-            f.write(message if isinstance(message, str) else json.dumps(message, ensure_ascii=False, indent=2))
+            f.write(runner_last_message(runner_normalized, stdout))
 
     if os.path.normcase(exec_run_abs) != os.path.normcase(run_abs) and os.path.exists(exec_run_abs):
         shutil.copy2(exec_run_abs, run_abs)
@@ -6241,6 +6734,7 @@ Rules:
         "stderr_log": stderr_rel_path.replace("\\", "/"),
         "last_message": last_message_rel_path.replace("\\", "/"),
         "activity": activity_rel_path.replace("\\", "/"),
+        "status_file": status_rel_path.replace("\\", "/"),
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     }
@@ -6544,6 +7038,230 @@ def cmd_agent_run(
     print(f"오류: 지원하지 않는 agent-run mode입니다: {mode}")
     print("현재 지원 mode: review, work")
     sys.exit(1)
+
+
+def cmd_agent_resume(
+    target_id,
+    runner=None,
+    prompt="",
+    timeout_seconds=None,
+    dry_run=False,
+    project_dir=".",
+):
+    project_abs = os.path.abspath(project_dir)
+    activity, activity_rel_path = load_latest_agent_activity(project_abs, target_id, runner=runner)
+    if not activity:
+        print(f"오류: {target_id}의 이전 agent activity를 찾을 수 없습니다.")
+        print(f"  검색 위치: {execution_rel_dir(project_abs)}")
+        if runner:
+            print(f"  runner: {runner}")
+        sys.exit(1)
+
+    runner_normalized = normalize_exec_runner(activity.get("runner") or runner)
+    if runner_normalized not in ("codex-cli", "claude-cli"):
+        print(f"오류: resume은 현재 codex-cli와 claude-cli만 지원합니다: {runner_normalized}")
+        sys.exit(1)
+
+    config = load_vulcan_config(project_abs)
+    execution_config = config.get("execution", {}) if isinstance(config.get("execution"), dict) else {}
+    review_config = config.get("review", {}) if isinstance(config.get("review"), dict) else {}
+    timeout_seconds = int(
+        timeout_seconds
+        or activity.get("timeout_seconds")
+        or execution_config.get("default_timeout_seconds")
+        or review_config_get(review_config, "exec_timeout_seconds", 1800)
+    )
+
+    target_type = activity.get("target_type") or ("review" if target_id.startswith("RV-") else "run")
+    exec_dir = activity.get("exec_dir") or project_abs
+    if not os.path.isdir(exec_dir):
+        exec_dir = project_abs
+    status_rel_path = activity.get("status_file") or agent_status_rel_path(project_abs, target_id, runner_normalized)
+    status_abs = os.path.abspath(os.path.join(project_abs, status_rel_path))
+    log_slug = runner_log_slug(runner_normalized)
+    log_ext = runner_log_ext(runner_normalized)
+    exec_rel_dir = execution_rel_dir(project_abs)
+    resume_log_rel_path = os.path.join(exec_rel_dir, f"{target_id}_{log_slug}-resume.{log_ext}")
+    resume_stderr_rel_path = os.path.join(exec_rel_dir, f"{target_id}_{log_slug}-resume.stderr.txt")
+    resume_last_rel_path = os.path.join(exec_rel_dir, f"{target_id}_{log_slug}-resume-last-message.md")
+    resume_log_abs = os.path.abspath(os.path.join(project_abs, resume_log_rel_path))
+    resume_stderr_abs = os.path.abspath(os.path.join(project_abs, resume_stderr_rel_path))
+    resume_last_abs = os.path.abspath(os.path.join(project_abs, resume_last_rel_path))
+    os.makedirs(os.path.dirname(resume_log_abs), exist_ok=True)
+
+    resume_prompt = prompt or f"""Resume the previous Vulcan-Anvil Ex {target_type} worker session for {target_id}.
+
+This is not a preparation request. Continue the original task now.
+Update the configured Run or review result file before exiting, or record blocked/failed details if you cannot.
+Update this worker status file at start and whenever the phase changes:
+{status_abs}
+Keep status.current_task to one short dashboard line, 80 characters or fewer.
+Do not perform Gate transitions, edit session gate state, or make final approval/merge/release decisions.
+"""
+
+    if runner_normalized == "codex-cli":
+        thread_id = activity.get("thread_id") or ""
+        if not thread_id:
+            print(f"오류: {target_id} activity에 Codex thread_id가 없어 resume할 수 없습니다.")
+            print(f"  activity: {activity_rel_path}")
+            sys.exit(1)
+        runner_exe = shutil.which("codex")
+        if not runner_exe:
+            print("오류: codex CLI를 찾을 수 없습니다. `codex --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        cmd = [
+            runner_exe,
+            "-a",
+            "never",
+            "exec",
+            "resume",
+            thread_id,
+            resume_prompt,
+        ]
+    else:
+        runner_exe = shutil.which("claude")
+        if not runner_exe:
+            print("오류: Claude CLI를 찾을 수 없습니다. `claude --version`이 실행되는지 확인하세요.")
+            sys.exit(1)
+        session_id = activity.get("session_id") or ""
+        cmd = [runner_exe]
+        if session_id:
+            cmd.extend(["--resume", session_id])
+        else:
+            cmd.append("--continue")
+        cmd.extend([
+            "-p",
+            resume_prompt,
+            "--add-dir",
+            project_abs,
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--include-partial-messages",
+            "--dangerously-skip-permissions",
+        ])
+
+    printable_cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd)
+    if dry_run:
+        print("Agent resume dry-run")
+        print(f"  target_id: {target_id}")
+        print(f"  target_type: {target_type}")
+        print(f"  runner: {runner_normalized}")
+        print(f"  exec_dir: {exec_dir}")
+        print(f"  activity: {activity_rel_path}")
+        print(f"  status_file: {status_rel_path}")
+        print(f"  command: {printable_cmd}")
+        return
+
+    started_dt = datetime.now()
+    deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
+    started_at = started_dt.isoformat(timespec="seconds")
+    deadline_at = deadline_dt.isoformat(timespec="seconds")
+    activity.update({
+        "status": "running",
+        "resume": True,
+        "resume_started_at": started_at,
+        "deadline_at": deadline_at,
+        "timeout_seconds": timeout_seconds,
+        "exec_dir": exec_dir,
+        "status_file": status_rel_path.replace("\\", "/"),
+        "resume_log": resume_log_rel_path.replace("\\", "/"),
+        "resume_stderr_log": resume_stderr_rel_path.replace("\\", "/"),
+        "resume_last_message": resume_last_rel_path.replace("\\", "/"),
+    })
+    write_agent_activity(project_abs, activity)
+    write_agent_status(project_abs, {
+        "target_type": target_type,
+        "target_id": target_id,
+        "runner": runner_normalized,
+        "status": "running",
+        "phase": "resume",
+        "current_task": f"{target_id} resume 실행 중",
+        "started_at": activity.get("started_at") or started_at,
+        "resume_started_at": started_at,
+        "deadline_at": deadline_at,
+        "exec_dir": exec_dir,
+        "status_file": status_rel_path,
+        "resume": True,
+    })
+
+    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+        cmd=cmd,
+        cwd=exec_dir,
+        timeout_seconds=timeout_seconds,
+        project_dir=project_abs,
+        status_payload={
+            "target_type": target_type,
+            "target_id": target_id,
+            "runner": runner_normalized,
+            "started_at": activity.get("started_at") or started_at,
+            "resume_started_at": started_at,
+            "deadline_at": deadline_at,
+            "exec_dir": exec_dir,
+            "status_file": status_rel_path,
+            "resume": True,
+        },
+        current_task=f"{target_id} {runner_normalized} resume 응답 대기 중",
+        on_stdout_line=make_runner_resume_capture(
+            project_abs,
+            activity,
+            f"{target_id} {runner_normalized} resume 세션 연결됨",
+        ),
+    )
+
+    completed_dt = datetime.now()
+    completed_at = completed_dt.isoformat(timespec="seconds")
+    duration_seconds = int((completed_dt - started_dt).total_seconds())
+    with open(resume_log_abs, "w", encoding="utf-8") as f:
+        f.write(stdout)
+    with open(resume_stderr_abs, "w", encoding="utf-8") as f:
+        f.write(stderr)
+    with open(resume_last_abs, "w", encoding="utf-8") as f:
+        if runner_normalized == "claude-cli":
+            f.write(runner_last_message(runner_normalized, stdout))
+        else:
+            f.write(stdout)
+
+    run_status = "timeout" if timed_out else ("failed" if exit_code != 0 else "completed")
+    activity.update({
+        "status": run_status,
+        "resume_completed_at": completed_at,
+        "resume_duration_seconds": duration_seconds,
+        "timed_out": timed_out,
+        "exit_code": exit_code,
+    })
+    activity.update(runner_resume_info(runner_normalized, stdout))
+    write_agent_activity(project_abs, activity)
+    write_agent_status(project_abs, {
+        "target_type": target_type,
+        "target_id": target_id,
+        "runner": runner_normalized,
+        "status": run_status,
+        "phase": "resume_completed" if run_status == "completed" else run_status,
+        "current_task": f"{target_id} resume 완료" if run_status == "completed" else f"{target_id} resume 실패",
+        "started_at": activity.get("started_at") or started_at,
+        "resume_started_at": started_at,
+        "completed_at": completed_at,
+        "duration_seconds": duration_seconds,
+        "exec_dir": exec_dir,
+        "status_file": status_rel_path,
+        "resume": True,
+        "exit_code": exit_code,
+        **runner_resume_info(runner_normalized, stdout),
+    })
+
+    print("\nAgent resume 완료")
+    print(f"  target_id: {target_id}")
+    print(f"  runner: {runner_normalized}")
+    print(f"  status: {run_status}")
+    print(f"  duration_seconds: {duration_seconds}")
+    print(f"  exit_code: {exit_code}")
+    print(f"  activity: {activity_rel_path}")
+    print(f"  status_file: {status_rel_path}")
+    print(f"  resume_log: {resume_log_rel_path}")
+    if exit_code != 0:
+        print(f"오류: {runner_normalized} resume 실행이 비정상 종료되었습니다. stderr 로그를 확인하세요: {resume_stderr_rel_path}")
+        sys.exit(exit_code)
 
 
 def check_run_file(path):
@@ -7017,6 +7735,13 @@ def main():
     p_agent_run.add_argument("--allow-dirty", action="store_true", help="work mode에서 미커밋 변경이 있어도 HEAD 기준 worktree 생성을 허용")
     p_agent_run.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
 
+    p_agent_resume = subparsers.add_parser("agent-resume", help="이전 CLI runner 세션을 이어 실행하고 대시보드 상태를 갱신")
+    p_agent_resume.add_argument("--target-id", required=True, help="resume 대상 ID (RV-NNN 또는 RUN-NNN)")
+    p_agent_resume.add_argument("--runner", choices=["codex-cli", "codex", "claude-cli", "claude"], help="이전 실행 runner")
+    p_agent_resume.add_argument("--prompt", default="", help="resume 세션에 보낼 추가 지시")
+    p_agent_resume.add_argument("--timeout-seconds", type=int, default=0, help="resume timeout seconds")
+    p_agent_resume.add_argument("--dry-run", action="store_true", help="실행하지 않고 명령만 출력")
+
     backlog_sub = p_backlog.add_subparsers(dest="backlog_cmd")
     backlog_sub.add_parser("list", help="백로그 Active 항목 나열")
     bl_add = backlog_sub.add_parser("add", help="새 백로그 항목 추가")
@@ -7165,6 +7890,14 @@ def main():
             allow_dirty=args.allow_dirty,
             dry_run=args.dry_run,
         )
+    elif args.command == "agent-resume":
+        cmd_agent_resume(
+            target_id=args.target_id,
+            runner=args.runner,
+            prompt=args.prompt,
+            timeout_seconds=args.timeout_seconds or None,
+            dry_run=args.dry_run,
+        )
     elif args.command == "backlog":
         if args.backlog_cmd == "list":
             cmd_backlog_list()
@@ -7194,4 +7927,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 

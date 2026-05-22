@@ -72,16 +72,25 @@ Orchestrator는 `AGENT_PERSONAS.md`의 persona를 사용한다.
 | 변경요청 영향도와 다시 진행할 Gate 판단 | change-control |
 | 문서 버전, 용어, 산출물 정합성 정리 | documentation |
 
-Orchestrator가 직접 해도 되는 일은 작은 탐색, 짧은 문서 보정, 검증 명령 실행, 결과 통합이다. 범위가 커지거나 관점 분리가 필요하면 persona Run으로 나눈다.
+Orchestrator가 직접 해도 되는 일은 작은 탐색, 작업지시서 작성, 짧은 문서 보정, worker가 만든 테스트케이스 재실행, 결과 통합이다. 범위가 커지거나 관점 분리가 필요하면 persona Run으로 나눈다.
 
-구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 구현은 `build` persona 또는 subagent가 수행하고, Orchestrator는 작업지시, 결과 검토, 통합, 검증, 추적성 갱신을 책임진다. 단, subagent를 사용할 수 없거나 충돌 해결이 필요한 경우에는 최소한의 연결 수정, 문서 갱신, 테스트 보정만 직접 수행할 수 있으며 Run 기록에 그 이유를 남긴다.
+구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행하는 것을 기본값으로 한다. Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
+
+Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로 제한한다.
+
+- worker Run 작성과 실행 지시
+- worker 결과 통합 중 충돌 해결에 필요한 최소 연결 수정
+- Run 문서, 추적표, `session.json`, 테스트 결과서 같은 운영/증적 문서 갱신
+- worker가 작성/갱신한 테스트케이스 실행과 실패 원인 분류
+
+subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run 기록에 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 남긴다. 직접 구현한 변경은 구현 완료가 아니라 worker 재검수 또는 QA 검수 대상이다.
 
 ## 5.1 Build Wave 오케스트레이션
 
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
 
-- Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다.
-- 실제 구현은 Wave마다 별도의 `Build Wave Run`을 만든 뒤 진행한다.
+- Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다.
+- 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 `agent-run --mode work`나 명시적 subagent 위임으로 진행한다.
 - 하나의 Wave 안에서는 여러 subagent를 병렬로 사용할 수 있다.
 - 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
 - 다음 Wave의 분석, 읽기 전용 검토, 질문 정리는 허용할 수 있지만 코드 수정은 금지한다.

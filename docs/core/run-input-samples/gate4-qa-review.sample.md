@@ -21,7 +21,14 @@ source_documents:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   reference_on_demand:
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
-    - docs/artifacts/02-design/
+    - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
+    - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
+    - docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
+    - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
     - docs/templates/QA_FINDING_TEMPLATE.md
     - docs/templates/TEST_RESULT_TEMPLATE.md
     - docs/core/ID_SYSTEM.md
@@ -29,8 +36,8 @@ source_documents:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
-    - docs/adapters/codex-gpt/RUN_OUTPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - docs/artifacts/04-review/
@@ -85,3 +92,4 @@ ui_implementation_contract_policy:
 - 화면 QA는 Playwright 기준으로 수행한다. CDP나 브라우저 수동 캡처는 보조 관찰로만 남기고 Pass 증적으로 쓰지 않는다.
 - 화면 퍼블리싱 기반 화면이 UI Implementation Contract와 다르면 기준 UIREF와 구현 screenshot을 비교하고, 허용되지 않은 차이를 FIND로 남긴다.
 - 기대 화면과 다른 캡처를 Pass로 기록하지 않는다. 예를 들어 회원가입 성공 테스트에 로그인 화면만 있으면 FIND로 남긴다.
+

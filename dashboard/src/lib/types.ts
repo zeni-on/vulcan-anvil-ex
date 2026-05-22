@@ -185,6 +185,17 @@ export interface RuntimeActivity {
   result_file_changed?: boolean
   run_file_changed?: boolean
   changed_files?: string[]
+  phase?: string
+  current_task?: string
+  current_message?: string
+  last_update?: string
+  status_file?: string
+  status_stale?: boolean
+  last_update_age_seconds?: number
+  resume_supported?: boolean
+  thread_id?: string
+  session_id?: string
+  resume_hint?: string
   log?: string
   stderr_log?: string
   last_message?: string

@@ -82,6 +82,15 @@ Spring Boot를 사용하는 경우 다음 항목을 반드시 확정한다.
 | Lombok 기준 | 예: 허용 annotation과 금지 annotation |
 | Logging 기준 | 예: SLF4J + Logback, Log4j2 선택 시 사유 기록 |
 
+스택별 실행 정책:
+
+| 항목 | 적용 조건 | 프로젝트 기준 | 금지/주의 사항 | 검증 방법 |
+| --- | --- | --- | --- | --- |
+| 동기/비동기 함수 선언 | Python/FastAPI, Node, Java async, 외부 I/O 사용 시 | 예: 동기 DB driver는 동기 함수, 비동기 I/O library 사용 시에만 async/await | blocking I/O를 async context에 임의 배치 금지 | UT-/IT-/lint |
+| 트랜잭션 소유권 | DB write 또는 복수 repository 조합 시 | 예: Service/UseCase가 commit/rollback 또는 `@Transactional` 경계를 소유 | Repository/Adapter의 자의적 commit/rollback 금지 | UT-/IT- |
+| 외부 호출 정책 | API client, queue, file, third-party 호출 시 | timeout, retry, idempotency, fallback 기준 작성 | 무한 retry, 민감정보 로그 출력 금지 | UT-/IT-/E2E |
+| 환경 설정 | endpoint, DB URL, secret, feature flag 사용 시 | `.env`, application config, secret manager 등 출처 작성 | endpoint/secret의 운영 코드 하드코딩 금지 | config test/build |
+
 ## 4. 아키텍처 및 패키지 구조
 
 아키텍처 패턴:
@@ -325,6 +334,12 @@ log.debug("login token={}, password={}", token, rawPassword);
 | --- | --- | ---: | --- |
 | ERR-001 |  |  |  |
 
+글로벌 예외 매핑 기준:
+
+- Controller/Router마다 동일한 `try/catch`, `try-except` 응답 변환을 반복하지 않고, 선택 스택의 global exception handler, middleware, interceptor, filter 중 하나로 공통 오류 포맷을 매핑한다.
+- validation, authentication, authorization, not found, conflict, system error는 공통 오류 코드와 HTTP 상태를 가진다.
+- 사용자 노출 메시지와 내부 원인/stack trace는 분리한다.
+
 ## 8. 메시지 관리 규칙
 
 기본 원칙:
@@ -449,13 +464,15 @@ Spring Boot + Vue 통합 배포 예:
 
 에이전트는 다음 순서를 따른다.
 
-1. 관련 요구사항정의서, 기능명세서, 프로그램명세서, 화면설계서, DB명세서, 테스트케이스를 확인한다.
-2. 구현 대상의 `REQ/FUNC/PGM/SCR/DB/SEC/UT/IT/PT` ID를 확인한다.
-3. 사용자가 선택한 기술스택에 맞는 `docs/core/TECH_STACK_BASELINES.md` 섹션과 본 개발표준정의서의 패키지 구조, 코드 컨벤션을 따른다.
-4. 문서에 없는 기능, API, DB 컬럼, 테스트를 임의로 추가하지 않는다.
-5. 필요한 변경이 있으면 먼저 `ISSUE` 또는 `CR` 후보로 기록한다.
-6. 사용자 노출 메시지를 코드에 직접 하드코딩하지 않고 메시지 리소스를 사용한다.
-7. 구현 후 테스트 결과와 증적을 추적표에 연결할 수 있게 남긴다.
+1. Run 입력 계약의 `target_contracts`, `source_documents.working`, `scope.writable`을 먼저 확인한다.
+2. 구현 대상의 `REQ/FUNC/PGM/SCR/API/DB/SEC/UT/IT/UI/PT` ID를 확인한다.
+3. `reference_on_demand` 문서는 대상 ID와 직접 충돌하거나 세부 기준이 필요할 때만 읽는다.
+4. 사용자가 선택한 기술스택에 맞는 `docs/core/TECH_STACK_BASELINES.md` 섹션과 본 개발표준정의서의 패키지 구조, 코드 컨벤션을 따른다.
+5. 프로그램 설계서의 public method/event, DTO, error, transaction, config contract를 우선 구현한다.
+6. 문서에 없는 기능, API, DB 컬럼, 테스트를 임의로 추가하지 않는다.
+7. 필요한 변경이 있으면 먼저 `ISSUE` 또는 `CR` 후보로 기록한다.
+8. 사용자 노출 메시지를 코드에 직접 하드코딩하지 않고 메시지 리소스를 사용한다.
+9. worker는 자신의 self-check 명령과 결과를 Run에 남기고, Orchestrator가 최종 테스트결과서와 추적표 반영을 재검증한다.
 
 ## 14. 변경이력
 

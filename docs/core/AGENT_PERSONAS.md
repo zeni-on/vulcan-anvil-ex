@@ -23,7 +23,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | --- | --- | --- | --- |
 | `discovery` | 배경, 제약, 현행 자료, 질문, 위험을 정리한다. | P0 | 분석 메모, 질문, 가정, 위험 |
 | `requirements` | 요구사항, 비기능 요구사항, 인수기준을 정리한다. | G1 | 요구사항정의서, 요구사항추적표 |
-| `design` | SW 아키텍처, 기능, 화면, 프로그램, DB, 보안 설계를 작성한다. | G2 | SW 아키텍처 정의서, 기능명세서, 화면설계서, 프로그램명세서, DB명세서 |
+| `design` | SW 아키텍처, 기능, 화면, 프로그램, DB, 보안 설계를 작성한다. | G2 | SW 아키텍처 정의서, 기능명세서, 화면설계서, 프로그램 설계서, DB명세서 |
 | `screen-design` | 화면 구조, 시안, 와이어프레임, UI 구현 계약, UI 기준 증적을 설계한다. | G2 | 화면설계서, UI 시안, 와이어프레임, UI Implementation Contract, 기준 스크린샷 |
 | `security-review` | 보안 요구사항, 보안설계, 시큐어코딩 기준 누락을 검토한다. | G1, G2, G3, G4 | 보안 검토 결과, 보안 FIND/CR |
 | `screen-review` | 화면 식별, 화면상태, 와이어프레임, UI 구현 계약, UI 증적 기준 누락을 검토한다. | G2, G3, G4 | 화면 검토 결과, UI FIND/CR |
@@ -83,18 +83,24 @@ run_id: RUN-001
 gate: gate4
 goal: "PGM-005 게시글 작성 API 구현"
 related_ids: [REQ-005, AC-007, PGM-005, UT-007]
+target_contracts:
+  req: [REQ-005]
+  ac: [AC-007]
+  pgm: [PGM-005]
+  test: [UT-007]
 source_documents:
   read_first:
     - AGENTS.md
     - session.json
     - docs/core/TRACEABILITY_RULES.md
   working_documents:
-    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Spec_v0.1.md
+    - docs/runs/RUN-001_게시글-작성-api-구현_v0.1.md
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
   reference_on_demand:
     - docs/core/AGENT_PERSONAS.md
     - docs/core/AGENT_RUN_PROTOCOL.md
-    - docs/adapters/codex-gpt/RUN_INPUT_CONTRACT.md
+    - docs/core/RUN_INPUT_CONTRACT.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
 scope:
   writable:
     - app/api/posts.py
@@ -103,6 +109,7 @@ scope:
     - docs/
 completion_criteria:
   - "UT-007이 통과한다."
+  - "PGM-005의 public method 계약이 구현과 테스트에 반영되어 있다."
   - "Run 기록에 검증 command와 결과를 남긴다."
 ```
 
@@ -137,3 +144,4 @@ completion_criteria:
 - 다음 persona 또는 다음 Run 제안
 
 이 정보는 `docs/runs/RUN-xxx_..._v0.1.md` 또는 adapter별 출력 계약에 기록한다.
+
