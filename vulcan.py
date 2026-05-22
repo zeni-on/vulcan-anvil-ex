@@ -5284,6 +5284,86 @@ def extract_runner_stream_delta(runner, line):
     return ""
 
 
+def extract_runner_log_update(runner, line):
+    normalized = normalize_exec_runner(runner)
+    if normalized != "antigravity-cli":
+        return {}
+    text = (line or "").strip()
+    if not text:
+        return {}
+
+    update = {}
+    model_match = re.search(r'Propagating selected model override.*label="([^"]+)"', text)
+    if model_match:
+        model_label = model_match.group(1)
+        update.update({
+            "phase": "model_selected",
+            "current_task": f"Gemini 모델 확인: {model_label}",
+            "current_message": model_label,
+            "model_observed": model_label,
+        })
+        return update
+
+    conversation_match = re.search(r"(?:Created|Streaming) conversation ([0-9a-fA-F-]{20,})", text)
+    if conversation_match:
+        conversation_id = conversation_match.group(1)
+        streaming = "Streaming conversation" in text
+        update.update({
+            "conversation_id": conversation_id,
+            "resume_supported": True,
+            "resume_hint": f"agy.exe --conversation {conversation_id}",
+            "phase": "session_streaming" if streaming else "session_started",
+            "current_task": "Gemini 응답 스트림 수신 중" if streaming else "Gemini conversation 생성",
+        })
+        return update
+
+    if "streamGenerateContent" in text:
+        return {
+            "phase": "model_stream",
+            "current_task": "Gemini 모델 응답 생성 중",
+        }
+    if "Drip stopped" in text:
+        return {
+            "phase": "message_stream",
+            "current_task": "Gemini 응답 스트림 수신",
+        }
+    if "Stopping conversation stream" in text:
+        return {
+            "phase": "stream_stopped",
+            "current_task": "Gemini 응답 스트림 종료",
+        }
+    if "Failed to" in text or "ERROR" in text or "Error" in text:
+        return {
+            "phase": "runner_warning",
+            "current_task": truncate_dashboard_message(text, limit=80),
+            "current_message": truncate_dashboard_message(text),
+        }
+    return {}
+
+
+def collect_runner_log_updates(runner, log_path):
+    updates = {}
+    if not log_path or not os.path.exists(log_path):
+        return updates
+    try:
+        with open(log_path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                update = extract_runner_log_update(runner, line)
+                if update:
+                    updates.update(update)
+    except OSError:
+        return updates
+    return updates
+
+
+def runner_log_identity_fields(updates):
+    return {
+        key: value
+        for key, value in (updates or {}).items()
+        if key not in ("status", "phase", "current_task")
+    }
+
+
 def create_execution_worktree(project_dir, run_id, runner, branch_name=None, worktree_dir=None):
     project_abs = os.path.abspath(project_dir)
     target = os.path.abspath(worktree_dir) if worktree_dir else default_execution_worktree_path(project_abs, run_id, runner)
@@ -5329,6 +5409,8 @@ def run_command_with_status_heartbeat(
     current_task,
     heartbeat_seconds=30,
     on_stdout_line=None,
+    tail_file_path=None,
+    on_tail_line=None,
 ):
     stop_event = threading.Event()
     process = subprocess.Popen(
@@ -5376,6 +5458,26 @@ def run_command_with_status_heartbeat(
                 except Exception:
                     pass
 
+    def tail_file():
+        if not tail_file_path or not on_tail_line:
+            return
+        position = 0
+        while not stop_event.wait(1):
+            try:
+                if not os.path.exists(tail_file_path):
+                    continue
+                size = os.path.getsize(tail_file_path)
+                if size < position:
+                    position = 0
+                with open(tail_file_path, encoding="utf-8", errors="replace") as f:
+                    f.seek(position)
+                    lines = f.readlines()
+                    position = f.tell()
+                for line in lines:
+                    on_tail_line(line)
+            except Exception:
+                continue
+
     heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
     stdout_thread = threading.Thread(
         target=read_stream,
@@ -5387,9 +5489,11 @@ def run_command_with_status_heartbeat(
         args=(process.stderr, stderr_chunks, None),
         daemon=True,
     )
+    tail_thread = threading.Thread(target=tail_file, daemon=True)
     heartbeat_thread.start()
     stdout_thread.start()
     stderr_thread.start()
+    tail_thread.start()
     timed_out = False
     try:
         exit_code = process.wait(timeout=timeout_seconds)
@@ -5407,6 +5511,7 @@ def run_command_with_status_heartbeat(
     finally:
         stop_event.set()
         heartbeat_thread.join(timeout=1)
+        tail_thread.join(timeout=1)
 
     stdout = "".join(stdout_chunks)
     stderr = "".join(stderr_chunks)
@@ -5445,9 +5550,11 @@ def make_runner_resume_capture(project_dir, activity, current_task):
         nonlocal last_message_status_at
         info = runner_resume_info(activity.get("runner", ""), line)
         delta = extract_runner_stream_delta(activity.get("runner", ""), line)
+        log_update = extract_runner_log_update(activity.get("runner", ""), line)
         with lock:
             should_update = False
             status_phase = ""
+            status_task = current_task
             if info.get("thread_id") and activity.get("thread_id") != info.get("thread_id"):
                 activity.update(info)
                 should_update = True
@@ -5465,6 +5572,11 @@ def make_runner_resume_capture(project_dir, activity, current_task):
                     should_update = True
                     status_phase = status_phase or "message_stream"
                     last_message_status_at = now
+            if log_update:
+                activity.update(log_update)
+                should_update = True
+                status_phase = log_update.get("phase") or status_phase or "runner_log"
+                status_task = log_update.get("current_task") or status_task
             if not should_update:
                 return
             write_agent_activity(project_dir, activity)
@@ -5472,11 +5584,12 @@ def make_runner_resume_capture(project_dir, activity, current_task):
             status.update({
                 "status": "running",
                 "phase": status_phase or "running",
-                "current_task": current_task,
+                "current_task": status_task,
             })
             if "current_message" in activity:
                 status["current_message"] = activity["current_message"]
             status.update(info)
+            status.update(log_update)
             write_agent_status(project_dir, status)
 
     return capture
@@ -6151,6 +6264,8 @@ Rules:
             exec_dir,
             "--add-dir",
             project_abs,
+            "--log-file",
+            log_abs,
             "--print-timeout",
             f"{timeout_seconds}s",
         ]
@@ -6238,13 +6353,25 @@ Rules:
             activity,
             f"{review_id} {runner_normalized} 세션 연결됨",
         ),
+        tail_file_path=log_abs if runner_normalized == "antigravity-cli" else None,
+        on_tail_line=make_runner_resume_capture(
+            project_abs,
+            activity,
+            f"{review_id} {runner_normalized} 로그 수신 중",
+        ) if runner_normalized == "antigravity-cli" else None,
     )
     completed_dt = datetime.now()
     completed_at = completed_dt.isoformat(timespec="seconds")
     duration_seconds = int((completed_dt - started_dt).total_seconds())
 
-    with open(log_abs, "w", encoding="utf-8") as f:
-        f.write(stdout)
+    if runner_normalized == "antigravity-cli":
+        if stdout.strip():
+            with open(log_abs, "a", encoding="utf-8") as f:
+                f.write("\n\n--- stdout ---\n")
+                f.write(stdout)
+    else:
+        with open(log_abs, "w", encoding="utf-8") as f:
+            f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
     if runner_normalized in ("claude-cli", "antigravity-cli"):
@@ -6273,6 +6400,7 @@ Rules:
         "empty_output": empty_output,
         "result_file_changed": result_changed,
     })
+    activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
     write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
@@ -6296,6 +6424,7 @@ Rules:
         "status_file": status_rel_path,
         "result_file_changed": result_changed,
         "exit_code": exit_code,
+        **runner_log_identity_fields(collect_runner_log_updates(runner_normalized, log_abs)),
         **runner_resume_info(runner_normalized, stdout),
     })
     if os.path.normcase(exec_result_abs) != os.path.normcase(result_abs) and os.path.exists(exec_result_abs):
@@ -6578,6 +6707,8 @@ Rules:
             exec_dir,
             "--add-dir",
             project_abs,
+            "--log-file",
+            log_abs,
             "--print-timeout",
             f"{timeout_seconds}s",
         ]
@@ -6696,6 +6827,12 @@ Rules:
             activity,
             f"{run_id} {runner_normalized} 세션 연결됨",
         ),
+        tail_file_path=log_abs if runner_normalized == "antigravity-cli" else None,
+        on_tail_line=make_runner_resume_capture(
+            project_abs,
+            activity,
+            f"{run_id} {runner_normalized} 로그 수신 중",
+        ) if runner_normalized == "antigravity-cli" else None,
     )
     completed_dt = datetime.now()
     completed_at = completed_dt.isoformat(timespec="seconds")
@@ -6727,6 +6864,7 @@ Rules:
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     })
+    activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
     write_agent_activity(project_abs, activity)
     write_agent_status(project_abs, {
@@ -6752,11 +6890,18 @@ Rules:
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
         "exit_code": exit_code,
+        **runner_log_identity_fields(collect_runner_log_updates(runner_normalized, log_abs)),
         **runner_resume_info(runner_normalized, stdout),
     })
 
-    with open(log_abs, "w", encoding="utf-8") as f:
-        f.write(stdout)
+    if runner_normalized == "antigravity-cli":
+        if stdout.strip():
+            with open(log_abs, "a", encoding="utf-8") as f:
+                f.write("\n\n--- stdout ---\n")
+                f.write(stdout)
+    else:
+        with open(log_abs, "w", encoding="utf-8") as f:
+            f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
     if runner_normalized in ("claude-cli", "antigravity-cli"):

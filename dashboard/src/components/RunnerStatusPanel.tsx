@@ -60,6 +60,11 @@ function activityLabel(activity: RuntimeActivity): string {
   return `${type} ${activity.target_id}`
 }
 
+function activityDetail(activity: RuntimeActivity): string {
+  const message = activity.current_message || activity.current_task || activity.phase || activity.status
+  return [activityLabel(activity), message].filter(Boolean).join(' · ')
+}
+
 function capabilityLabel(runtime: ProjectRuntime): { label: string; tone: 'green' | 'yellow' | 'gray' } {
   if (runtime.capabilities.cross_model_validation) {
     return { label: '교차검증 가능', tone: 'green' }
@@ -161,8 +166,8 @@ export default function RunnerStatusPanel({
                   <div className="truncate text-xs font-semibold text-slate-100">
                     {runnerLabel(runner)}
                   </div>
-                  <div className="truncate text-[11px] text-slate-500">
-                    {runningActivity ? `작업중 · ${activityLabel(runningActivity)}` : runnerDetail(runner)}
+                  <div className={runningActivity ? 'line-clamp-2 text-[11px] leading-3 text-slate-400' : 'truncate text-[11px] text-slate-500'}>
+                    {runningActivity ? activityDetail(runningActivity) : runnerDetail(runner)}
                   </div>
                 </div>
                 {runningActivity ? (

@@ -180,10 +180,13 @@ python vulcan.py run-integrate --run-id RUN-010 --apply
 - 실행 시작 시 `docs/runs/_exec/<TARGET-ID>_<runner>-activity.json`에 `status: running`을 기록하고, 종료 시 `completed`, `failed`, `timeout`, `completed_no_result_change`로 갱신한다. 로컬 대시보드는 이 파일을 읽어 runner 실행 중 상태를 표시한다.
 - 실행 시작 시 `docs/runs/_exec/<TARGET-ID>_<runner>-status.json`도 만든다. worker는 wall-clock 타이머를 정확히 맞추려고 하지 않고, 시작, 컨텍스트 로딩, 편집, 테스트, 결과 작성, 완료, 차단, 실패 같은 단계가 바뀔 때 이 파일의 `phase`와 `current_task`를 갱신한다.
 - `current_task`는 대시보드에 한 줄로 보이는 짧은 문장이어야 한다. 너무 긴 설명, 전체 로그, 사고 과정은 기록하지 않는다.
+- `codex-cli`는 `--json` JSONL stdout을 파싱하되, stdout 앞에 섞일 수 있는 non-JSON 경고 줄은 무시한다.
+- `claude-cli`는 `--output-format stream-json --include-partial-messages`를 파싱해 `session_id`와 부분 메시지를 수집한다.
+- `antigravity-cli`/`agy.exe`는 현재 stdout 결과를 신뢰하지 않고 `--log-file`을 필수로 지정해 conversation id, 모델 선택, stream 상태를 tail 하여 activity/status에 반영한다. `--add-dir`는 절대경로를 사용한다.
 
 Context attach 기본값:
 
-- Antigravity runner는 `--add-dir <worktree>`로 작업 디렉터리를 workspace에 추가하고, 계약 문서 경로는 프롬프트 안에 명시한다.
+- Antigravity runner는 `--add-dir <worktree-absolute-path>`로 작업 디렉터리를 workspace에 추가하고, 계약 문서 경로는 프롬프트 안에 명시한다.
 - Review 실행은 `request.md`와 `result.md` 경로를 프롬프트 계약으로 전달한다.
 - Work/Run 실행은 해당 `RUN-*.md` 경로를 프롬프트 계약으로 전달한다.
 - `source_documents.read_first`, `source_documents.working_documents`, `scope.writable`은 Run/Review 문서 안의 계약으로 두고 worker가 필요할 때 읽게 한다.
