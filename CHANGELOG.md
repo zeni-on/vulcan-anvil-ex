@@ -32,7 +32,6 @@
 ### Verification
 
 - `python -m py_compile vulcan.py`
-- `python vulcan.py check-contract --project-dir C:\Users\user\Documents\antig-workspace\sample-ex-0523-1`
 - `npm test -- --runTestsByPath src/__tests__/components/DocList.test.tsx src/__tests__/api/session-docs-commits.test.ts src/__tests__/lib/qa-doc.test.ts`
 - `npm run build` in `dashboard/`
 
