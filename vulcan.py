@@ -26,6 +26,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 """
 
 import argparse
+import ast
 import fnmatch
 import hashlib
 import io
@@ -2650,6 +2651,458 @@ def validate_program_spec(project_dir="."):
     return [rel_path], issues
 
 
+def normalize_md_header(value):
+    return re.sub(r"\s+", "", (value or "").strip().lower())
+
+
+def clean_contract_cell(value):
+    cleaned = (value or "").strip()
+    cleaned = cleaned.replace("<br>", " ").replace("<br/>", " ").replace("<br />", " ")
+    cleaned = re.sub(r"`([^`]+)`", r"\1", cleaned)
+    cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = re.sub(r"\s*후보\s*$", "", cleaned)
+    return cleaned.strip()
+
+
+def extract_markdown_section(content, section_title_pattern):
+    lines = content.splitlines()
+    section_lines = []
+    in_section = False
+    start_level = None
+    title_re = re.compile(section_title_pattern, re.IGNORECASE)
+    heading_re = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+
+    for line in lines:
+        heading = heading_re.match(line)
+        if heading:
+            level = len(heading.group(1))
+            title = heading.group(2)
+            if in_section and start_level is not None and level <= start_level:
+                break
+            if not in_section and title_re.search(title):
+                in_section = True
+                start_level = level
+                continue
+        if in_section:
+            section_lines.append(line)
+    return "\n".join(section_lines)
+
+
+def parse_markdown_tables(section_content):
+    tables = []
+    headers = None
+    rows = []
+    in_fence = False
+
+    def flush():
+        nonlocal headers, rows
+        if headers and rows:
+            tables.append((headers, rows))
+        headers = None
+        rows = []
+
+    for raw_line in section_content.splitlines():
+        line = raw_line.strip()
+        if line.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if not line.startswith("|") or not line.endswith("|"):
+            flush()
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if all(re.fullmatch(r"[-: ]+", cell or "") for cell in cells):
+            continue
+        if headers is None:
+            headers = cells
+            continue
+        if len(cells) < len(headers):
+            cells += [""] * (len(headers) - len(cells))
+        rows.append({headers[idx]: cells[idx] for idx in range(min(len(headers), len(cells)))})
+
+    flush()
+    return tables
+
+
+def table_cell(row, candidates, default=""):
+    normalized = {normalize_md_header(key): value for key, value in row.items()}
+    for candidate in candidates:
+        key = normalize_md_header(candidate)
+        for header, value in normalized.items():
+            if key in header:
+                return clean_contract_cell(value)
+    return default
+
+
+def split_contract_ids(value, prefix):
+    ids = []
+    for match in re.finditer(rf"\b{re.escape(prefix)}-\d{{3}}(?:-\d{{2}})?\b", value or "", re.IGNORECASE):
+        item = match.group(0).upper()
+        if item not in ids:
+            ids.append(item)
+    return ids
+
+
+def pgm_matches(interface_pgm_value, method_pgm_value):
+    method_ids = split_contract_ids(method_pgm_value, "PGM")
+    if not method_ids:
+        return False
+    text = (interface_pgm_value or "").upper()
+    direct_ids = split_contract_ids(text, "PGM")
+    if any(method_id in direct_ids for method_id in method_ids):
+        return True
+    range_match = re.search(r"PGM-(\d{3})\s*~\s*(?:PGM-)?(\d{3})", text)
+    if range_match:
+        start = int(range_match.group(1))
+        end = int(range_match.group(2))
+        for method_id in method_ids:
+            num = int(method_id.split("-")[1])
+            if start <= num <= end:
+                return True
+    return False
+
+
+def parse_contract_method_name(signature):
+    text = clean_contract_cell(signature)
+    match = re.search(r"(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*\(", text)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def parse_program_contracts(program_design_path):
+    with open(program_design_path, encoding="utf-8") as f:
+        content = f.read()
+
+    interface_section = extract_markdown_section(content, r"Interface Contract|인터페이스")
+    method_section = extract_markdown_section(content, r"Public Method Contract|public method|메소드")
+    interfaces = []
+    methods = []
+
+    for headers, rows in parse_markdown_tables(interface_section):
+        if not any(re.search(r"IF-ID|Interface-ID", header, re.IGNORECASE) for header in headers):
+            continue
+        for row in rows:
+            if_id = table_cell(row, ["Interface-ID", "IF-ID"])
+            if not re.match(r"IF-\d{3}$", if_id or "", re.IGNORECASE):
+                continue
+            interfaces.append({
+                "if_id": if_id.upper(),
+                "pgm": table_cell(row, ["PGM-ID", "PGM"]),
+                "name": table_cell(row, ["인터페이스명", "Interface", "이름"]),
+                "path": table_cell(row, ["패키지/경로", "경로", "Path"]),
+                "implementation": table_cell(row, ["구현체", "Implementation"]),
+            })
+
+    for headers, rows in parse_markdown_tables(method_section):
+        if not any(re.search(r"Method-ID|시그니처|이벤트", header, re.IGNORECASE) for header in headers):
+            continue
+        for row in rows:
+            signature = table_cell(row, ["시그니처/이벤트", "시그니처", "Method", "Event"])
+            method_name = parse_contract_method_name(signature)
+            if not method_name:
+                continue
+            methods.append({
+                "method_id": table_cell(row, ["Method-ID", "MTH-ID"]),
+                "if_id": table_cell(row, ["IF-ID", "Interface-ID"]).upper(),
+                "pgm": table_cell(row, ["PGM-ID", "PGM"]),
+                "signature": signature,
+                "method_name": method_name,
+                "input": table_cell(row, ["입력", "Input"]),
+                "output": table_cell(row, ["출력", "Output"]),
+            })
+
+    return {
+        "program_design": program_design_path,
+        "interfaces": interfaces,
+        "methods": methods,
+    }
+
+
+def extract_contract_paths(path_cell):
+    paths = []
+    for match in re.finditer(r"`([^`]+)`", path_cell or ""):
+        paths.append(match.group(1).strip())
+    if not paths and path_cell:
+        for chunk in re.split(r"[,，]|\s+또는\s+|\s+and\s+", path_cell):
+            chunk = clean_contract_cell(chunk)
+            if chunk:
+                paths.append(chunk)
+    return paths
+
+
+def resolve_contract_path(project_dir, path_cell):
+    for rel_path in extract_contract_paths(path_cell):
+        normalized = rel_path.replace("/", os.sep).replace("\\", os.sep)
+        if not normalized.lower().endswith(".py"):
+            continue
+        candidate = os.path.join(project_dir, normalized)
+        if os.path.exists(candidate):
+            return normalized, candidate
+        if normalized.startswith("backend" + os.sep):
+            continue
+        backend_candidate = os.path.join(project_dir, "backend", normalized)
+        if os.path.exists(backend_candidate):
+            return os.path.join("backend", normalized), backend_candidate
+    return "", ""
+
+
+def resolve_contract_file(project_dir, path_cell):
+    supported_exts = (".py", ".java")
+    for rel_path in extract_contract_paths(path_cell):
+        normalized = rel_path.replace("/", os.sep).replace("\\", os.sep)
+        lower = normalized.lower()
+        if not lower.endswith(supported_exts):
+            continue
+        candidates = [normalized]
+        if not normalized.startswith("backend" + os.sep):
+            candidates.append(os.path.join("backend", normalized))
+        if not normalized.startswith(os.path.join("src", "main", "java") + os.sep):
+            candidates.append(os.path.join("src", "main", "java", normalized))
+        if not normalized.startswith(os.path.join("backend", "src", "main", "java") + os.sep):
+            candidates.append(os.path.join("backend", "src", "main", "java", normalized))
+        for candidate_rel in candidates:
+            candidate_abs = os.path.join(project_dir, candidate_rel)
+            if os.path.exists(candidate_abs):
+                return candidate_rel, candidate_abs, os.path.splitext(candidate_abs)[1].lower().lstrip(".")
+    return "", "", ""
+
+
+def parse_python_classes(file_path):
+    with open(file_path, encoding="utf-8") as f:
+        tree = ast.parse(f.read(), filename=file_path)
+
+    classes = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            methods = {
+                item.name
+                for item in node.body
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            classes[node.name] = methods
+    return classes
+
+
+def strip_java_comments(content):
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+    content = re.sub(r"//.*", "", content)
+    return content
+
+
+def find_matching_brace(content, open_index):
+    depth = 0
+    for idx in range(open_index, len(content)):
+        char = content[idx]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return idx
+    return -1
+
+
+def parse_java_types(file_path):
+    with open(file_path, encoding="utf-8") as f:
+        content = strip_java_comments(f.read())
+
+    types = {}
+    type_pattern = re.compile(
+        r"\b(?:(?:public|protected|private|abstract|final|sealed|non-sealed|static)\s+)*"
+        r"(class|interface|record|enum)\s+([A-Za-z_]\w*)\b"
+    )
+    method_pattern = re.compile(
+        r"(?:^|[;\n{}])\s*"
+        r"(?:(?:public|protected|private|static|final|abstract|default|synchronized|native|strictfp)\s+)*"
+        r"(?:<[^>{};]+>\s*)?"
+        r"[A-Za-z_$][\w$<>\[\], ?.&]*\s+"
+        r"([A-Za-z_$][\w$]*)\s*\([^;{}]*\)\s*(?:throws\s+[^{;]+)?\s*[;{]",
+        re.MULTILINE,
+    )
+
+    for match in type_pattern.finditer(content):
+        kind = match.group(1)
+        name = match.group(2)
+        brace_index = content.find("{", match.end())
+        if brace_index == -1:
+            types[name] = set()
+            continue
+        end_index = find_matching_brace(content, brace_index)
+        body = content[brace_index + 1:end_index if end_index != -1 else len(content)]
+        methods = set()
+        for method_match in method_pattern.finditer(body):
+            method_name = method_match.group(1)
+            if method_name in {"if", "for", "while", "switch", "catch", "return", "new"}:
+                continue
+            if method_name == name:
+                continue
+            methods.add(method_name)
+        types[name] = methods
+    return types
+
+
+def parse_contract_classes(file_path, language):
+    if language == "py":
+        return parse_python_classes(file_path)
+    if language == "java":
+        return parse_java_types(file_path)
+    return {}
+
+
+def write_json_file(path, payload):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def cmd_check_contract(program_design="", report="", emit_contract="", project_dir="."):
+    program_path = program_design or find_program_spec_file(project_dir)
+    if not program_path:
+        print("오류: 프로그램 설계서를 찾을 수 없습니다.")
+        return 1
+    if not os.path.isabs(program_path):
+        program_path = os.path.join(project_dir, program_path)
+    if not os.path.exists(program_path):
+        print(f"오류: 프로그램 설계서 파일이 없습니다: {program_path}")
+        return 1
+
+    contract = parse_program_contracts(program_path)
+    results = []
+    interface_by_id = {item["if_id"]: item for item in contract["interfaces"]}
+    class_cache = {}
+
+    def add_result(level, contract_id, target, message, path=""):
+        results.append({
+            "level": level,
+            "contract_id": contract_id,
+            "target": target,
+            "message": message,
+            "path": path,
+        })
+
+    for interface in contract["interfaces"]:
+        if_id = interface["if_id"]
+        rel_path, abs_path, language = resolve_contract_file(project_dir, interface.get("path", ""))
+        if not rel_path:
+            add_result("info", if_id, interface.get("name", ""), "지원 대상 파일(.py/.java)이 아니어서 1차 정적검사에서 제외", interface.get("path", ""))
+            continue
+        if not os.path.exists(abs_path):
+            add_result("fail", if_id, interface.get("name", ""), "파일 없음", rel_path)
+            continue
+        try:
+            classes = class_cache.setdefault(abs_path, parse_contract_classes(abs_path, language))
+        except SyntaxError as exc:
+            add_result("fail", if_id, interface.get("name", ""), f"Python AST 파싱 실패: {exc}", rel_path)
+            continue
+        except UnicodeDecodeError as exc:
+            add_result("fail", if_id, interface.get("name", ""), f"파일 읽기 실패: {exc}", rel_path)
+            continue
+        name = interface.get("name", "")
+        if name and name in classes:
+            add_result("pass", if_id, name, "interface/class 확인", rel_path)
+        elif name:
+            add_result("fail", if_id, name, "interface/class 없음", rel_path)
+        implementation = interface.get("implementation", "")
+        if implementation and implementation not in {"-", "해당없음"}:
+            if implementation in classes:
+                add_result("pass", if_id, implementation, "구현체 class 확인", rel_path)
+            else:
+                add_result("warn", if_id, implementation, "구현체 class를 같은 Python 파일에서 찾지 못함", rel_path)
+
+    for method in contract["methods"]:
+        if_id = method.get("if_id", "")
+        interface = interface_by_id.get(if_id)
+        if not interface and not if_id:
+            candidates = [item for item in contract["interfaces"] if pgm_matches(item.get("pgm", ""), method.get("pgm", ""))]
+            matching_candidates = []
+            for candidate in candidates:
+                _rel_path, candidate_abs_path, candidate_language = resolve_contract_file(project_dir, candidate.get("path", ""))
+                if not candidate_abs_path:
+                    continue
+                try:
+                    candidate_classes = class_cache.setdefault(candidate_abs_path, parse_contract_classes(candidate_abs_path, candidate_language))
+                except SyntaxError:
+                    continue
+                candidate_class_names = [
+                    name for name in [candidate.get("implementation"), candidate.get("name")]
+                    if name and name not in {"-", "해당없음"}
+                ]
+                if any(method["method_name"] in candidate_classes.get(name, set()) for name in candidate_class_names):
+                    matching_candidates.append(candidate)
+            if len(matching_candidates) == 1:
+                interface = matching_candidates[0]
+                if_id = interface["if_id"]
+                add_result("warn", method.get("method_id", "") or method["method_name"], method["method_name"], f"Public Method Contract에 IF-ID가 없어 {if_id}로 코드 기준 추정", "")
+            elif len(candidates) == 1:
+                interface = candidates[0]
+                if_id = interface["if_id"]
+                add_result("warn", method.get("method_id", "") or method["method_name"], method["method_name"], f"Public Method Contract에 IF-ID가 없어 {if_id}로 추정", "")
+            elif candidates:
+                add_result("warn", method.get("method_id", "") or method["method_name"], method["method_name"], "Public Method Contract에 IF-ID가 없어 대상 interface가 모호함", "")
+                continue
+        if not interface:
+            add_result("warn", method.get("method_id", "") or method["method_name"], method["method_name"], f"IF-ID를 Interface Contract에서 찾지 못함: {if_id or '미기재'}", "")
+            continue
+        rel_path, abs_path, language = resolve_contract_file(project_dir, interface.get("path", ""))
+        if not rel_path:
+            add_result("info", method.get("method_id", "") or f"{if_id}.{method['method_name']}", method["method_name"], "지원 대상 파일(.py/.java)이 아니어서 method 검사 제외", interface.get("path", ""))
+            continue
+        if not os.path.exists(abs_path):
+            add_result("fail", method.get("method_id", "") or f"{if_id}.{method['method_name']}", method["method_name"], "파일 없음", rel_path)
+            continue
+        try:
+            classes = class_cache.setdefault(abs_path, parse_contract_classes(abs_path, language))
+        except SyntaxError as exc:
+            add_result("fail", method.get("method_id", "") or f"{if_id}.{method['method_name']}", method["method_name"], f"Python AST 파싱 실패: {exc}", rel_path)
+            continue
+        except UnicodeDecodeError as exc:
+            add_result("fail", method.get("method_id", "") or f"{if_id}.{method['method_name']}", method["method_name"], f"파일 읽기 실패: {exc}", rel_path)
+            continue
+        class_names = [
+            name for name in [interface.get("implementation"), interface.get("name")]
+            if name and name not in {"-", "해당없음"}
+        ]
+        found_in = [name for name in class_names if method["method_name"] in classes.get(name, set())]
+        target_id = method.get("method_id", "") or f"{if_id}.{method['method_name']}"
+        if found_in:
+            add_result("pass", target_id, method["method_name"], f"public method 확인 ({', '.join(found_in)})", rel_path)
+        else:
+            add_result("fail", target_id, method["method_name"], f"public method 없음: {method['method_name']}", rel_path)
+
+    summary = {
+        "pass": sum(1 for item in results if item["level"] == "pass"),
+        "warn": sum(1 for item in results if item["level"] == "warn"),
+        "fail": sum(1 for item in results if item["level"] == "fail"),
+        "info": sum(1 for item in results if item["level"] == "info"),
+    }
+    output = {
+        "program_design": os.path.relpath(program_path, project_dir),
+        "summary": summary,
+        "results": results,
+    }
+
+    if emit_contract:
+        write_json_file(emit_contract, contract)
+    if report:
+        write_json_file(report, output)
+
+    print(f"\n[check-contract] {os.path.relpath(program_path, project_dir)}")
+    print(f"  PASS {summary['pass']} / WARN {summary['warn']} / FAIL {summary['fail']} / INFO {summary['info']}\n")
+    for item in results:
+        marker = {"pass": "O", "warn": "!", "fail": "X", "info": "-"}[item["level"]]
+        path_suffix = f" ({item['path']})" if item.get("path") else ""
+        print(f"  {marker} {item['contract_id']} {item['target']} - {item['message']}{path_suffix}")
+    if report:
+        print(f"\n  report: {report}")
+    if emit_contract:
+        print(f"  extracted contract: {emit_contract}")
+    return 1 if summary["fail"] else 0
+
+
 def program_spec_requires_api_spec(project_dir="."):
     path = find_program_spec_file(project_dir)
     if not path:
@@ -4284,23 +4737,30 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
         wave_read_first = [
             "AGENTS.md",
             "session.json",
-            "docs/core/TRACEABILITY_RULES.md",
+            rel_path.replace("\\", "/"),
             skill_path,
         ]
         wave_working_documents = [
-            rel_path.replace("\\", "/"),
             "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
         ]
-        wave_reference_documents = [
-            "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
-            "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
-            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
-            "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
-            "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
-            "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
-            "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+        wave_contracts = classify_related_ids(ids)
+        wave_reference_documents = ["docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"]
+        if wave_contracts.get("func"):
+            wave_reference_documents.append("docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md")
+        if wave_contracts.get("pgm") or wave_contracts.get("func"):
+            wave_reference_documents.append("docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md")
+        if wave_contracts.get("api"):
+            wave_reference_documents.append("docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md")
+        if wave_contracts.get("scr") or wave_contracts.get("ui"):
+            wave_reference_documents.append("docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md")
+        if wave_contracts.get("db"):
+            wave_reference_documents.append("docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md")
+        if wave_contracts.get("sec"):
+            wave_reference_documents.append("docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md")
+        orchestrator_reference_documents = [
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            "docs/core/TRACEABILITY_RULES.md",
             "docs/core/AGENT_RUN_PROTOCOL.md",
             "docs/core/RUN_INPUT_CONTRACT.md",
             "docs/core/RUN_OUTPUT_CONTRACT.md",
@@ -4310,7 +4770,6 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
             "docs/artifacts/04-review/evidence/",
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
-        wave_contracts = classify_related_ids(ids)
         content = f"""# {run_id} Build Wave {bw_id} - {run_title}
 
 ```yaml
@@ -4344,6 +4803,8 @@ source_documents:
 {format_yaml_sequence(wave_working_documents, 4)}
   reference_on_demand:
 {format_yaml_sequence(wave_reference_documents, 4)}
+orchestrator_reference:
+{format_yaml_sequence(orchestrator_reference_documents, 2)}
 scope:
   writable:
 {format_yaml_sequence(wave_writable, 4)}
@@ -4365,16 +4826,16 @@ worker_execution_policy:
   required_outputs:
     - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
     - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
-worker_run_sizing_policy:
-  primary_split_basis: "기능/계약 단위"
-  time_is_secondary: true
-  target_duration_minutes: 10
-  max_duration_minutes: 15
-  rules:
-    - "Run 하나는 FUNC/PGM/API/DB/SEC/TEST ID가 연결된 검증 가능한 완결 단위여야 한다."
-    - "Run 하나만 반영해도 빌드 또는 담당 테스트가 깨지지 않아야 한다."
-    - "15분을 넘길 것으로 예상되면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 분리한다."
-    - "시간이 끝났다는 이유로 컴파일/테스트가 깨진 반쪽 구현을 완료 처리하지 않는다."
+  completion_rules:
+    - "이 Run의 target_contracts만 완결한다."
+    - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
+    - "범위가 너무 크면 중간 구현하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
+dependency_install_policy:
+  worker_cache_required: true
+  npm_cache_env: "npm_config_cache"
+  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
+  if_install_blocked: "npm install/npm ci/npx playwright install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
+  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 보조 self-check이며 최종 UI/Playwright 증적은 통합된 main 또는 QA worktree의 Gate 4에서 판정한다."
 wave_verification_boundary:
   scope:
     - "Gate 3 테스트 설계 중 이 Wave의 target_contracts에 매핑된 UT/IT/UI 또는 smoke 기준만 Wave 검증으로 수행한다."
@@ -4403,17 +4864,21 @@ open_issues: []
 - `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음이 이 Run의 실제 작업 범위다.
 - `source_documents.working_documents`는 이번 Wave의 필수 작업 문서다.
 - `source_documents.reference_on_demand`는 설계 충돌, 기준 확인, 세부 판단이 필요할 때만 참고한다.
+- `orchestrator_reference`는 worker 입력 계약이 아니다. Orchestrator가 worker 결과 통합, 추적성 반영, Run 입출력 정규화, session/Wave 상태 갱신 판단에 사용한다.
 - `scope.writable`에 `TBD`가 남아 있으면 코드 수정 전에 Orchestrator에게 수정 허용 경로를 요청한다.
 - 작업 단위는 기능/계약 단위로 완결되어야 하며, 목표 10분 내외/최대 15분 기준은 쪼개기 보조 기준이다.
 - 시간이 부족하다는 이유로 빌드/테스트가 깨지는 중간 구현을 완료 처리하지 않는다.
+- Node/Playwright 설치가 필요하면 worker cache를 사용하고, 설치가 환경 문제로 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
+- worker worktree에서 화면 서버나 Playwright를 실행하지 못해도 그 사실만으로 구현 실패를 확정하지 않는다.
 - Wave 검증은 담당 계약 테스트와 현재까지 가능한 회귀 검증까지만 의미한다. 전체 E2E, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
+- 최종 UI/Playwright 증적은 통합된 main 작업공간 또는 별도 QA worktree에서 수행한다.
 
 ## 4. Orchestrator 지시
 
 - 이 Run은 `{bw_id}` 하나만 수행한다.
 - 실제 코드/테스트/UI/API 구현은 작업자 runner 또는 subagent가 수행한다. Orchestrator는 작업지시, 통합, 검증, 상태 갱신을 담당한다.
 - 다른 Build Wave의 코드 수정은 하지 않는다.
-- subagent를 병렬 실행하더라도 이 Wave의 수정 허용 범위 안에서만 작업한다.
+- 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 Build Wave Run으로 나눈다.
 - 구현 결과는 Orchestrator가 검토하고 통합한다.
 - Orchestrator는 worker 테스트케이스와 해당 Wave 범위의 가능한 회귀 검증을 재실행한다. 전체 시나리오 검증이 불가능한 Wave를 전체 통합 테스트 완료로 보고하지 않는다.
 - 작업자 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
@@ -5193,7 +5658,7 @@ TBD
 def git_status_porcelain(project_dir="."):
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "-c", "core.quotePath=false", "status", "--porcelain"],
             cwd=project_dir,
             check=True,
             capture_output=True,
@@ -5497,14 +5962,34 @@ def extract_runner_log_update(runner, line):
         return update
 
     if "streamGenerateContent" in text:
+        trace_match = re.search(r"Trace:\s*(0x[0-9a-fA-F]+)", text)
+        trace_suffix = f" ({trace_match.group(1)})" if trace_match else ""
         return {
             "phase": "model_stream",
-            "current_task": "Gemini 모델 응답 생성 중",
+            "current_task": f"Gemini 모델 응답 생성 중{trace_suffix}",
+        }
+    if "PlannerResponse without ModifiedResponse" in text:
+        return {
+            "phase": "planner_response",
+            "current_task": "Gemini 응답 후보 정리 중",
+        }
+    if "checkpoint model generated tool calls" in text:
+        return {
+            "phase": "tool_call_planned",
+            "current_task": "Gemini 도구 호출 생성",
         }
     if "Drip stopped" in text:
+        drip_match = re.search(r"charIdx=(\d+),\s*length=(\d+)", text)
+        if drip_match:
+            current, total = drip_match.groups()
+            return {
+                "phase": "message_stream",
+                "current_task": f"Gemini 응답 출력 완료 ({current}/{total}자)",
+                "current_message": f"Gemini 응답 출력 완료 ({current}/{total}자)",
+            }
         return {
             "phase": "message_stream",
-            "current_task": "Gemini 응답 스트림 수신",
+            "current_task": "Gemini 응답 출력 완료",
         }
     if "Stopping conversation stream" in text:
         return {
@@ -5590,6 +6075,7 @@ def run_command_with_status_heartbeat(
     on_stdout_line=None,
     tail_file_path=None,
     on_tail_line=None,
+    env=None,
 ):
     stop_event = threading.Event()
     process = subprocess.Popen(
@@ -5600,6 +6086,7 @@ def run_command_with_status_heartbeat(
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
 
     def heartbeat():
@@ -5695,6 +6182,24 @@ def run_command_with_status_heartbeat(
     stdout = "".join(stdout_chunks)
     stderr = "".join(stderr_chunks)
     return exit_code, stdout or "", stderr or "", timed_out
+
+
+def worker_dependency_cache_env(project_dir, base_env=None):
+    env = dict(base_env or os.environ)
+    cache_root = os.path.abspath(os.path.join(project_dir, ".vulcan", "cache"))
+    npm_cache = os.path.join(cache_root, "npm")
+    playwright_cache = os.path.join(cache_root, "ms-playwright")
+    os.makedirs(npm_cache, exist_ok=True)
+    os.makedirs(playwright_cache, exist_ok=True)
+    env.setdefault("npm_config_cache", npm_cache)
+    env.setdefault("NPM_CONFIG_CACHE", npm_cache)
+    env.setdefault("PLAYWRIGHT_BROWSERS_PATH", playwright_cache)
+    env.setdefault("npm_config_update_notifier", "false")
+    env.setdefault("NPM_CONFIG_UPDATE_NOTIFIER", "false")
+    return env, {
+        "npm_config_cache": npm_cache,
+        "PLAYWRIGHT_BROWSERS_PATH": playwright_cache,
+    }
 
 
 def activity_status_payload(activity):
@@ -5798,7 +6303,7 @@ def parse_git_status_files(status_text):
 def git_status_porcelain_all(project_dir="."):
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain", "-uall"],
+            ["git", "-c", "core.quotePath=false", "status", "--porcelain", "-uall"],
             cwd=project_dir,
             check=True,
             capture_output=True,
@@ -5822,6 +6327,8 @@ def parse_git_status_entries(status_text):
         path = value.strip()
         if " -> " in value:
             old_path, path = [part.strip() for part in value.split(" -> ", 1)]
+        path = decode_git_quoted_path(path)
+        old_path = decode_git_quoted_path(old_path)
         entries.append({
             "status": status.strip() or status,
             "path": path,
@@ -5830,6 +6337,54 @@ def parse_git_status_entries(status_text):
             "untracked": status == "??",
         })
     return entries
+
+
+def decode_git_quoted_path(path):
+    path = (path or "").strip()
+    if len(path) < 2 or not (path.startswith('"') and path.endswith('"')):
+        return path
+
+    body = path[1:-1]
+    raw = bytearray()
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch != "\\":
+            raw.extend(ch.encode("utf-8"))
+            i += 1
+            continue
+
+        if i + 1 >= len(body):
+            raw.extend(b"\\")
+            i += 1
+            continue
+
+        nxt = body[i + 1]
+        if nxt in "01234567":
+            digits = nxt
+            j = i + 2
+            while j < len(body) and len(digits) < 3 and body[j] in "01234567":
+                digits += body[j]
+                j += 1
+            raw.append(int(digits, 8))
+            i = j
+            continue
+
+        escape_map = {
+            "a": 7,
+            "b": 8,
+            "t": 9,
+            "n": 10,
+            "v": 11,
+            "f": 12,
+            "r": 13,
+            '"': ord('"'),
+            "\\": ord("\\"),
+        }
+        raw.append(escape_map.get(nxt, ord(nxt)))
+        i += 2
+
+    return raw.decode("utf-8", errors="replace")
 
 
 def filter_ignorable_status_entries(entries):
@@ -6341,6 +6896,11 @@ def cmd_review_run(
             or "high"
         )
     sandbox = sandbox or review_config_get(review_config, "sandbox", "") or runner_config.get("sandbox") or "workspace-write"
+    if sandbox == "read-only":
+        print("오류: 독립 검수 실행은 result 파일을 작성해야 하므로 --sandbox read-only를 사용할 수 없습니다.")
+        print("  result 파일까지 runner가 직접 작성하려면 --sandbox workspace-write를 사용하세요.")
+        print("  읽기 전용 관찰만 필요하면 runner를 직접 실행하고 last-message를 수동 검토하세요.")
+        sys.exit(1)
     timeout_seconds = int(timeout_seconds or review_config_get(review_config, "exec_timeout_seconds", 1800))
 
     review_rel_dir = reviews_rel_dir(project_dir)
@@ -6809,6 +7369,7 @@ def cmd_run_exec(
     last_message_abs = os.path.abspath(os.path.join(project_abs, last_message_rel_path))
     summary_abs = os.path.abspath(os.path.join(project_abs, summary_rel_path))
     status_abs = os.path.abspath(os.path.join(project_abs, status_rel_path))
+    worker_env, dependency_cache = worker_dependency_cache_env(project_abs)
 
     prompt = f"""You are executing a worker Run for Vulcan-Anvil Ex right now.
 
@@ -6833,11 +7394,19 @@ Rules:
 - Do not edit session current_gate, gate_status, completed gate state, or final approval state.
 - Do not make merge, release, or final acceptance decisions.
 - Do not mark user approval unless explicit user approval evidence already exists.
+- If frontend dependencies or Playwright are needed, use the provided worker cache paths.
+- Worker worktree npm/build/Playwright execution is a best-effort self-check, not the final UI or QA verdict.
+- If npm install/npm ci/npx playwright install fails because of permission, registry, auth, network, or cache access, do not hide it and do not call the implementation failed by itself. Record verification as not_run or environment_blocked with the failing command, cwd, exit code, log path, and the exact Orchestrator rerun command.
+- If npm run dev/build or Playwright cannot run in the worker worktree, report it as environment_blocked/not_run when appropriate. Final UI/Playwright evidence is produced from the integrated main workspace or a QA worktree during Gate 4.
 - Record your work in the Run document: changed_files, verification_results, evidence, traceability_updates, open_issues, and orchestrator_decision_needed.
 - Do not rely on wall-clock timers. Update the status file when you start, after loading context, while editing, while testing, while writing the result, and when completed/blocked/failed.
 - Keep status.current_task to one short dashboard line, 80 characters or fewer.
 - Status JSON shape: {{"target_id":"{run_id}","target_type":"run","runner":"{runner_normalized}","status":"running","phase":"editing","current_task":"Backend tests running","last_update":"<ISO time>"}}.
 - In your final response, summarize changed files, verification commands/results, and any Orchestrator decision needed.
+
+Worker dependency cache:
+- npm_config_cache={dependency_cache["npm_config_cache"]}
+- PLAYWRIGHT_BROWSERS_PATH={dependency_cache["PLAYWRIGHT_BROWSERS_PATH"]}
 """
 
     if runner_normalized == "codex-cli":
@@ -6929,6 +7498,8 @@ Rules:
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
         print(f"  sandbox: {sandbox}")
         print(f"  timeout_seconds: {timeout_seconds}")
+        print(f"  npm_config_cache: {dependency_cache['npm_config_cache']}")
+        print(f"  PLAYWRIGHT_BROWSERS_PATH: {dependency_cache['PLAYWRIGHT_BROWSERS_PATH']}")
         print(f"  worktree: {str(create_worktree).lower()}")
         if create_worktree:
             print(f"  worktree_path: {worktree_path}")
@@ -6984,6 +7555,7 @@ Rules:
         "last_message": last_message_rel_path.replace("\\", "/"),
         "summary": summary_rel_path.replace("\\", "/"),
         "status_file": status_rel_path.replace("\\", "/"),
+        "dependency_cache": dependency_cache,
     }
     append_agent_event(activity, "started", f"{run_id} worker 실행 시작", status="running")
     activity_rel_path = write_agent_activity(project_abs, activity)
@@ -7001,6 +7573,7 @@ Rules:
         "worktree_path": worktree_path or None,
         "branch": execution_branch or None,
         "status_file": status_rel_path,
+        "dependency_cache": dependency_cache,
     })
     exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
         cmd=cmd,
@@ -7018,6 +7591,7 @@ Rules:
             "worktree_path": worktree_path or None,
             "branch": execution_branch or None,
             "status_file": status_rel_path,
+            "dependency_cache": dependency_cache,
         },
         current_task=f"{run_id} {runner_normalized} 응답 대기 중",
         on_stdout_line=make_runner_resume_capture(
@@ -7031,6 +7605,7 @@ Rules:
             activity,
             f"{run_id} {runner_normalized} 로그 수신 중",
         ) if runner_normalized == "antigravity-cli" else None,
+        env=worker_env,
     )
     completed_dt = datetime.now()
     completed_at = completed_dt.isoformat(timespec="seconds")
@@ -7140,6 +7715,7 @@ Rules:
         "last_message": last_message_rel_path.replace("\\", "/"),
         "activity": activity_rel_path.replace("\\", "/"),
         "status_file": status_rel_path.replace("\\", "/"),
+        "dependency_cache": dependency_cache,
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     }
@@ -7174,6 +7750,8 @@ stderr_log: {stderr_rel_path}
 last_message: {last_message_rel_path}
 summary: {summary_rel_path}
 activity: {activity_rel_path}
+npm_config_cache: {dependency_cache["npm_config_cache"]}
+PLAYWRIGHT_BROWSERS_PATH: {dependency_cache["PLAYWRIGHT_BROWSERS_PATH"]}
 run_file_changed: {str(run_file_changed).lower()}
 changed_files:
 {format_yaml_sequence(changed_files, indent=2)}
@@ -7863,6 +8441,13 @@ def run_preflight_file(path):
             blockers.append("worker Run의 target_contracts에 TBD가 남아 있습니다. 실행 전 public signature/schema/skeleton을 구체화하세요.")
         if "worker_execution_policy:" not in content:
             warnings.append("worker Run에 worker_execution_policy가 없습니다.")
+        source_documents_block = _extract_yaml_block_text(content, "source_documents")
+        if re.search(
+            r"Traceability-Matrix|AGENT_RUN_PROTOCOL|RUN_INPUT_CONTRACT|RUN_OUTPUT_CONTRACT|TRACEABILITY_RULES",
+            source_documents_block,
+            re.IGNORECASE,
+        ):
+            warnings.append("worker Run source_documents에 Orchestrator 운영 문서가 포함되어 있습니다. 추적표/Run 입출력/절차 문서는 orchestrator_reference로 분리하세요.")
 
         related_ids = _extract_yaml_list_inline(content, "related_ids")
         req_ids = _extract_yaml_list_inline(content, "req")
@@ -8178,6 +8763,7 @@ def main():
 명령어:
   init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
+  check-contract Program Design 구현 계약과 코드 구조 대조
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
@@ -8192,6 +8778,7 @@ def main():
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git --require-remote
   python vulcan.py check-trace
+  python vulcan.py check-contract --report docs/artifacts/04-review/evidence/contract/contract-conformance.json
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
@@ -8213,6 +8800,12 @@ def main():
     p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=["audit", "solution", "poc", "lite"], help="Delivery Profile")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+
+    p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
+    p_check_contract.add_argument("--program-design", default="", help="프로그램 설계서 경로")
+    p_check_contract.add_argument("--project-dir", default=".", help="검증할 프로젝트 루트 경로")
+    p_check_contract.add_argument("--report", default="", help="검증 결과 JSON 저장 경로")
+    p_check_contract.add_argument("--emit-contract", default="", help="Program Design 표에서 추출한 계약 JSON 저장 경로")
 
     p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
     p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
@@ -8380,6 +8973,13 @@ def main():
         )
     elif args.command == "check-trace":
         check_trace()
+    elif args.command == "check-contract":
+        sys.exit(cmd_check_contract(
+            program_design=args.program_design,
+            report=args.report,
+            emit_contract=args.emit_contract,
+            project_dir=args.project_dir,
+        ))
     elif args.command == "check-architecture":
         cmd_check_architecture(level=args.level)
     elif args.command == "gate-start":

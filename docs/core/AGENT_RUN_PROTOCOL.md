@@ -241,7 +241,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 | --- | --- | --- |
 | Implementation Plan Run | 전체 구현을 Wave로 나누는 운영 Run | `BW-ID`, 의존성, 위임 계획, 테스트/커밋 계획 |
 | Implementation Scaffold Run | feature 구현 전 빌드 가능한 계약 뼈대를 만드는 Run | 폴더/빌드 설정, class/interface/method/DTO skeleton, compile/build smoke |
-| Build Wave Run | 하나의 검증 가능한 구현 배치 | 코드, 테스트, 추적표 갱신 필요 항목, 검증 결과, 커밋 후보 |
+| Build Wave Run | 하나의 검증 가능한 구현 배치이자 worker 작업지시서 | 코드, 테스트, 추적표 갱신 필요 항목, 검증 결과, 커밋 후보 |
 
 `Build Wave`는 다음 기준을 만족해야 한다.
 
@@ -252,7 +252,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 - Wave 간 의존성이 있으면 Implementation Plan에 순서를 명시한다.
 - 신규 개발의 첫 Wave는 보통 `BW-000` 또는 `SCF-001` scaffold로 두고, 이후 `BW-001`부터 feature 구현을 수행한다.
 - 구현 중 active Wave는 하나만 둔다. 여러 Wave를 동시에 코드 수정 상태로 진행하지 않는다.
-- 하나의 Wave 내부에서는 수정 범위가 겹치지 않는 subagent 병렬 작업을 허용할 수 있다.
+- 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - Orchestrator는 기능 구현의 주 작성자가 아니라 작업지시, 검토, 통합, 검증, 상태 갱신 책임자다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 곧바로 구현하지 않는다. 먼저 단일 worker Run 또는 Build Wave Run으로 작업 범위와 검증 기준을 만든다.
 - Wave 시작과 완료는 `session.json` 수동 편집이 아니라 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 처리한다.
@@ -263,7 +263,7 @@ Wave 완료 검증은 전체 Gate 4 QA와 구분한다.
 | --- | --- | --- | --- |
 | Worker self-check | worker | 자기 Run 범위가 깨지지 않았는지 확인 | 단위 테스트, API 계약 테스트, 컴포넌트 테스트, lint/build |
 | Wave 종료 검증 | Orchestrator | 통합된 현재 코드가 Wave 계약과 기존 회귀 기준을 깨지 않았는지 확인 | worker 테스트 재실행, 전체 build, 관련 run-check |
-| Gate 4 QA 검증 | QA/review/evidence | 사용자 시나리오, 화면 증적, 최종 테스트 결과를 판정 | Playwright E2E, 상태/시나리오별 UI 증적, QA Finding/Test Result |
+| Gate 4 QA 검증 | QA/review/evidence | 사용자 시나리오, 화면 증적, 설계 계약 준수, 최종 테스트 결과를 판정 | `check-contract`, Playwright E2E, 상태/시나리오별 UI 증적, QA Finding/Test Result |
 
 Wave가 전체 사용자 시나리오를 완성하지 않았다면 Wave 종료 시 전체 E2E나 최종 화면 증적을 요구하지 않는다.
 Wave 검증은 Gate 3 테스트 설계 중 해당 Wave의 `target_contracts`에 매핑된 `UT/IT/UI` 또는 smoke 기준까지만 수행한다.
@@ -281,7 +281,7 @@ RUN-013_build-wave-BW-003_...md
 RUN-014_build-wave-BW-004_...md
 ```
 
-`Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
+`Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. backend와 frontend처럼 실제 지시서가 달라져야 하는 범위는 하나의 Wave 안에서 병렬 subagent로 나누지 말고 별도 Build Wave Run으로 분리한다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
 
 worker/subagent/`agent-run --mode work` 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
 

@@ -339,6 +339,7 @@ export interface DocEntry {
     | 'design'
     | 'test-plan'
     | 'review'
+    | 'independent-review'
     | 'security'
     | 'release'
     | 'backlog'
@@ -384,6 +385,14 @@ export const EXTERNAL_DOC_EXTENSIONS = [
   'html',
   'css',
   'js',
+  'log',
+  'txt',
+  'out',
+  'err',
+  'json',
+  'jsonl',
+  'xml',
+  'csv',
 ] as const
 
 export type ExternalDocExt = (typeof EXTERNAL_DOC_EXTENSIONS)[number]

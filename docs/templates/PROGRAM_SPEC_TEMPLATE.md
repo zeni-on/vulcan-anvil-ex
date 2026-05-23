@@ -200,11 +200,12 @@ public abstract class BaseController {
 
 > Worker Run은 이 표의 계약 단위를 기준으로 쪼갠다. 하나의 worker Run은 기능/계약상 완결되어야 하며, 시간은 보조 기준으로만 사용한다.
 > 시그니처/이벤트는 `execute(request)`처럼 모호하게 두지 말고, 스택에 맞는 입력/출력/오류 타입을 함께 적는다. 단, private helper의 내부 알고리즘은 worker 재량으로 남길 수 있다.
+> `IF-ID`는 `Interface Contract`의 부모 인터페이스를 가리킨다. 기본 식별은 `IF-ID + 시그니처/이벤트`로 가능하며, `Method-ID`는 감리/변경관리/테스트 추적상 필요할 때 사용한다.
 > Interface Contract의 간단 signature와 이 표의 상세 signature가 다르면 이 표를 기준으로 정정하고, 불일치는 Gate 2 Review에서 FIND로 처리한다.
 
-| Method-ID | PGM-ID | 시그니처/이벤트 | 입력 | 출력 | 검증/정책 | 오류/예외 | 트랜잭션 | 로그/감사 | 관련 ID |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| MTH-001 | PGM-001 | `execute(request)` | Request DTO | Response DTO | AC- / SEC- | ERR-001 | Required / None | INFO/ERROR 기준 | REQ- / FUNC- / API- / UT- |
+| Method-ID | IF-ID | PGM-ID | 시그니처/이벤트 | 입력 | 출력 | 검증/정책 | 오류/예외 | 트랜잭션 | 로그/감사 | 관련 ID |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| MTH-001 | IF-001 | PGM-001 | `execute(request)` | Request DTO | Response DTO | AC- / SEC- | ERR-001 | Required / None | INFO/ERROR 기준 | REQ- / FUNC- / API- / UT- |
 
 작성 예:
 

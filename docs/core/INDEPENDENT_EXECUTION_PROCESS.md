@@ -132,8 +132,8 @@ Build Execution은 같은 독립 실행 모델을 구현에 적용한 것이다.
 권장 흐름:
 
 1. Orchestrator가 `implementation-plan` Run을 만든다.
-2. Build Wave별 Run을 만든다.
-3. 각 Build Wave에 runner, writable scope, 관련 ID, 검증 명령을 부여한다.
+2. 작업지시서가 달라지는 구현 범위는 Build Wave별 Run으로 분리한다.
+3. 각 Build Wave Run에 runner, writable scope, 관련 ID, 검증 명령을 부여한다.
 4. runner가 별도 세션/worktree에서 수행한다.
 5. Orchestrator가 `run-integrate`로 worker worktree diff를 수집하고 Run scope 위반 여부를 판정한다.
 6. scope 위반이나 충돌이 있으면 직접 수정하지 않고 재작업 Run 또는 FIND로 돌려보낸다.
@@ -150,7 +150,7 @@ Worktree와 PR은 같은 것이 아니다.
 
 초기 운영은 직렬 실행이 기본이다.
 Backend Wave를 먼저 끝내고 API 계약을 고정한 뒤 Frontend Wave가 그 계약을 따라가는 방식이 충돌을 줄인다.
-병렬 실행은 writable scope가 분리되고 fan-in review가 준비된 뒤 허용한다.
+현재 Core 모델에서는 한 Wave를 backend/frontend runner에게 나누어 동시에 구현시키지 않는다. 병렬 구현이 필요하면 별도 fan-out 실행 모델을 정의한 뒤 적용한다.
 
 Build Wave 또는 작업자 Run 실행 명령:
 
@@ -164,7 +164,7 @@ python vulcan.py run-integrate --run-id RUN-010 --apply
 ```
 
 `agent-run --mode work`는 한 번에 하나의 Run을 실행한다.
-초기 운영은 직렬 실행이 기본이며, 병렬 실행은 writable scope가 분리되고 fan-in review가 준비된 뒤 허용한다.
+초기 운영은 직렬 실행이 기본이며, 현재 Core 모델에서는 Build Wave Run을 순차 실행한다.
 
 기본 동작:
 

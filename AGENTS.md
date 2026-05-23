@@ -118,8 +118,8 @@ docs/adapters/codex-gpt/skills/
 - Orchestrator 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 구현은 Implementation Plan Wave 분할을 생략할 수 있지만, 구현 자체는 worker Run 또는 `agent-run --mode work`로 실행하고 생략 이유와 검증 범위를 남긴다.
 - 신규 개발이거나 빌드 가능한 프로젝트 골격/class/interface/method/DTO skeleton이 없으면 feature 구현 Build Wave 전에 `BW-000 implementation-scaffold` Run을 먼저 만든다. 이미 골격이 충분하면 `contract_skeleton.mode: not-required`와 생략 근거를 Implementation Plan 또는 Run에 남긴다.
-- 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
-- Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent에게 전달할 최소 입력 계약이 된다.
+- 동시에 active 상태인 Build Wave는 하나만 둔다. 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
+- Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent/worker에게 전달할 최소 입력 계약이 된다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 - Wave 완료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다.
 - 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.

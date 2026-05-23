@@ -26,6 +26,7 @@ const mockDocs: DocEntry[] = [
   { name: 'screen-spec', path: 'docs/artifacts/02-design/screen/screen-spec.md', category: 'design' },
   { name: 'TEST_PLAN', path: 'docs/artifacts/03-test/TEST_PLAN.md', category: 'test-plan' },
   { name: 'ux-review', path: 'docs/artifacts/04-review/ux-review.md', category: 'review' },
+  { name: 'RV-001_gate4_result', path: 'docs/reviews/RV-001_gate4_result.md', category: 'independent-review' },
 ]
 
 describe('DocList', () => {
@@ -57,6 +58,12 @@ describe('DocList', () => {
   it('review 카테고리 섹션을 렌더링한다', () => {
     render(<DocList docs={mockDocs} />)
     expect(screen.getByTestId('doc-category-review')).toBeInTheDocument()
+  })
+
+  it('independent-review 카테고리 섹션을 렌더링한다', () => {
+    render(<DocList docs={mockDocs} />)
+    expect(screen.getByTestId('doc-category-independent-review')).toBeInTheDocument()
+    expect(screen.getByText('독립검수')).toBeInTheDocument()
   })
 
   it('REQUIREMENTS 파일명을 doc-item에 표시한다', () => {
@@ -122,9 +129,9 @@ describe('DocList', () => {
     expect(screen.getByText('logical-erd.dbml')).toBeInTheDocument()
   })
 
-  it('총 5개의 doc-item을 렌더링한다', () => {
+  it('총 6개의 doc-item을 렌더링한다', () => {
     render(<DocList docs={mockDocs} />)
-    expect(screen.getAllByTestId('doc-item')).toHaveLength(5)
+    expect(screen.getAllByTestId('doc-item')).toHaveLength(6)
   })
 
   it('other 카테고리 파일도 렌더링한다', () => {

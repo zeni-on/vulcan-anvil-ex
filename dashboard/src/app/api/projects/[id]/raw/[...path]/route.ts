@@ -15,9 +15,21 @@ const IMAGE_CONTENT_TYPES: Record<string, string> = {
   gif: 'image/gif',
 }
 
+const TEXT_CONTENT_TYPES: Record<string, string> = {
+  log: 'text/plain; charset=utf-8',
+  txt: 'text/plain; charset=utf-8',
+  out: 'text/plain; charset=utf-8',
+  err: 'text/plain; charset=utf-8',
+  json: 'application/json; charset=utf-8',
+  jsonl: 'application/x-ndjson; charset=utf-8',
+  xml: 'application/xml; charset=utf-8',
+  html: 'text/html; charset=utf-8',
+  csv: 'text/csv; charset=utf-8',
+}
+
 function contentTypeFor(filePath: string): string | null {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
-  return IMAGE_CONTENT_TYPES[ext] ?? null
+  return IMAGE_CONTENT_TYPES[ext] ?? TEXT_CONTENT_TYPES[ext] ?? null
 }
 
 function isUnsafeSegment(segment: string): boolean {

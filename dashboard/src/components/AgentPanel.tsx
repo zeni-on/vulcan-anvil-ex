@@ -68,6 +68,13 @@ function formatAge(seconds?: number): string {
   return `${Math.floor(minutes / 60)}시간 전`
 }
 
+function compactWorktreePath(path?: string | null): string {
+  if (!path) return ''
+  const normalized = path.replace(/\\/g, '/')
+  const parts = normalized.split('/').filter(Boolean)
+  return parts[parts.length - 1] ?? normalized
+}
+
 function activityTone(activity: RuntimeActivity): {
   dotClassName: string
   label: string
@@ -124,6 +131,7 @@ function ActivityRow({
   const tone = activityTone(activity)
   const age = formatAge(activity.last_update_age_seconds)
   const targetType = activity.target_type === 'review' ? 'Review' : 'Run'
+  const worktree = compactWorktreePath(activity.worktree_path)
   const title = [
     `${runnerLabel(activity.runner)} · ${targetType} ${activity.target_id}`,
     activity.current_task || activity.phase || activity.status,
@@ -146,12 +154,9 @@ function ActivityRow({
         <span className="min-w-0 truncate text-[11px] text-slate-500">{activity.target_id}</span>
         {age && <span className="ml-auto shrink-0 text-[10px] text-slate-500">{age}</span>}
       </div>
-      <p className="mt-1 line-clamp-2 min-w-0 pl-4 text-xs leading-4 text-slate-300">
-        {activityTask(activity)}
-      </p>
-      {activity.current_message && activity.current_task && (
-        <p className="mt-0.5 line-clamp-1 min-w-0 pl-4 text-[10px] leading-3 text-slate-500">
-          {activity.current_task}
+      {worktree && (
+        <p className="mt-1 truncate pl-4 text-[11px] leading-4 text-slate-500">
+          worktree: {worktree}
         </p>
       )}
       <span className="sr-only">{tone.label}</span>
@@ -287,8 +292,11 @@ function WorktreeRow({ worktree }: { worktree: RuntimeWorktree }) {
               {targetLabel(worktree)}
             </span>
             {worktree.changed_count > 0 && (
-              <span className="shrink-0 rounded border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">
-                {worktree.changed_count}
+              <span
+                className="shrink-0 rounded border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200"
+                title={worktree.changed_files.join('\n')}
+              >
+                변경 {worktree.changed_count}
               </span>
             )}
           </div>

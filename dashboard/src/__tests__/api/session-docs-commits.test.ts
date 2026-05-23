@@ -455,6 +455,35 @@ status: Draft
             type: 'dir',
             children: [{ name: 'DOC-PM-G5-001_Release-Approval_v0.1', type: 'file' }],
           },
+          {
+            name: '04-review',
+            type: 'dir',
+            children: [
+              {
+                name: 'evidence',
+                type: 'dir',
+                children: [
+                  {
+                    name: 'logs',
+                    type: 'dir',
+                    children: [
+                      { name: 'QA-CMD-001_pytest.log', type: 'file' },
+                      { name: 'QA-CMD-002_playwright.jsonl', type: 'file' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: 'reviews',
+        type: 'dir',
+        children: [
+          { name: 'RV-003_review-gate4_request', type: 'file' },
+          { name: 'RV-003_review-gate4_result', type: 'file' },
+          { name: 'RV-003_codex-last-message', type: 'file' },
         ],
       },
     ])
@@ -499,6 +528,23 @@ status: Draft
         category: 'design',
         kind: 'external',
         ext: 'js',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/04-review/evidence/logs/QA-CMD-001_pytest.log',
+        category: 'review',
+        kind: 'external',
+        ext: 'log',
+      }),
+      expect.objectContaining({
+        path: 'docs/artifacts/04-review/evidence/logs/QA-CMD-002_playwright.jsonl',
+        category: 'review',
+        kind: 'external',
+        ext: 'jsonl',
+      }),
+      expect.objectContaining({
+        path: 'docs/reviews/RV-003_review-gate4_result.md',
+        category: 'independent-review',
+        kind: 'markdown',
       }),
     ]))
     expect(body.docs).not.toEqual(expect.arrayContaining([

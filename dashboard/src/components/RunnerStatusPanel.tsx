@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Bot, Cpu, GitBranch, Loader2, Sparkles, type LucideIcon } from 'lucide-react'
+import { AlertCircle, Bot, Cpu, GitBranch, Sparkles, type LucideIcon } from 'lucide-react'
 import { ProjectRuntime, RuntimeActivity, RuntimeRunner } from '@/lib/types'
 
 function runnerLabel(runner: RuntimeRunner): string {
@@ -53,16 +53,6 @@ function runnerVisual(runner: RuntimeRunner): {
 function runnerDetail(runner: RuntimeRunner): string {
   const effort = runner.effort ?? runner.reasoning_effort
   return [runner.model, effort].filter(Boolean).join(' / ') || runner.version || '설정값 없음'
-}
-
-function activityLabel(activity: RuntimeActivity): string {
-  const type = activity.target_type === 'review' ? 'Review' : 'Run'
-  return `${type} ${activity.target_id}`
-}
-
-function activityDetail(activity: RuntimeActivity): string {
-  const message = activity.current_message || activity.current_task || activity.phase || activity.status
-  return [activityLabel(activity), message].filter(Boolean).join(' · ')
 }
 
 function capabilityLabel(runtime: ProjectRuntime): { label: string; tone: 'green' | 'yellow' | 'gray' } {
@@ -140,26 +130,28 @@ export default function RunnerStatusPanel({
           {runners.map((runner) => {
             const visual = runnerVisual(runner)
             const RunnerIcon = visual.Icon
-            const runningActivity = runningActivities.find(
+            const runnerActivities = runningActivities.filter(
               (activity) => runnerFamily(activity.runner) === runnerFamily(runner.name),
             )
-            const selectable = Boolean(runningActivity && onActivitySelect)
+            const activeCount = runnerActivities.length
+            const firstActivity = runnerActivities[0]
+            const selectable = Boolean(firstActivity && onActivitySelect)
 
             return (
               <li
                 key={runner.name}
                 role={selectable ? 'button' : undefined}
                 tabIndex={selectable ? 0 : undefined}
-                onClick={selectable ? () => onActivitySelect?.(runningActivity!) : undefined}
+                onClick={selectable ? () => onActivitySelect?.(firstActivity!) : undefined}
                 onKeyDown={selectable ? (event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
-                    onActivitySelect?.(runningActivity!)
+                    onActivitySelect?.(firstActivity!)
                   }
                 } : undefined}
                 className={
-                  runningActivity
-                    ? `flex min-w-0 items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 shadow-[0_0_0_1px_rgba(16,185,129,0.08)] ${selectable ? 'cursor-pointer hover:border-emerald-300/60 hover:bg-emerald-500/15' : ''}`
+                  activeCount > 0
+                    ? `flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5 ${selectable ? 'cursor-pointer hover:border-cyan-700/70 hover:bg-slate-900/70' : ''}`
                     : 'flex min-w-0 items-center gap-2 rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5'
                 }
               >
@@ -168,23 +160,19 @@ export default function RunnerStatusPanel({
                   title={`${runnerLabel(runner)} runner`}
                   aria-label={`${runnerLabel(runner)} runner`}
                 >
-                  {runningActivity ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-emerald-200" />
-                  ) : (
-                    <RunnerIcon className={`h-4 w-4 ${visual.iconClass}`} />
-                  )}
+                  <RunnerIcon className={`h-4 w-4 ${visual.iconClass}`} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-semibold text-slate-100">
                     {runnerLabel(runner)}
                   </div>
-                  <div className={runningActivity ? 'line-clamp-2 text-[11px] leading-3 text-slate-400' : 'truncate text-[11px] text-slate-500'}>
-                    {runningActivity ? activityDetail(runningActivity) : runnerDetail(runner)}
+                  <div className="truncate text-[11px] text-slate-500">
+                    {runnerDetail(runner)}
                   </div>
                 </div>
-                {runningActivity ? (
+                {activeCount > 0 ? (
                   <span className="shrink-0 rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-200">
-                    running
+                    active {activeCount}
                   </span>
                 ) : runner.name === runtime?.primary && (
                   <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">

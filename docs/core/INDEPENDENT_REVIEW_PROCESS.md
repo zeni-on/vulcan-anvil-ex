@@ -153,6 +153,7 @@ result_file_changed: true
 - Claude runner 기준 기본값은 `claude-opus-4-7` + `high`다.
 - Antigravity runner 기준 기본값은 `gemini-3.5-flash` + `high`다.
 - 빠른 예비 검토나 로컬 스모크 확인만 필요하면 일회성으로 `--reasoning-effort low`를 사용할 수 있다.
+- 독립 검수 실행은 result 파일 작성을 계약으로 하므로 `--sandbox read-only`를 사용하지 않는다. `agent-run --mode review`와 `review-run`은 read-only sandbox를 차단하고 `workspace-write` 사용을 요구한다.
 - 검수 완료 보고에는 실제 사용된 `model`과 `reasoning_effort`를 남긴다.
 - timeout은 `review.independent_exec_timeout_seconds`를 따르며 기본값은 1800초다.
 - timeout이면 `status: timeout`, `timed_out: true`, `exit_code: 124`로 기록한다.

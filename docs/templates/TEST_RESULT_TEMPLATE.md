@@ -44,12 +44,14 @@ change_reason: 최초 초안 작성
 
 > 명령, Playwright, 보안 점검 등 실제 실행한 검증만 작성한다.
 > 개발표준정의서의 "빌드, 실행, 테스트 명령" 표에서 필수로 지정한 명령은 실행 결과를 모두 기록한다.
+> 프로그램 설계서에 Interface/Public Method Contract가 있으면 `python vulcan.py check-contract` 결과를 설계 계약 준수 검증으로 기록한다.
 > `Pass`는 성공 기준, exit code, 로그/증적이 모두 확인될 때만 기록한다.
 > 화면 QA는 Playwright 설치 확인과 `npx playwright test` 실행 결과를 필수로 기록한다. CDP 또는 브라우저 수동 캡처만으로 UI Pass를 확정하지 않는다.
 
 | 검증 ID | 목적 | 실행 위치(cwd) | 명령/방법 | OS | 필수 여부 | 성공 기준 | Exit Code | 결과 | 로그/증적 | 요약 | 관련 Run |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | QA-CMD-001 | 단위 테스트 | repository root | `./gradlew test` | Windows / POSIX | 필수/선택 | exit code 0, 실패 0건 | 0 / 1 / N/A | Pass / Fail / Not Run / Skipped | `build/reports/tests/test/` |  | RUN- |
+| QA-CMD-00X | 설계 계약 준수 | repository root | `python vulcan.py check-contract --report docs/artifacts/04-review/evidence/contract/contract-conformance.json` | Windows / POSIX | 프로그램 설계 계약이 있으면 필수 | Fail 0건 | 0 / 1 / N/A | Pass / Fail / Not Run / Skipped | `docs/artifacts/04-review/evidence/contract/contract-conformance.json` | Interface/Class/Public Method 존재 확인 | RUN- |
 
 실행 검증 기록 기준:
 

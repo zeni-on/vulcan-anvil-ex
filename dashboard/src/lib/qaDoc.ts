@@ -4,6 +4,7 @@ export interface QaEvidenceRow {
   id: string
   label: string
   path: string
+  kind: 'image' | 'log' | 'file'
 }
 
 export interface QaResultRow {
@@ -148,12 +149,31 @@ function isImagePath(value: string): boolean {
   return /\.(png|jpe?g|webp|gif)$/i.test(value)
 }
 
+function isLogPath(value: string): boolean {
+  return /\.(log|txt|jsonl?|out|err|xml|html|csv)$/i.test(value)
+}
+
+function isEvidencePath(value: string): boolean {
+  const normalized = value.replace(/\\/g, '/')
+  return (
+    isImagePath(normalized) ||
+    isLogPath(normalized) ||
+    normalized.includes('docs/artifacts/04-review/evidence/')
+  )
+}
+
+function evidenceKindForPath(value: string): QaEvidenceRow['kind'] {
+  if (isImagePath(value)) return 'image'
+  if (isLogPath(value) || value.replace(/\\/g, '/').includes('/logs/')) return 'log'
+  return 'file'
+}
+
 function splitEvidencePaths(value: string): string[] {
   return value
     .split(/[,，\n]/)
     .map((item) => item.trim())
     .map((item) => item.replace(/^`|`$/g, ''))
-    .filter(isImagePath)
+    .filter(isEvidencePath)
 }
 
 function evidenceFileName(value: string): string {
@@ -161,13 +181,15 @@ function evidenceFileName(value: string): string {
 }
 
 function resolveEvidencePath(value: string, knownEvidences: QaEvidenceRow[]): string {
-  if (value.includes('/') || value.includes('\\')) return value.replace(/\\/g, '/')
+  const normalized = value.replace(/\\/g, '/')
+  if (normalized.includes('/')) return normalized
 
-  const fileName = evidenceFileName(value)
+  const fileName = evidenceFileName(normalized)
   const known = knownEvidences.find((evidence) => evidenceFileName(evidence.path) === fileName)
   if (known) return known.path
 
-  return `docs/artifacts/04-review/evidence/ui/${value}`
+  const defaultDir = evidenceKindForPath(normalized) === 'image' ? 'ui' : 'logs'
+  return `docs/artifacts/04-review/evidence/${defaultDir}/${normalized}`
 }
 
 function dedupeEvidencesByPath(evidences: QaEvidenceRow[]): QaEvidenceRow[] {
@@ -247,13 +269,15 @@ export function parseQaDoc(content: string): QaDocModel {
       id: getCell(row, ['UI-ID']),
       label: getCell(row, ['설명']),
       path: getCell(row, ['캡처 경로']),
+      kind: evidenceKindForPath(getCell(row, ['캡처 경로'])),
     })),
     ...(resultEvidenceTable?.rows ?? []).map((row) => ({
       id: getCell(row, ['증적 ID']),
-      label: getCell(row, ['화면', '관련 UI', '설명']),
+      label: getCell(row, ['화면', '관련 UI', '설명', '요약']),
       path: getCell(row, ['경로', '파일']),
+      kind: evidenceKindForPath(getCell(row, ['경로', '파일'])),
     })),
-  ].filter((row) => isImagePath(row.path))
+  ].filter((row) => isEvidencePath(row.path))
 
   const evidenceRows = [
     ...(testResultTable?.rows ?? []),
@@ -265,6 +289,7 @@ export function parseQaDoc(content: string): QaDocModel {
       id: index === 0 ? rowId : `${rowId}-${index + 1}`,
       label: rowId,
       path: resolveEvidencePath(path, tableEvidences),
+      kind: evidenceKindForPath(resolveEvidencePath(path, tableEvidences)),
     }))
   })
 

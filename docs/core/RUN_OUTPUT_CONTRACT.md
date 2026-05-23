@@ -233,6 +233,7 @@ verification_results:
 | `passed` | 검증 통과 |
 | `failed` | 검증 실패 |
 | `not_run` | 실행하지 못함. `reason` 필수 |
+| `environment_blocked` | worker 실행 환경의 권한, 인증, 네트워크, registry, cache 문제로 실행 차단. `reason`, `exit_code`, `log_path`, `followup` 필수 |
 | `partial` | 일부만 실행 |
 
 ## 7. 증적 작성 규칙

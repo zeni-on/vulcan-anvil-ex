@@ -24,27 +24,27 @@ source_documents:
   read_first:
     - AGENTS.md
     - session.json
-    - docs/core/TRACEABILITY_RULES.md
-    - docs/adapters/codex-gpt/GATE_PROMPTS.md
     - docs/adapters/codex-gpt/skills/implementation-plan.md
   working_documents:
     - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
   reference_on_demand:
-    - docs/core/AGENT_RUN_PROTOCOL.md
     - docs/core/ID_SYSTEM.md
-    - docs/core/ORCHESTRATOR_PROTOCOL.md
     - docs/core/AGENT_PERSONAS.md
     - docs/core/DELIVERY_PROFILES.md
-    - docs/core/RUN_INPUT_CONTRACT.md
-    - docs/core/RUN_OUTPUT_CONTRACT.md
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md
     - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
     - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
     - docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md
     - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
-    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+orchestrator_reference:
+  - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+  - docs/core/TRACEABILITY_RULES.md
+  - docs/core/AGENT_RUN_PROTOCOL.md
+  - docs/core/ORCHESTRATOR_PROTOCOL.md
+  - docs/core/RUN_INPUT_CONTRACT.md
+  - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - docs/runs/
@@ -64,15 +64,6 @@ completion_criteria:
   - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
   - "구현 변경은 작성/갱신한 테스트케이스, Orchestrator 재실행 명령, 추적표 갱신 필요 항목과 연결된다."
   - "동시에 active 상태인 Build Wave가 하나만 유지된다."
-worker_run_sizing_policy:
-  primary_split_basis: "feature_contract_unit"
-  target_minutes: 10
-  max_minutes: 15
-  time_is_secondary: true
-  rules:
-    - "Run은 닫힌 FUNC/PGM/API/DB/SEC/TEST 계약 묶음이어야 한다."
-    - "15분을 넘길 것으로 예상되면 작업을 시작하기 전에 더 작은 계약 단위로 분리한다."
-    - "시간이 부족해도 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
 development_standard_policy:
   required: true
   block_implementation_when_missing:
@@ -124,8 +115,9 @@ ui_implementation_contract_policy:
 - 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
 - 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
-- 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
+- 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Build Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
 - API/화면/프로그램/DB/보안 설계는 related ID나 기준 충돌이 있을 때 필요한 문서만 `reference_on_demand`에서 확인한다.
+- 추적표와 Core Run 입출력/절차 문서는 worker 입력이 아니라 `orchestrator_reference`로 분리한다. worker는 갱신 필요 항목만 보고하고 Orchestrator가 추적표/session/Wave 상태를 확정한다.
 - 작업 범위는 문서 목록이 아니라 `target_contracts`의 기능/프로그램 계약 단위로 닫는다.
 - 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 작업 중간에 끊지 않고, 예상 범위가 크면 시작 전에 Run을 더 작게 나눈다.
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
@@ -224,6 +216,12 @@ verification:
     - "python -m compileall backend/app"
     - "cd frontend && npm run build"
     - "python vulcan.py run-check docs/runs/RUN-020_bw-000-contract-skeleton_v0.1.md"
+dependency_install_policy:
+  worker_cache_required: true
+  npm_cache_env: "npm_config_cache"
+  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
+  if_install_blocked: "verification_results에 environment_blocked 또는 not_run으로 기록하고 Orchestrator 재실행 명령을 남긴다."
+  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 skeleton smoke 보조 검증이다. 최종 UI/Playwright 증적은 Gate 4에서 통합본 기준으로 판정한다."
 worker_execution_policy:
   forbidden_actions:
     - "업무 기능 로직을 완성하지 않는다."
@@ -272,13 +270,16 @@ source_documents:
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
     - docs/artifacts/02-design/screen/ui-baseline/
   reference_on_demand:
-    - docs/core/AGENT_RUN_PROTOCOL.md
-    - docs/core/TRACEABILITY_RULES.md
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
     - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
     - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
     - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
-    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+orchestrator_reference:
+  - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
+  - docs/core/TRACEABILITY_RULES.md
+  - docs/core/AGENT_RUN_PROTOCOL.md
+  - docs/core/RUN_INPUT_CONTRACT.md
+  - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
     - frontend/
@@ -303,6 +304,7 @@ completion_criteria:
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."
   - "Wave 검증은 담당 계약 테스트와 가능한 회귀 검증까지만 의미하며, 전체 E2E/QA Pass로 보고하지 않는다."
   - "가능하면 worker self-check를 실행하고, 실행하지 못하면 Not Run 사유를 남긴다."
+  - "worker worktree에서 npm/build/Playwright를 못 실행해도 그 사실만으로 구현 실패를 확정하지 않고 environment_blocked/not_run과 Orchestrator 재실행 명령을 남긴다."
   - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환하고, Implemented/Verified 상태를 직접 확정하지 않는다."
 verification:
   owner: "orchestrator-rerun"
@@ -316,19 +318,20 @@ verification:
     target_documents:
       - docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md
       - docs/artifacts/04-review/evidence/ui/
+dependency_install_policy:
+  worker_cache_required: true
+  npm_cache_env: "npm_config_cache"
+  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
+  if_install_blocked: "npm install/npm ci/npx playwright install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked로 보고한다."
+  worker_node_playwright_scope: "worker self-check는 보조 검증이다. 화면 서버 실행과 Playwright 최종 증적은 통합된 main 또는 QA worktree의 Gate 4에서 판정한다."
 worker_execution_policy:
   forbidden_actions:
     - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
     - "사용자 승인, QA Pass, merge 가능 여부를 최종 판단하지 않는다."
     - "scope.writable 밖 파일을 수정하지 않는다."
-worker_run_sizing_policy:
-  primary_split_basis: "feature_contract_unit"
-  target_minutes: 10
-  max_minutes: 15
-  time_is_secondary: true
-  rules:
-    - "Run은 닫힌 FUNC/SCR/UI/TEST 계약 묶음이어야 한다."
-    - "15분을 넘길 것으로 예상되면 시작 전에 더 작은 Run으로 분리하도록 보고한다."
-    - "시간이 부족해도 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다."
+  completion_rules:
+    - "이 Run의 target_contracts만 완결한다."
+    - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
+    - "범위가 너무 크면 중간 구현하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
 ```
 

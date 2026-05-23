@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import { ChevronDown, Images, X } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Images, X } from 'lucide-react'
 import { QaDocModel, QaEvidenceRow, QaFindingRow, QaResultRow } from '@/lib/qaDoc'
 
 function EmptyValue({ children }: { children?: string }) {
@@ -12,7 +12,7 @@ function encodeDocPath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/')
 }
 
-function imageUrl(projectId: string, path: string): string {
+function rawUrl(projectId: string, path: string): string {
   return `/api/projects/${encodeURIComponent(projectId)}/raw/${encodeDocPath(path)}`
 }
 
@@ -100,7 +100,7 @@ function EvidenceGrid({
         >
           <div className="aspect-[16/9] max-h-28 bg-slate-100">
             <img
-              src={imageUrl(projectId, evidence.path)}
+              src={rawUrl(projectId, evidence.path)}
               alt={`${evidence.id} ${evidence.label}`}
               className="h-full w-full object-contain"
               loading="lazy"
@@ -156,6 +156,8 @@ function FindingEvidencePanel({
     <div className="space-y-3">
       {findings.map((finding) => {
         const matchedEvidences = evidences.filter((evidence) => evidenceMatchesFinding(evidence, finding))
+        const imageEvidences = matchedEvidences.filter((evidence) => evidence.kind === 'image')
+        const logEvidences = matchedEvidences.filter((evidence) => evidence.kind !== 'image')
         return (
           <article key={finding.id} className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-2">
@@ -178,7 +180,14 @@ function FindingEvidencePanel({
             </div>
 
             {matchedEvidences.length > 0 ? (
-              <EvidenceGrid projectId={projectId} evidences={matchedEvidences} onPreview={onPreview} />
+              <div className="space-y-3">
+                {imageEvidences.length > 0 && (
+                  <EvidenceGrid projectId={projectId} evidences={imageEvidences} onPreview={onPreview} />
+                )}
+                {logEvidences.length > 0 && (
+                  <LogEvidenceList projectId={projectId} evidences={logEvidences} />
+                )}
+              </div>
             ) : (
               <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
                 이 발견사항에 직접 매칭된 이미지 증적이 없습니다. 필요한 경우 관련 ID에 UI/UT/IT/PT 증적 ID를 추가하거나 Test Result 문서의 증적을 연결하세요.
@@ -202,6 +211,45 @@ function renderFindingRows(rows: QaFindingRow[]) {
   ])
 }
 
+function LogEvidenceList({
+  projectId,
+  evidences,
+}: {
+  projectId: string
+  evidences: QaEvidenceRow[]
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {evidences.map((evidence) => (
+        <a
+          key={`${evidence.id}-${evidence.path}`}
+          href={rawUrl(projectId, evidence.path)}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-md border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          <div className="flex items-start gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-50 text-slate-600">
+              <FileText className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-xs font-semibold text-blue-700">{evidence.id}</span>
+                <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                  LOG
+                </span>
+                <ExternalLink className="h-3 w-3 text-slate-400" aria-hidden="true" />
+              </div>
+              <div className="mt-0.5 text-xs text-slate-700"><EmptyValue>{evidence.label}</EmptyValue></div>
+              <div className="mt-1 truncate font-mono text-[11px] text-slate-500">{evidence.path}</div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function fileName(value: string): string {
   return value.replace(/\\/g, '/').split('/').pop()?.toLowerCase() ?? value.toLowerCase()
 }
@@ -221,11 +269,13 @@ function evidencesForRow(row: QaResultRow, evidencesById: Map<string, QaEvidence
 }
 
 function EvidenceCell({
+  projectId,
   row,
   evidencesById,
   evidences,
   onPreview,
 }: {
+  projectId: string
   row: QaResultRow
   evidencesById: Map<string, QaEvidenceRow[]>
   evidences: QaEvidenceRow[]
@@ -235,14 +285,26 @@ function EvidenceCell({
   return (
     <div className="space-y-1">
       {matched.map((evidence) => (
-        <button
-          key={evidence.path}
-          type="button"
-          onClick={() => onPreview(evidence)}
-          className="block text-left font-mono text-[11px] text-blue-700 hover:underline"
-        >
-          {evidence.path}
-        </button>
+        evidence.kind === 'image' ? (
+          <button
+            key={evidence.path}
+            type="button"
+            onClick={() => onPreview(evidence)}
+            className="block text-left font-mono text-[11px] text-blue-700 hover:underline"
+          >
+            {evidence.path}
+          </button>
+        ) : (
+          <a
+            key={evidence.path}
+            href={rawUrl(projectId, evidence.path)}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-left font-mono text-[11px] text-blue-700 hover:underline"
+          >
+            {evidence.path}
+          </a>
+        )
       ))}
       {matched.length === 0 && (
         <span className="font-mono text-[11px] text-slate-500">{row.evidence || '-'}</span>
@@ -253,6 +315,7 @@ function EvidenceCell({
 
 function renderResultRows(
   rows: QaResultRow[],
+  projectId: string,
   evidencesById: Map<string, QaEvidenceRow[]>,
   evidences: QaEvidenceRow[],
   onPreview: (evidence: QaEvidenceRow) => void,
@@ -262,12 +325,13 @@ function renderResultRows(
     row.target || '-',
     row.method || '-',
     <StatusBadge key="result" value={row.result} />,
-    <EvidenceCell key="evidence" row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
+    <EvidenceCell key="evidence" projectId={projectId} row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
   ])
 }
 
 function renderRequirementResultRows(
   rows: QaResultRow[],
+  projectId: string,
   evidencesById: Map<string, QaEvidenceRow[]>,
   evidences: QaEvidenceRow[],
   onPreview: (evidence: QaEvidenceRow) => void,
@@ -277,7 +341,7 @@ function renderRequirementResultRows(
     row.method || '-',
     row.target || '-',
     <StatusBadge key="result" value={row.result} />,
-    <EvidenceCell key="evidence" row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
+    <EvidenceCell key="evidence" projectId={projectId} row={row} evidencesById={evidencesById} evidences={evidences} onPreview={onPreview} />,
   ])
 }
 
@@ -297,6 +361,10 @@ export default function QaDocView({
   const visibleEvidenceLimit = 6
   const visibleEvidences = showAllEvidence ? model.evidences : model.evidences.slice(0, visibleEvidenceLimit)
   const hiddenEvidenceCount = Math.max(0, model.evidences.length - visibleEvidences.length)
+  const imageEvidenceCount = model.evidences.filter((evidence) => evidence.kind === 'image').length
+  const logEvidenceCount = model.evidences.filter((evidence) => evidence.kind === 'log').length
+  const visibleImageEvidences = visibleEvidences.filter((evidence) => evidence.kind === 'image')
+  const visibleLogEvidences = visibleEvidences.filter((evidence) => evidence.kind !== 'image')
   const shouldGroupEvidenceByFinding = model.documentKind === 'finding' && model.findings.length > 0
   const evidencesById = useMemo(() => {
     const map = new Map<string, QaEvidenceRow[]>()
@@ -333,7 +401,8 @@ export default function QaDocView({
         <StatPill label="발견사항" value={model.findings.length} />
         <StatPill label="Open" value={openFindingCount} />
         <StatPill label="테스트 결과" value={model.results.length} />
-        <StatPill label="이미지 증적" value={model.evidences.length} />
+        <StatPill label="이미지 증적" value={imageEvidenceCount} />
+        <StatPill label="로그 증적" value={logEvidenceCount} />
       </div>
 
       {model.judgement && (
@@ -357,7 +426,7 @@ export default function QaDocView({
         <Section title="요구사항 검증 요약">
           <SmallTable
             headers={['REQ-ID', '검증 항목', '관련 테스트', '결과', '증적']}
-            rows={renderRequirementResultRows(requirementResults, evidencesById, model.evidences, setPreview)}
+            rows={renderRequirementResultRows(requirementResults, projectId, evidencesById, model.evidences, setPreview)}
           />
         </Section>
       )}
@@ -366,13 +435,13 @@ export default function QaDocView({
         <Section title={`테스트 실행 결과${failedCount > 0 ? ` (실패 ${failedCount}건)` : ''}`}>
           <SmallTable
             headers={['테스트 ID', '관련 REQ', '명령/방법', '결과', '증적']}
-            rows={renderResultRows(executionResults, evidencesById, model.evidences, setPreview)}
+            rows={renderResultRows(executionResults, projectId, evidencesById, model.evidences, setPreview)}
           />
         </Section>
       )}
 
       {(model.evidences.length > 0 || shouldGroupEvidenceByFinding) && (
-        <Section title={shouldGroupEvidenceByFinding ? '발견사항별 증적 매칭' : '이미지 증적'}>
+        <Section title={shouldGroupEvidenceByFinding ? '발견사항별 증적 매칭' : '증적'}>
           {shouldGroupEvidenceByFinding ? (
             <FindingEvidencePanel
               projectId={projectId}
@@ -389,6 +458,12 @@ export default function QaDocView({
                   {showAllEvidence
                     ? `전체 ${model.evidences.length}개 표시 중`
                     : `처음 ${visibleEvidences.length}개 표시 중`}
+                </span>
+                <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">
+                  UI {imageEvidenceCount}
+                </span>
+                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                  LOG {logEvidenceCount}
                 </span>
                 {hiddenEvidenceCount > 0 && (
                   <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
@@ -411,7 +486,14 @@ export default function QaDocView({
                 </button>
               )}
             </div>
-            <EvidenceGrid projectId={projectId} evidences={visibleEvidences} onPreview={setPreview} />
+            {visibleImageEvidences.length > 0 && (
+              <EvidenceGrid projectId={projectId} evidences={visibleImageEvidences} onPreview={setPreview} />
+            )}
+            {visibleLogEvidences.length > 0 && (
+              <div className={visibleImageEvidences.length > 0 ? 'mt-3' : ''}>
+                <LogEvidenceList projectId={projectId} evidences={visibleLogEvidences} />
+              </div>
+            )}
             </div>
           )}
         </Section>
@@ -445,7 +527,7 @@ export default function QaDocView({
             </div>
             <div className="max-h-[80vh] overflow-auto bg-slate-900 p-3">
               <img
-                src={imageUrl(projectId, preview.path)}
+                src={rawUrl(projectId, preview.path)}
                 alt={`${preview.id} ${preview.label}`}
                 className="max-h-[74vh] max-w-full object-contain"
               />

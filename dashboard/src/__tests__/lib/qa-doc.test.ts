@@ -122,12 +122,19 @@ updated_at: 2026-05-13
 | --- | --- | --- | --- | --- |
 | REQ-001-01 | 로그인 성공/실패 | UT-001, IT-001, UI-001 | Pass | UI-001_login.png |
 | REQ-001-02 | 비로그인 보호 | UT-002, IT-002, UI-005 | Pass | UI-001_login.png |
+| REQ-001-03 | 빌드 검증 | QA-CMD-005 | Pass | QA-CMD-005_build.log |
 
 ## 4. 화면 증적
 
 | 증적 ID | 관련 UI | 파일 | 설명 |
 | --- | --- | --- | --- |
 | EV-UI-001 | UI-001 | docs/artifacts/04-review/evidence/ui/UI-001_login.png | 로그인 화면 |
+
+## 5. 실행 로그
+
+| 증적 ID | 관련 UI | 파일 | 설명 |
+| --- | --- | --- | --- |
+| QA-CMD-005 | QA-CMD-005 | docs/artifacts/04-review/evidence/logs/QA-CMD-005_build.log | frontend build log |
 `)
 
     expect(model.documentKind).toBe('result')
@@ -139,7 +146,14 @@ updated_at: 2026-05-13
     expect(model.evidences.some((evidence) =>
       evidence.path === 'docs/artifacts/04-review/evidence/ui/UI-001_login.png',
     )).toBe(true)
-    expect(model.evidences).toHaveLength(1)
-    expect(model.evidences.every((evidence) => evidence.path.includes('docs/artifacts/04-review/evidence/ui/'))).toBe(true)
+    expect(model.evidences).toHaveLength(2)
+    expect(model.evidences.some((evidence) =>
+      evidence.path === 'docs/artifacts/04-review/evidence/logs/QA-CMD-005_build.log' &&
+      evidence.kind === 'log',
+    )).toBe(true)
+    expect(model.evidences.some((evidence) =>
+      evidence.path.includes('docs/artifacts/04-review/evidence/ui/') &&
+      evidence.kind === 'image',
+    )).toBe(true)
   })
 })

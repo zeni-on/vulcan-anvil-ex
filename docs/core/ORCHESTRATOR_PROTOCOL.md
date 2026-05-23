@@ -95,7 +95,7 @@ subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 
 - Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
 - 이미 빌드 가능한 골격과 public signature가 있으면 `contract_skeleton.mode: not-required`와 확인 근거를 Run에 남긴다.
 - 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 `agent-run --mode work`나 명시적 subagent 위임으로 진행한다.
-- 하나의 Wave 안에서는 여러 subagent를 병렬로 사용할 수 있다.
+- 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
 - 다음 Wave의 분석, 읽기 전용 검토, 질문 정리는 허용할 수 있지만 코드 수정은 금지한다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
@@ -112,11 +112,12 @@ Implementation Plan Run
 → scaffold smoke 검증과 public signature 확인
 → vulcan.py wave-complete BW-000
 → vulcan.py wave-start BW-001
-→ BW-001 Build Wave Run을 subagent 작업지시서로 전달
+→ BW-001 Backend Build Wave Run을 worker 작업지시서로 전달
 → subagent 결과 검토와 통합
 → Wave 범위 테스트 재실행, 추적표 갱신 필요 항목 정리, Run 기록 갱신
 → vulcan.py wave-complete BW-001
 → vulcan.py wave-start BW-002
+→ BW-002 Frontend Build Wave Run을 worker 작업지시서로 전달
 ```
 
 ## 6. Orchestrator Plan 계약

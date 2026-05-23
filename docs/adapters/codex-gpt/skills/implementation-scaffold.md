@@ -23,8 +23,12 @@ Impl 진입 직후 feature 구현 전에 빌드 가능한 계약 skeleton을 만
 4. 신규 개발이면 폴더, 빌드 설정, app entrypoint, public class/interface/method, DTO/schema, 테스트 파일 skeleton을 만든다.
 5. 고도화이면 기존 코드와 Program Design의 계약을 매핑하고, 누락 skeleton만 보강한다.
 6. 업무 로직은 완성하지 않는다. method body는 `TODO`, `NotImplemented`, 최소 wiring, 빈 adapter처럼 빌드가 깨지지 않는 수준으로 둔다.
-7. contract skeleton smoke 명령 또는 Run의 `verification.commands`를 가능한 범위에서 실행한다.
-8. 다음 Build Wave가 채워야 할 method, 테스트, 남은 ISSUE/CR 후보를 Run 결과에 남긴다.
+7. Gate 2/3에서 frontend stack과 도구가 확정되어 있으면 `package.json`, lockfile, lint/build/test script, Playwright 설정을 scaffold 범위에서 고정한다.
+8. Node/Playwright 의존성 설치가 필요하면 worker cache(`npm_config_cache`, `PLAYWRIGHT_BROWSERS_PATH`)를 사용해 가능한 범위에서 실행한다.
+9. npm registry, 권한, 인증, 네트워크, cache 문제로 설치/검증을 실행하지 못하면 `environment_blocked` 또는 `not_run`으로 기록하고, 실패 명령/cwd/exit code/log path/Orchestrator 재실행 명령을 남긴다.
+10. scaffold worker의 Node/Playwright 실행은 skeleton smoke 보조 검증이다. 최종 화면 실행, Playwright 증적, QA Pass는 통합된 main 작업공간 또는 별도 QA worktree의 Gate 4 QA에서 판정한다.
+11. contract skeleton smoke 명령 또는 Run의 `verification.commands`를 가능한 범위에서 실행한다.
+12. 다음 Build Wave가 채워야 할 method, 테스트, 남은 ISSUE/CR 후보를 Run 결과에 남긴다.
 
 ## 금지
 
@@ -39,4 +43,6 @@ Impl 진입 직후 feature 구현 전에 빌드 가능한 계약 skeleton을 만
 - Program Design의 public signature가 실제 skeleton 파일에 존재한다.
 - 신규/고도화 모드와 생략 사유가 Run에 기록되어 있다.
 - compile/import/build smoke가 통과했거나 Not Run 사유가 명확하다.
+- Node/Playwright 설치가 막혔으면 코드 실패와 환경 차단을 분리해 기록하고 Orchestrator 재검증 명령을 남긴다.
+- worker worktree에서 화면 서버나 Playwright를 못 띄운 경우에도 최종 UI 검증은 Gate 4 QA 입력으로 분리되어 있다.
 - 다음 Build Wave가 구현할 계약 단위가 식별되어 있다.
