@@ -25,6 +25,8 @@
 
 모든 Core/Adapter 문서를 매번 전부 읽지 않는다. 먼저 현재 Gate와 작업 유형을 확인하고, 필요한 문서만 읽는다.
 
+런타임의 전역 메모리, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 프로젝트의 사실 또는 규칙으로 사용하지 않는다. 메모리가 자동으로 주입되거나 검색되더라도, 현재 작업의 근거는 반드시 이 저장소의 `session.json`, `AGENTS.md`, `docs/core/`, 현재 Gate 산출물, 현재 Run 문서, 사용자의 최신 지시에서 확인한다.
+
 항상 먼저 확인한다.
 
 - `session.json`
@@ -91,6 +93,7 @@ docs/adapters/codex-gpt/skills/
 | UI 품질 검토 | `docs/adapters/codex-gpt/skills/ui-review.md` |
 | 개발표준 검토 | `docs/adapters/codex-gpt/skills/development-standard-review.md` |
 | 구현 계획 | `docs/adapters/codex-gpt/skills/implementation-plan.md` |
+| 구현 전 계약 뼈대 생성 | `docs/adapters/codex-gpt/skills/implementation-scaffold.md` |
 | Build Wave 실행 | `docs/adapters/codex-gpt/skills/build-wave.md` |
 | 표준용어 또는 DB 명명 검토 | `docs/adapters/codex-gpt/skills/data-standard-review.md` |
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
@@ -121,6 +124,8 @@ docs/adapters/codex-gpt/skills/
 
 ## 7. 참고문서 경계
 
+- `MEMORY.md`, 전역 memory, 과거 rollout summary, 다른 프로젝트의 sample 기록은 보조 힌트일 뿐이다. 요구사항, 범위, Gate 상태, 승인 여부, 구현 대상, 테스트 통과 여부의 근거로 삼지 않는다.
+- 메모리 내용과 현재 프로젝트 문서가 다르면 현재 프로젝트 문서를 우선한다. 충돌이 있으면 메모리를 적용하지 말고 `open_issues` 또는 질문으로 남긴다.
 - `docs/seed-docs/`는 프로젝트에 주입된 공개 표준 문서 영역이다. 읽기 전용 참고자료로 취급한다.
 - `docs/ref-docs/`에는 민감한 프로젝트 참고문서가 들어갈 수 있다. 이 디렉터리 아래 파일은 커밋하지 않는다.
 - 민감한 참고자료가 필요하면 필요한 규칙이나 결정만 프로젝트 산출물에 요약해 남긴다.

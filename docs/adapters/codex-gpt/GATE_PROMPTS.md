@@ -23,6 +23,7 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, 증적을 사용자 승인 없이 만들지 않는다.
 - 의미 있는 변경은 관련 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI/FIND/CR/RUN`과 연결한다.
 - 실행하지 않은 테스트를 Pass로 기록하지 않는다.
+- 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 프로젝트의 근거로 사용하지 않는다. 현재 `session.json`, Run 문서, Gate 산출물, 사용자 최신 지시로 다시 확인한다.
 - Gate 산출물 완료 후에는 요약, 미해결 항목, 다음 제안, 사용자 승인 질문을 남기고 멈춘다.
 - `docs/ref-docs/`는 민감 자료일 수 있으므로 커밋하거나 원문 인용하지 않는다.
 - Claude 전용 `.claude/` 문서는 Codex 실행 계약으로 보지 않는다.
@@ -35,7 +36,7 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 | Gate 1 | 테스트 가능한 `REQ/NREQ/AC`와 추적표를 만든다 | `TRACEABILITY_RULES.md`, `ID_SYSTEM.md` |
 | Gate 2 | 요구사항을 아키텍처, 화면, 기능, API, DB, 보안, 개발표준으로 전개한다 | `GATE2_DESIGN_SEQUENCE.md`, `screen-design`, `security-review`, `development-standard-review`, `data-standard-review` |
 | Gate 3 | 요구사항, 보안, UI 계약을 검증 가능한 테스트와 증적 기준으로 전개한다 | `TRACEABILITY_RULES.md`, `RUN_INPUT_CONTRACT.md` |
-| Impl | 승인된 Build Wave 범위 안에서 구현하고 테스트, 증적, 추적성 delta를 남긴다 | `implementation-plan`, `build-wave`, `TECH_STACK_BASELINES.md` |
+| Impl | 승인된 Build Wave 범위 안에서 구현하고 테스트, 증적, 추적성 delta를 남긴다 | `implementation-plan`, `implementation-scaffold`, `build-wave`, `TECH_STACK_BASELINES.md` |
 | Gate 4 | 테스트 결과, Playwright 증적, 추적성, FIND/CR/ISSUE를 검수한다 | `CHANGE_CONTROL_PROCESS.md`, `traceability-review`, `ui-review` |
 | Gate 5 | 릴리즈 승인 근거, 잔여 위험, 인수인계 항목을 정리한다 | `DOCUMENT_METADATA.md`, `CHANGE_CONTROL_PROCESS.md` |
 
@@ -70,6 +71,8 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 먼저 worker Run 또는 Build Wave Run을 만들고 `agent-run --mode work`나 명시적 subagent 위임으로 실행한다.
 - Orchestrator가 직접 코드를 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
+- 신규 개발 또는 빌드 가능한 골격이 없으면 feature 구현 전 `implementation-scaffold`로 class/interface/method/DTO skeleton과 build smoke를 먼저 만든다.
+- `build-wave` Run은 Program Design의 public signature를 `target_contracts.interface_contract`로 가져온 뒤 실행한다.
 - 개발표준, 보안가이드, 테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
 - 화면 구현 전 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
 

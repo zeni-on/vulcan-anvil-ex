@@ -17,6 +17,7 @@ Vulcan-Anvil Ex Run을 수행하기 전에 어떤 절차를 읽어야 하는지 
 | `ui-review.md` | 구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선이 충분한지 검토할 때 |
 | `development-standard-review.md` | 개발표준정의서, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토할 때 |
 | `implementation-plan.md` | 구현 전에 Build Wave, 의존성, 위임, 검증, 커밋 단위를 계획할 때 |
+| `implementation-scaffold.md` | feature 구현 전에 빌드 가능한 계약 skeleton과 public signature를 만들 때 |
 | `build-wave.md` | Implementation Plan에 정의된 하나의 Build Wave를 구현할 때 |
 | `data-standard-review.md` | 프로젝트 용어집, DB 명세, 데이터 명명, 공공데이터 표준 준수 여부를 검토할 때 |
 | `qa-fix-loop.md` | 승인된 설계 범위 안에서 QA 발견사항을 수정할 때 |

@@ -1,7 +1,7 @@
 # Implementation Build Wave Run Input Sample
 
 > 목적: Audit Profile에서 구현 단계가 승인된 설계와 테스트 범위 안에서만 움직이게 하는 기준 예시다.
-> 이 샘플은 두 단계로 본다. 먼저 Orchestrator가 Wave를 나누는 `implementation-plan`을 만들고, 실제 작업자에게는 더 얇은 `build-wave` 계약을 전달한다.
+> 이 샘플은 세 단계로 본다. 먼저 Orchestrator가 Wave를 나누는 `implementation-plan`을 만들고, 신규 개발 또는 큰 고도화에서는 `implementation-scaffold`로 빌드 가능한 계약 skeleton을 만든 뒤, 실제 작업자에게 더 얇은 `build-wave` 계약을 전달한다.
 
 ```yaml
 profile: "audit"
@@ -51,6 +51,8 @@ scope:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
 completion_criteria:
   - "승인된 Gate 2/3 범위 안에서만 구현 또는 구현 계획을 작성한다."
+  - "신규 개발 또는 빌드 가능한 골격이 없는 프로젝트는 BW-000 Implementation Scaffold를 첫 Wave로 둔다."
+  - "고도화 프로젝트는 BW-000에서 기존 코드와 Program Design의 PGM/IF/MTH 계약을 매핑하고 누락 skeleton 또는 충돌 항목을 식별한다."
   - "코딩 전 개발표준정의서의 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령을 확인하고 준수 체크리스트를 남긴다."
   - "Spring Boot 구현은 개발표준의 base package와 feature 우선 패키지 구조를 따른다. domain 래퍼는 DDD 선택 사유가 있을 때만 사용한다."
   - "로깅은 개발표준의 SLF4J/Logback 또는 Log4j2 선택, logger 선언, 로그 레벨, 민감정보 금지 기준을 따른다."
@@ -116,6 +118,8 @@ ui_implementation_contract_policy:
 ## Review Notes
 
 - 중간 이상 구현은 `implementation-plan`으로 Wave를 먼저 나눈 뒤 `build-wave`로 실행한다.
+- 신규 개발 또는 골격이 없는 프로젝트는 실제 feature 구현 전에 `implementation-scaffold` Run으로 빌드 가능한 skeleton을 먼저 만든다.
+- 고도화 프로젝트는 `implementation-scaffold` Run에서 기존 코드와 Program Design 계약을 정렬하고, 바로 구현 가능한 public signature가 이미 존재하면 생략 사유를 남긴다.
 - 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. 단일 worker Run 또는 `agent-run --mode work`로 실행한다.
 - Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
 - 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
@@ -127,6 +131,103 @@ ui_implementation_contract_policy:
 - Wave 종료 검증은 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다. 전체 사용자 시나리오, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 Orchestrator가 구현 범위, 재실행한 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
 - worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
+
+## Worker Scaffold 예시
+
+신규 개발의 첫 Impl Wave는 보통 `BW-000`으로 둔다. 이 Run은 업무 로직 구현이 아니라, Program Design의 공개 계약을 실제 파일과 signature로 고정하고 빌드 smoke를 통과시키는 작업이다.
+
+```yaml
+profile: "audit"
+run_type: "ImplementationScaffold"
+gate: "impl"
+skill: "implementation-scaffold"
+persona: "build"
+bw_id: "BW-000"
+related_ids: [PGM-001, PGM-002, API-001, API-002, API-003, API-004, SCR-001, UT-001, IT-001, UI-001-01]
+target_contracts:
+  pgm: [PGM-001, PGM-002]
+  api: [API-001, API-002, API-003, API-004]
+  scr: [SCR-001]
+  test: [UT-001, IT-001, UI-001-01]
+  interface_contract:
+    language: "python, typescript"
+    signatures:
+      - "TodoService.list_todos() -> list[TodoOut]"
+      - "TodoService.create_todo(request: TodoCreate) -> TodoOut"
+      - "TodoService.update_todo_completed(todo_id: int, request: TodoUpdate) -> TodoOut"
+      - "TodoService.delete_todo(todo_id: int) -> None"
+      - "fetchTodos(): Promise<Todo[]>"
+      - "addTodo(text: string): Promise<Todo>"
+      - "setCompleted(id: number, completed: boolean): Promise<Todo>"
+      - "removeTodo(id: number): Promise<void>"
+    schemas:
+      - "TodoCreate: text"
+      - "TodoUpdate: completed"
+      - "TodoOut/Todo: id, text, completed, createdAt, updatedAt"
+    error_contracts:
+      - "TODO_TEXT_REQUIRED"
+      - "TODO_TEXT_TOO_LONG"
+      - "TODO_NOT_FOUND"
+  contract_skeleton:
+    mode: "new"
+    files:
+      - path: "backend/app/services/todos.py"
+        create: "TodoService class and public method stubs"
+      - path: "backend/app/schemas/todos.py"
+        create: "TodoCreate, TodoUpdate, TodoOut"
+      - path: "frontend/shared/api/todos.ts"
+        create: "Todo type and API client signatures"
+      - path: "frontend/features/todo/useTodos.ts"
+        create: "useTodos state/action return shape"
+    forbidden:
+      - "업무 로직 완성"
+      - "전체 E2E 또는 Gate 4 QA Pass 선언"
+    smoke_commands:
+      - "python -m compileall backend/app"
+      - "cd frontend && npm run build"
+source_documents:
+  read_first:
+    - AGENTS.md
+    - session.json
+    - docs/adapters/codex-gpt/skills/implementation-scaffold.md
+  working_documents:
+    - docs/runs/RUN-020_bw-000-contract-skeleton_v0.1.md
+    - docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    - docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md
+    - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
+  reference_on_demand:
+    - docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md
+    - docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md
+    - docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md
+    - docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md
+scope:
+  writable:
+    - backend/
+    - frontend/
+    - docs/runs/RUN-020_bw-000-contract-skeleton_v0.1.md
+  excluded:
+    - session.json
+    - docs/ref-docs/
+    - "**/*.db"
+    - "**/node_modules/"
+    - "**/.next/"
+completion_criteria:
+  - "Program Design의 PGM/IF/MTH/DTO public contract가 실제 skeleton 파일에 존재한다."
+  - "업무 로직은 TODO/stub/NotImplemented 또는 최소 wiring만 포함한다."
+  - "compile/import/build smoke가 통과한다."
+  - "다음 Build Wave가 구현할 method와 테스트 stub가 식별되어 있다."
+verification:
+  owner: "orchestrator-rerun"
+  commands:
+    - "python -m compileall backend/app"
+    - "cd frontend && npm run build"
+    - "python vulcan.py run-check docs/runs/RUN-020_bw-000-contract-skeleton_v0.1.md"
+worker_execution_policy:
+  forbidden_actions:
+    - "업무 기능 로직을 완성하지 않는다."
+    - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
+    - "scope.writable 밖 파일을 수정하지 않는다."
+```
 
 ## Worker Build Wave 예시
 
@@ -142,9 +243,22 @@ persona: "build"
 related_ids: [REQ-001, SCR-001, UI-001, UT-001]
 target_contracts:
   func: [FUNC-001]
+  pgm: [PGM-002]
+  api: [API-001, API-002, API-003, API-004]
   scr: [SCR-001]
   ui: [UI-001]
   test: [UT-001]
+  interface_contract:
+    language: "typescript"
+    signatures:
+      - "fetchTodos(): Promise<Todo[]>"
+      - "addTodo(text: string): Promise<Todo>"
+      - "setCompleted(id: number, completed: boolean): Promise<Todo>"
+      - "removeTodo(id: number): Promise<void>"
+    schemas:
+      - "Todo: id, text, completed, createdAt, updatedAt"
+    error_contracts:
+      - "UI error state must not expose stack, SQL, DB path, token, or internal exception details."
 source_documents:
   read_first:
     - AGENTS.md
@@ -181,6 +295,7 @@ scope:
 completion_criteria:
   - "담당 Wave 범위만 구현하고 다른 worker 범위는 수정하지 않는다."
   - "target_contracts의 기능/화면/UI/테스트 계약을 완결된 조각으로 닫는다."
+  - "target_contracts.interface_contract의 public signature, schema, error contract를 다른 이름이나 타입으로 대체하지 않는다."
   - "UI Implementation Contract와 Gate 3 UI 테스트 기준을 구현 전 확인한다."
   - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 깨진 중간 구현을 완료 처리하지 않는다."
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."

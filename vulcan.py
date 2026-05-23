@@ -158,6 +158,7 @@ RUN_SKILLS = {
     "ui-review": "docs/adapters/codex-gpt/skills/ui-review.md",
     "development-standard-review": "docs/adapters/codex-gpt/skills/development-standard-review.md",
     "implementation-plan": "docs/adapters/codex-gpt/skills/implementation-plan.md",
+    "implementation-scaffold": "docs/adapters/codex-gpt/skills/implementation-scaffold.md",
     "build-wave": "docs/adapters/codex-gpt/skills/build-wave.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
@@ -193,6 +194,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "ui-review": "ui-review",
     "development-standard-review": "development-review",
     "implementation-plan": "build-planning",
+    "implementation-scaffold": "build",
     "build-wave": "build",
     "data-standard-review": "review",
     "qa-fix-loop": "build",
@@ -335,6 +337,7 @@ AUDIT_UI_POLICY_SKILLS = {
     "screen-review",
     "ui-review",
     "implementation-plan",
+    "implementation-scaffold",
     "build-wave",
     "qa-fix-loop",
 }
@@ -420,6 +423,7 @@ AUDIT_WORKER_EXECUTION_POLICY = {
         "사용자 승인, Gate 완료, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다.",
         "Run의 scope.writable 밖 파일을 수정하지 않는다.",
         "Orchestrator가 요청하지 않은 신규 Run, PR, 커밋, push를 만들지 않는다.",
+        "전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억을 현재 Run의 근거로 사용하지 않는다.",
     ],
     "required_outputs": [
         "수행한 변경과 검증 결과를 Run 결과에 남긴다.",
@@ -779,6 +783,28 @@ AUDIT_GATE_SKILL_PRESETS = {
             "구현 착수 전 사용자 승인 또는 명시적인 진행 지시가 필요한 항목이 식별되어 있다.",
         ],
     },
+    ("impl", "implementation-scaffold"): {
+        "run_type": "ImplementationScaffold",
+        "worker_run": True,
+        "working": [
+            "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
+            "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+        ],
+        "writable": [
+            "docs/runs/",
+            "docs/artifacts/04-review/evidence/",
+            "TBD: scaffold 대상 코드/테스트 경로를 Program Design의 Contract Skeleton 기준으로 구체화",
+        ],
+        "completion_criteria": [
+            "신규 개발이면 빌드 가능한 프로젝트 골격과 contract skeleton을 먼저 만든다.",
+            "고도화이면 기존 코드와 Program Design의 PGM/IF/MTH/DTO 계약 매핑을 확인하고 누락 skeleton만 보강한다.",
+            "target_contracts.interface_contract와 contract_skeleton의 public signature, DTO/schema, error contract가 실제 파일에 존재한다.",
+            "업무 로직은 TODO/stub/NotImplemented 또는 최소 wiring만 포함하고 feature 구현을 완료 처리하지 않는다.",
+            "compile/import/build smoke 명령을 실행하거나 Not Run 사유를 남긴다.",
+            "다음 Build Wave가 구현할 method와 테스트 stub를 Orchestrator 결정 필요 항목으로 반환한다.",
+        ],
+    },
     ("impl", "build-wave"): {
         "worker_run": True,
         "working": [
@@ -792,6 +818,7 @@ AUDIT_GATE_SKILL_PRESETS = {
         "completion_criteria": [
             "Wave 하나의 범위만 수정하고 다른 Wave 범위는 건드리지 않는다.",
             "Wave는 기능/계약 단위로 검증 가능한 완결 조각이며, 시간은 쪼개기 보조 기준으로만 사용한다.",
+            "target_contracts.interface_contract의 public signature, schema, error contract를 다른 이름이나 타입으로 대체하지 않는다.",
             "화면 구현은 UI Implementation Contract의 필수 유지 요소, 허용 변경, 금지 변경을 준수한다.",
             "구현 결과, 작성/갱신한 테스트케이스, Orchestrator가 재실행할 검증 명령, 추적표 갱신 필요 항목이 같은 Run에 기록되어 있다.",
         ],
@@ -1310,7 +1337,8 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     )
     return {
         "profile": profile,
-        "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
+        "skill": skill,
+        "run_type": skill_preset.get("run_type", RUN_TYPES_BY_GATE.get(gate, "Review")),
         "worker_run": worker_run,
         "focused_source": focused_source,
         "source_documents": {
@@ -1392,6 +1420,7 @@ def render_run_input_preset(preset, ids, persona, gate):
     sizing_policy = preset.get("worker_run_sizing_policy", AUDIT_WORKER_RUN_SIZING_POLICY)
     target_contracts = classify_related_ids(ids)
     worker_run = bool(preset.get("worker_run"))
+    skill = preset.get("skill", "")
     design_sequence = preset.get("design_sequence", [])
     design_sequence_block = ""
     design_sequence_instruction = ""
@@ -1422,33 +1451,57 @@ ui_implementation_contract_policy:
   gate4_required_evidence:
 {format_yaml_sequence(ui_contract["gate4_required_evidence"], 4)}"""
         gate_finish_instruction = (
-            "12. 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
+            "- 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
             if worker_run
-            else "12. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
+            else "- Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
         )
         ui_instruction_block = f"""
-8. UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
-9. UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
-10. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
-11. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
+- UI 검증이 포함되면 `ui_evidence_policy`에 따라 상태/시나리오별 UI-ID와 증적 파일을 1:1로 연결한다.
+- UIREF, 화면 퍼블리싱 산출물, 외부 시안이 있으면 `ui_implementation_contract_policy`에 따라 설계-구현-증적 비교 기준을 남긴다.
+- subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
+- 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
 {gate_finish_instruction}"""
     else:
         gate_finish_instruction = (
-            "10. 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
+            "- 작업자 runner이면 Gate 진행 승인 질문을 사용자에게 직접 하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
             if worker_run
-            else "10. Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
+            else "- Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다."
         )
         ui_instruction_block = f"""
-8. subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
-9. 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
+- subagent, CLI, 별도 worktree에서 작업자 runner로 실행 중이면 `worker_execution_policy`를 따른다.
+- 기준 충돌, 범위 초과, 도메인 정보 부족은 임의로 통과시키지 말고 `open_issues`에 남기거나 사용자에게 질문한다.
 {gate_finish_instruction}"""
 
     read_first_docs = source.get("read_first", [])
     working_docs = source.get("working_documents", [])
     reference_docs = source.get("reference_on_demand", [])
     optional_docs = source.get("optional", [])
+    contract_detail_block = ""
     if worker_run:
-        completion_action_line = "5. `completion_criteria`를 모두 만족하도록 담당 코드, 테스트, 증적, 자기 Run 기록을 갱신한다."
+        contract_detail_block = """
+  interface_contract:
+    language: "TBD: Program Design 기준 언어/런타임"
+    signatures:
+      - "TBD: PGM/IF/MTH public signature를 Program Design에서 복사"
+    schemas:
+      - "TBD: DTO/Entity/State schema를 Program Design에서 복사"
+    error_contracts:
+      - "TBD: 오류 코드/예외/사용자 메시지 계약을 Program Design/API/Security에서 복사"
+"""
+        if skill == "implementation-scaffold":
+            contract_detail_block += """  contract_skeleton:
+    mode: "new|existing-alignment|not-required"
+    files:
+      - path: "TBD: skeleton 파일 경로"
+        create: "TBD: 생성/확인할 class/interface/method/DTO"
+    forbidden:
+      - "업무 로직 완성"
+      - "전체 E2E 또는 Gate 4 QA Pass 선언"
+    smoke_commands:
+      - "TBD: compile/import/build smoke 명령"
+"""
+    if worker_run:
+        completion_action_line = "- `completion_criteria`를 모두 만족하도록 담당 코드, 테스트, 증적, 자기 Run 기록을 갱신한다."
         completion_policy_section = """## 5. Worker 완료 및 Orchestrator 반환
 
 Run을 완료할 때 다음 항목을 반드시 남긴다.
@@ -1464,7 +1517,7 @@ Run을 완료할 때 다음 항목을 반드시 남긴다.
 
 작업자 runner는 사용자 승인 질문, Gate 완료 선언, QA Pass, 릴리즈 승인, merge 가능 판단을 직접 하지 않는다."""
     else:
-        completion_action_line = "5. `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다."
+        completion_action_line = "- `completion_criteria`를 모두 만족하도록 문서, 추적표, Run 기록을 갱신한다."
         completion_policy_section = """## 5. Gate 종료 및 승인 대기
 
 Run을 완료할 때 다음 항목을 반드시 남긴다.
@@ -1486,7 +1539,7 @@ run_type: {format_yaml_scalar(preset["run_type"])}
 gate: {format_yaml_scalar(gate)}
 related_ids: {format_yaml_list(ids)}
 target_contracts:
-{format_yaml_mapping_sequences(target_contracts, 2)}
+{format_yaml_mapping_sequences(target_contracts, 2)}{contract_detail_block}
 persona: {format_yaml_scalar(persona)}
 source_documents:
   read_first:
@@ -1528,15 +1581,18 @@ output_requirements:
 
 ## 4. 수행 지시
 
-1. `source_documents.read_first`만 먼저 읽고 현재 Gate, skill, 관련 ID를 확인한다.
-   - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다.
-2. `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
-3. `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
-4. `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
+- `source_documents.read_first`만 먼저 읽고 현재 Gate, skill, 관련 ID를 확인한다.
+  - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다.
+- 구현 worker Run이면 `target_contracts.interface_contract`의 public signature, schema, error contract를 먼저 구현 경계로 삼는다.
+- scaffold Run이면 `target_contracts.contract_skeleton`의 파일과 smoke 검증을 먼저 확인하고 업무 로직 구현을 완료 처리하지 않는다.
+- `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
+- `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
+- 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 Run의 근거로 사용하지 않는다.
+- `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
 {completion_action_line}
-6. worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다.
-7. 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
-8. 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다.
+- worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다.
+- 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
+- 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다.
 {ui_instruction_block}
 
 {completion_policy_section}"""
@@ -4250,6 +4306,14 @@ created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
 target_contracts:
 {format_yaml_mapping_sequences(wave_contracts, 2)}
+  interface_contract:
+    language: "TBD: Program Design 기준 언어/런타임"
+    signatures:
+      - "TBD: PGM/IF/MTH public signature를 Program Design에서 복사"
+    schemas:
+      - "TBD: DTO/Entity/State schema를 Program Design에서 복사"
+    error_contracts:
+      - "TBD: 오류 코드/예외/사용자 메시지 계약을 Program Design/API/Security에서 복사"
 runner_role: worker-runner
 source_documents:
   read_first:
@@ -4828,9 +4892,10 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
 1. 관련 문서와 코드를 확인한다.
 2. `{persona}` persona의 책임과 금지사항을 확인한다.
 3. skill 절차에 따라 누락, 결함, 변경 필요 여부를 판단한다.
-4. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
-5. 검증 명령을 실행하고 결과를 기록한다.
-6. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다."""
+4. 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 Run의 근거로 사용하지 않는다.
+5. 필요한 경우 문서, 코드, 테스트, 증적을 갱신한다.
+6. 검증 명령을 실행하고 결과를 기록한다.
+7. `RUN_OUTPUT_CONTRACT.md` 형식에 맞게 이 Run 기록을 갱신한다."""
 
         content = f"""# {run_id} {title}
 
@@ -4938,6 +5003,7 @@ open_issues: []
 - `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
 - `docs/core/RUN_INPUT_CONTRACT.md`
 - `docs/core/RUN_OUTPUT_CONTRACT.md`
+- 런타임 memory나 과거 샘플 프로젝트 기억은 현재 프로젝트의 근거로 사용하지 않는다.
 
 ## 3. 판단 범위
 
@@ -5308,6 +5374,68 @@ def extract_runner_stream_delta(runner, line):
     return ""
 
 
+def codex_item_label(item_type, status):
+    labels = {
+        "agent_message": ("응답 작성 중", "응답 작성 완료"),
+        "reasoning": ("검토 중", "검토 완료"),
+        "function_call": ("도구 호출 중", "도구 호출 완료"),
+        "tool_call": ("도구 실행 중", "도구 실행 완료"),
+        "command_execution": ("명령 실행 중", "명령 실행 완료"),
+        "file_change": ("파일 변경 중", "파일 변경 완료"),
+        "patch": ("패치 작성 중", "패치 작성 완료"),
+    }
+    default = (f"{item_type or 'item'} 처리 중", f"{item_type or 'item'} 처리 완료")
+    started, completed = labels.get(item_type or "", default)
+    return completed if status == "completed" else started
+
+
+def extract_runner_status_update(runner, line):
+    normalized = normalize_exec_runner(runner)
+    if normalized != "codex-cli":
+        return {}
+    try:
+        event = json.loads(line)
+    except json.JSONDecodeError:
+        return {}
+
+    event_type = event.get("type") or ""
+    if event_type == "thread.started":
+        return {
+            "phase": "session_started",
+            "current_task": "Codex 세션 시작",
+        }
+    if event_type == "turn.started":
+        return {
+            "phase": "turn_started",
+            "current_task": "Codex 작업 시작",
+        }
+    if event_type == "turn.completed":
+        return {
+            "phase": "turn_completed",
+            "current_task": "Codex 작업 완료",
+        }
+    if event_type == "turn.failed":
+        return {
+            "phase": "turn_failed",
+            "current_task": "Codex 작업 실패",
+        }
+    if event_type in ("item.started", "item.completed"):
+        item = event.get("item") or {}
+        item_type = item.get("type") or item.get("item_type") or ""
+        status = "completed" if event_type.endswith(".completed") else "started"
+        task = codex_item_label(item_type, status)
+        command = item.get("command") or item.get("cmd")
+        name = item.get("name") or item.get("tool_name")
+        detail = command or name
+        if detail and item_type in ("command_execution", "function_call", "tool_call"):
+            task = f"{task}: {truncate_dashboard_message(str(detail), 80)}"
+        return {
+            "phase": f"codex_{item_type or 'item'}_{status}",
+            "current_task": task,
+        }
+    return {}
+
+
 def extract_runner_log_update(runner, line):
     normalized = normalize_exec_runner(runner)
     if normalized != "antigravity-cli":
@@ -5574,6 +5702,7 @@ def make_runner_resume_capture(project_dir, activity, current_task):
         nonlocal last_message_status_at
         info = runner_resume_info(activity.get("runner", ""), line)
         delta = extract_runner_stream_delta(activity.get("runner", ""), line)
+        status_update = extract_runner_status_update(activity.get("runner", ""), line)
         log_update = extract_runner_log_update(activity.get("runner", ""), line)
         with lock:
             should_update = False
@@ -5596,6 +5725,11 @@ def make_runner_resume_capture(project_dir, activity, current_task):
                     should_update = True
                     status_phase = status_phase or "message_stream"
                     last_message_status_at = now
+            if status_update:
+                activity.update(status_update)
+                should_update = True
+                status_phase = status_update.get("phase") or status_phase or "runner_status"
+                status_task = status_update.get("current_task") or status_task
             if log_update:
                 activity.update(log_update)
                 should_update = True
@@ -5603,7 +5737,7 @@ def make_runner_resume_capture(project_dir, activity, current_task):
                 status_task = log_update.get("current_task") or status_task
             if not should_update:
                 return
-            event_message = activity.get("current_message") or status_task or status_phase
+            event_message = status_task if (status_update or log_update) else (activity.get("current_message") or status_task or status_phase)
             append_agent_event(activity, status_phase or "running", event_message, status="running")
             write_agent_activity(project_dir, activity)
             status = activity_status_payload(activity)
@@ -5615,6 +5749,7 @@ def make_runner_resume_capture(project_dir, activity, current_task):
             if "current_message" in activity:
                 status["current_message"] = activity["current_message"]
             status.update(info)
+            status.update(status_update)
             status.update(log_update)
             write_agent_status(project_dir, status)
 
@@ -6525,7 +6660,7 @@ def infer_execution_role(run_content, metadata):
     title_hint = (metadata.get("run_id") or "").lower()
     text = run_content.lower()
 
-    if skill == "build-wave" or persona in ("build", "frontend", "backend", "ui", "screen"):
+    if skill in ("build-wave", "implementation-scaffold") or persona in ("build", "frontend", "backend", "ui", "screen"):
         if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend"):
             return "build-frontend"
         if "backend" in text or "back-end" in text or "백엔드" in run_content or persona == "backend":

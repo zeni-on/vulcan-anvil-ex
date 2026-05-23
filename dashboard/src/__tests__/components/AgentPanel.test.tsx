@@ -4,6 +4,14 @@ import '@testing-library/jest-dom'
 import AgentPanel from '@/components/AgentPanel'
 import { ProjectRuntime } from '@/lib/types'
 
+const refreshMock = jest.fn()
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    refresh: refreshMock,
+  }),
+}))
+
 const runtime: ProjectRuntime = {
   primary: 'codex-cli',
   available_runners: [
@@ -46,6 +54,10 @@ const runtime: ProjectRuntime = {
 }
 
 describe('AgentPanel worker activity drawer', () => {
+  beforeEach(() => {
+    refreshMock.mockClear()
+  })
+
   it('진행 중 worker 클릭 시 최근 이벤트 레이어를 표시한다', () => {
     render(<AgentPanel runtime={runtime} />)
 
@@ -56,5 +68,14 @@ describe('AgentPanel worker activity drawer', () => {
     expect(screen.getByText('RV-001 독립 검수 시작')).toBeInTheDocument()
     expect(screen.getAllByText('프로그램 계약과 API 정의를 비교 중').length).toBeGreaterThan(0)
     expect(screen.getByText('019e-test-thread')).toBeInTheDocument()
+  })
+
+  it('레이어 새로고침 버튼으로 현재 worker 상태를 다시 요청한다', () => {
+    render(<AgentPanel runtime={runtime} />)
+
+    fireEvent.click(screen.getByTestId('agent-worker-line'))
+    fireEvent.click(screen.getByRole('button', { name: 'worker 상태 새로고침' }))
+
+    expect(refreshMock).toHaveBeenCalledTimes(1)
   })
 })

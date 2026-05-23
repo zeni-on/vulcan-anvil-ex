@@ -30,8 +30,8 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `ui-review` | 구현자가 좋은 화면을 만들 수 있을 만큼 UI 기준선과 구현 계약이 충분한지 까다롭게 검토한다. | G2, G4 | UI 품질 검토 결과, UI 보강 ISSUE/FIND |
 | `development-review` | 개발표준, 패키지 구조, 코딩/주석/테스트 컨벤션 확정 여부를 검토한다. | G2, G4 | 개발표준 검토 결과, 표준 준수 FIND |
 | `test-design` | AC, SEC, NREQ를 검증 가능한 테스트로 전개한다. | G3 | 테스트케이스, 테스트계획, 증적 기준 |
-| `build-planning` | 승인된 설계와 테스트 기준을 구현 가능한 Build Wave로 나눈다. | Impl | 구현 계획, Build Wave 목록, 위임 계획 |
-| `build` | 승인된 설계를 코드, 설정, 테스트 코드로 구현한다. | G4 | 소스 코드, 단위 테스트, 빌드 결과 |
+| `build-planning` | 승인된 설계와 테스트 기준을 구현 가능한 Scaffold/Build Wave로 나눈다. | Impl | 구현 계획, BW-000 scaffold 필요 여부, Build Wave 목록, 위임 계획 |
+| `build` | 승인된 설계를 코드, 설정, 테스트 코드로 구현한다. Scaffold Run에서는 업무 로직이 아니라 public skeleton만 만든다. | Impl | 소스 코드, 단위 테스트, 빌드 결과 |
 | `evidence` | 테스트 결과, 화면 캡처, 로그 등 증적을 만든다. | G4 | 테스트결과서, UI 증적, 실행 로그 |
 | `review` | 추적성, 보안, 품질, 설계 준수 여부를 검토한다. | G4, G5 | 발견사항, FIND, CR, 리뷰 결과 |
 | `release` | 승인 후보, 릴리즈 범위, 인수인계 항목을 정리한다. | G5 | 승인 체크리스트, 릴리즈 노트 |
@@ -48,7 +48,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | `pm` | `requirements` | 실제 PM 직책과 혼동을 피한다. |
 | `architect`, `dba`, `ui-designer` | `design` | 필요하면 설계 Run을 기능/데이터/화면으로 나눈다. |
 | `qa` Gate 3 | `test-design` | 테스트를 설계하는 역할이다. |
-| `tech-lead`, `implementation-lead` | `build-planning` | 구현 전에 Wave, 의존성, 위임, 커밋 단위를 계획하는 역할이다. |
+| `tech-lead`, `implementation-lead` | `build-planning` | 구현 전에 scaffold 필요 여부, Wave, 의존성, 위임, 커밋 단위를 계획하는 역할이다. |
 | `frontend-dev`, `backend-dev` | `build` | 요즘 표현에 맞춰 구현 실행자는 build persona로 묶는다. |
 | `qa` Gate 4, `ux-reviewer` | `review` 또는 `evidence` | 판정은 review, 캡처/결과 정리는 evidence로 분리한다. |
 | `human` | `approver` | persona가 아니라 승인 책임자다. |
@@ -62,7 +62,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | G2 Design | `design` | `screen-design`, `security-review`, `screen-review`, `ui-review`, `development-review`, `documentation` |
 | G3 Test Planning | `test-design` | `security-review`, `screen-review`, `ui-review`, `review` |
 | Impl Planning | `build-planning` | `review`, `security-review`, `ui-review`, `development-review` |
-| G4 Implementation | `build` | `evidence`, `security-review`, `screen-review`, `ui-review`, `development-review`, `review` |
+| Impl Execution | `build` | `evidence`, `security-review`, `screen-review`, `ui-review`, `development-review`, `review` |
 | G5 Approval | `release` | `review`, `documentation` |
 | Change Request | `change-control` | 영향 범위에 따라 `requirements`, `design`, `build`, `review` |
 

@@ -12,6 +12,8 @@ Agent Run Protocol은 특정 모델이나 제품의 사용법이 아니다.
 Core 원칙:
 
 - 에이전트는 항상 승인된 문서와 추적표를 먼저 읽고 작업한다.
+- 런타임 전역 메모리, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 프로젝트의 source of truth가 아니다.
+- 메모리가 자동으로 제공되더라도 요구사항, Gate 상태, Run 범위, 승인 여부, 구현 대상, 테스트 통과 여부는 현재 저장소의 `session.json`, Gate 산출물, Run 문서, 사용자 최신 지시로 다시 확인한다.
 - 에이전트의 모든 작업은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `PT`, `UI` 중 하나 이상과 연결되어야 한다.
 - 에이전트가 임의로 범위를 확장하지 않도록 Run Scope를 명시한다.
 - Gate 완료 전에는 산출물, 구현, 테스트, 증적, 미해결 이슈를 함께 남긴다.
@@ -112,6 +114,23 @@ completion:
   - UT-007, UT-008 통과
   - 추적표 증적 갱신
 ```
+
+## 3.1 Memory 사용 금지 경계
+
+Codex, Claude, Gemini 등 런타임은 전역 또는 프로젝트별 memory를 자동으로 제공할 수 있다.
+Vulcan-Anvil Ex에서 memory는 편의 힌트일 뿐이며 현재 프로젝트의 공식 근거가 아니다.
+
+에이전트는 다음을 memory만 근거로 판단하지 않는다.
+
+- 현재 Gate와 Gate 완료 여부
+- 사용자 승인 여부
+- 요구사항, 비목표, 범위, 관련 ID
+- 사용할 기술스택, 도메인 기능, 보안 정책
+- 구현 대상 파일, public method, DTO/schema
+- 테스트 실행 여부와 Pass/Fail
+
+memory 내용이 현재 프로젝트 문서와 충돌하거나 오래된 샘플 프로젝트 맥락을 포함하면 적용하지 않는다.
+필요하면 `memory-derived assumption`으로 표시한 뒤 현재 산출물에서 확인하거나 질문한다.
 
 ## 4. Run 출력 계약
 
@@ -216,9 +235,12 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 
 구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행한다.
 
+신규 개발 또는 빌드 가능한 골격이 없는 프로젝트는 feature 구현 전에 `BW-000 Implementation Scaffold`를 먼저 수행한다. 고도화 프로젝트도 기존 코드가 Program Design의 `PGM/IF/MTH/DTO` 계약과 맞는지 확인하는 scaffold/alignment Run을 둘 수 있다.
+
 | 개념 | 의미 | 산출물 |
 | --- | --- | --- |
 | Implementation Plan Run | 전체 구현을 Wave로 나누는 운영 Run | `BW-ID`, 의존성, 위임 계획, 테스트/커밋 계획 |
+| Implementation Scaffold Run | feature 구현 전 빌드 가능한 계약 뼈대를 만드는 Run | 폴더/빌드 설정, class/interface/method/DTO skeleton, compile/build smoke |
 | Build Wave Run | 하나의 검증 가능한 구현 배치 | 코드, 테스트, 추적표 갱신, 검증 결과, 커밋 후보 |
 
 `Build Wave`는 다음 기준을 만족해야 한다.
@@ -228,6 +250,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 - 하나의 Wave가 끝나면 요구사항추적표와 Run 기록이 갱신된다.
 - 하나의 Wave는 기본적으로 하나의 커밋 후보가 된다.
 - Wave 간 의존성이 있으면 Implementation Plan에 순서를 명시한다.
+- 신규 개발의 첫 Wave는 보통 `BW-000` 또는 `SCF-001` scaffold로 두고, 이후 `BW-001`부터 feature 구현을 수행한다.
 - 구현 중 active Wave는 하나만 둔다. 여러 Wave를 동시에 코드 수정 상태로 진행하지 않는다.
 - 하나의 Wave 내부에서는 수정 범위가 겹치지 않는 subagent 병렬 작업을 허용할 수 있다.
 - Orchestrator는 기능 구현의 주 작성자가 아니라 작업지시, 검토, 통합, 검증, 상태 갱신 책임자다.
@@ -260,11 +283,32 @@ RUN-014_build-wave-BW-004_...md
 
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다.
 
+`Implementation Scaffold Run`은 업무 기능을 완성하는 Run이 아니다. 이 Run의 책임은 다음으로 제한한다.
+
+- 개발표준정의서의 패키지/폴더/빌드 기준에 맞는 프로젝트 골격 생성
+- Program Design의 `PGM/IF/MTH/DTO/Entity/Component` public contract를 실제 파일, class, interface, method signature로 생성
+- Gate 3 테스트 설계에 대응하는 테스트 파일 또는 테스트 이름 skeleton 생성
+- build/import/compile smoke 통과
+- 다음 Build Wave가 채울 TODO/stub와 관련 ID 표시
+
+Scaffold worker는 업무 로직, 전체 E2E, Gate 4 QA Pass, 릴리즈 판단을 완료 처리하지 않는다. 메소드 내부는 `TODO`, `NotImplemented`, 최소 wiring, 빈 adapter처럼 빌드가 깨지지 않는 수준으로만 둔다. 기능 구현은 이후 Build Wave worker가 담당한다.
+
+Scaffold Run의 권장 상태:
+
+| 프로젝트 유형 | Scaffold 기준 |
+| --- | --- |
+| 신규 개발 | `contract_skeleton.mode: new`로 프로젝트 폴더, 빌드 설정, public signature, DTO/schema, 테스트 skeleton을 생성한다. |
+| 고도화 | `contract_skeleton.mode: existing-alignment`로 기존 코드와 Program Design 계약을 매핑하고, 누락 skeleton은 보강하며, 설계와 기존 코드 충돌은 `ISSUE` 또는 `CR`로 반환한다. |
+| 이미 정렬됨 | `contract_skeleton.mode: not-required`와 생략 사유, 확인한 파일/명령을 Run에 남긴다. |
+
 작업자 runner에게 전달하는 `Build Wave Run`은 Orchestrator 통합 Run보다 얇아야 한다.
 작업자 Run의 `working_documents`에는 현재 Run 문서, 담당 구현에 직접 필요한 개발표준/테스트케이스/UI 기준선만 두고, 요구사항정의서와 전체 설계 산출물은 `reference_on_demand`에 둔다.
 작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 자기 Run 문서만 포함한다.
 화면 증적처럼 worker가 직접 만들어야 하는 파일이 있을 때만 담당 증적 경로를 추가한다.
 `session.json`, Gate 상태, 전체 추적표 갱신, 테스트 결과서 확정, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
+
+Build Wave Run의 `target_contracts.interface_contract`는 구현 worker에게 전달되는 핵심 계약이다. `skill: build-wave`인 Run에 `interface_contract`가 없으면 Orchestrator는 누락 사유를 명시해야 하며, class/method/schema 이름이 이미 Program Design에 있는데도 빠졌다면 Run을 보완한 뒤 실행한다.
+Scaffold Run의 `target_contracts.contract_skeleton`은 필수다. 신규 개발인데 skeleton 대상 파일과 smoke 검증이 없으면 feature 구현으로 넘어가지 않는다.
 
 Orchestrator는 worker worktree의 파일을 손으로 복사하지 않는다.
 worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 변경 파일을 수집하고, `scope.writable`/`scope.excluded` 위반 여부를 먼저 판정한다.

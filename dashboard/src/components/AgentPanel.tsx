@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, X, XCircle, type LucideIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, RefreshCw, X, XCircle, type LucideIcon } from 'lucide-react'
 import RunnerStatusPanel from '@/components/RunnerStatusPanel'
 import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeWorktree } from '@/lib/types'
 
@@ -102,6 +103,10 @@ function activityEvents(activity: RuntimeActivity): RuntimeActivityEvent[] {
   }]
 }
 
+function activityKey(activity: RuntimeActivity): string {
+  return `${activity.runner}-${activity.target_type ?? 'target'}-${activity.target_id}`
+}
+
 function eventTime(value?: string): string {
   if (!value) return ''
   const date = new Date(value)
@@ -157,9 +162,11 @@ function ActivityRow({
 function ActivityDrawer({
   activity,
   onClose,
+  onRefresh,
 }: {
   activity: RuntimeActivity | null
   onClose: () => void
+  onRefresh: () => void
 }) {
   if (!activity) return null
 
@@ -187,6 +194,15 @@ function ActivityDrawer({
                 {activityTask(activity)}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="rounded-md border border-slate-700 p-1 text-slate-400 hover:border-cyan-700 hover:text-cyan-100"
+              aria-label="worker 상태 새로고침"
+              title="worker 상태 새로고침"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={onClose}
@@ -304,17 +320,21 @@ export default function AgentPanel({
   isLoading?: boolean
   error?: unknown
 }) {
-  const [selectedActivity, setSelectedActivity] = useState<RuntimeActivity | null>(null)
+  const router = useRouter()
+  const [selectedActivityKey, setSelectedActivityKey] = useState<string | null>(null)
   const activities = runtime?.active_executions ?? []
   const worktrees = runtime?.worktrees ?? []
+  const selectedActivity = selectedActivityKey
+    ? activities.find((activity) => activityKey(activity) === selectedActivityKey) ?? null
+    : null
   const visibleActivities = activities
     .filter((activity) => ['running', 'stale', 'completed_no_result_change', 'failed', 'timeout', 'failed_empty_output'].includes(activity.status))
     .slice(0, 4)
 
   return (
     <div className="space-y-4" data-testid="agent-panel">
-      <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={setSelectedActivity} />
-      <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivity(null)} />
+      <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={(activity) => setSelectedActivityKey(activityKey(activity))} />
+      <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivityKey(null)} onRefresh={() => router.refresh()} />
 
       <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
@@ -325,8 +345,8 @@ export default function AgentPanel({
         ) : (
           <ul className="space-y-1.5">
             {visibleActivities.map((activity) => (
-              <li key={`${activity.runner}-${activity.target_id}`}>
-                <ActivityRow activity={activity} onSelect={setSelectedActivity} />
+              <li key={activityKey(activity)}>
+                <ActivityRow activity={activity} onSelect={(selected) => setSelectedActivityKey(activityKey(selected))} />
               </li>
             ))}
           </ul>
