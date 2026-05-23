@@ -32,6 +32,8 @@ worker별 다른 구현 구조
 | Orchestrator 작성/검증 규칙 | Orchestrator, `vulcan.py`, adapter | worker 입력 계약을 생성, 축약, 검증, 전달할 때 사용한다. worker payload에 장문으로 반복하지 않는다. |
 
 worker에게는 가능한 한 `3. Worker 입력 계약`과 해당 Run에 필요한 보조 블록만 전달한다.
+
+worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로 현재 Run 입력 계약을 사전 검사한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 preflight를 자동 실행하고 차단 항목이 있으면 worker 실행을 시작하지 않는다. `run-preflight`는 완성된 구현 결과를 판단하지 않고, worker가 scope 밖으로 나가거나 Gate/session/추적표 확정을 직접 수행할 위험이 있는지 확인한다.
 `6. 작성/검증 규칙` 이후의 내용은 Orchestrator와 도구가 보는 작성 기준이다.
 
 ## 3. Worker 입력 계약

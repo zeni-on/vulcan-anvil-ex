@@ -16,8 +16,8 @@ approver: Approver
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
 related_ids:
-  - REQ-001
-  - AC-001
+  - REQ-001-01
+  - AC-001-01
 change_reason: 최초 초안 작성
 ---
 ```
@@ -31,7 +31,7 @@ change_reason: 최초 초안 작성
 ## 2. 작성 기준
 
 - 요구사항추적표는 “요구사항 하나가 어디에 설계되고 어떻게 검증되었는가”를 보여주는 중심 산출물이다.
-- 모든 `REQ`는 하나 이상의 `AC`와 연결하는 것을 원칙으로 한다.
+- 모든 상세 `REQ-NNN-NN`은 하나 이상의 `AC-NNN-NN`와 연결하는 것을 원칙으로 한다.
 - 모든 핵심 `AC`는 하나 이상의 테스트 또는 검증 증적과 연결해야 한다.
 - 모든 테스트는 `REQ`, `NREQ`, `AC`, `SEC`, `CR` 중 하나 이상과 연결되어야 한다.
 - Gate 3 완료 시점에는 `UT-ID`, `IT-ID`, `PT-ID`에 `미정` 또는 `확인필요`가 남아 있으면 안 된다. 필요 없는 테스트 유형은 `해당없음`으로 쓰고, 통합/UI 테스트로 대체 검증하는 경우 해당 `IT-ID` 또는 `UI-ID`를 명시한다.
@@ -58,25 +58,25 @@ change_reason: 최초 초안 작성
 
 | REQ-ID | NREQ-ID | AC-ID | FUNC-ID | SCR-ID | UIREF-ID | UICON-ID | PGM-ID | DB-ID | IF-ID | SEC-ID | 참조 표준 | UT-ID | IT-ID | UI-ID | PT-ID | 상태 | 증적 | 비고 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| REQ-001 |  | AC-001 | FUNC-001 | SCR-001 | UIREF-001 | UICON-001 | PGM-001 | DB-001 |  | SEC-001 | KISA-SD-2021 SR- | UT-001 | IT-001 | UI-001-01 |  | Draft |  |  |
+| REQ-001-01 |  | AC-001-01 | FUNC-001 | SCR-001 | UIREF-001 | UICON-001 | PGM-001 | DB-001 |  | SEC-001 | KISA-SD-2021 SR- | UT-001 | IT-001 | UI-001-01 | 해당없음 | Draft |  |  |
 
 ## 5. 요구사항별 검증 요약
 
 | REQ-ID | 요구사항명 | 인수기준 수 | 설계 연결 | 테스트 연결 | 검증 상태 | 미해결 사항 |
 | --- | --- | ---: | --- | --- | --- | --- |
-| REQ-001 |  | 0 | 미정 | 미정 | Draft |  |
+| REQ-001-01 |  | 1 | FUNC-001 / SCR-001 / PGM-001 | UT-001 / IT-001 / UI-001-01 | Draft |  |
 
 ## 6. 보안항목 추적
 
 | SEC-ID | 보안항목 | 관련 REQ/NREQ | 참조 표준 | 적용 대상 | 검증 테스트 | 증적 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| SEC-001 |  | REQ-/NREQ- | KISA-SD-2021 SR- | SCR-/PGM-/DB- | UT-/IT- |  | Draft |
+| SEC-001 |  | REQ-001-01 / NREQ- | KISA-SD-2021 SR- | SCR-/PGM-/DB- | UT-/IT- |  | Draft |
 
 ## 7. 데이터 표준 추적
 
 | DB-ID | 데이터 항목 | 관련 REQ/NREQ | 공공데이터 표준 용어 | 영문 약어 | 도메인 | 표준 준용 여부 | 비고 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| DB-001 |  | REQ- |  |  |  | 확인필요 |  |
+| DB-001 |  | REQ-001-01 |  |  |  | 확인필요 |  |
 
 ## 8. 변경요청 영향 추적
 

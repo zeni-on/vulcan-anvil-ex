@@ -85,11 +85,15 @@ Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로
 
 subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run 기록에 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 남긴다. 직접 구현한 변경은 구현 완료가 아니라 worker 재검수 또는 QA 검수 대상이다.
 
+사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 worker/subagent/`agent-run --mode work` 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+
 ## 5.1 Build Wave 오케스트레이션
 
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
 
 - Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다.
+- Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
+- 이미 빌드 가능한 골격과 public signature가 있으면 `contract_skeleton.mode: not-required`와 확인 근거를 Run에 남긴다.
 - 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 `agent-run --mode work`나 명시적 subagent 위임으로 진행한다.
 - 하나의 Wave 안에서는 여러 subagent를 병렬로 사용할 수 있다.
 - 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
@@ -102,6 +106,11 @@ subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 
 
 ```text
 Implementation Plan Run
+→ scaffold 필요 여부 판단
+→ 필요 시 vulcan.py wave-start BW-000
+→ BW-000 implementation-scaffold Run을 worker 작업지시서로 전달
+→ scaffold smoke 검증과 public signature 확인
+→ vulcan.py wave-complete BW-000
 → vulcan.py wave-start BW-001
 → BW-001 Build Wave Run을 subagent 작업지시서로 전달
 → subagent 결과 검토와 통합

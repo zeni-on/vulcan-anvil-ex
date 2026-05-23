@@ -16,6 +16,8 @@ approver: Approver
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
 related_ids:
+  - REQ-001-01
+  - AC-001-01
   - UT-001
   - IT-001
 change_reason: 최초 초안 작성
@@ -33,7 +35,9 @@ change_reason: 최초 초안 작성
 - 단위테스트는 `UT-001` 형식으로 부여한다.
 - 통합테스트는 `IT-001` 형식으로 부여한다.
 - 성능테스트는 `PT-001` 형식으로 부여한다.
-- 각 테스트는 관련 `AC`, `SEC`, `NREQ` 중 하나 이상과 연결한다.
+- Gate 3 테스트 설계는 그룹 요구사항 `REQ-001`이 아니라 상세 요구사항 `REQ-001-01` 단위로 매핑한다.
+- 각 상세 `REQ-NNN-NN`은 하나 이상의 `UT`, `IT`, `UI`, `PT` 또는 승인된 검토 테스트와 연결한다.
+- 각 테스트는 관련 `REQ-NNN-NN`, `AC-NNN-NN`, `SEC`, `NREQ` 중 하나 이상과 연결한다.
 - 보안 테스트는 가능한 경우 외부 보안 기준 `SR`을 함께 기록한다.
 - 화면 테스트는 상태/시나리오 단위로 `UI-001-01` 형식까지 세분화하고 관련 `SCR-ID`, 기준 시안, viewport, 기대 화면, 캡처 경로를 기록한다.
 - 하나의 화면 흐름에 기본/오류/성공/전환 상태가 있으면 각각 별도 UI 테스트와 증적을 둔다.
@@ -55,8 +59,17 @@ change_reason: 최초 초안 작성
 
 | 테스트 ID | 유형 | 테스트명 | 대상 | 관련 REQ | 관련 AC | 관련 SEC/SR | 우선순위 | 상태 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| UT-001 | Unit |  | PGM-001 | REQ- | AC- | SEC- / KISA-SD-2021 SR- | Must | Draft |
-| UI-001-01 | UI |  | SCR-001 | REQ- | AC- | SEC- / KISA-SD-2021 SR- | Must | Draft |
+| UT-001 | Unit |  | PGM-001 | REQ-001-01 | AC-001-01 | SEC-001 / KISA-SD-2021 SR- | Must | Draft |
+| UI-001-01 | UI |  | SCR-001 | REQ-001-01 | AC-001-01 | SEC-001 / KISA-SD-2021 SR- | Must | Draft |
+
+### 4.1 상세 REQ별 테스트 매핑
+
+> `check-trace`는 Gate 3에서 테스트케이스 문서 안의 상세 `REQ-NNN-NN` 매핑을 확인한다.
+> 아래 표에는 요구사항정의서의 모든 상세 REQ를 빠짐없이 넣고, 테스트가 불필요하면 사유와 대체 검증을 명시한다.
+
+| 상세 REQ-ID | 관련 AC-ID | UT-ID | IT-ID | UI-ID | PT-ID | 검증 방식 | 상태 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| REQ-001-01 | AC-001-01 | UT-001 | IT-001 | UI-001-01 | 해당없음 | 자동 테스트 + UI 증적 | Planned |  |
 
 ## 5. 테스트 케이스 상세
 
@@ -69,8 +82,8 @@ change_reason: 최초 초안 작성
 | 테스트명 |  |
 | 테스트 목적 |  |
 | 테스트 대상 | PGM- / SCR- / DB- / IF- |
-| 관련 요구사항 | REQ- |
-| 관련 인수기준 | AC- |
+| 관련 요구사항 | REQ-001-01 |
+| 관련 인수기준 | AC-001-01 |
 | 관련 보안항목 | SEC- |
 | 참조 표준 | KISA-SD-2021 SR- |
 | 관련 비기능 요구사항 | NREQ- |
@@ -164,7 +177,8 @@ change_reason: 최초 초안 작성
 | 항목 | 확인 |
 | --- | --- |
 | 모든 테스트에 `UT`, `IT`, `PT` ID가 부여되었는가 |  |
-| 모든 테스트가 `REQ`, `AC`, `NREQ`, `SEC`, `CR` 중 하나 이상과 연결되었는가 |  |
+| 요구사항정의서의 모든 상세 `REQ-NNN-NN`이 4.1 상세 REQ별 테스트 매핑 표에 포함되었는가 |  |
+| 모든 테스트가 상세 `REQ-NNN-NN`, `AC-NNN-NN`, `NREQ`, `SEC`, `CR` 중 하나 이상과 연결되었는가 |  |
 | 보안 테스트에 `SEC-ID`와 `SR-ID`가 연결되었는가 |  |
 | 화면 테스트에 `UI-ID`, `SCR-ID`, 기준 시안, viewport, 캡처 경로가 연결되었는가 |  |
 | 기준 시안의 UI Implementation Contract가 테스트 기대결과와 비교 방식에 반영되었는가 |  |

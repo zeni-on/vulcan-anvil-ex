@@ -121,13 +121,15 @@ ui_implementation_contract_policy:
 - 신규 개발 또는 골격이 없는 프로젝트는 실제 feature 구현 전에 `implementation-scaffold` Run으로 빌드 가능한 skeleton을 먼저 만든다.
 - 고도화 프로젝트는 `implementation-scaffold` Run에서 기존 코드와 Program Design 계약을 정렬하고, 바로 구현 가능한 public signature가 이미 존재하면 생략 사유를 남긴다.
 - 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. 단일 worker Run 또는 `agent-run --mode work`로 실행한다.
+- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
+- 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
 - 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
 - API/화면/프로그램/DB/보안 설계는 related ID나 기준 충돌이 있을 때 필요한 문서만 `reference_on_demand`에서 확인한다.
 - 작업 범위는 문서 목록이 아니라 `target_contracts`의 기능/프로그램 계약 단위로 닫는다.
 - 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 작업 중간에 끊지 않고, 예상 범위가 크면 시작 전에 Run을 더 작게 나눈다.
 - 화면 퍼블리싱 기반 화면 구현은 UI Implementation Contract를 먼저 확인하고, 다르면 임의 재설계가 아니라 `FIND` 또는 `CR`로 분류한다.
-- 구현자는 Gate 전환, session 변경, 최종 승인 판단을 하지 않는다. Orchestrator가 worker 결과를 통합하고 worker가 만든 테스트케이스를 재실행한다.
+- 구현자는 Gate 전환, session 변경, 최종 승인 판단, 추적표의 `Implemented`/`Verified` 상태 확정을 하지 않는다. Orchestrator가 worker 결과를 통합하고 worker가 만든 테스트케이스를 재실행한 뒤 추적표 상태를 반영한다.
 - Wave 종료 검증은 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다. 전체 사용자 시나리오, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
 - 구현 완료 후 Gate 4 QA로 넘어가기 전 Orchestrator가 구현 범위, 재실행한 테스트 결과, 남은 이슈를 요약하고 승인 질문을 남긴다.
 - worker worktree 결과는 손으로 복사하지 않고 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으로 scope 위반을 확인한 뒤, 위반이 없을 때만 `--apply`로 반영한다.
@@ -301,10 +303,11 @@ completion_criteria:
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."
   - "Wave 검증은 담당 계약 테스트와 가능한 회귀 검증까지만 의미하며, 전체 E2E/QA Pass로 보고하지 않는다."
   - "가능하면 worker self-check를 실행하고, 실행하지 못하면 Not Run 사유를 남긴다."
-  - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환한다."
+  - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환하고, Implemented/Verified 상태를 직접 확정하지 않는다."
 verification:
   owner: "orchestrator-rerun"
   commands:
+    - "python vulcan.py run-preflight docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md"
     - "npm run lint"
     - "npm run build"
     - "python vulcan.py run-check docs/runs/RUN-022_bw-001-frontend-구현-claude_v0.1.md"
