@@ -4,9 +4,9 @@
 
 ## 현재 상태
 
-**Experimental - v0.2.2**
+**Experimental - v0.2.3**
 
-`0.2.2`는 Codex와 Claude 양쪽 런타임을 실제 프로젝트 생성과 Gate 진행에 사용할 수 있도록 확장한 `0.2.1` 흐름에 Gate 종료 승인, Run 입력/출력 계약, UI Implementation Contract, 상태별 UI 증적, 필수 검증 명령 기록 기준을 정렬한 패치 버전입니다.
+`0.2.3`은 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현 흐름에 더 안전하게 연결하기 위해 worker 실행, Program Design 계약 검증, Gate 4 QA 증적 가시성을 보강한 패치 버전입니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
@@ -22,6 +22,9 @@
 - 리팩토링의 DEBT/FIND/CR 분류와 문서 영향 판단 기준
 - 변경관리/릴리즈 산출물
 - Build Wave 운영 규칙
+- Program Design 기반 `check-contract` 1차 검사(Python/Java class/interface/public method 존재 확인)
+- Worker dependency cache와 worktree 실행 경계
+- Gate 4 QA 로그/독립검수 문서 대시보드 표시
 - Upgrade와 Dashboard 운영 흐름
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
@@ -30,7 +33,7 @@
 
 ## 다음 초점
 
-`0.2.2` 이후의 다음 초점은 다음입니다.
+`0.2.3` 이후의 다음 초점은 다음입니다.
 
 - 실제 SI형 다중 프로젝트 구조 검토
 - Delivery Profile 도입: Audit/SI, Solution/Product, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절

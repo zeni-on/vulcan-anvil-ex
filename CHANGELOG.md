@@ -2,16 +2,39 @@
 
 ## Unreleased
 
+## 0.2.3 - 2026-05-24
+
+`0.2.3`은 worker 실행, Program Design 계약 준수 검증, Gate 4 QA 증적 가시성을 보강한 패치 릴리즈다. `0.2.2`의 Gate/Run 계약을 유지하면서 worker가 구현한 코드가 설계한 interface/class/public method 구조를 따르는지 확인하고, 대시보드에서 독립검수와 QA 로그를 더 직접적으로 확인할 수 있게 했다.
+
 ### Added
 
 - `vulcan.py review-request` 명령 추가: Gate 산출물을 별도 세션 또는 detached worktree에서 독립 검수하기 위한 review request/result 파일과 Run 초안을 생성한다.
 - `vulcan.py review-run` 명령 추가: 생성된 Independent Review 요청을 `codex exec`로 실행하고 JSONL 로그, 마지막 응답, result 변경 여부를 Run 증적으로 남긴다.
+- `vulcan.py check-contract` 명령 추가: Program Design의 Interface/Public Method Contract 표를 읽어 Python/Java 파일의 interface/class, 구현체 class, public method 존재 여부를 확인한다.
 - `vulcan.config.json` 초기 생성 추가: 독립 검수 runner, trigger Gate, worktree 사용 여부를 프로젝트별로 명시한다.
 - 독립 검수 모델/추론 강도 기준 추가: Gate 2/Gate 4 검수는 `gpt-5.5` + `high`를 권장하고, `review-run --model ... --reasoning-effort ...`로 실행 단위 override할 수 있다.
 - 독립 검수 기본값 변경: 새 프로젝트는 `independent_enabled: true`로 생성되며, Gate 2/Gate 4 종료 전 독립 검수를 기본 권장 절차로 둔다. 단, `review-run`은 자동 실행하지 않는다.
 - Gate 2 독립 검수의 상류 정합성 기준 추가: Phase 0, Gate 1, Gate 2 순서로 목표/제약/가정, REQ/NREQ/AC, 범위 drift, 미해결 DEC/ISSUE, 설계 내부 정합성을 별도 판정한다.
 - `docs/core/INDEPENDENT_REVIEW_PROCESS.md`와 Codex `independent-review` skill 추가.
 - 혼동을 줄이기 위해 이전 호환 경로를 제거하고 `review-request`, `review-run`, `independent_*`만 표준으로 유지한다.
+- Dashboard 산출물 목록에 `docs/reviews/` 독립검수 문서와 QA log evidence 표시를 추가했다.
+- Agent 패널의 worker activity drawer와 runner 상태 표시를 보강하고, Agy/Gemini 로그 이벤트를 더 구체적인 진행 상태로 변환한다.
+
+### Changed
+
+- Build Wave와 Worker Run의 의미를 분리했다. Wave는 통합/검증 배치이고, 실제 작업지시서는 Build Wave Run으로 정의한다.
+- backend/frontend처럼 작업지시서가 달라지는 범위는 같은 Wave 내부 병렬 실행이 아니라 별도 Build Wave Run/Wave로 순차 실행하도록 정리했다.
+- Program Design `Public Method Contract` 템플릿에 `IF-ID` 컬럼을 추가해 interface와 public method의 부모-자식 관계를 명확히 했다.
+- Gate 4 Test Result 템플릿에 `check-contract` 결과를 설계 계약 준수 검증으로 기록하는 기준을 추가했다.
+- Worker dependency cache와 worktree npm/Playwright 검증 경계를 문서와 실행 기록에 반영했다.
+- 독립 검수 runner가 result 파일을 작성해야 하는 흐름에서는 `read-only` sandbox를 차단하도록 정리했다.
+
+### Verification
+
+- `python -m py_compile vulcan.py`
+- `python vulcan.py check-contract --project-dir C:\Users\user\Documents\antig-workspace\sample-ex-0523-1`
+- `npm test -- --runTestsByPath src/__tests__/components/DocList.test.tsx src/__tests__/api/session-docs-commits.test.ts src/__tests__/lib/qa-doc.test.ts`
+- `npm run build` in `dashboard/`
 
 ## 0.2.2 - 2026-05-18
 
