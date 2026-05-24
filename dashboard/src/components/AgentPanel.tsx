@@ -346,7 +346,7 @@ function WorkspaceSummary({ runtime }: { runtime: ProjectRuntime | null }) {
         </div>
         <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-500">
           <span className="truncate">main: {main}</span>
-          <span className="truncate">dev: {integration}</span>
+          <span className="truncate">integration: {integration}</span>
           <span className="truncate">workflow: {workflow?.branch_mode ?? 'single'}</span>
           <span className="truncate">QA worktree: {qaEnabled ? 'on' : 'off'}</span>
         </div>

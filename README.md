@@ -95,7 +95,7 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 
 **Experimental - v0.3.0**
 
-`0.3.0`은 `0.2.x`의 Gate/Run 기반 흐름 위에 audit workflow의 브랜치 경계, staged QA 실행, QA workspace 재사용, dashboard 증적 표시를 묶어 정리한 실험 버전입니다. 구현은 `dev` 통합 브랜치에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
+`0.3.0`은 `0.2.x`의 Gate/Run 기반 흐름 위에 audit workflow의 브랜치 경계, staged QA 실행, QA workspace 재사용, dashboard 증적 표시를 묶어 정리한 실험 버전입니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 

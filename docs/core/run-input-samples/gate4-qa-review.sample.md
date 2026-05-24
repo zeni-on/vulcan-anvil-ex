@@ -75,7 +75,7 @@ qa_execution_policy:
     - "QA-000은 Gate 4 전체에서 재사용할 QA workspace/worktree를 준비하고 경로를 Run 결과에 기록한다."
     - "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace/worktree에서 실행한다."
     - "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다."
-    - "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 dev 통합 브랜치의 qa-fix-loop로 분리한다."
+    - "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 workflow.integration_branch 통합 브랜치의 qa-fix-loop로 분리한다."
   qa000_required_checks:
     - "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다."
     - "backend 최소 smoke test 또는 test discovery가 실행 가능한지 확인한다."

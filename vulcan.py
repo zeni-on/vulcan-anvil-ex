@@ -459,7 +459,7 @@ AUDIT_QA_EXECUTION_POLICY = {
         "QA-000은 Gate 4 전체에서 재사용할 QA workspace/worktree를 준비하고 경로를 Run 결과에 기록한다.",
         "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace/worktree에서 실행한다.",
         "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다.",
-        "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 dev 통합 브랜치의 qa-fix-loop로 분리한다.",
+        "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 workflow.integration_branch 통합 브랜치의 qa-fix-loop로 분리한다.",
     ],
     "qa000_required_checks": [
         "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다.",
@@ -4975,7 +4975,7 @@ dependency_install_policy:
   npm_cache_env: "npm_config_cache"
   playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
   if_install_blocked: "npm install/npm ci/npx playwright install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
-  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 보조 self-check이며 최종 UI/Playwright 증적은 통합된 dev 브랜치 기준의 QA-000 workspace 결과를 Gate 4 판정 기준으로 사용한다."
+  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 보조 self-check이며 최종 UI/Playwright 증적은 workflow.integration_branch 기준 QA-000 workspace 결과를 Gate 4 판정 기준으로 사용한다."
 wave_verification_boundary:
   scope:
     - "Gate 3 테스트 설계 중 이 Wave의 target_contracts에 매핑된 UT/IT/UI 또는 smoke 기준만 Wave 검증으로 수행한다."
@@ -5011,7 +5011,7 @@ open_issues: []
 - Node/Playwright 설치가 필요하면 worker cache를 사용하고, 설치가 환경 문제로 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
 - worker worktree에서 화면 서버나 Playwright를 실행하지 못해도 그 사실만으로 구현 실패를 확정하지 않는다.
 - Wave 검증은 담당 계약 테스트와 현재까지 가능한 회귀 검증까지만 의미한다. 전체 E2E, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
-- 최종 UI/Playwright 증적은 통합된 dev 브랜치 기준의 QA-000 workspace에서 수행한다.
+- 최종 UI/Playwright 증적은 workflow.integration_branch 기준 QA-000 workspace에서 수행한다.
 
 ## 4. Orchestrator 지시
 
@@ -7683,7 +7683,7 @@ Rules:
 - If frontend dependencies or Playwright are needed, use the provided worker cache paths.
 - Worker worktree npm/build/Playwright execution is a best-effort self-check, not the final UI or QA verdict.
 - If npm install/npm ci/npx playwright install fails because of permission, registry, auth, network, or cache access, do not hide it and do not call the implementation failed by itself. Record verification as not_run or environment_blocked with the failing command, cwd, exit code, log path, and the exact Orchestrator rerun command.
-- If npm run dev/build or Playwright cannot run in the worker worktree, report it as environment_blocked/not_run when appropriate. Final UI/Playwright evidence is produced from the integrated dev branch workspace or the QA-000 QA workspace during Gate 4.
+- If npm run dev/build or Playwright cannot run in the worker worktree, report it as environment_blocked/not_run when appropriate. Final UI/Playwright evidence is produced from the configured integration branch workspace or the QA-000 QA workspace during Gate 4.
 - Record your work in the Run document: changed_files, verification_results, evidence, traceability_updates, open_issues, and orchestrator_decision_needed.
 - Do not rely on wall-clock timers. Update the status file when you start, after loading context, while editing, while testing, while writing the result, and when completed/blocked/failed.
 - Keep status.current_task to one short dashboard line, 80 characters or fewer.
@@ -9086,7 +9086,7 @@ def cmd_branch_status(project_dir="."):
         print(f"  qa_workspace_path: {qa_state.get('path') or '-'}")
         print(f"  qa_workspace_status: {qa_state.get('status') or '-'}")
         print(f"  qa_workspace_last_stage: {qa_state.get('last_stage') or '-'}")
-    print(f"  dev_exists: {git_branch_exists(integration_branch, project_abs)}")
+    print(f"  integration_exists: {git_branch_exists(integration_branch, project_abs)}")
     print(f"  dirty_blocking: {has_blocking_dirty_status(project_abs)}")
 
 

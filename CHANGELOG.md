@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- `dev`를 고정 브랜치명처럼 설명하던 문구를 `workflow.integration_branch` 역할 기준으로 정리했다. 기본값은 `dev`지만 프로젝트별로 `develop`, `dev-happy` 같은 브랜치명을 사용할 수 있다.
+
 ## 0.3.0 - 2026-05-24
 
-`0.3.0`은 `0.2.x`의 Gate/Run 계약을 유지하면서 audit workflow의 실행 브랜치, worker 실행, Gate 4 QA 실행 방식을 한 단계 더 명확히 한 마이너 릴리즈다. 구현은 `dev` 통합 브랜치에서 진행하고, Gate 4 QA는 `QA-000`이 준비한 재사용 workspace를 기준으로 단계별 실행/증적/판정 후보를 분리한다.
+`0.3.0`은 `0.2.x`의 Gate/Run 계약을 유지하면서 audit workflow의 실행 브랜치, worker 실행, Gate 4 QA 실행 방식을 한 단계 더 명확히 한 마이너 릴리즈다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4 QA는 `QA-000`이 준비한 재사용 workspace를 기준으로 단계별 실행/증적/판정 후보를 분리한다.
 
 ### Added
 
@@ -16,7 +20,7 @@
 
 - Gate 4 기본 흐름을 QA 실행/증적 수집(`qa-execution`)과 승인된 결함 수정(`qa-fix-loop`)으로 분리했다.
 - `run-new --skill qa-execution`이 worker Run으로 생성되도록 Core/Adapter Run 입력 계약과 preflight 기준을 보강했다.
-- `impl`/Gate 4 작업은 통합 브랜치(`dev`)에서 실행하도록 Core/Adapter 문서와 `wave-start`/`run-exec` guard를 보강했다.
+- `impl`/Gate 4 작업은 `workflow.integration_branch` 통합 브랜치에서 실행하도록 Core/Adapter 문서와 `wave-start`/`run-exec` guard를 보강했다.
 - Gate 4 `QA-000`이 만든 QA workspace/worktree를 `QA-001`~`QA-003`이 계속 재사용하도록 Run 계약, skill, preflight 안내를 보강했다.
 - Worker dependency cache, Node/Playwright self-check, QA workspace 실행 경계를 Run 입력 계약과 worker 프롬프트에 반영했다.
 

@@ -556,7 +556,7 @@ worker는 다음 원칙을 따른다.
 - Node/Playwright 명령이 필요하면 `npm_config_cache`와 `PLAYWRIGHT_BROWSERS_PATH`를 사용한다.
 - 권한, 인증, 네트워크, registry, cache 문제로 설치 또는 실행이 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
 - 실패한 명령, cwd, exit code, log path, Orchestrator 재실행 명령을 남긴다.
-- 화면 서버 실행과 Playwright 최종 증적은 통합된 dev 브랜치 기준의 `QA-000` QA workspace에서 Gate 4 QA 입력으로 판정한다.
+- 화면 서버 실행과 Playwright 최종 증적은 `workflow.integration_branch` 기준의 `QA-000` QA workspace에서 Gate 4 QA 입력으로 판정한다.
 
 ## 9.2 Gate 4 QA 실행 worker 경계
 
@@ -703,8 +703,8 @@ related_ids: [REQ-005]
 기본 audit workflow에서 worker Run은 브랜치 경계를 전제로 작성한다.
 
 - Phase 0~Gate 3 산출물 Run은 `main` 기준으로 작성한다.
-- `impl`의 `implementation-plan`, `implementation-scaffold`, `build-wave` Run은 `dev` 통합 브랜치 기준으로 작성한다.
-- Gate 4의 `qa-execution` Run은 통합된 `dev` 또는 `dev` 기준 QA worktree에서 실행하는 것으로 작성한다.
+- `impl`의 `implementation-plan`, `implementation-scaffold`, `build-wave` Run은 `workflow.integration_branch` 통합 브랜치 기준으로 작성한다. 기본값은 `dev`지만 프로젝트 설정에 따라 다른 브랜치명을 사용할 수 있다.
+- Gate 4의 `qa-execution` Run은 `workflow.integration_branch` 또는 그 기준 `QA-000` QA workspace에서 실행하는 것으로 작성한다.
 - Run 입력 계약에는 브랜치 전환 명령을 worker 작업으로 넣지 않는다. Orchestrator가 `python vulcan.py branch-start impl`과 `python vulcan.py branch-status`로 준비한다.
 - worker는 feature 브랜치/worktree에서 작업할 수 있지만, 최종 통합 판단과 `main` 반영 판단은 Orchestrator와 Gate 5 승인 절차가 담당한다.
 
