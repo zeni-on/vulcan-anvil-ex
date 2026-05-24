@@ -2,10 +2,15 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-05-24
+
+`0.3.0`은 `0.2.x`의 Gate/Run 계약을 유지하면서 audit workflow의 실행 브랜치, worker 실행, Gate 4 QA 실행 방식을 한 단계 더 명확히 한 마이너 릴리즈다. 구현은 `dev` 통합 브랜치에서 진행하고, Gate 4 QA는 `QA-000`이 준비한 재사용 workspace를 기준으로 단계별 실행/증적/판정 후보를 분리한다.
+
 ### Added
 
 - Gate 4 QA 실행 전용 `qa-execution` skill을 추가했다. QA worker는 테스트 실행, 로그/Playwright 증적, 후보 FIND/CR/ISSUE 수집을 담당하고 소스 수정은 하지 않는다.
 - audit workflow용 브랜치 정책을 `vulcan.config.json.workflow`에 추가하고, `branch-status`/`branch-start impl` 명령을 추가했다.
+- Dashboard 문서 drawer에서 QA/Test Result Markdown, 이미지 증적, 로그 링크를 더 직접적으로 확인할 수 있게 했다.
 
 ### Changed
 
@@ -13,6 +18,17 @@
 - `run-new --skill qa-execution`이 worker Run으로 생성되도록 Core/Adapter Run 입력 계약과 preflight 기준을 보강했다.
 - `impl`/Gate 4 작업은 통합 브랜치(`dev`)에서 실행하도록 Core/Adapter 문서와 `wave-start`/`run-exec` guard를 보강했다.
 - Gate 4 `QA-000`이 만든 QA workspace/worktree를 `QA-001`~`QA-003`이 계속 재사용하도록 Run 계약, skill, preflight 안내를 보강했다.
+- Worker dependency cache, Node/Playwright self-check, QA workspace 실행 경계를 Run 입력 계약과 worker 프롬프트에 반영했다.
+
+### Removed
+
+- 별도 `QaDocView`를 제거하고 일반 문서 drawer에서 QA 문서와 evidence 링크를 표시하도록 정리했다.
+
+### Verification
+
+- `python -m py_compile vulcan.py`
+- `git diff --check`
+- 임시 프로젝트 dry-run으로 `QA-000`은 QA workspace 생성 모드가 되고, `QA-001`은 기록된 `QA-000` workspace가 없으면 차단되는 것을 확인했다.
 
 ## 0.2.3 - 2026-05-24
 
