@@ -1,24 +1,29 @@
-# Gate 4 QA Review Run Input Sample
+# Gate 4 QA Execution Run Input Sample
 
-> 목적: Audit Profile에서 테스트 결과, 증적, 결함 처리를 연결하는 기준 예시다.
+> 목적: Audit Profile에서 Gate 4 테스트 실행, 증적 수집, 결함 후보 분류를 worker에게 맡기는 기준 예시다.
 
 ```yaml
 profile: "audit"
-run_type: "Review"
+adapter: "codex-gpt"
+run_type: "Evidence"
 gate: "gate4"
-skill: "qa-fix-loop"
-persona: "build"
-related_ids: [FIND-001, UI-001, UT-001, IT-001]
+skill: "qa-execution"
+persona: "evidence"
+qa_stage: "QA-000|QA-001|QA-002|QA-003"
+qa_workspace:
+  path: "TBD: QA-000이 준비하고 QA-001~QA-003이 재사용할 workspace/worktree 경로"
+  base_branch: "dev"
+  base_commit: "TBD"
+related_ids: [UI-001-01, UT-001, IT-001, NREQ-001]
 source_documents:
   read_first:
     - AGENTS.md
     - session.json
     - docs/core/TRACEABILITY_RULES.md
     - docs/adapters/codex-gpt/GATE_PROMPTS.md
-    - docs/adapters/codex-gpt/skills/qa-fix-loop.md
+    - docs/adapters/codex-gpt/skills/qa-execution.md
   working_documents:
     - docs/artifacts/04-review/
-    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
   reference_on_demand:
     - docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md
     - docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md
@@ -40,10 +45,13 @@ source_documents:
     - docs/core/RUN_OUTPUT_CONTRACT.md
 scope:
   writable:
+    - docs/runs/RUN-NNN_gate4-qa-stage_v0.1.md
     - docs/artifacts/04-review/
-    - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md
-    - docs/runs/
 completion_criteria:
+  - "Gate 4 전체 QA를 한 번에 수행하지 않고 qa_stage 하나만 수행한다."
+  - "QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 qa_workspace.path를 기록한다."
+  - "QA-001/QA-002/QA-003은 QA-000이 기록한 같은 qa_workspace.path에서 실행한다."
+  - "QA-000 환경 준비/스모크가 통과하지 않으면 QA-001/QA-002를 진행하지 않고 environment_blocked 또는 Not Run으로 반환한다."
   - "개발표준정의서와 테스트케이스에서 필수로 지정한 검증 명령이 테스트 결과서에 모두 기록되어 있다."
   - "각 실행 검증에는 실행 위치(cwd), 명령/방법, OS, 성공 기준, exit code, 결과, 로그/증적 경로가 있다."
   - "실행하지 못한 필수 명령은 Pass가 아니라 Not Run으로 기록하고 사유, 영향 범위, 후속 조치가 있다."
@@ -55,7 +63,37 @@ completion_criteria:
   - "화면 퍼블리싱 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다."
   - "증적 파일이 기대 화면을 실제로 보여주지 못하면 Pass가 아니라 Fail 또는 Not Run으로 기록되어 있다."
   - "결함은 FIND로 기록하고, 범위 변경은 CR로 승격한다."
+  - "실패가 발생하면 코드를 즉시 수정하지 않고 원인 가설, 재현 명령, 로그, 영향 ID를 기록한다."
+  - "새 API, 새 메소드, 요구사항/설계 변경이 필요하면 CR 후보로 반환한다."
   - "수정 완료 결함은 qa-fix-loop Run과 재검증 결과가 연결되어 있다."
+qa_execution_policy:
+  worker_can_run_tests: true
+  worker_can_write_evidence: true
+  worker_can_modify_source: false
+  result_statuses: [Pass, Fail, Not Run, Skipped, environment_blocked]
+  qa_workspace_policy:
+    - "QA-000은 Gate 4 전체에서 재사용할 QA workspace/worktree를 준비하고 경로를 Run 결과에 기록한다."
+    - "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace/worktree에서 실행한다."
+    - "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다."
+    - "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 dev 통합 브랜치의 qa-fix-loop로 분리한다."
+  qa000_required_checks:
+    - "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다."
+    - "backend 최소 smoke test 또는 test discovery가 실행 가능한지 확인한다."
+    - "frontend 의존성이 설치되어 있거나 npm ci/npm install을 실행할 수 있는지 확인한다."
+    - "Playwright package와 browser cache가 있거나 npx playwright install을 실행할 수 있는지 확인한다."
+    - "backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)가 사용 가능한지 확인한다."
+    - "SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는지 확인한다."
+    - "필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리를 확인한다."
+  stages:
+    - "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다."
+    - "QA-001 명령 기반 검증: QA-000 workspace에서 backend/frontend test, lint, build, check-contract, check-trace, run-check를 실행하고 로그 증적을 남긴다."
+    - "QA-002 UI/E2E 증적: QA-000 workspace에서 서버를 띄우고 UI-ID별 Playwright screenshot/log/trace를 수집한다."
+    - "QA-003 결과 정리/판정 후보: QA Finding, Test Result, traceability 반영 후보, FIND/CR/ISSUE, Gate4 완료 판단 필요 항목을 정리한다."
+  on_failure:
+    - "코드를 직접 수정하지 않는다."
+    - "원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다."
+    - "승인된 설계 범위 안의 결함이면 FIND 후보로 남긴다."
+    - "요구사항/API/DB/보안/화면 계약 변경이 필요하면 CR 후보로 남긴다."
 gate_exit_policy:
   stop_required: true
   next_gate_requires_user_approval: true
@@ -85,7 +123,13 @@ ui_implementation_contract_policy:
 
 ## Review Notes
 
-- `working_documents`에는 이번 Run이 작성/갱신할 QA 결과, 결함, 증적, 추적표만 둔다. 테스트케이스와 설계 산출물은 실행 기준 확인이나 결함 판정이 필요할 때 `reference_on_demand`에서 관련 ID 기준으로 확인한다.
+- `working_documents`에는 이번 Run이 작성/갱신할 QA 결과, 결함, 증적만 둔다. 테스트케이스, 설계 산출물, 추적표는 실행 기준 확인이나 결함 판정이 필요할 때 `reference_on_demand` 또는 Orchestrator 판단 자료로 확인한다.
+- Gate 4 QA는 `QA-000` 환경 준비, `QA-001` 명령 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리로 쪼갠다.
+- `QA-000`은 구현 통합 결과가 실제로 실행 가능한지 다시 확인하고, 후속 QA가 재사용할 `qa_workspace.path`를 확정하는 단계다. 여기서 차단되면 후속 QA를 억지로 진행하지 않는다.
+- `QA-001`, `QA-002`, `QA-003`은 새 workspace를 만들지 않고 `QA-000`이 기록한 같은 `qa_workspace.path`에서 실행한다.
+- `qa-execution` worker는 테스트 실행과 증적 수집을 맡고, 소스코드 수정은 하지 않는다.
+- 실패 원인이 명확해 보여도 worker가 즉시 새 API, 새 메소드, 새 화면 상태를 만들지 않는다.
+- Orchestrator는 worker의 실패/차단 보고를 보고 사용자와 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다.
 - QA 결함이 승인된 설계 범위 안이면 FIND로 처리한다.
 - 요구사항, 보안 기준, 릴리즈 범위를 바꾸면 CR로 승격한다.
 - 개발표준의 필수 명령이 테스트결과서에 없거나, exit code/성공 기준/로그 증적 없이 Pass로 기록되어 있으면 FIND로 남긴다.

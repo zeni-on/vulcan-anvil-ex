@@ -87,6 +87,22 @@ subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 
 
 사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 worker/subagent/`agent-run --mode work` 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 
+Gate 4에서도 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 실제 검증 명령, Playwright 증적, 로그, 후보 FIND/CR/ISSUE를 수집한다. 실패가 나오면 즉시 코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 사용자에게 보고한 뒤 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다. 수정하기로 결정한 항목만 별도 `qa-fix-loop` Run으로 넘긴다.
+
+Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator는 먼저 통합된 소스가 실제로 실행 가능한지 `QA-000` 환경 준비/스모크 Run으로 확인한다. `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하고 경로를 Run 결과에 남긴다. 그 다음 `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적 수집, `QA-003` 결과 정리/판정 후보 Run을 순차로 진행하되 모두 `QA-000`이 기록한 같은 workspace에서 실행한다. `QA-000`이 차단되면 후속 QA Run을 진행하지 말고 사용자에게 환경 차단 사유와 재현 명령을 보고한다.
+
+## 5.0 Branch Workflow
+
+기본 audit profile은 문서 기준선과 구현 통합선을 분리한다.
+
+- `main`: `init`, Phase 0, Gate 1, Gate 2, Gate 3 산출물과 사용자 승인 기준선.
+- `dev`: `impl` 진입 후 생성/전환하는 통합 브랜치. Build Wave worker 결과, 통합 검증, Gate 4 QA 후보를 모은다.
+- `qa worktree`: Gate 4에서 필요하면 `dev` 기준으로 생성하는 테스트 전용 작업공간. 의존성 설치, 서버 기동, Playwright 증적 수집은 이 공간에서 수행할 수 있다.
+
+`impl`로 넘어간 직후 Orchestrator는 `python vulcan.py branch-start impl`을 실행해 `dev` 브랜치를 시작한다. 현재 브랜치가 의심되면 `python vulcan.py branch-status`로 확인한다. `wave-start`, `run-exec`, `agent-run --mode work`는 audit workflow에서 통합 브랜치가 아니면 실행하지 않는다.
+
+Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다. Gate 5에서 릴리즈 승인 문서, QA 결과, 잔여 Backlog를 확인한 뒤 `dev`를 `main`에 반영한다.
+
 ## 5.1 Build Wave 오케스트레이션
 
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.

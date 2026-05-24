@@ -129,7 +129,15 @@ export class GitHubDataSource implements DataSource {
         return null
       }
 
-      return result.data.runtime ?? null
+      const runtime = result.data.runtime ?? null
+      if (!runtime) return null
+      return {
+        ...runtime,
+        current_branch: this.branch,
+        workflow: result.data.workflow ?? runtime.workflow ?? null,
+        active_executions: runtime.active_executions ?? [],
+        worktrees: runtime.worktrees ?? [],
+      }
     } catch (err) {
       if (err instanceof DataSourceError && err.message.includes('404')) {
         return null

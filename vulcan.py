@@ -162,6 +162,7 @@ RUN_SKILLS = {
     "implementation-scaffold": "docs/adapters/codex-gpt/skills/implementation-scaffold.md",
     "build-wave": "docs/adapters/codex-gpt/skills/build-wave.md",
     "data-standard-review": "docs/adapters/codex-gpt/skills/data-standard-review.md",
+    "qa-execution": "docs/adapters/codex-gpt/skills/qa-execution.md",
     "qa-fix-loop": "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
     "change-impact-analysis": "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
     "handoff": "docs/core/ORCHESTRATOR_PROTOCOL.md",
@@ -198,6 +199,7 @@ RUN_SKILL_DEFAULT_PERSONAS = {
     "implementation-scaffold": "build",
     "build-wave": "build",
     "data-standard-review": "review",
+    "qa-execution": "evidence",
     "qa-fix-loop": "build",
     "change-impact-analysis": "change-control",
     "handoff": "review",
@@ -340,6 +342,7 @@ AUDIT_UI_POLICY_SKILLS = {
     "implementation-plan",
     "implementation-scaffold",
     "build-wave",
+    "qa-execution",
     "qa-fix-loop",
 }
 
@@ -444,6 +447,40 @@ AUDIT_WORKER_RUN_SIZING_POLICY = {
         "15분을 넘길 것으로 예상되면 개발 중단이 아니라 더 작은 기능/계약 단위로 다시 분리한다.",
         "시간이 끝났다는 이유로 컴파일/테스트가 깨진 반쪽 구현을 완료 처리하지 않는다.",
         "파일/메소드 개수 제한은 시간 판단을 돕는 보조 기준이며 1차 기준이 아니다.",
+    ],
+}
+
+AUDIT_QA_EXECUTION_POLICY = {
+    "worker_can_run_tests": True,
+    "worker_can_write_evidence": True,
+    "worker_can_modify_source": False,
+    "result_statuses": ["Pass", "Fail", "Not Run", "Skipped", "environment_blocked"],
+    "qa_workspace_policy": [
+        "QA-000은 Gate 4 전체에서 재사용할 QA workspace/worktree를 준비하고 경로를 Run 결과에 기록한다.",
+        "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace/worktree에서 실행한다.",
+        "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다.",
+        "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 dev 통합 브랜치의 qa-fix-loop로 분리한다.",
+    ],
+    "qa000_required_checks": [
+        "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다.",
+        "backend 최소 smoke test 또는 test discovery가 실행 가능한지 확인한다.",
+        "frontend 의존성이 설치되어 있거나 npm ci/npm install을 실행할 수 있는지 확인한다.",
+        "Playwright package와 browser cache가 있거나 npx playwright install을 실행할 수 있는지 확인한다.",
+        "backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)가 사용 가능한지 확인한다.",
+        "SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는지 확인한다.",
+        "필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리를 확인한다.",
+    ],
+    "stages": [
+        "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다.",
+        "QA-001 명령 기반 검증: QA-000 workspace에서 backend/frontend test, lint, build, check-contract, check-trace, run-check를 실행하고 로그 증적을 남긴다.",
+        "QA-002 UI/E2E 증적: QA-000 workspace에서 서버를 띄우고 UI-ID별 Playwright screenshot/log/trace를 수집한다.",
+        "QA-003 결과 정리/판정 후보: QA Finding, Test Result, traceability 반영 후보, FIND/CR/ISSUE, Gate4 완료 판단 필요 항목을 정리한다.",
+    ],
+    "on_failure": [
+        "코드를 직접 수정하지 않는다.",
+        "원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다.",
+        "승인된 설계 범위 안의 결함이면 FIND 후보로 남긴다.",
+        "요구사항/API/DB/보안/화면 계약 변경이 필요하면 CR 후보로 남긴다.",
     ],
 }
 
@@ -626,6 +663,8 @@ AUDIT_GATE_PRESETS = {
             "화면 퍼블리싱 기반 화면은 기준 UIREF와 구현 screenshot의 차이 목록 및 허용 여부가 기록되어 있다.",
             "증적 파일이 기대 화면을 실제로 보여주지 못하면 Pass가 아니라 Fail 또는 Not Run으로 기록되어 있다.",
             "결함은 FIND로 기록하고, 범위 변경은 CR로 승격한다.",
+            "Gate 4 QA 실행은 가능하면 qa-execution/evidence worker Run으로 분리하고, Orchestrator는 결과 판정과 사용자 협의를 맡는다.",
+            "QA 실행 중 실패가 나오면 Orchestrator가 즉시 코드를 수정하지 않고 원인, 재현 명령, 로그, 영향 ID를 먼저 기록한다.",
             "수정 완료 결함은 qa-fix-loop Run과 재검증 결과가 연결되어 있다.",
         ],
         "verification_commands": [
@@ -838,6 +877,37 @@ AUDIT_GATE_SKILL_PRESETS = {
             "승인된 설계 범위 안의 결함만 FIND로 수정한다.",
             "요구사항 또는 범위 변경이 필요한 항목은 CR로 승격한다.",
             "재검증 명령과 결과가 테스트 결과서에 반영되어 있다.",
+        ],
+    },
+    ("gate4", "qa-execution"): {
+        "sample": "docs/core/run-input-samples/gate4-qa-review.sample.md",
+        "run_type": "Evidence",
+        "worker_run": True,
+        "required": [
+            "docs/adapters/codex-gpt/skills/qa-execution.md",
+            "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+        ],
+        "working": [
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+        ],
+        "writable": [
+            "docs/runs/",
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            "docs/artifacts/04-review/evidence/",
+        ],
+        "completion_criteria": [
+            "Gate 4 전체 QA를 한 번에 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run 범위를 명시한다.",
+            "QA-000에서 통합된 소스, 의존성, 실행 포트, DB/환경변수, Playwright 설치 상태를 먼저 확인하고 차단되면 이후 QA 실행을 진행하지 않는다.",
+            "Gate 3 테스트케이스와 개발표준정의서의 필수 검증 명령을 실행하거나 Not Run/environment_blocked로 사유를 기록한다.",
+            "각 검증 결과에는 cwd, command, exit code, success criteria, result, log/evidence path가 있다.",
+            "Playwright 화면 검증은 상태/시나리오별 UI-ID와 screenshot/log/trace 증적을 1:1로 연결한다.",
+            "실패나 이상 동작은 즉시 수정하지 않고 원인 가설, 재현 명령, 영향 ID, 후보 FIND/CR/ISSUE를 기록한다.",
+            "새 API, 새 메소드, 요구사항/설계 변경이 필요해 보이면 코드를 만들지 않고 CR 후보로 반환한다.",
+            "worker는 QA Pass, Gate 완료, 수정 완료를 확정하지 않고 Orchestrator 결정 필요 항목으로 반환한다.",
         ],
     },
     ("gate5", "change-impact-analysis"): {
@@ -1337,6 +1407,11 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         skill_preset.get("evidence_targets", []),
     )
     writable_scope = skill_preset.get("writable") or gate_preset.get("writable", [])
+    if worker_run and skill == "qa-execution":
+        writable_scope = merge_unique(
+            [run_rel_path],
+            [path for path in writable_scope if path.replace("\\", "/") != "docs/runs/"],
+        )
     completion_criteria = (
         skill_preset.get("completion_criteria", [])
         if skill_has_working_docs and skill_preset.get("completion_criteria")
@@ -1376,6 +1451,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         "gate_exit_policy": AUDIT_GATE_EXIT_POLICY,
         "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
         "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
+        "qa_execution_policy": AUDIT_QA_EXECUTION_POLICY if skill == "qa-execution" else {},
         "worker_execution_policy": AUDIT_WORKER_EXECUTION_POLICY,
         "worker_run_sizing_policy": AUDIT_WORKER_RUN_SIZING_POLICY,
         "output_requirements": {
@@ -1423,6 +1499,7 @@ def render_run_input_preset(preset, ids, persona, gate):
     gate_exit = preset["gate_exit_policy"]
     ui_evidence = preset["ui_evidence_policy"]
     ui_contract = preset["ui_implementation_contract_policy"]
+    qa_execution = preset.get("qa_execution_policy", {})
     worker_policy = preset["worker_execution_policy"]
     sizing_policy = preset.get("worker_run_sizing_policy", AUDIT_WORKER_RUN_SIZING_POLICY)
     target_contracts = classify_related_ids(ids)
@@ -1439,6 +1516,30 @@ design_sequence:
    - Gate 2 Run이면 `design_sequence`에서 현재 위치를 확인하고, 필요한 이전 단계 누락과 다음 Gate 2 Run 제안을 기록한다."""
     ui_evidence_block = ""
     ui_contract_block = ""
+    qa_execution_block = ""
+    qa_execution_instruction = ""
+    if qa_execution:
+        qa_execution_block = f"""
+qa_execution_policy:
+  worker_can_run_tests: {str(qa_execution["worker_can_run_tests"]).lower()}
+  worker_can_write_evidence: {str(qa_execution["worker_can_write_evidence"]).lower()}
+  worker_can_modify_source: {str(qa_execution["worker_can_modify_source"]).lower()}
+  result_statuses: {format_yaml_list(qa_execution["result_statuses"])}
+  qa_workspace_policy:
+{format_yaml_sequence(qa_execution.get("qa_workspace_policy", []), 4)}
+  qa000_required_checks:
+{format_yaml_sequence(qa_execution.get("qa000_required_checks", []), 4)}
+  stages:
+{format_yaml_sequence(qa_execution.get("stages", []), 4)}
+  on_failure:
+{format_yaml_sequence(qa_execution["on_failure"], 4)}"""
+        qa_execution_instruction = """
+- QA 실행 worker이면 테스트 실패 또는 이상 동작을 발견해도 소스코드를 수정하지 않는다.
+- QA 실패는 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE로 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
+- Gate 4 전체 QA를 한 Run에서 모두 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run의 범위를 명시한다.
+- QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace/worktree 경로를 남긴다.
+- QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace/worktree에서 실행한다.
+- QA-000 환경 준비가 통과하지 않으면 QA-001/QA-002를 진행하지 않고 environment_blocked 또는 Not Run으로 반환한다."""
     if preset.get("include_ui_policies", True):
         ui_evidence_block = f"""
 ui_evidence_policy:
@@ -1484,7 +1585,8 @@ ui_implementation_contract_policy:
     reference_docs = source.get("reference_on_demand", [])
     optional_docs = source.get("optional", [])
     contract_detail_block = ""
-    if worker_run:
+    implementation_worker = worker_run and skill in ("build-wave", "implementation-scaffold")
+    if implementation_worker:
         contract_detail_block = """
   interface_contract:
     language: "TBD: Program Design 기준 언어/런타임"
@@ -1508,8 +1610,27 @@ ui_implementation_contract_policy:
       - "TBD: compile/import/build smoke 명령"
 """
     if worker_run:
-        completion_action_line = "- `completion_criteria`를 모두 만족하도록 담당 코드, 테스트, 증적, 자기 Run 기록을 갱신한다."
-        completion_policy_section = """## 5. Worker 완료 및 Orchestrator 반환
+        if skill == "qa-execution":
+            completion_action_line = "- `completion_criteria`를 모두 만족하도록 테스트 실행 결과, 로그/화면 증적, 후보 FIND/CR/ISSUE, 자기 Run 기록을 갱신한다."
+        else:
+            completion_action_line = "- `completion_criteria`를 모두 만족하도록 담당 코드, 테스트, 증적, 자기 Run 기록을 갱신한다."
+        if skill == "qa-execution":
+            completion_policy_section = """## 5. QA Worker 완료 및 Orchestrator 반환
+
+Run을 완료할 때 다음 항목을 반드시 남긴다.
+
+| 항목 | 작성 기준 |
+| --- | --- |
+| 실행 검증 요약 | 실행한 명령, cwd, exit code, 성공 기준, 결과 |
+| 증적 | 로그, screenshot, trace, report 파일 경로와 관련 UT/IT/UI ID |
+| 실패/차단 분류 | `Fail`, `Not Run`, `Skipped`, `environment_blocked` 사유 |
+| 원인 가설 | 실패 재현 명령, 영향 ID, 관련 로그 위치 |
+| 후보 분류 | 승인된 설계 범위 안이면 FIND 후보, 범위 변경이면 CR 후보, 판단 보류면 ISSUE 후보 |
+| Orchestrator 결정 필요 | 수정 여부, 재실행 여부, CR 승격 여부, Gate 완료 판단 필요 항목 |
+
+QA 실행 worker는 소스코드를 수정하지 않고, 사용자 승인 질문, Gate 완료 선언, QA Pass, 릴리즈 승인, merge 가능 판단을 직접 하지 않는다."""
+        else:
+            completion_policy_section = """## 5. Worker 완료 및 Orchestrator 반환
 
 Run을 완료할 때 다음 항목을 반드시 남긴다.
 
@@ -1538,10 +1659,20 @@ Run을 완료할 때 다음 항목을 반드시 남긴다.
 | 승인 증적 | 대화에서 사용자가 명시 승인한 문구 또는 승인 보류 사유 |
 
 사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
+    if implementation_worker:
+        run_scope_instruction = "- worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다."
+        verification_instruction = "- 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다."
+    elif skill == "qa-execution":
+        run_scope_instruction = "- QA 실행 worker Run은 테스트 실행/증적 수집/원인 분류 단위로 끝나는 완결 조각이어야 한다."
+        verification_instruction = "- QA 실행 worker Run이면 실행한 명령과 Orchestrator가 재실행할 `verification.commands`를 결과 문서에 남긴다."
+    else:
+        run_scope_instruction = "- Run은 현재 Gate와 related_ids 범위 안에서 완료 가능한 산출물 또는 검토 단위로 끝나야 한다."
+        verification_instruction = "- 실행하거나 확인한 검증 명령과 결과를 Run 기록에 남긴다."
     return f"""## 3. Run 입력 계약
 
 ```yaml
 profile: {format_yaml_scalar(preset["profile"])}
+adapter: "codex-gpt"
 run_type: {format_yaml_scalar(preset["run_type"])}
 gate: {format_yaml_scalar(gate)}
 related_ids: {format_yaml_list(ids)}
@@ -1566,6 +1697,7 @@ scope:
 {format_yaml_sequence(scope["excluded"], 4)}
 completion_criteria:
 {format_yaml_sequence(preset["completion_criteria"], 2)}
+{qa_execution_block}
 verification:
   commands:
 {format_yaml_sequence(verification["commands"], 4)}
@@ -1573,13 +1705,13 @@ verification:
     required: {str(evidence["required"]).lower()}
     target_documents:
 {format_yaml_sequence(evidence["target_documents"], 6)}
-worker_run_sizing_policy:
+{f'''worker_run_sizing_policy:
   primary_split_basis: {format_yaml_scalar(sizing_policy["primary_split_basis"])}
   time_is_secondary: {str(sizing_policy["time_is_secondary"]).lower()}
   target_duration_minutes: {sizing_policy["target_duration_minutes"]}
   max_duration_minutes: {sizing_policy["max_duration_minutes"]}
   rules:
-{format_yaml_sequence(sizing_policy["rules"], 4)}
+{format_yaml_sequence(sizing_policy["rules"], 4)}''' if implementation_worker else ""}
 output_requirements:
   format: {format_yaml_scalar(output["format"])}
   include:
@@ -1589,17 +1721,18 @@ output_requirements:
 ## 4. 수행 지시
 
 - `source_documents.read_first`만 먼저 읽고 현재 Gate, skill, 관련 ID를 확인한다.
-  - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다.
-- 구현 worker Run이면 `target_contracts.interface_contract`의 public signature, schema, error contract를 먼저 구현 경계로 삼는다.
-- scaffold Run이면 `target_contracts.contract_skeleton`의 파일과 smoke 검증을 먼저 확인하고 업무 로직 구현을 완료 처리하지 않는다.
+{"  - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다." if implementation_worker else ""}
+{"- 구현 worker Run이면 `target_contracts.interface_contract`의 public signature, schema, error contract를 먼저 구현 경계로 삼는다." if implementation_worker else ""}
+{"- scaffold Run이면 `target_contracts.contract_skeleton`의 파일과 smoke 검증을 먼저 확인하고 업무 로직 구현을 완료 처리하지 않는다." if skill == "implementation-scaffold" else ""}
 - `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
 - `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
 - 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 Run의 근거로 사용하지 않는다.
 - `scope.writable` 안에서만 산출물을 수정한다.{design_sequence_instruction}
 {completion_action_line}
-- worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다.
+{run_scope_instruction}
 - 실제 프로젝트 값으로 작성하고 placeholder를 완료 산출물에 남기지 않는다.
-- 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다.
+{verification_instruction}
+{qa_execution_instruction}
 {ui_instruction_block}
 
 {completion_policy_section}"""
@@ -4671,6 +4804,12 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
     if committed:
         git_push_if_remote(project_dir)
 
+    if gate == "impl":
+        workflow = workflow_policy(project_dir)
+        if workflow.get("branch_mode") not in ("none", "single", "disabled") and workflow.get("impl_uses_integration_branch", True):
+            integration_branch = workflow.get("integration_branch") or "dev"
+            print(f"  다음 단계: python vulcan.py branch-start impl  # 구현 통합 브랜치 `{integration_branch}` 사용")
+
     if has_open_run_for_gate(project_dir, gate):
         print(f"  Run 초안 생략: {gate}에 진행 중인 Run이 이미 있습니다.")
         return
@@ -4712,6 +4851,7 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
     if current_gate != "impl":
         print(f"오류: Build Wave는 impl 단계에서만 시작할 수 있습니다. 현재 Gate: {current_gate}")
         sys.exit(1)
+    workflow_branch_guard(project_dir, "impl", "wave-start")
 
     impl = session.setdefault("implementation", {})
     waves = impl.setdefault("waves", {})
@@ -4835,7 +4975,7 @@ dependency_install_policy:
   npm_cache_env: "npm_config_cache"
   playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
   if_install_blocked: "npm install/npm ci/npx playwright install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
-  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 보조 self-check이며 최종 UI/Playwright 증적은 통합된 main 또는 QA worktree의 Gate 4에서 판정한다."
+  worker_node_playwright_scope: "worker worktree의 npm/build/Playwright는 보조 self-check이며 최종 UI/Playwright 증적은 통합된 dev 브랜치 기준의 QA-000 workspace 결과를 Gate 4 판정 기준으로 사용한다."
 wave_verification_boundary:
   scope:
     - "Gate 3 테스트 설계 중 이 Wave의 target_contracts에 매핑된 UT/IT/UI 또는 smoke 기준만 Wave 검증으로 수행한다."
@@ -4871,7 +5011,7 @@ open_issues: []
 - Node/Playwright 설치가 필요하면 worker cache를 사용하고, 설치가 환경 문제로 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
 - worker worktree에서 화면 서버나 Playwright를 실행하지 못해도 그 사실만으로 구현 실패를 확정하지 않는다.
 - Wave 검증은 담당 계약 테스트와 현재까지 가능한 회귀 검증까지만 의미한다. 전체 E2E, 상태별 화면 증적, QA Pass는 Gate 4에서 판정한다.
-- 최종 UI/Playwright 증적은 통합된 main 작업공간 또는 별도 QA worktree에서 수행한다.
+- 최종 UI/Playwright 증적은 통합된 dev 브랜치 기준의 QA-000 workspace에서 수행한다.
 
 ## 4. Orchestrator 지시
 
@@ -5041,6 +5181,7 @@ def collect_documents(project_dir="."):
 def cmd_export(output="snapshot.json", project_dir="."):
     from datetime import datetime
     session = load_session(project_dir)
+    workflow = workflow_policy(project_dir)
 
     snapshot = {
         "schema_version": "1.0",
@@ -5053,6 +5194,11 @@ def cmd_export(output="snapshot.json", project_dir="."):
         "started": session.get("started", ""),
         "completed": session.get("completed", []),
         "blocked": session.get("blocked", []),
+        "branch": {
+            "current": git_current_branch(project_dir),
+            "state": session.get("branch_state", {}),
+            "workflow": workflow,
+        },
         "timeline": git_log_timeline(project_dir),
         "documents": collect_documents(project_dir),
         "stats": session.get("stats"),
@@ -5393,6 +5539,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
 run_id: {run_id}
 gate: {gate}
 persona: {persona}
+adapter: {adapter}
 skill: {skill}
 skill_path: {skill_path}
 profile: {profile}
@@ -6054,6 +6201,128 @@ def create_execution_worktree(project_dir, run_id, runner, branch_name=None, wor
         sys.exit(1)
 
     return target, branch
+
+
+QA_STAGE_PATTERN = re.compile(r"\bQA-(000|001|002|003)\b", re.IGNORECASE)
+
+
+def qa_stage_from_run(run_content, run_meta=None):
+    run_meta = run_meta or {}
+    candidates = [
+        str(run_meta.get("qa_stage") or ""),
+        str(run_meta.get("stage") or ""),
+        str(run_meta.get("title") or ""),
+        run_content[:5000] if run_content else "",
+    ]
+    for candidate in candidates:
+        match = QA_STAGE_PATTERN.search(candidate)
+        if match:
+            return f"QA-{match.group(1)}".upper()
+    return ""
+
+
+def is_gate4_qa_execution_run(run_meta, run_content=""):
+    if run_meta.get("gate") == "gate4" and run_meta.get("skill") == "qa-execution":
+        return True
+    return bool(
+        re.search(r"(?m)^\s*gate\s*:\s*['\"]?gate4['\"]?\s*$", run_content or "", re.IGNORECASE)
+        and re.search(r"(?m)^\s*skill\s*:\s*['\"]?qa-execution['\"]?\s*$", run_content or "", re.IGNORECASE)
+    )
+
+
+def default_qa_worktree_path(project_dir):
+    return os.path.abspath(os.path.join(project_dir, ".vulcan", "worktrees", "QA-GATE4"))
+
+
+def qa_workspace_state(session):
+    qa_execution = session.get("qa_execution")
+    if not isinstance(qa_execution, dict):
+        return {}
+    workspace = qa_execution.get("gate4_workspace") or qa_execution.get("gate4_worktree")
+    return workspace if isinstance(workspace, dict) else {}
+
+
+def save_qa_workspace_state(project_dir, *, stage, run_id, worktree_path, branch="", status="active"):
+    session = load_session(project_dir)
+    qa_execution = session.setdefault("qa_execution", {})
+    if not isinstance(qa_execution, dict):
+        qa_execution = {}
+        session["qa_execution"] = qa_execution
+
+    existing = qa_workspace_state(session)
+    now = datetime.now().isoformat(timespec="seconds")
+    base_commit = git_text(["rev-parse", "HEAD"], worktree_path) or git_text(["rev-parse", "HEAD"], project_dir)
+    qa_execution["gate4_workspace"] = {
+        "path": os.path.abspath(worktree_path),
+        "branch": branch or existing.get("branch") or git_current_branch(worktree_path),
+        "base_commit": existing.get("base_commit") or base_commit,
+        "created_by_run": existing.get("created_by_run") or run_id,
+        "created_at": existing.get("created_at") or now,
+        "last_stage": stage,
+        "last_run": run_id,
+        "updated_at": now,
+        "status": status,
+    }
+    refresh_session_stats(session, project_dir)
+    save_session(session, project_dir)
+
+
+def resolve_gate4_qa_workspace(project_dir, *, run_id, run_meta, run_content, create_worktree, worktree_dir):
+    if not is_gate4_qa_execution_run(run_meta, run_content):
+        return "", "", ""
+
+    stage = qa_stage_from_run(run_content, run_meta)
+    if not stage:
+        return "", "", ""
+    if not create_worktree:
+        print(f"오류: {stage} qa-execution Run은 QA workspace/worktree에서 실행해야 합니다.")
+        print("  --no-worktree를 제거하거나 --worktree를 사용하세요.")
+        sys.exit(1)
+
+    if stage == "QA-000":
+        return stage, "", ""
+
+    session = load_session(project_dir)
+    state = qa_workspace_state(session)
+    qa_path = state.get("path") or ""
+    qa_status = state.get("status") or ""
+    if not qa_path or not os.path.isdir(qa_path):
+        print(f"오류: {stage}는 QA-000에서 만든 QA workspace를 재사용해야 합니다.")
+        print("  먼저 QA-000 qa-execution Run을 --worktree로 실행해 qa_execution.gate4_workspace.path를 기록하세요.")
+        sys.exit(1)
+    if qa_status in ("blocked", "missing"):
+        print(f"오류: QA-000 workspace 상태가 {qa_status}입니다. 후속 QA Run을 진행할 수 없습니다.")
+        print(f"  QA workspace: {qa_path}")
+        sys.exit(1)
+    if worktree_dir and os.path.abspath(worktree_dir) != os.path.abspath(qa_path):
+        print(f"오류: {stage}는 QA-000 workspace를 재사용해야 합니다.")
+        print(f"  QA-000 workspace: {qa_path}")
+        print(f"  요청 worktree-dir: {os.path.abspath(worktree_dir)}")
+        sys.exit(1)
+    return stage, os.path.abspath(qa_path), state.get("branch") or ""
+
+
+def sync_run_file_to_execution_workspace(run_abs, exec_run_abs, exec_dir, run_rel_path):
+    if os.path.exists(exec_run_abs):
+        changed = subprocess.run(
+            ["git", "status", "--porcelain", "--", run_rel_path],
+            cwd=exec_dir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        has_local_change = bool((changed.stdout or "").strip()) if changed.returncode == 0 else True
+        if not has_local_change and file_sha256(run_abs) != file_sha256(exec_run_abs):
+            shutil.copy2(run_abs, exec_run_abs)
+            print(f"  QA workspace Run 문서 갱신: {run_rel_path}")
+        elif has_local_change and file_sha256(run_abs) != file_sha256(exec_run_abs):
+            print(f"  경고: QA workspace의 Run 문서에 로컬 변경이 있어 덮어쓰지 않았습니다: {run_rel_path}")
+        return
+
+    os.makedirs(os.path.dirname(exec_run_abs), exist_ok=True)
+    shutil.copy2(run_abs, exec_run_abs)
+    print(f"  QA workspace Run 문서 동기화: {run_rel_path}")
 
 
 def coerce_process_output(value):
@@ -7296,6 +7565,7 @@ def cmd_run_exec(
     with open(run_abs, encoding="utf-8") as f:
         run_content = f.read()
     run_meta = parse_simple_yaml_block(run_content)
+    workflow_branch_guard(project_abs, run_meta.get("gate") or "", "run-exec", strict=not dry_run)
 
     run_preflight_or_exit(run_abs, context="run-exec")
 
@@ -7338,9 +7608,18 @@ def cmd_run_exec(
     if create_worktree is None:
         create_worktree = bool(execution_config.get("default_worktree", True))
 
+    qa_stage, qa_reuse_worktree_path, qa_reuse_branch = resolve_gate4_qa_workspace(
+        project_abs,
+        run_id=run_id,
+        run_meta=run_meta,
+        run_content=run_content,
+        create_worktree=create_worktree,
+        worktree_dir=worktree_dir,
+    )
+
     dirty_status = git_status_porcelain(project_abs)
     blocking_dirty = has_blocking_dirty_status(project_abs)
-    if create_worktree and blocking_dirty and not allow_dirty and not dry_run:
+    if create_worktree and not qa_reuse_worktree_path and blocking_dirty and not allow_dirty and not dry_run:
         print("오류: 현재 worktree에 미커밋 변경이 있어 실행 worktree를 만들 수 없습니다.")
         print("  run-exec worktree는 HEAD 기준으로 생성되므로 미커밋 변경이 누락될 수 있습니다.")
         print("  먼저 커밋하거나, 위험을 이해했다면 --allow-dirty를 사용하세요.")
@@ -7350,8 +7629,15 @@ def cmd_run_exec(
     worktree_path = ""
     execution_branch = ""
     if create_worktree:
-        worktree_path = worktree_dir or default_execution_worktree_path(project_abs, run_id, runner_normalized)
-        execution_branch = branch_name or default_execution_branch(run_id, runner_normalized)
+        if qa_reuse_worktree_path:
+            worktree_path = qa_reuse_worktree_path
+            execution_branch = qa_reuse_branch
+        elif qa_stage == "QA-000":
+            worktree_path = worktree_dir or default_qa_worktree_path(project_abs)
+            execution_branch = branch_name or default_execution_branch(run_id, runner_normalized)
+        else:
+            worktree_path = worktree_dir or default_execution_worktree_path(project_abs, run_id, runner_normalized)
+            execution_branch = branch_name or default_execution_branch(run_id, runner_normalized)
         exec_dir = os.path.abspath(worktree_path)
 
     exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
@@ -7397,12 +7683,14 @@ Rules:
 - If frontend dependencies or Playwright are needed, use the provided worker cache paths.
 - Worker worktree npm/build/Playwright execution is a best-effort self-check, not the final UI or QA verdict.
 - If npm install/npm ci/npx playwright install fails because of permission, registry, auth, network, or cache access, do not hide it and do not call the implementation failed by itself. Record verification as not_run or environment_blocked with the failing command, cwd, exit code, log path, and the exact Orchestrator rerun command.
-- If npm run dev/build or Playwright cannot run in the worker worktree, report it as environment_blocked/not_run when appropriate. Final UI/Playwright evidence is produced from the integrated main workspace or a QA worktree during Gate 4.
+- If npm run dev/build or Playwright cannot run in the worker worktree, report it as environment_blocked/not_run when appropriate. Final UI/Playwright evidence is produced from the integrated dev branch workspace or the QA-000 QA workspace during Gate 4.
 - Record your work in the Run document: changed_files, verification_results, evidence, traceability_updates, open_issues, and orchestrator_decision_needed.
 - Do not rely on wall-clock timers. Update the status file when you start, after loading context, while editing, while testing, while writing the result, and when completed/blocked/failed.
 - Keep status.current_task to one short dashboard line, 80 characters or fewer.
 - Status JSON shape: {{"target_id":"{run_id}","target_type":"run","runner":"{runner_normalized}","status":"running","phase":"editing","current_task":"Backend tests running","last_update":"<ISO time>"}}.
 - In your final response, summarize changed files, verification commands/results, and any Orchestrator decision needed.
+{f"- Gate 4 QA stage: {qa_stage}. Use the current working directory as the single QA workspace for this stage." if qa_stage else ""}
+{f"- QA workspace continuity is required: QA-001, QA-002, and QA-003 must use the QA-000 workspace path recorded by the Orchestrator. Do not create or switch to a different QA workspace." if qa_stage else ""}
 
 Worker dependency cache:
 - npm_config_cache={dependency_cache["npm_config_cache"]}
@@ -7504,12 +7792,15 @@ Worker dependency cache:
         if create_worktree:
             print(f"  worktree_path: {worktree_path}")
             print(f"  branch: {execution_branch}")
-            if blocking_dirty and not allow_dirty:
+            if qa_stage:
+                print(f"  qa_stage: {qa_stage}")
+                print(f"  qa_workspace_mode: {'reuse' if qa_reuse_worktree_path else 'create'}")
+            if not qa_reuse_worktree_path and blocking_dirty and not allow_dirty:
                 print("  warning: current worktree is dirty; non-dry-run would require commit or --allow-dirty")
         print(f"  command: {printable_cmd}")
         return
 
-    if create_worktree:
+    if create_worktree and not qa_reuse_worktree_path:
         worktree_path, execution_branch = create_execution_worktree(
             project_abs,
             run_id,
@@ -7519,6 +7810,29 @@ Worker dependency cache:
         )
         exec_dir = worktree_path
         exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
+        if qa_stage == "QA-000":
+            save_qa_workspace_state(
+                project_abs,
+                stage=qa_stage,
+                run_id=run_id,
+                worktree_path=worktree_path,
+                branch=execution_branch,
+                status="preparing",
+            )
+            print(f"  QA workspace prepared: {worktree_path}")
+    elif qa_reuse_worktree_path:
+        exec_dir = qa_reuse_worktree_path
+        exec_run_abs = os.path.abspath(os.path.join(exec_dir, run_rel_path))
+        sync_run_file_to_execution_workspace(run_abs, exec_run_abs, exec_dir, run_rel_path)
+        save_qa_workspace_state(
+            project_abs,
+            stage=qa_stage,
+            run_id=run_id,
+            worktree_path=qa_reuse_worktree_path,
+            branch=execution_branch,
+            status="active",
+        )
+        print(f"  QA workspace reused: {qa_reuse_worktree_path}")
 
     if not os.path.exists(exec_run_abs):
         print(f"오류: 실행 위치에서 Run 문서를 찾을 수 없습니다: {exec_run_abs}")
@@ -7686,6 +8000,20 @@ Worker dependency cache:
     if runner_normalized in ("claude-cli", "antigravity-cli"):
         with open(last_message_abs, "w", encoding="utf-8") as f:
             f.write(runner_last_message(runner_normalized, stdout))
+
+    if qa_stage:
+        if qa_stage == "QA-000":
+            qa_status = "ready" if run_status in ("completed", "completed_no_result_change") else "blocked"
+        else:
+            qa_status = "active" if run_status in ("completed", "completed_no_result_change") else "blocked"
+        save_qa_workspace_state(
+            project_abs,
+            stage=qa_stage,
+            run_id=run_id,
+            worktree_path=worktree_path or exec_dir,
+            branch=execution_branch or git_current_branch(exec_dir),
+            status=qa_status,
+        )
 
     if os.path.normcase(exec_run_abs) != os.path.normcase(run_abs) and os.path.exists(exec_run_abs):
         shutil.copy2(exec_run_abs, run_abs)
@@ -8483,6 +8811,23 @@ def run_preflight_file(path):
         if status in {"Completed", "Verified", "CompletedWithIssues"} and has_trace_final_claim:
             warnings.append("Build Wave 결과가 추적표 Implemented/Verified/Pass 확정처럼 보입니다. worker 결과와 Orchestrator 재검증 반영을 구분하세요.")
 
+    if skill == "qa-execution":
+        if "qa_execution_policy:" not in content:
+            warnings.append("qa-execution Run에는 qa_execution_policy가 있는 편이 안전합니다.")
+        if not re.search(r"\bQA-00[0-3]\b", content):
+            warnings.append("qa-execution Run은 QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 단계가 드러나야 합니다.")
+        if re.search(r"\bQA-000\b", content) and not re.search(r"qa_workspace|qa_workspace_path|worktree", content, re.IGNORECASE):
+            warnings.append("QA-000 Run은 후속 QA Run이 재사용할 qa_workspace_path 또는 QA worktree 경로를 기록해야 합니다.")
+        if re.search(r"\bQA-00[1-3]\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
+            warnings.append("QA-001~QA-003 Run은 QA-000이 기록한 같은 qa_workspace_path를 입력으로 받아야 합니다.")
+        writable_block = _extract_yaml_block_text(content, "writable")
+        if re.search(r"(^|\n)\s*-\s*(backend|frontend|src|app|packages|server|client)(/|\\|\s*$)", writable_block, re.IGNORECASE):
+            blockers.append("qa-execution Run writable scope에는 소스코드 경로를 포함하지 않습니다. QA worker는 증적과 결과 문서만 작성합니다.")
+        if re.search(r"\bsession\.json\b", writable_block):
+            blockers.append("qa-execution Run writable scope에 session.json을 포함할 수 없습니다.")
+        if re.search(r"새\s*(API|메소드|method)|소스.*수정|코드.*수정|fix.*code", content, re.IGNORECASE):
+            warnings.append("qa-execution Run이 수정 지시처럼 보입니다. 실패는 FIND/CR 후보로 보고하고 수정은 qa-fix-loop로 분리하세요.")
+
     return blockers, warnings
 
 
@@ -8578,6 +8923,16 @@ def default_vulcan_config(available_runners=None):
             "primary": None,
             "available_runners": available_runners or []
         },
+        "workflow": {
+            "branch_mode": "audit",
+            "main_branch": "main",
+            "integration_branch": "dev",
+            "impl_uses_integration_branch": True,
+            "qa_worktree_enabled": True,
+            "qa_stage_mode": "staged",
+            "release_merge_to": "main",
+            "enforce_branch_guard": True
+        },
         "review": {
             "independent_enabled": has_runner,
             "independent_sandbox": "workspace-write",
@@ -8617,6 +8972,180 @@ def load_vulcan_config(project_dir="."):
     if isinstance(user_config, dict):
         deep_merge_dict(config, user_config)
     return config
+
+
+def workflow_policy(project_dir="."):
+    config = load_vulcan_config(project_dir)
+    workflow = config.get("workflow", {}) if isinstance(config.get("workflow"), dict) else {}
+    defaults = default_vulcan_config().get("workflow", {})
+    merged = dict(defaults)
+    merged.update(workflow)
+    return merged
+
+
+def git_text(args, project_dir="."):
+    result = subprocess.run(
+        ["git"] + list(args),
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
+def git_current_branch(project_dir="."):
+    branch = git_text(["rev-parse", "--abbrev-ref", "HEAD"], project_dir)
+    return branch or "unknown"
+
+
+def git_branch_exists(branch, project_dir="."):
+    if not branch:
+        return False
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", branch],
+        cwd=project_dir,
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
+def git_checkout_branch(branch, create=False, project_dir="."):
+    args = ["checkout", "-b", branch] if create else ["checkout", branch]
+    result = subprocess.run(
+        ["git"] + args,
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        print(f"오류: git checkout 실패 - {detail or branch}")
+        sys.exit(1)
+
+
+def workflow_branch_guard(project_dir, gate, command_name, strict=None):
+    workflow = workflow_policy(project_dir)
+    if workflow.get("branch_mode") in ("none", "single", "disabled"):
+        return True
+    if not workflow.get("impl_uses_integration_branch", True):
+        return True
+    if gate not in ("impl", "gate4"):
+        return True
+
+    integration_branch = workflow.get("integration_branch") or "dev"
+    current_branch = git_current_branch(project_dir)
+    if current_branch == integration_branch:
+        return True
+
+    strict = workflow.get("enforce_branch_guard", True) if strict is None else strict
+    message = (
+        f"{command_name}는 audit workflow에서 `{integration_branch}` 통합 브랜치에서 실행해야 합니다. "
+        f"현재 브랜치: `{current_branch}`"
+    )
+    if strict:
+        print(f"오류: {message}")
+        print(f"  먼저 실행: python vulcan.py branch-start impl")
+        sys.exit(1)
+    print(f"  경고: {message}")
+    return False
+
+
+def cmd_branch_status(project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    workflow = workflow_policy(project_abs)
+    session_path = os.path.join(project_abs, "session.json")
+    session = {}
+    if os.path.exists(session_path):
+        try:
+            session = load_session(project_abs)
+        except SystemExit:
+            session = {}
+    current_branch = git_current_branch(project_abs)
+    main_branch = workflow.get("main_branch") or "main"
+    integration_branch = workflow.get("integration_branch") or "dev"
+    branch_state = session.get("branch_state", {}) if isinstance(session.get("branch_state"), dict) else {}
+
+    print("Vulcan workflow branch status")
+    print(f"  mode: {workflow.get('branch_mode')}")
+    print(f"  current_gate: {session.get('current_gate') or '-'}")
+    print(f"  current_branch: {current_branch}")
+    print(f"  main_branch: {main_branch}")
+    print(f"  integration_branch: {integration_branch}")
+    print(f"  impl_uses_integration_branch: {workflow.get('impl_uses_integration_branch')}")
+    print(f"  qa_worktree_enabled: {workflow.get('qa_worktree_enabled')}")
+    print(f"  qa_stage_mode: {workflow.get('qa_stage_mode')}")
+    print(f"  session_branch_role: {branch_state.get('current_role', '') or '-'}")
+    qa_state = qa_workspace_state(session)
+    if qa_state:
+        print(f"  qa_workspace_path: {qa_state.get('path') or '-'}")
+        print(f"  qa_workspace_status: {qa_state.get('status') or '-'}")
+        print(f"  qa_workspace_last_stage: {qa_state.get('last_stage') or '-'}")
+    print(f"  dev_exists: {git_branch_exists(integration_branch, project_abs)}")
+    print(f"  dirty_blocking: {has_blocking_dirty_status(project_abs)}")
+
+
+def cmd_branch_start(stage="impl", project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    workflow = workflow_policy(project_abs)
+    if workflow.get("branch_mode") in ("none", "single", "disabled"):
+        print("오류: workflow.branch_mode가 단일 브랜치 모드입니다.")
+        sys.exit(1)
+    if stage != "impl":
+        print(f"오류: 현재 지원하는 branch-start stage는 impl뿐입니다: {stage}")
+        sys.exit(1)
+
+    session = load_session(project_abs)
+    current_gate = session.get("current_gate")
+    if current_gate not in ("impl", "gate4", "gate5"):
+        print(f"오류: impl 통합 브랜치는 impl 진입 후 시작합니다. 현재 Gate: {current_gate}")
+        print("  먼저 이전 Gate 승인 후 python vulcan.py gate-start impl 을 실행하세요.")
+        sys.exit(1)
+
+    if has_blocking_dirty_status(project_abs):
+        print("오류: 브랜치 전환 전 미커밋 변경이 있습니다.")
+        print("  먼저 변경사항을 커밋하거나 정리한 뒤 다시 실행하세요.")
+        sys.exit(1)
+
+    main_branch = workflow.get("main_branch") or "main"
+    integration_branch = workflow.get("integration_branch") or "dev"
+    current_branch = git_current_branch(project_abs)
+
+    if current_branch == integration_branch:
+        print(f"  이미 통합 브랜치입니다: {integration_branch}")
+    elif git_branch_exists(integration_branch, project_abs):
+        git_checkout_branch(integration_branch, create=False, project_dir=project_abs)
+        print(f"  브랜치 전환: {integration_branch}")
+    else:
+        if current_branch != main_branch:
+            print(f"오류: `{integration_branch}` 브랜치를 처음 만들 때는 `{main_branch}`에서 시작해야 합니다.")
+            print(f"  현재 브랜치: {current_branch}")
+            sys.exit(1)
+        git_checkout_branch(integration_branch, create=True, project_dir=project_abs)
+        print(f"  브랜치 생성 및 전환: {integration_branch}")
+
+    session["branch_state"] = {
+        "main_branch": main_branch,
+        "integration_branch": integration_branch,
+        "current_role": "integration",
+        "current_branch": integration_branch,
+        "started_at": datetime.now().isoformat(timespec="seconds"),
+        "stage": stage,
+    }
+    refresh_session_stats(session, project_abs)
+    save_session(session, project_abs)
+    committed = git_commit(
+        f"session: branch start {stage} - {integration_branch}",
+        project_abs,
+        paths=["session.json"],
+    )
+    if committed:
+        git_push_if_remote(project_abs)
 
 
 def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE):
@@ -8783,6 +9312,8 @@ def main():
   python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py sync-session
+  python vulcan.py branch-status
+  python vulcan.py branch-start impl
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
   python vulcan.py export
@@ -8822,6 +9353,11 @@ def main():
     p_session.add_argument("--approval-evidence", default="", help="사용자 승인 근거 또는 대화 메모")
 
     subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
+
+    subparsers.add_parser("branch-status", help="workflow 브랜치 정책과 현재 브랜치 상태 확인")
+
+    p_branch_start = subparsers.add_parser("branch-start", help="workflow 단계별 통합 브랜치 시작")
+    p_branch_start.add_argument("stage", choices=["impl"], help="시작할 브랜치 단계")
 
     p_wave_start = subparsers.add_parser("wave-start", help="Build Wave 시작 및 작업지시 Run 생성")
     p_wave_start.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
@@ -8994,6 +9530,10 @@ def main():
         )
     elif args.command == "sync-session":
         cmd_sync_session()
+    elif args.command == "branch-status":
+        cmd_branch_status()
+    elif args.command == "branch-start":
+        cmd_branch_start(stage=args.stage)
     elif args.command == "wave-start":
         cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
     elif args.command == "wave-complete":

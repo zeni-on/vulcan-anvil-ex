@@ -15,7 +15,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, GitBranch } from 'lucide-react'
 import AnvilIcon from '@/components/AnvilIcon'
 import DocDrawer from '@/components/DocDrawer'
 import RefreshButton from '@/components/RefreshButton'
@@ -28,7 +28,78 @@ import { useProjectRuntime } from '@/hooks/useProjectRuntime'
 import { useProjectDocs } from '@/hooks/useProjectDocs'
 import { useProjectCommits } from '@/hooks/useProjectCommits'
 import { useLayoutTemplate } from '@/hooks/useLayoutTemplate'
-import { DocEntry, DocNode } from '@/lib/types'
+import { DocEntry, DocNode, ProjectRuntime, SessionData } from '@/lib/types'
+
+function branchRoleLabel(branch: string | null | undefined, runtime: ProjectRuntime | null | undefined, session: SessionData | null | undefined): string {
+  const workflow = runtime?.workflow
+  const branchState = session?.branch_state
+  const main = workflow?.main_branch ?? branchState?.main_branch ?? 'main'
+  const integration = workflow?.integration_branch ?? branchState?.integration_branch ?? 'dev'
+  if (!branch) return 'unknown'
+  if (branch === main) return 'baseline'
+  if (branch === integration) return 'integration'
+  return branchState?.current_role ?? 'worktree'
+}
+
+function needsIntegrationBranch(session: SessionData | null | undefined, runtime: ProjectRuntime | null | undefined): boolean {
+  const gate = session?.current_gate
+  if (gate !== 'impl' && gate !== 'gate4') return false
+  return runtime?.workflow?.impl_uses_integration_branch !== false
+}
+
+function BranchWorkspaceBanner({
+  session,
+  runtime,
+  isLoading,
+}: {
+  session: SessionData | null | undefined
+  runtime: ProjectRuntime | null | undefined
+  isLoading?: boolean
+}) {
+  const branch = runtime?.current_branch ?? session?.branch_state?.current_branch ?? null
+  const workflow = runtime?.workflow
+  const integration = workflow?.integration_branch ?? session?.branch_state?.integration_branch ?? 'dev'
+  const mode = workflow?.branch_mode ?? 'single'
+  const role = branchRoleLabel(branch, runtime, session)
+  const mismatch = needsIntegrationBranch(session, runtime) && Boolean(branch) && branch !== integration
+
+  if (isLoading && !branch && !workflow) {
+    return (
+      <div className="mt-3 h-7 w-72 animate-pulse rounded-md bg-slate-800/70" />
+    )
+  }
+
+  if (!branch && !workflow && !session?.branch_state) return null
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+      <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 ${
+        mismatch
+          ? 'border-amber-500/50 bg-amber-500/10 text-amber-200'
+          : 'border-slate-700 bg-slate-900/70 text-slate-300'
+      }`}>
+        <GitBranch className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+        <span className="font-medium">{branch ?? 'branch unknown'}</span>
+        <span className="text-slate-500">/</span>
+        <span>{role}</span>
+      </span>
+      <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 text-slate-400">
+        workflow: {mode}
+      </span>
+      {mismatch ? (
+        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-200">
+          <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+          <span className="truncate">impl/Gate4는 {integration} 브랜치에서 진행</span>
+        </span>
+      ) : branch ? (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-200">
+          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+          작업공간 확인됨
+        </span>
+      ) : null}
+    </div>
+  )
+}
 
 // ── 메인 페이지 컴포넌트 ─────────────────────────────────────────────────────
 
@@ -171,6 +242,11 @@ export default function ProjectDetailPage() {
               {session.started && (
                 <p className="text-xs text-[#6B7280]">시작일: {session.started}</p>
               )}
+              <BranchWorkspaceBanner
+                session={session}
+                runtime={runtime}
+                isLoading={runtimeLoading}
+              />
             </>
           ) : !sessionLoading && (
             <h1 className="text-2xl font-bold text-[#F9FAFB] mb-1">

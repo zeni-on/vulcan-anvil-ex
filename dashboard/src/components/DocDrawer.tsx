@@ -21,6 +21,7 @@ import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
 import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
 import { isTraceabilityDoc, parseTraceabilityDoc } from '@/lib/traceabilityDoc'
+import { isQaDoc } from '@/lib/qaDoc'
 import MermaidBlock from './MermaidBlock'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
@@ -112,6 +113,67 @@ function splitDocumentMetadata(content: string): { metadata: DocumentMetadata; b
   }
 }
 
+function encodeDocPath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/')
+}
+
+function projectRawUrl(projectId: string, path: string): string {
+  return `/api/projects/${encodeURIComponent(projectId)}/raw/${encodeDocPath(path)}`
+}
+
+function normalizeEvidenceHref(href?: string): string | undefined {
+  if (!href) return undefined
+  const normalized = href
+    .replace(/\\/g, '/')
+    .replace(/^`|`$/g, '')
+    .replace(/^<|>$/g, '')
+    .replace(/^['"]|['"]$/g, '')
+    .trim()
+
+  if (/^(?:https?:|mailto:|#)/i.test(normalized)) return normalized
+  if (normalized.startsWith('/docs/')) return normalized.slice(1)
+  if (normalized.startsWith('docs/')) return normalized
+  if (normalized.startsWith('evidence/')) return `docs/artifacts/04-review/${normalized}`
+  if (/^(ui|logs|contract)\//i.test(normalized)) {
+    return `docs/artifacts/04-review/evidence/${normalized}`
+  }
+  return normalized
+}
+
+function isEvidenceHref(href?: string): boolean {
+  const normalized = normalizeEvidenceHref(href)
+  return Boolean(
+    normalized &&
+      (normalized.includes('docs/artifacts/04-review/evidence/') ||
+        /\.(png|jpe?g|webp|gif|log|txt|jsonl?|out|err|xml|html|csv)$/i.test(normalized)),
+  )
+}
+
+function evidenceHref(projectId: string, href?: string): string | undefined {
+  const normalized = normalizeEvidenceHref(href)
+  if (!normalized) return href
+  return isEvidenceHref(normalized) ? projectRawUrl(projectId, normalized) : href
+}
+
+function linkBareEvidencePaths(markdown: string): string {
+  const evidencePathPattern =
+    /(?<!]\()(?:docs\/artifacts\/04-review\/evidence\/|evidence\/|ui\/|logs\/|contract\/)[^\s|),]+\.(?:png|jpe?g|webp|gif|log|txt|jsonl?|out|err|xml|html|csv)/gi
+
+  return markdown
+    .split(/(```[\s\S]*?```)/g)
+    .map((part) => {
+      if (part.startsWith('```')) return part
+      return part
+        .split(/(\[[^\]]+]\([^)]+\))/g)
+        .map((segment) => {
+          if (/^\[[^\]]+]\([^)]+\)$/.test(segment)) return segment
+          return segment.replace(evidencePathPattern, (path) => `[${path}](${path})`)
+        })
+        .join('')
+    })
+    .join('')
+}
+
 // react-markdown의 code 렌더러를 가로채 ```mermaid 블록을 SVG로 변환한다.
 const markdownComponents: Components = {
   code(props) {
@@ -126,6 +188,38 @@ const markdownComponents: Components = {
       </code>
     )
   },
+}
+
+function markdownComponentsForProject(projectId: string): Components {
+  return {
+    ...markdownComponents,
+    a(props) {
+      const { href, children, ...rest } = props
+      const resolvedHref = evidenceHref(projectId, href)
+      return (
+        <a
+          href={resolvedHref}
+          target={isEvidenceHref(href) ? '_blank' : undefined}
+          rel={isEvidenceHref(href) ? 'noreferrer' : undefined}
+          {...rest}
+        >
+          {children}
+        </a>
+      )
+    },
+    img(props) {
+      const { src, alt, ...rest } = props
+      const imageSrc = typeof src === 'string' ? evidenceHref(projectId, src) : undefined
+      return (
+        <img
+          src={imageSrc ?? src}
+          alt={alt ?? ''}
+          loading="lazy"
+          {...rest}
+        />
+      )
+    },
+  }
 }
 
 interface DocDrawerProps {
@@ -151,6 +245,13 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
   const { content, isLoading, error } = useDocContent(projectId, doc)
   const [showMetadata, setShowMetadata] = useState(false)
   const genericDoc = splitDocumentMetadata(content ?? '')
+  const isQaMarkdownDoc = Boolean(content && isQaDoc(doc, content))
+  const markdownBody = isQaMarkdownDoc
+    ? linkBareEvidencePaths(genericDoc.body)
+    : genericDoc.body
+  const components = isQaMarkdownDoc
+    ? markdownComponentsForProject(projectId)
+    : markdownComponents
   const hasMetadataHeader =
     genericDoc.metadata.titleKo ||
     genericDoc.metadata.title ||
@@ -247,9 +348,9 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
             <ReactMarkdown
               remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
               rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
-              components={markdownComponents}
+              components={components}
             >
-              {genericDoc.body}
+              {markdownBody}
             </ReactMarkdown>
           </div>
         </div>

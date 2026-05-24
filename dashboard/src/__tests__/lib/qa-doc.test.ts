@@ -156,4 +156,47 @@ updated_at: 2026-05-13
       evidence.kind === 'image',
     )).toBe(true)
   })
+
+  it('마크다운 링크와 QA 문서 기준 상대 증적 경로를 프로젝트 기준 경로로 정규화한다', () => {
+    const model = parseQaDoc(`# Gate 4 QA 테스트 결과서
+
+\`\`\`yaml
+---
+document_id: DOC-QA-G4-002
+title_ko: QA 테스트 결과서
+---
+\`\`\`
+
+## 2. 요구사항 검증 요약
+
+| REQ-ID | 검증 항목 | 관련 테스트 | 결과 | 증적 |
+| --- | --- | --- | --- | --- |
+| REQ-001 | 회원가입 | UI-002-01 | Pass | [회원가입 기본](evidence/ui/UI-002-01_signup_default_desktop.png) |
+
+## 4. 화면 증적
+
+| 증적 ID | 관련 UI | 관련 SCR | 상태/시나리오 | 기대 화면 | 실제 확인 | 파일 | 결과 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| EV-UI-002-01 | UI-002-01 | SCR-002 | 회원가입 기본 | 폼 표시 | 확인 | [UI-002-01_signup_default_desktop.png](evidence/ui/UI-002-01_signup_default_desktop.png) | Pass |
+
+## 3. 실행 검증
+
+| 검증 ID | 목적 | 실행 위치(cwd) | 명령/방법 | OS | 필수 여부 | 성공 기준 | Exit Code | 결과 | 로그/증적 | 요약 | 관련 Run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| QA-CMD-005 | Playwright UI/E2E | frontend | npm run test:e2e | Windows | 필수 | exit code 0 | 0 | Pass | [last-run](evidence/ui/playwright-output/.last-run.json), [HTML report](evidence/ui/playwright-report/index.html) | 통과 | RUN-016 |
+`)
+
+    expect(model.evidences.some((evidence) =>
+      evidence.path === 'docs/artifacts/04-review/evidence/ui/UI-002-01_signup_default_desktop.png' &&
+      evidence.kind === 'image',
+    )).toBe(true)
+    expect(model.evidences.some((evidence) =>
+      evidence.path === 'docs/artifacts/04-review/evidence/ui/playwright-output/.last-run.json' &&
+      evidence.kind === 'log',
+    )).toBe(true)
+    expect(model.evidences.some((evidence) =>
+      evidence.path === 'docs/artifacts/04-review/evidence/ui/playwright-report/index.html' &&
+      evidence.kind === 'log',
+    )).toBe(true)
+  })
 })

@@ -210,8 +210,21 @@ export const RuntimeWorktreeSchema = z.object({
   stale: z.boolean().optional(),
 })
 
+export const WorkflowPolicySchema = z.object({
+  branch_mode: z.string().optional(),
+  main_branch: z.string().optional(),
+  integration_branch: z.string().optional(),
+  impl_uses_integration_branch: z.boolean().optional(),
+  qa_worktree_enabled: z.boolean().optional(),
+  qa_stage_mode: z.string().optional(),
+  release_merge_to: z.string().optional(),
+  enforce_branch_guard: z.boolean().optional(),
+}).passthrough()
+
 export const ProjectRuntimeSchema = z.object({
   primary: z.string().nullable().optional(),
+  current_branch: z.string().nullable().optional(),
+  workflow: WorkflowPolicySchema.nullable().optional(),
   available_runners: z.array(RuntimeRunnerSchema).default([]),
   active_executions: z.array(RuntimeActivitySchema).default([]),
   worktrees: z.array(RuntimeWorktreeSchema).default([]),
@@ -239,6 +252,7 @@ export const ProjectRuntimeSchema = z.object({
 
 export const VulcanConfigSchema = z.object({
   runtime: ProjectRuntimeSchema.optional(),
+  workflow: WorkflowPolicySchema.optional(),
 })
 
 /** ProjectStats Zod 스키마. updated_at은 YYYY-MM-DD 형식을 검증한다. */
@@ -269,6 +283,14 @@ export const SessionDataSchema = z.object({
   completed: z.array(z.string()),
   pending: z.array(z.string()),
   blocked: z.array(z.string()),
+  branch_state: z.object({
+    main_branch: z.string().optional(),
+    integration_branch: z.string().optional(),
+    current_role: z.string().optional(),
+    current_branch: z.string().optional(),
+    started_at: z.string().optional(),
+    stage: z.string().optional(),
+  }).optional(),
   /** check-trace 실행 시 계산된 프로젝트 통계. stats 없는 session.json도 유효하다. */
   stats: ProjectStatsSchema.optional(),
 })

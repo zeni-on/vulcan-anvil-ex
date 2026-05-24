@@ -67,6 +67,9 @@
 - Gate 산출물 작성, 구현, 테스트, QA, 릴리즈 판단은 현재 Gate의 Run 문서가 먼저 생성된 뒤 진행한다.
 - 사용자가 "앱을 만들어줘", "기능을 구현해줘"처럼 end-to-end 목표를 말해도, 현재 Gate가 `phase0` 또는 `gate1`이면 요구사항/질문/승인 지점까지만 정리하고 구현으로 넘어가기 전에 사용자 승인을 받는다.
 - `gate2`, `gate3`, `impl`, `gate4`로 넘어가려면 이전 Gate의 완료 상태와 사용자 승인 또는 명시적인 진행 지시가 있어야 한다.
+- 기본 audit workflow에서 Phase 0~Gate 3 문서화는 `main`에서 진행하고, `impl` 진입 후에는 `python vulcan.py branch-start impl`로 `vulcan.config.json.workflow.integration_branch`(기본 `dev`)를 시작한다.
+- Build Wave, worker 구현, Gate 4 QA는 통합 브랜치에서 진행한다. `main`은 초기화와 승인된 릴리즈 기준선이며, Gate 5 승인 후 통합 브랜치를 `main`으로 반영한다.
+- 현재 브랜치/정책이 헷갈리면 `python vulcan.py branch-status`로 확인한다.
 - 필요한 경우 `python vulcan.py orchestrator-plan --goal "<목표>" --gate <gate>`로 계획 Run을 만든다.
 - Gate 4로 넘어갈 때 화면 검수, 별도 CLI 검증, GitHub 리뷰, Claude 교차 검토가 도움이 되면 사용자에게 handoff를 제안한다.
 - 사용자가 제안을 수락하면 `python vulcan.py handoff ...`로 handoff Run을 만들고, 수락하지 않으면 현재 작업 환경에서 가능한 검증을 계속한다.
@@ -96,6 +99,7 @@ docs/adapters/codex-gpt/skills/
 | 구현 전 계약 뼈대 생성 | `docs/adapters/codex-gpt/skills/implementation-scaffold.md` |
 | Build Wave 실행 | `docs/adapters/codex-gpt/skills/build-wave.md` |
 | 표준용어 또는 DB 명명 검토 | `docs/adapters/codex-gpt/skills/data-standard-review.md` |
+| Gate 4 QA 실행 및 증적 수집 | `docs/adapters/codex-gpt/skills/qa-execution.md` |
 | 승인된 설계 범위 안의 QA 결함 수정 | `docs/adapters/codex-gpt/skills/qa-fix-loop.md` |
 | 변경요청 또는 영향도 분석 | `docs/adapters/codex-gpt/skills/change-impact-analysis.md` |
 | 독립 검수 | `docs/adapters/codex-gpt/skills/independent-review.md` |
@@ -123,6 +127,10 @@ docs/adapters/codex-gpt/skills/
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 - Wave 완료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다.
 - 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.
+- Gate 4에서 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 테스트 실행, 로그, Playwright 증적, 후보 FIND/CR/ISSUE를 수집하고, 실패가 나오면 즉시 수정하지 않고 사용자와 처리 방향을 협의한다.
+- Gate 4 QA는 한 번에 전부 수행하지 않는다. `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나누며, `QA-000`이 차단되면 후속 QA를 진행하지 않고 사유를 보고한다.
+- `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하고 경로를 남긴다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
+- QA에서 승인된 설계 범위 안의 결함을 고치기로 결정한 뒤에만 별도 `qa-fix-loop` Run을 만든다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계

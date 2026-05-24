@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- Gate 4 QA 실행 전용 `qa-execution` skill을 추가했다. QA worker는 테스트 실행, 로그/Playwright 증적, 후보 FIND/CR/ISSUE 수집을 담당하고 소스 수정은 하지 않는다.
+- audit workflow용 브랜치 정책을 `vulcan.config.json.workflow`에 추가하고, `branch-status`/`branch-start impl` 명령을 추가했다.
+
+### Changed
+
+- Gate 4 기본 흐름을 QA 실행/증적 수집(`qa-execution`)과 승인된 결함 수정(`qa-fix-loop`)으로 분리했다.
+- `run-new --skill qa-execution`이 worker Run으로 생성되도록 Core/Adapter Run 입력 계약과 preflight 기준을 보강했다.
+- `impl`/Gate 4 작업은 통합 브랜치(`dev`)에서 실행하도록 Core/Adapter 문서와 `wave-start`/`run-exec` guard를 보강했다.
+- Gate 4 `QA-000`이 만든 QA workspace/worktree를 `QA-001`~`QA-003`이 계속 재사용하도록 Run 계약, skill, preflight 안내를 보강했다.
+
 ## 0.2.3 - 2026-05-24
 
 `0.2.3`은 worker 실행, Program Design 계약 준수 검증, Gate 4 QA 증적 가시성을 보강한 패치 릴리즈다. `0.2.2`의 Gate/Run 계약을 유지하면서 worker가 구현한 코드가 설계한 interface/class/public method 구조를 따르는지 확인하고, 대시보드에서 독립검수와 QA 로그를 더 직접적으로 확인할 수 있게 했다.

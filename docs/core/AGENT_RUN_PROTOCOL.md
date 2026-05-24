@@ -69,6 +69,8 @@ Gate 작업은 Run 문서 생성 뒤에 시작한다. `vulcan.py gate-start`는 
 
 Gate 산출물이 완료되어도 사용자 승인 전에는 `done`으로 닫지 않는다. 산출물 요약과 다음 Gate 진행 질문을 남긴 뒤 `python vulcan.py session --gate <현재 Gate> --status awaiting-approval`로 현재 Gate에 머무른다. 사용자가 명시 승인한 뒤에만 `python vulcan.py session --gate <현재 Gate> --status done --approved --approval-evidence "<승인 근거>"`를 실행해 다음 Gate로 전환한다.
 
+기본 audit workflow는 브랜치 경계를 둔다. `init`과 Phase 0~Gate 3 산출물은 `main`에서 진행한다. `impl`에 진입하면 `python vulcan.py branch-start impl`로 `vulcan.config.json.workflow.integration_branch`(기본 `dev`)를 만들거나 전환한다. Build Wave 구현, worker 실행, Gate 4 QA는 통합 브랜치에서 수행하고, Gate 5 승인 후 통합 브랜치를 `main`으로 반영한다. 현재 상태는 `python vulcan.py branch-status`로 확인한다.
+
 이 기본 Run은 Gate 작업의 시작 계약이다. 에이전트는 이 Run을 읽고 필요한 세부 persona Run을 제안하거나 `run-new`로 추가 생성한 뒤 산출물 작성, 구현, 테스트, QA를 진행한다. Gate 종료 시에는 시작 시 만든 Run 또는 세부 Run을 완료 보고 형식으로 갱신한다.
 
 | 입력 | 필수 여부 | 설명 |
@@ -270,6 +272,31 @@ Wave 검증은 Gate 3 테스트 설계 중 해당 Wave의 `target_contracts`에 
 전체 통합 시나리오, 화면 상태별 증적, QA Pass 판정은 Gate 4에서 수행한다.
 단, 하나의 Wave가 vertical slice를 완성했다면 해당 slice의 smoke 또는 제한된 E2E를 실행할 수 있다.
 이 경우에도 보고 문구는 "전체 통합 테스트 완료"가 아니라 "해당 Wave 범위의 계약 테스트와 가능한 회귀 검증 완료"로 쓴다.
+
+Gate 4 QA 검증은 가능하면 `qa-execution` worker Run으로 수행한다. QA worker는 테스트 명령, Playwright, 로그/증적 생성, 후보 FIND/CR/ISSUE 분류를 담당하고 소스코드 수정은 하지 않는다. 실패가 나오면 `Fail`, `Not Run`, `Skipped`, `environment_blocked` 중 하나로 기록하고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다. Orchestrator는 이 보고를 사용자와 검토한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 수정한다.
+
+Gate 4 QA는 전체를 한 Run에 밀어 넣지 않는다. 구현 소스가 통합됐다는 사실은 QA 입력일 뿐이며, QA 시작 시 다시 실행 가능성을 확인해야 한다. 권장 QA Run 순서는 다음과 같다.
+
+| QA Run | 목적 | 최소 산출물 |
+| --- | --- | --- |
+| `QA-000` 환경 준비/스모크 | 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시 확인 | 환경 체크 로그, 차단 여부, 다음 QA Run 진행 가능 여부 |
+| `QA-001` 명령 기반 검증 | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check` 실행 | `QA-CMD-*` 로그, exit code, Pass/Fail/Not Run |
+| `QA-002` UI/E2E 증적 | 통합된 main 또는 QA worktree에서 서버 기동 후 UI-ID별 Playwright screenshot/log/trace 생성 | `UI-*` screenshot, Playwright report/trace, UI-ID 매핑 |
+| `QA-003` 결과 정리/판정 후보 | QA Finding/Test Result 정리, 추적표 반영 후보, Gate4 완료 판단 필요 항목 작성 | `DOC-QA-G4-001`, `DOC-QA-G4-002`, FIND/CR/ISSUE, 승인 질문 후보 |
+
+QA workspace는 `QA-000`에서 한 번 정한다. `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 detached QA worktree 경로를 Run 결과에 기록해야 한다. `QA-001`, `QA-002`, `QA-003`은 그 경로를 기준으로 실행하며, 임의로 다른 workspace를 만들거나 main/dev 작업공간으로 섞어 실행하지 않는다. `QA-000` workspace가 없거나 차단되면 후속 QA Run은 `environment_blocked` 또는 Orchestrator 결정 필요 항목으로 반환한다.
+
+`QA-000`의 최소 체크리스트는 다음이다.
+
+- Gradle wrapper 또는 프로젝트 지정 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한가
+- backend 최소 smoke test, test discovery, 또는 컴파일 확인이 가능한가
+- frontend 의존성이 설치되어 있거나 `npm ci`/`npm install`을 실행할 수 있는가
+- Playwright package와 browser cache가 있거나 `npx playwright install`을 실행할 수 있는가
+- backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)가 사용 가능한가
+- SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는가
+- 필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리가 준비되어 있는가
+
+`QA-000`이 `environment_blocked` 또는 `Fail`이면 `QA-001`/`QA-002`를 억지로 진행하지 않는다. `QA-003`은 QA Pass를 확정하지 않고 Orchestrator가 사용자와 협의할 판정 후보만 정리한다.
 
 Implementation Plan이 Wave 4개를 정의했다면, 실행 기록은 보통 다음처럼 1:N 구조가 된다.
 

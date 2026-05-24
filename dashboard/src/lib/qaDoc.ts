@@ -154,7 +154,7 @@ function isLogPath(value: string): boolean {
 }
 
 function isEvidencePath(value: string): boolean {
-  const normalized = value.replace(/\\/g, '/')
+  const normalized = normalizeEvidenceCandidate(value)
   return (
     isImagePath(normalized) ||
     isLogPath(normalized) ||
@@ -163,16 +163,30 @@ function isEvidencePath(value: string): boolean {
 }
 
 function evidenceKindForPath(value: string): QaEvidenceRow['kind'] {
-  if (isImagePath(value)) return 'image'
-  if (isLogPath(value) || value.replace(/\\/g, '/').includes('/logs/')) return 'log'
+  const normalized = normalizeEvidenceCandidate(value)
+  if (isImagePath(normalized)) return 'image'
+  if (isLogPath(normalized) || normalized.includes('/logs/')) return 'log'
   return 'file'
 }
 
+function normalizeEvidenceCandidate(value: string): string {
+  const markdownLink = value.match(/\[[^\]]*]\(([^)]+)\)/)
+  const target = markdownLink?.[1] ?? value
+  return target
+    .replace(/\\/g, '/')
+    .replace(/^`|`$/g, '')
+    .replace(/^<|>$/g, '')
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/[).,;]+$/g, '')
+    .trim()
+}
+
 function splitEvidencePaths(value: string): string[] {
-  return value
+  const normalized = value.replace(/\[[^\]]*]\(([^)]+)\)/g, '$1')
+  return normalized
     .split(/[,，\n]/)
     .map((item) => item.trim())
-    .map((item) => item.replace(/^`|`$/g, ''))
+    .map(normalizeEvidenceCandidate)
     .filter(isEvidencePath)
 }
 
@@ -181,7 +195,11 @@ function evidenceFileName(value: string): string {
 }
 
 function resolveEvidencePath(value: string, knownEvidences: QaEvidenceRow[]): string {
-  const normalized = value.replace(/\\/g, '/')
+  const normalized = normalizeEvidenceCandidate(value)
+  if (normalized.startsWith('/docs/')) return normalized.slice(1)
+  if (normalized.startsWith('docs/')) return normalized
+  if (normalized.startsWith('evidence/')) return `docs/artifacts/04-review/${normalized}`
+  if (/^(ui|logs|contract)\//i.test(normalized)) return `docs/artifacts/04-review/evidence/${normalized}`
   if (normalized.includes('/')) return normalized
 
   const fileName = evidenceFileName(normalized)
@@ -253,7 +271,7 @@ export function parseQaDoc(content: string): QaDocModel {
   const resultTable = testResultTable ?? requirementResultTable ?? executionResultTable
   const reviewEvidenceTable = firstTable(tables, ['UI-ID', '설명', '캡처 경로'])
   const resultEvidenceTable = firstTable(tables, ['증적 ID', '화면', '경로'])
-    ?? firstTable(tables, ['증적 ID', '관련 UI', '파일', '설명'])
+    ?? firstTable(tables, ['증적 ID', '관련 UI', '파일'])
   const title = extractMetadata(content, 'title_ko') ?? 'QA 문서'
   const documentId = extractMetadata(content, 'document_id') ?? ''
   const normalizedTitle = `${title} ${extractMetadata(content, 'title') ?? ''} ${content.slice(0, 120)}`.toLowerCase()
@@ -265,27 +283,34 @@ export function parseQaDoc(content: string): QaDocModel {
         : 'qa'
 
   const tableEvidences = [
-    ...(reviewEvidenceTable?.rows ?? []).map((row) => ({
-      id: getCell(row, ['UI-ID']),
-      label: getCell(row, ['설명']),
-      path: getCell(row, ['캡처 경로']),
-      kind: evidenceKindForPath(getCell(row, ['캡처 경로'])),
-    })),
-    ...(resultEvidenceTable?.rows ?? []).map((row) => ({
-      id: getCell(row, ['증적 ID']),
-      label: getCell(row, ['화면', '관련 UI', '설명', '요약']),
-      path: getCell(row, ['경로', '파일']),
-      kind: evidenceKindForPath(getCell(row, ['경로', '파일'])),
-    })),
+    ...(reviewEvidenceTable?.rows ?? []).map((row) => {
+      const path = resolveEvidencePath(getCell(row, ['캡처 경로']), [])
+      return {
+        id: getCell(row, ['UI-ID']),
+        label: getCell(row, ['설명']),
+        path,
+        kind: evidenceKindForPath(path),
+      }
+    }),
+    ...(resultEvidenceTable?.rows ?? []).map((row) => {
+      const path = resolveEvidencePath(getCell(row, ['경로', '파일']), [])
+      return {
+        id: getCell(row, ['증적 ID']),
+        label: getCell(row, ['상태/시나리오', '화면', '관련 UI', '설명', '요약']),
+        path,
+        kind: evidenceKindForPath(path),
+      }
+    }),
   ].filter((row) => isEvidencePath(row.path))
 
   const evidenceRows = [
     ...(testResultTable?.rows ?? []),
     ...(requirementResultTable?.rows ?? []),
+    ...(executionResultTable?.rows ?? []),
   ]
   const resultEvidences = evidenceRows.flatMap((row) => {
     const rowId = getCell(row, ['테스트 ID', 'REQ-ID', '검증 ID'])
-    return splitEvidencePaths(getCell(row, ['증적'])).map((path, index) => ({
+    return splitEvidencePaths(getCell(row, ['증적', '로그/증적', '파일', '경로'])).map((path, index) => ({
       id: index === 0 ? rowId : `${rowId}-${index + 1}`,
       label: rowId,
       path: resolveEvidencePath(path, tableEvidences),
@@ -359,7 +384,7 @@ export function parseQaDoc(content: string): QaDocModel {
         target: '-',
         method: getCell(row, ['명령/방법']),
         result: getCell(row, ['결과']),
-        evidence: getCell(row, ['요약']),
+        evidence: getCell(row, ['로그/증적', '증적', '파일', '경로']),
         kind: 'execution' as const,
       })),
     ],

@@ -142,6 +142,8 @@ export class LocalDataSource implements DataSource {
 
       return {
         ...runtime,
+        current_branch: this.readGitBranch(this.resolvedBasePath),
+        workflow: result.data.workflow ?? runtime.workflow ?? null,
         active_executions: activeExecutions,
         worktrees: this.readRuntimeWorktrees(activeExecutions),
       }

@@ -1,5 +1,5 @@
 {
-  "version": "0.2.2",
+  "version": "0.2.3",
   "runtime": {
     "primary": null,
     "available_runners": [
@@ -24,6 +24,16 @@
         "version": "1.0.0"
       }
     ]
+  },
+  "workflow": {
+    "branch_mode": "audit",
+    "main_branch": "main",
+    "integration_branch": "dev",
+    "impl_uses_integration_branch": true,
+    "qa_worktree_enabled": true,
+    "qa_stage_mode": "staged",
+    "release_merge_to": "main",
+    "enforce_branch_guard": true
   },
   "review": {
     "independent_enabled": true,

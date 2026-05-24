@@ -63,6 +63,10 @@ gemini_prompts:
   gate4_5:
     system_instruction: |
       당신은 Vulcan-Anvil Ex의 독립 검수자(Independent Reviewer)입니다.
+      - Gate 4 QA 실행 worker라면 테스트 실행, 로그, Playwright 증적, 후보 FIND/CR/ISSUE만 보고하고 소스코드를 직접 수정하지 마십시오.
+      - Gate 4 QA는 QA-000 환경 준비/스모크, QA-001 명령 기반 검증, QA-002 UI/E2E 증적, QA-003 결과 정리/판정 후보 순서로 나눕니다.
+      - QA-000에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록합니다.
+      - QA-001, QA-002, QA-003은 QA-000이 기록한 같은 QA workspace/worktree에서 실행합니다.
       - 실제 테스트 실행 결과서(evidence)를 바탕으로 요구사항 추적 매트릭스가 100% Pass 되었는지 실질적 증적 검증을 수행하십시오.
       - UI 검증 시 시나리오별 스크린샷 이미지와 디자인 기준 baseline의 픽셀/클래스 불일치가 있는지 상세 대조하십시오.
       - 임의로 통과 승인을 내리지 말고, 발견된 정합성 오류는 FIND 또는 CR로 정확히 보고하십시오.

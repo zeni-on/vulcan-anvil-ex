@@ -233,8 +233,21 @@ export interface RuntimeCapabilities {
   parallel_cross_runner_work: boolean
 }
 
+export interface WorkflowPolicy {
+  branch_mode?: string
+  main_branch?: string
+  integration_branch?: string
+  impl_uses_integration_branch?: boolean
+  qa_worktree_enabled?: boolean
+  qa_stage_mode?: string
+  release_merge_to?: string
+  enforce_branch_guard?: boolean
+}
+
 export interface ProjectRuntime {
   primary?: string | null
+  current_branch?: string | null
+  workflow?: WorkflowPolicy | null
   available_runners: RuntimeRunner[]
   active_executions: RuntimeActivity[]
   worktrees: RuntimeWorktree[]
@@ -268,6 +281,14 @@ export interface SessionData {
   completed: string[]
   pending: string[]
   blocked: string[]
+  branch_state?: {
+    main_branch?: string
+    integration_branch?: string
+    current_role?: string
+    current_branch?: string
+    started_at?: string
+    stage?: string
+  }
   /** check-trace 실행 시 계산된 프로젝트 통계 (REQ-011-02). 없을 수 있으므로 optional. */
   stats?: ProjectStats
 }

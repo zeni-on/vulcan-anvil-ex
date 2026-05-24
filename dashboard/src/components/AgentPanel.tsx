@@ -319,6 +319,42 @@ function WorktreeRow({ worktree }: { worktree: RuntimeWorktree }) {
   )
 }
 
+function WorkspaceSummary({ runtime }: { runtime: ProjectRuntime | null }) {
+  const branch = runtime?.current_branch
+  const workflow = runtime?.workflow
+  if (!branch && !workflow) return null
+
+  const main = workflow?.main_branch ?? 'main'
+  const integration = workflow?.integration_branch ?? 'dev'
+  const role = branch === main ? 'baseline' : branch === integration ? 'integration' : 'worktree'
+  const qaEnabled = workflow?.qa_worktree_enabled
+
+  return (
+    <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+        작업공간
+      </h3>
+      <div className="space-y-1.5 text-xs">
+        <div className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-900/60 px-2 py-1.5">
+          <span className="inline-flex min-w-0 items-center gap-1.5 text-slate-400">
+            <GitBranch className="h-3.5 w-3.5 flex-none text-cyan-300" aria-hidden="true" />
+            <span className="truncate">{branch ?? 'branch unknown'}</span>
+          </span>
+          <span className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300">
+            {role}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-500">
+          <span className="truncate">main: {main}</span>
+          <span className="truncate">dev: {integration}</span>
+          <span className="truncate">workflow: {workflow?.branch_mode ?? 'single'}</span>
+          <span className="truncate">QA worktree: {qaEnabled ? 'on' : 'off'}</span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function AgentPanel({
   runtime,
   isLoading,
@@ -341,6 +377,7 @@ export default function AgentPanel({
 
   return (
     <div className="space-y-4" data-testid="agent-panel">
+      <WorkspaceSummary runtime={runtime} />
       <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={(activity) => setSelectedActivityKey(activityKey(activity))} />
       <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivityKey(null)} onRefresh={() => router.refresh()} />
 

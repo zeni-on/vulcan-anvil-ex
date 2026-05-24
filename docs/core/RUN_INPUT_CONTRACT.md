@@ -68,6 +68,7 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 | `dependency_install_policy` | Node/Playwright 같은 외부 의존성 설치가 worker self-check에 필요할 때. cache env와 설치 차단 시 보고 기준을 명시한다. |
 | `ui_evidence_policy` | UI 테스트, 화면 캡처, Playwright 증적이 이번 Run의 직접 결과일 때 |
 | `ui_implementation_contract_policy` | UIREF/ui-baseline을 기준으로 구현 또는 검수할 때 |
+| `qa_execution_policy` | Gate 4에서 worker가 테스트 실행, 로그, 화면 증적, 후보 FIND/CR/ISSUE를 수집할 때 |
 | `gate_exit_policy` | Orchestrator Run이 Gate 종료와 사용자 승인 질문을 직접 다룰 때 |
 | `worker_execution_policy` | 기본 worker 금지사항을 Run 안에 명시적으로 재기입해야 할 때 |
 | `question_policy` / `security_policy` | 프로젝트별 질문/보안 예외가 기본 Core 규칙보다 더 좁거나 다를 때 |
@@ -555,7 +556,59 @@ worker는 다음 원칙을 따른다.
 - Node/Playwright 명령이 필요하면 `npm_config_cache`와 `PLAYWRIGHT_BROWSERS_PATH`를 사용한다.
 - 권한, 인증, 네트워크, registry, cache 문제로 설치 또는 실행이 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
 - 실패한 명령, cwd, exit code, log path, Orchestrator 재실행 명령을 남긴다.
-- 화면 서버 실행과 Playwright 최종 증적은 통합된 main 작업공간 또는 별도 QA worktree에서 Gate 4 QA 입력으로 판정한다.
+- 화면 서버 실행과 Playwright 최종 증적은 통합된 dev 브랜치 기준의 `QA-000` QA workspace에서 Gate 4 QA 입력으로 판정한다.
+
+## 9.2 Gate 4 QA 실행 worker 경계
+
+`skill: qa-execution` 또는 `persona: evidence`인 Gate 4 worker는 테스트 실행자와 증적 수집자다.
+이 worker는 결함 수정자가 아니다.
+
+QA 실행 worker는 다음을 수행할 수 있다.
+
+- Gate 3 테스트케이스와 개발표준정의서의 필수 검증 명령 확인
+- backend/frontend test, lint, build, `check-contract`, Playwright 실행
+- 로그, screenshot, trace, JSON report, 테스트 결과서 초안 작성
+- 후보 `FIND`, `CR`, `ISSUE`, `environment_blocked`, `Not Run` 기록
+
+Gate 4 QA 실행은 다음 QA Run 순서로 쪼갠다.
+
+| QA Run | 목적 | Worker 입력 계약에 포함할 것 |
+| --- | --- | --- |
+| `QA-000` | 환경 준비/스모크 | 통합 소스 존재 확인, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시, 차단 시 후속 QA 중단 조건 |
+| `QA-001` | 명령 기반 검증 | Gate 3/개발표준의 필수 명령, `check-contract`, `check-trace`, `run-check`, 로그 파일 경로, exit code 기록 기준 |
+| `QA-002` | UI/E2E 증적 | UI-ID 목록, viewport, 서버 기동 절차, Playwright screenshot/log/trace 경로, 상태/시나리오별 1:1 증적 기준 |
+| `QA-003` | 결과 정리/판정 후보 | QA Finding/Test Result 갱신 범위, 추적표 반영 후보, FIND/CR/ISSUE 후보, Orchestrator 결정 필요 항목 |
+
+`QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하는 Run이다.
+`QA-000` Run 결과에는 `qa_workspace_path`, 기준 브랜치/커밋, 의존성 설치 상태, 서버/포트/DB 준비 상태를 남긴다.
+`QA-001`, `QA-002`, `QA-003` Run 입력 계약에는 `QA-000`이 기록한 같은 `qa_workspace_path`를 포함해야 한다.
+후속 QA Run은 새 workspace를 임의로 만들지 않고 같은 workspace에서 실행한다.
+
+`QA-000` Run 입력 계약에는 다음 체크리스트를 포함한다.
+
+| 확인 항목 | 작성 기준 |
+| --- | --- |
+| Backend 빌드 도구 | Gradle wrapper 또는 프로젝트 지정 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 기록한다. |
+| Backend smoke | backend 최소 smoke test, test discovery, 컴파일 확인 중 하나 이상을 실행하거나 미실행 사유를 기록한다. |
+| Frontend 의존성 | `node_modules` 존재 여부 또는 `npm ci`/`npm install` 실행 가능 여부를 기록한다. |
+| Playwright | `@playwright/test`와 browser cache 존재 여부 또는 `npx playwright install` 가능 여부를 기록한다. |
+| 포트 | backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)의 사용 가능 여부를 기록한다. |
+| DB | SQLite 또는 프로젝트 지정 DB 파일 생성/접근 가능 여부를 기록한다. |
+| 환경변수/출력 경로 | test profile, 필수 환경변수, 임시 디렉터리, 로그/증적 출력 디렉터리를 기록한다. |
+
+하나의 `qa-execution` Run이 Gate 4 전체를 모두 수행한다고 쓰지 않는다.
+`QA-000`이 통과하지 않으면 `QA-001`/`QA-002`를 실행하지 않고 `environment_blocked` 또는 `Not Run`으로 반환한다.
+
+QA 실행 worker는 다음을 수행하지 않는다.
+
+- 소스코드 수정
+- 새 API, 새 메소드, 새 화면 상태 생성
+- `qa-fix-loop`까지 이어서 수행
+- QA Pass, Gate 완료, 릴리즈 가능 여부 확정
+
+실패가 나오면 worker는 즉시 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다.
+Orchestrator는 사용자와 처리 방향을 정한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 보낸다.
+요구사항/API/DB/보안/화면 계약 변경이 필요하면 `CR` 후보로 분류한다.
 
 ## 10. Worker 전달 프롬프트 기본형
 
@@ -579,9 +632,10 @@ Runner 종류가 Codex, Claude, Gemini 중 무엇이든 아래 Run 입력 계약
 10. 가능한 경우 verification.commands를 self-check로 실행하고 결과를 보고한다.
 11. Node/Playwright self-check가 worker 환경 문제로 막히면 environment_blocked 또는 not_run으로 기록하고 Orchestrator 재실행 명령을 남긴다.
 12. UI 검증이 있으면 상태/시나리오별 UI-ID와 캡처 증적을 1:1로 연결한다. 단, worker worktree의 Playwright는 보조 검증이며 최종 UI 증적은 Gate 4 통합본 기준이다.
-13. 범위가 너무 커서 완결 구현이 어렵다면 중간 구현을 완료 처리하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
-14. Gate 전환, session 변경, 최종 승인 판단을 하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
-15. RUN_OUTPUT_CONTRACT 형식으로 결과를 보고한다.
+13. Gate 4 QA 실행 worker라면 실패를 발견해도 소스코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남긴다.
+14. 범위가 너무 커서 완결 구현이 어렵다면 중간 구현을 완료 처리하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
+15. Gate 전환, session 변경, 최종 승인 판단을 하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
+16. RUN_OUTPUT_CONTRACT 형식으로 결과를 보고한다.
 
 금지:
 - docs/ref-docs/를 읽거나 커밋하지 않는다.
@@ -590,6 +644,7 @@ Runner 종류가 Codex, Claude, Gemini 중 무엇이든 아래 Run 입력 계약
 - 관련 없는 리팩터링을 하지 않는다.
 - 테스트를 실행하지 못했으면 통과로 보고하지 않는다.
 - worker self-check 결과를 최종 테스트 결과로 확정하지 않는다.
+- QA 실행 worker가 결함 수정까지 이어서 수행하지 않는다.
 - 추적표/결과서/session/Gate 갱신이 필요하면 Orchestrator 결정 필요 항목으로 반환한다.
 - 시간이 끝났다는 이유로 빌드/테스트가 깨진 중간 구현을 완료 처리하지 않는다.
 - 기대 화면과 다른 캡처를 UI 증적으로 Pass 처리하지 않는다.
@@ -642,6 +697,16 @@ related_ids: [REQ-005]
 
 이 경우 Orchestrator 또는 도구는 추적표와 산출물을 읽어 완전 입력으로 확장한다.
 완전 입력을 만들 수 없으면 `Blocked` 상태로 질문한다.
+
+## 12.1 Branch/Worktree 기준
+
+기본 audit workflow에서 worker Run은 브랜치 경계를 전제로 작성한다.
+
+- Phase 0~Gate 3 산출물 Run은 `main` 기준으로 작성한다.
+- `impl`의 `implementation-plan`, `implementation-scaffold`, `build-wave` Run은 `dev` 통합 브랜치 기준으로 작성한다.
+- Gate 4의 `qa-execution` Run은 통합된 `dev` 또는 `dev` 기준 QA worktree에서 실행하는 것으로 작성한다.
+- Run 입력 계약에는 브랜치 전환 명령을 worker 작업으로 넣지 않는다. Orchestrator가 `python vulcan.py branch-start impl`과 `python vulcan.py branch-status`로 준비한다.
+- worker는 feature 브랜치/worktree에서 작업할 수 있지만, 최종 통합 판단과 `main` 반영 판단은 Orchestrator와 Gate 5 승인 절차가 담당한다.
 
 ## 13. 통합 규칙
 

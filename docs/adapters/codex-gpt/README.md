@@ -83,6 +83,7 @@ Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
 | 추적성 검토 | `skills/traceability-review.md` |
 | 보안 검토 | `skills/security-review.md` |
 | 표준용어/DB명세 검토 | `skills/data-standard-review.md` |
+| Gate 4 QA 실행/증적 수집 | `skills/qa-execution.md` |
 | QA 결함 수정 루프 | `skills/qa-fix-loop.md` |
 | 변경요청 영향도 분석 | `skills/change-impact-analysis.md` |
 

@@ -63,6 +63,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 | G3 Test Planning | `test-design` | `security-review`, `screen-review`, `ui-review`, `review` |
 | Impl Planning | `build-planning` | `review`, `security-review`, `ui-review`, `development-review` |
 | Impl Execution | `build` | `evidence`, `security-review`, `screen-review`, `ui-review`, `development-review`, `review` |
+| G4 QA | `evidence` | `review`, `screen-review`, `ui-review`, `security-review`, `development-review` |
 | G5 Approval | `release` | `review`, `documentation` |
 | Change Request | `change-control` | 영향 범위에 따라 `requirements`, `design`, `build`, `review` |
 
@@ -127,7 +128,7 @@ completion_criteria:
 | `test-design` | 테스트를 위한 테스트를 만들지 않는다. AC, SEC, NREQ와 연결되지 않은 테스트는 만들지 않는다. |
 | `build-planning` | 코드를 작성하지 않는다. 구현 순서, Wave, 위임, 검증, 커밋 단위만 계획한다. |
 | `build` | 승인된 설계 범위 밖의 요구사항을 임의로 추가하지 않는다. 화면 구현 시 UI Implementation Contract를 무시하고 재설계하지 않는다. |
-| `evidence` | 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다. |
+| `evidence` | 실행하지 않은 테스트나 보지 않은 화면을 증적으로 기록하지 않는다. Gate 4 QA 실행 중 실패가 나오면 직접 수정하지 않고 원인, 재현 명령, 로그, 영향 ID를 남긴다. |
 | `review` | 단순 취향성 리팩터링을 필수 결함으로 올리지 않는다. |
 | `change-control` | 영향도 분석 없이 다시 진행할 Gate나 scope를 결정하지 않는다. |
 

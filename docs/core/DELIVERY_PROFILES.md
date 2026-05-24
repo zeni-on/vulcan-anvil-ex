@@ -158,6 +158,10 @@ python vulcan.py run-new --gate gate2 --skill data-standard-review --title "프�
 python vulcan.py run-new --gate gate2 --skill development-standard-review --title "개발표준 검토" --related-ids NREQ-001,SEC-001,PGM-001
 python vulcan.py run-new --gate gate3 --skill traceability-review --title "테스트케이스 전개 검토" --related-ids AC-001,UT-001,IT-001
 python vulcan.py run-new --gate impl --skill implementation-plan --title "Build Wave 계획" --related-ids REQ-001,PGM-001,UT-001
+python vulcan.py run-new --gate gate4 --skill qa-execution --title "QA-000 Gate 4 환경 준비 및 smoke" --related-ids NREQ-002,IT-BUILD-001
+python vulcan.py run-new --gate gate4 --skill qa-execution --title "QA-001 Gate 4 명령 기반 검증" --related-ids UT-001,IT-001,NREQ-001,NREQ-002
+python vulcan.py run-new --gate gate4 --skill qa-execution --title "QA-002 Gate 4 UI/E2E 증적 수집" --related-ids UI-001,UI-002
+python vulcan.py run-new --gate gate4 --skill qa-execution --title "QA-003 Gate 4 결과 정리 및 판정 후보" --related-ids RV-TEST-001,NREQ-001,NREQ-002
 python vulcan.py run-new --gate gate4 --skill qa-fix-loop --title "QA 결함 수정 루프" --related-ids FIND-001,UI-001
 python vulcan.py run-new --gate gate5 --skill traceability-review --title "릴리즈 승인 검토" --related-ids REQ-001,RUN-001,CR-001
 ```
