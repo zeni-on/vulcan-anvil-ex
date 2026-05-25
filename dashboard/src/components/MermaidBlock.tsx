@@ -101,6 +101,23 @@ function luminance(r: number, g: number, b: number): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 }
 
+function forceDarkPanelText(container: HTMLElement) {
+  container
+    .querySelectorAll<SVGElement>(
+      'svg text, svg tspan, svg .label, svg .labelText, svg .nodeLabel, svg .edgeLabel, svg .cluster-label, svg foreignObject, svg foreignObject *',
+    )
+    .forEach((text) => {
+      text.style.fill = '#f9fafb'
+      text.style.color = '#f9fafb'
+    })
+
+  container
+    .querySelectorAll<SVGElement>('svg .edgeLabel rect, svg .labelBkg, svg .label-container')
+    .forEach((box) => {
+      box.style.fill = '#111827'
+    })
+}
+
 /**
  * 렌더된 SVG를 순회하며 `.node` 안의 도형 fill이 밝은 색이면
  * 같은 노드 안의 텍스트를 어둡게 강제한다.
@@ -142,6 +159,7 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
         const { svg } = await mermaid.render(idRef.current, code)
         if (cancelled || !containerRef.current) return
         containerRef.current.innerHTML = svg
+        forceDarkPanelText(containerRef.current)
         fixLightNodes(containerRef.current)
         setRendered(true)
       } catch (e) {

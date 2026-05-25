@@ -3,6 +3,23 @@
 import { useEffect } from 'react'
 import mermaid from 'mermaid'
 
+function forceDarkPanelText(container: HTMLElement) {
+  container
+    .querySelectorAll<SVGElement>(
+      'svg text, svg tspan, svg .label, svg .labelText, svg .nodeLabel, svg .edgeLabel, svg .cluster-label, svg foreignObject, svg foreignObject *',
+    )
+    .forEach((text) => {
+      text.style.fill = '#f9fafb'
+      text.style.color = '#f9fafb'
+    })
+
+  container
+    .querySelectorAll<SVGElement>('svg .edgeLabel rect, svg .labelBkg, svg .label-container')
+    .forEach((box) => {
+      box.style.fill = '#111827'
+    })
+}
+
 export default function MermaidRenderer() {
   useEffect(() => {
     mermaid.initialize({
@@ -32,6 +49,7 @@ export default function MermaidRenderer() {
         const wrapper = document.createElement('div')
         wrapper.className = 'my-6 flex justify-center overflow-x-auto rounded-lg bg-gray-900 p-4'
         wrapper.innerHTML = svg
+        forceDarkPanelText(wrapper)
         pre.replaceWith(wrapper)
       } catch (e) {
         console.error('[MermaidRenderer] 렌더 실패:', e)
