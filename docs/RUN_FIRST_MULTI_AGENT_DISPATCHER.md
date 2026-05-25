@@ -1,5 +1,9 @@
 # Run-first Multi-Agent Dispatcher 구상
 
+> 상태: 장기 설계 메모.
+> `0.3.0` 기준으로 `run-exec`, `agent-run --mode work`, `agent-run --mode review`, worktree 실행, worker 로그/증적 수집의 일부는 이미 구현되었다.
+> 이 문서는 자동 큐, fan-in review, PR cross validation, lock/worktree 고도화를 검토할 때 참고한다. 현재 우선순위는 `docs/ROADMAP.md`를 따른다.
+
 ## 목적
 
 Vulcan-Anvil Ex를 현재의 "멀티 런타임 대응 단일 오케스트레이터" 구조에서, Run을 중심으로 여러 에이전트가 독립적으로 작업하는 "멀티 에이전트 작업 운영체계"로 발전시키기 위한 설계 메모다.

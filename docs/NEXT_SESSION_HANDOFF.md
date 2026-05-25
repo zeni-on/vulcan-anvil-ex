@@ -1,39 +1,55 @@
 # 다음 세션 인수인계 메모
 
-> 작성일: 2026-04-28
-> 목적: 다른 컴퓨터나 다른 대화에서 Vulcan-Anvil Ex 작업을 이어가기 위한 맥락 요약.
+> 작성일: 2026-05-26
+> 목적: 다른 대화나 다른 런타임에서 Vulcan-Anvil Ex 작업을 이어갈 때 현재 기준점을 빠르게 맞춘다.
 
-## 현재 방향
+## 현재 기준
 
-Vulcan-Anvil Ex는 기존 Claude 전용 Vulcan-Anvil을 확장해, 여러 AI 도구와 사람이 함께 사용할 수 있는 개발 운영 프레임워크로 만든다.
+Vulcan-Anvil Ex는 `0.3.0` 기준 Experimental 상태다. 현재 방향은 "문서와 Gate 중심의 audit workflow"를 유지하면서, worker 실행, staged QA, Program Design 계약 검증, Dashboard 관제를 실제 프로젝트에서 반복 가능하게 만드는 것이다.
 
-중요한 관점:
+작업을 이어갈 때는 다음 문서를 먼저 본다.
 
-- 특정 모델에 종속되지 않는다.
-- Core와 Adapter를 분리한다.
-- `.claude`는 Core가 아니라 Claude Adapter다.
-- Codex, Claude, Cursor, Copilot 등은 Core를 실행하는 도구가 될 수 있다.
-- Ex의 중심은 산출물, 추적성, Gate, 승인, Dashboard다.
-- Phase 0와 상위 설계는 사용자와 메인 에이전트가 오래 대화하며 아이디어와 방향을 함께 만드는 단계다.
-- 이후 요구사항, 설계, 구현, 테스트, 문서 갱신은 에이전트가 수행할 수 있어야 한다.
-- 최종 검수와 승인은 사용자 또는 지정된 승인자가 담당한다.
+1. `AGENTS.md`
+2. `docs/ROADMAP.md`
+3. `docs/CONCEPTS.md`
+4. `docs/GETTING_STARTED.md`
+5. `docs/core/AGENT_RUN_PROTOCOL.md`
+6. `docs/core/RUN_INPUT_CONTRACT.md`
+7. `docs/core/RUN_OUTPUT_CONTRACT.md`
 
-## 현재까지 만든 문서
+## 중요한 운영 원칙
 
-- `docs/VULCAN_ANVIL_EX_DIRECTION.md`
-- `docs/ARTIFACT_TEMPLATE_ROADMAP.md`
+- Phase 0~Gate 3는 기본적으로 `main` 기준 문서화와 승인 흐름이다.
+- `impl` 진입 후에는 `python vulcan.py branch-start impl`로 `vulcan.config.json.workflow.integration_branch`를 시작한다.
+- Build Wave 구현과 Gate 4 QA는 통합 브랜치에서 진행한다.
+- 신규 개발 또는 골격이 부족한 프로젝트는 기능 구현 전에 `BW-000 implementation-scaffold`로 빌드 가능한 skeleton을 먼저 만든다.
+- Orchestrator는 구현 주 작성자가 아니다. 실제 코드, 테스트, UI, API 구현은 worker/subagent/`agent-run --mode work`로 위임하는 것이 기본값이다.
+- Gate 4 QA는 한 번에 몰아서 하지 않는다. `QA-000` 환경 준비, `QA-001` 명령 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리로 나눈다.
+- `QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace를 재사용한다.
+- QA worker는 실패를 발견하면 즉시 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남긴다.
+- Program Design에 class/interface/public method 계약이 있으면 `python vulcan.py check-contract`로 코드 구조와 대조한다.
+- 전역 memory, 과거 샘플, 다른 프로젝트 기록은 현재 프로젝트 사실의 근거가 아니다.
 
-## 다음에 이어갈 작업
+## 다음에 우선 볼 작업
 
-1. 작년 감리 산출물 목록을 수집한다.
-2. 산출물을 Phase/Gate 기준으로 분류한다.
-3. 각 문서의 필수 항목, 검토 기준, 승인 메타데이터를 정의한다.
-4. 에이전트가 작성할 수 있는 템플릿 구조로 바꾼다.
-5. 우선 `요구사항정의서` 템플릿부터 만든다.
+현재 우선순위는 `docs/ROADMAP.md`를 따른다.
 
-## 다음 대화에서 Codex에게 전달하면 좋은 문장
+1. 샘플 프로젝트 회귀 검증 하네스
+2. Run 문서 품질 게이트 강화
+3. Gate 4 staged QA 안정화
+4. Delivery Profile 구체화
+5. 제출용 DOCX/XLSX/HWPX 생성 전략
+6. Dashboard 관제성 개선
+7. Multi-Agent Dispatcher 장기 구상
 
-다음과 같이 말하면 맥락을 빠르게 이어갈 수 있다.
+## 다음 대화에서 시작하기 좋은 문장
 
-> Vulcan-Anvil Ex 작업을 이어가자. `docs/VULCAN_ANVIL_EX_DIRECTION.md`, `docs/ARTIFACT_TEMPLATE_ROADMAP.md`, `docs/NEXT_SESSION_HANDOFF.md`를 먼저 읽고, 감리 산출물 템플릿 설계를 계속 진행해줘.
+```text
+Vulcan-Anvil Ex 작업을 이어가자. AGENTS.md, docs/ROADMAP.md, docs/CONCEPTS.md, docs/GETTING_STARTED.md를 먼저 확인하고, 현재 우선순위 기준으로 다음 보강 작업을 진행해줘.
+```
 
+## 참고
+
+- `docs/ARTIFACT_TEMPLATE_ROADMAP.md`는 초기 산출물 템플릿 구상이다.
+- `docs/RUN_FIRST_MULTI_AGENT_DISPATCHER.md`는 dispatcher 장기 구상이다.
+- 최신 우선순위 판단은 `docs/ROADMAP.md`를 기준으로 한다.
