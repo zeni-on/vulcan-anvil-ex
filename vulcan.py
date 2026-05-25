@@ -130,6 +130,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md", "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"),
     ("docs/templates/TRACEABILITY_MATRIX_TEMPLATE.md", "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"),
     ("docs/templates/SW_ARCHITECTURE_TEMPLATE.md", "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md"),
+    ("docs/templates/DEPLOYMENT_INFRASTRUCTURE_ARCHITECTURE_TEMPLATE.md", "docs/artifacts/02-design/architecture/DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md"),
     ("docs/templates/FUNCTION_SPEC_TEMPLATE.md", "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md"),
     ("docs/templates/PROGRAM_SPEC_TEMPLATE.md", "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md"),
     ("docs/templates/API_SPEC_TEMPLATE.md", "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md"),
@@ -2587,14 +2588,27 @@ def find_screen_spec_file(project_dir="."):
 
 
 def find_architecture_spec_file(project_dir="."):
-    return find_artifact_file(
+    return find_first_existing(project_dir, [
+        os.path.join("docs", "artifacts", "02-design", "architecture", "DOC-ARCH-G2-001_SW-Architecture_v0.1.md"),
+    ]) or find_artifact_file(
         project_dir,
         os.path.join("docs", "artifacts", "02-design", "architecture"),
-        r"(sw.*architecture|architecture|아키텍처).*\.md$",
+        r"(sw.*architecture|아키텍처).*\.md$",
     ) or find_first_existing(project_dir, [
         os.path.join("docs", "02-design", "architecture.md"),
         os.path.join("docs", "02-design", "Architecture.md"),
         os.path.join("docs", "02-design", "SW-Architecture.md"),
+    ])
+
+
+def find_deployment_infrastructure_architecture_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-design", "architecture"),
+        r"(deployment.*infrastructure|infrastructure.*architecture|인프라.*아키텍처|배포.*인프라).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "02-design", "deployment-infrastructure-architecture.md"),
+        os.path.join("docs", "02-design", "Infrastructure-Architecture.md"),
     ])
 
 
@@ -3382,6 +3396,46 @@ def validate_architecture_spec(project_dir=".", level="baseline"):
             issues.append(f"{rel_path}의 상세 설계/추적 연결 문서 누락: {', '.join(missing_links)}")
 
     return [rel_path], issues
+
+
+def validate_deployment_infrastructure_architecture(project_dir=".", level="baseline"):
+    warnings = []
+    path = find_deployment_infrastructure_architecture_file(project_dir)
+    if not path:
+        if (level or "baseline").lower() == "baseline":
+            warnings.append(
+                "배포·운영 인프라 아키텍처 문서 없음 "
+                "(audit/SI에서는 DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md 권장)"
+            )
+        return [], warnings
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    rel_path = os.path.relpath(path, project_dir)
+    required_terms = [
+        ("인프라 구성 개요", r"인프라 구성 개요|배포 환경|주요 Zone|L4|WAS|DB"),
+        ("배포·운영 구성도", r"배포.*운영.*구성도|```mermaid|L4|WAS|DB"),
+        ("확인 질문", r"확인 질문|Q-INFRA|미확정 영향"),
+        ("이중화와 장애 대응", r"이중화|장애|Failover|health check|Health Check"),
+        ("포트/프로토콜", r"포트|프로토콜|Port|Protocol|FLOW-INFRA"),
+        ("SW 설계/구현 영향", r"SW.*영향|Health Check|Session|DB Connection|TLS|Logging"),
+        ("로그/모니터링/백업", r"로그|모니터링|백업|Monitoring|Backup"),
+    ]
+    for label, pattern in required_terms:
+        if not re.search(pattern, content, re.IGNORECASE):
+            warnings.append(f"{rel_path}에 {label} 기준 없음")
+
+    if re.search(r"\bTBD\b", content, re.IGNORECASE):
+        has_questions = re.search(r"확인 질문|Q-INFRA|미확정 영향|확인 책임|목표 시점", content)
+        if not has_questions:
+            warnings.append(f"{rel_path}에 TBD가 있으나 확인 질문/영향/책임 기준이 없음")
+
+    if re.search(r"L4|WAS|DB|TLS|health check|Health Check", content, re.IGNORECASE):
+        if not re.search(r"DOC-ARCH-G2-001|DOC-SEC-G2-001|DOC-DEV-G2-001|DOC-DATA-G2-002", content):
+            warnings.append(f"{rel_path}에 SW/보안/개발표준/DB 문서 연결이 부족함")
+
+    return [rel_path], warnings
 
 
 def validate_security_guide(project_dir="."):
@@ -4199,6 +4253,7 @@ def check_trace(project_dir="."):
 
 def cmd_check_architecture(level="baseline", project_dir="."):
     files, issues = validate_architecture_spec(project_dir, level=level)
+    infra_files, infra_warnings = validate_deployment_infrastructure_architecture(project_dir, level=level)
     label = "Draft" if level == "draft" else "Baseline"
 
     print(f"\n[check-architecture] SW 아키텍처 {label} 검사\n")
@@ -4207,12 +4262,19 @@ def cmd_check_architecture(level="baseline", project_dir="."):
             print(f"  대상: {rel_path}")
     else:
         print("  대상: 없음")
+    for rel_path in infra_files:
+        print(f"  참고: {rel_path}")
 
     if issues:
         print(f"\n이슈 {len(issues)}건 발견:\n")
         for issue in issues:
             print(f"  X {issue}")
         sys.exit(1)
+
+    if infra_warnings:
+        print(f"\n경고 {len(infra_warnings)}건:\n")
+        for warning in infra_warnings:
+            print(f"  ! {warning}")
 
     print("\n이슈 0건 - SW 아키텍처 기준을 만족합니다.")
 

@@ -29,6 +29,8 @@ change_reason: 최초 초안 작성
 
 아키텍처 정의서는 Gate 2 설계의 중심 산출물이며, 이후 상세 설계와 구현 Wave는 본 문서의 Container, Component, Flow, ADR, 품질속성 기준을 따라야 한다.
 
+배포 토폴로지, L2/L3/L4/WAF/FW/WAS/DB 이중화, 포트/프로토콜, health check, 세션, DB failover, 로그/백업/모니터링처럼 SW 운영 환경을 설명하는 물리 인프라 상세는 `DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md`에 작성하고 본 문서에서는 필요한 참조와 SW 설계 영향을 연결한다.
+
 ## 2. 작성 기준
 
 - 최소 하나 이상의 C1 시스템 컨텍스트 다이어그램을 작성한다.
@@ -43,6 +45,7 @@ change_reason: 최초 초안 작성
 - SW 아키텍처는 한 번에 완성하지 않는다. Gate 2 안에서 `Draft` -> `Baseline Candidate` -> `Baseline`으로 성숙시킨다.
 - 아직 확정되지 않은 내용은 추측해서 채우지 않는다. `Pending`, `Open`, `질문`, `ADR 후보`, `상세설계 후 보강`으로 명시한다.
 - Gate 3 진입 전에는 구현과 테스트에 영향을 주는 `Pending`을 닫거나 `RISK`, `ASM`, `Q`, `ISSUE`, `CR` 중 하나로 분류한다.
+- 운영/인프라 정보가 없으면 그럴듯한 값을 만들지 않는다. `DOC-ARCH-G2-002`에 `TBD`와 확인 질문, 영향, 확인 책임, Gate 전 처리 필요 여부를 남긴다.
 
 ### 2.1 아키텍처 성숙도 관리
 
@@ -211,6 +214,8 @@ flowchart LR
 
 물리 아키텍처는 서버, 네트워크 구간, 배포 단위, 런타임, 운영/개발/검증 환경을 설명한다. 로컬 MVP라도 실제 실행 기준을 남긴다.
 
+상세 배포·운영 인프라 구성은 `DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md`를 기준으로 하며, 본 장에서는 SW 아키텍처에 영향을 주는 요약과 연결만 남긴다.
+
 | PHY-ID | 구분 | 구성 | 환경 | 네트워크/포트 | 런타임/컨테이너 | 관련 CNT/DEP |
 | --- | --- | --- | --- | --- | --- | --- |
 | PHY-001 | 서버 / 개발 PC / 컨테이너 / 클라우드 |  | local / dev / stage / prod |  |  | CNT- / DEP- |
@@ -218,6 +223,10 @@ flowchart LR
 | DEP-ID | 배포 단위 | 배포 대상 | 설정/시크릿 | 로그/모니터링 | 백업/복구 | 장애 대응 |
 | --- | --- | --- | --- | --- | --- | --- |
 | DEP-001 | CNT- |  | ENV- / Secret | LOG- / MON- |  | RUNBOOK- |
+
+| INFRA 참조 | SW 영향 | 관련 문서 |
+| --- | --- | --- |
+| DOC-ARCH-G2-002 | L4 health check, WAS 이중화, DB failover, TLS 종료, 파일 저장소, 로그/모니터링/백업 | 보안가이드 / 개발표준 / DB명세 / Gate 4 QA |
 
 ## 7. 모듈/컴포넌트 구조
 
@@ -328,6 +337,7 @@ sequenceDiagram
 | CNT-001 | DOC-CORE-G2-003_Screen-Spec_v0.1.md | SCR- / UIREF- | 화면 설계 연결 |
 | SEC-001 | DOC-SEC-G2-001_Security-Guide_v0.1.md | SEC- | 보안가이드 연결 |
 | CNT-001 | DOC-DEV-G2-001_Development-Standard_v0.1.md | DEV- | 개발표준 연결 |
+| DEP-001 | DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md | INFRA- / DEP- / ZONE- | 배포·운영 인프라 연결 |
 | FLOW-001 | DOC-QA-G3-001_Test-Cases_v0.1.md | UT- / IT- / UI- / PT- | 테스트 설계 연결 |
 | REQ- / NREQ- | DOC-CORE-G4-001_Traceability-Matrix_v0.1.md | REQ- / NREQ- / AC- | 요구사항 추적 연결 |
 
@@ -338,6 +348,7 @@ sequenceDiagram
 | 아키텍처 개요에 시스템 목적, 주요 사용자, 품질속성, 범위가 작성되었는가 | 예 / 아니오 |  |
 | 논리 아키텍처가 프론트엔드, 백엔드/API, DB, 연계, 인증/권한, 배치/비동기 관점으로 작성되었는가 | 예 / 아니오 |  |
 | 물리 아키텍처에 서버, 네트워크, 배포 단위, 런타임, 환경이 작성되었는가 | 예 / 아니오 |  |
+| 배포·운영 인프라 아키텍처 문서와 SW 영향이 연결되었는가 | 예 / 아니오 / 해당없음 |  |
 | C1 시스템 컨텍스트가 작성되었는가 | 예 / 아니오 |  |
 | C2 컨테이너 구조가 작성되었는가 | 예 / 아니오 |  |
 | C1/C2 다이어그램에 `subgraph` 경계가 표현되었는가 | 예 / 아니오 |  |
