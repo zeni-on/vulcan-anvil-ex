@@ -110,6 +110,10 @@ my-project/
 | `orchestrator-plan` | Orchestrator 실행 계획 Run 생성 |
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
+| `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
+| `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
+| `agent-run --mode work` | Run 문서를 worker runner로 실행 |
+| `run-exec` | 특정 Run을 codex-cli, claude-cli, antigravity-cli 같은 runner로 실행 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
 | `review-run` | 생성된 독립 검수 요청을 codex-cli 또는 claude-cli로 실행 |
@@ -125,6 +129,51 @@ Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude
 새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 교차검증을 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
 독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
 `init`은 현재 PC의 `codex`와 `claude` CLI 설치 여부를 감지해 `vulcan.config.json.runtime.available_runners`에 기록한다. Codex만 있으면 같은 runner 기반 독립검수/동시 worktree 작업으로 운영하고, Codex와 Claude가 모두 있으면 Gate/PR/QA 교차검증과 cross-runner 작업을 기본 후보로 둔다.
+
+## 5. 0.3 구현/QA 흐름
+
+`0.3.x` audit workflow에서는 구현과 QA를 `main`에 바로 누적하지 않습니다. `impl`에 진입하면 Orchestrator는 먼저 통합 브랜치를 시작합니다.
+
+```powershell
+python vulcan.py branch-status
+python vulcan.py branch-start impl
+```
+
+통합 브랜치 이름은 `vulcan.config.json`의 `workflow.integration_branch`가 결정합니다. 기본값은 `dev`지만, 프로젝트에서 `dev-happy`, `develop`, `integration/todo`처럼 바꿔도 됩니다.
+
+```json
+{
+  "workflow": {
+    "integration_branch": "dev-happy"
+  }
+}
+```
+
+이후 구현은 보통 다음 순서로 진행합니다.
+
+```text
+Gate 3 승인
+→ branch-start impl
+→ implementation-plan Run
+→ BW-000 implementation-scaffold 필요 여부 판단
+→ build-wave Run 생성
+→ agent-run --mode work 또는 run-exec로 worker 실행
+→ Orchestrator가 worker 결과 검토/통합/재검증
+→ wave-complete
+```
+
+신규 개발이거나 빌드 가능한 코드 골격이 없으면 `BW-000 implementation-scaffold`를 먼저 둡니다. 이 단계는 업무 로직을 완성하는 것이 아니라, 빌드 설정, entrypoint, public class/interface/method signature, DTO/schema, 테스트 skeleton을 고정하는 단계입니다.
+
+Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
+
+| QA Run | 목적 |
+| --- | --- |
+| `QA-000` | QA workspace 준비, 의존성/포트/DB/Playwright 가능성 확인 |
+| `QA-001` | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check` 같은 명령 검증 |
+| `QA-002` | Playwright UI/E2E screenshot/log/trace 증적 수집 |
+| `QA-003` | QA Finding, Test Result, FIND/CR/ISSUE, Gate 4 판단 후보 정리 |
+
+`QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행합니다. QA worker는 실패를 발견해도 소스코드를 바로 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남깁니다. 수정이 필요하면 Orchestrator가 사용자와 결정한 뒤 별도 `qa-fix-loop` Run으로 처리합니다.
 
 ### Run 생성 예시
 

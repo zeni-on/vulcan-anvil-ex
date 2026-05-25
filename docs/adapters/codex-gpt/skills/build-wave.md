@@ -53,7 +53,7 @@ Build Wave는 전체 Gate 4 QA가 아니다.
 Wave가 전체 사용자 시나리오를 완성하지 않았다면 전체 E2E나 최종 화면 증적을 Wave 완료 조건으로 요구하지 않는다.
 Gate 3 테스트 설계에서 이 Wave의 `target_contracts`에 매핑된 `UT/IT/UI`와 필요한 smoke 기준만 Wave 검증으로 수행한다.
 Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행할 수 있지만, 최종 QA Pass는 Gate 4에서만 판정한다.
-최종 UI 확인과 Playwright 증적은 개별 worker worktree가 아니라 통합된 main 작업공간 또는 별도 QA worktree에서 수행한다.
+최종 UI 확인과 Playwright 증적은 개별 worker worktree가 아니라 `workflow.integration_branch` 기준 `QA-000` QA workspace에서 수행한다.
 완료 보고에는 "전체 통합 테스트 완료" 대신 "Wave 범위 계약 테스트와 가능한 회귀 검증 완료"처럼 범위를 명확히 쓴다.
 
 ## Orchestrator와 subagent 책임

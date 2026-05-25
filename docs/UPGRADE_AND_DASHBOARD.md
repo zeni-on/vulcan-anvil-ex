@@ -41,6 +41,41 @@ Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상
 
 `upgrade`는 없는 공식 산출물 템플릿은 새로 만들 수 있지만, 이미 작성된 산출물은 기본적으로 덮어쓰지 않습니다.
 
+## 0.3.x 업그레이드 후 확인할 것
+
+`0.3.x`는 구현/QA 실행 방식에 브랜치 경계와 QA workspace 개념을 도입합니다. 기존 프로젝트를 업그레이드했다면 다음 항목을 확인합니다.
+
+```powershell
+python vulcan.py version
+python vulcan.py branch-status
+```
+
+`vulcan.config.json`에는 다음 workflow 설정이 들어갑니다.
+
+```json
+{
+  "workflow": {
+    "branch_mode": "audit",
+    "main_branch": "main",
+    "integration_branch": "dev",
+    "impl_uses_integration_branch": true,
+    "qa_worktree_enabled": true,
+    "qa_stage_mode": "staged",
+    "release_merge_to": "main"
+  }
+}
+```
+
+`integration_branch`는 브랜치 이름을 강제하는 값이 아니라 구현/QA 기준 브랜치 역할입니다. 기본값은 `dev`이며, 팀 브랜치 전략에 따라 `develop`, `dev-happy`, `integration/*` 같은 이름으로 바꿀 수 있습니다.
+
+이미 구현 단계에 들어간 프로젝트라면 `main`에서 직접 구현을 계속하지 말고, Orchestrator가 다음 명령으로 통합 브랜치를 만들거나 전환합니다.
+
+```powershell
+python vulcan.py branch-start impl
+```
+
+Gate 4에서는 `QA-000`이 만든 QA workspace를 `QA-001`, `QA-002`, `QA-003`이 재사용합니다. 후속 QA Run이 새 worktree를 임의로 만들거나 다른 checkout에서 실행된다면 최신 규칙과 맞지 않습니다.
+
 ## Dashboard 실행
 
 Dashboard는 Gate 진행 상태, 산출문서, Run, 구현 진행률, 테스트/백로그 통계, 최근 커밋을 한 화면에서 확인하기 위한 보조 UI입니다.
@@ -87,3 +122,21 @@ python vulcan.py check-trace
 ```
 
 Build Wave를 사용하는 구현 단계라면 `wave-start`, `wave-complete`, `sync-session` 흐름도 확인합니다.
+
+## Branch/Worker/QA 표시 읽기
+
+Dashboard는 프로젝트 폴더의 현재 Git checkout을 읽어 현재 브랜치와 workflow 상태를 보여줍니다.
+
+| 표시 | 의미 |
+| --- | --- |
+| `branch` | Dashboard가 읽고 있는 물리 폴더의 현재 Git 브랜치 |
+| `integration` | `workflow.integration_branch` 설정값. 구현/QA 기준 브랜치 역할 |
+| `workflow` | `audit`, `single` 등 브랜치 운영 모드 |
+| `QA worktree` | Gate 4에서 QA workspace/worktree 사용 여부 |
+| `Runner` | 현재 PC에서 감지되거나 설정된 Codex/Claude/Gemini runner |
+| `진행 작업` | 실행 중이거나 확인이 필요한 worker/review activity |
+| `Worktree` | `.vulcan/worktrees/` 아래 남아 있는 worker/QA 작업공간 |
+
+대시보드는 브랜치를 제한하지 않습니다. `dev-happy` 같은 브랜치도 현재 checkout이라면 그대로 표시합니다. 규칙상 올바른 통합 브랜치인지 여부는 `workflow.integration_branch`와 현재 브랜치 비교로 판단합니다.
+
+QA 문서와 증적은 산출물 목록과 문서 drawer에서 확인합니다. Gate 4 Test Result에 연결된 screenshot, log, JSON report 경로는 링크로 표시되며, 긴 QA 문서는 요약 카드가 아니라 Markdown 본문 중심으로 읽습니다.

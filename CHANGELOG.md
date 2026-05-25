@@ -5,6 +5,7 @@
 ### Changed
 
 - `dev`를 고정 브랜치명처럼 설명하던 문구를 `workflow.integration_branch` 역할 기준으로 정리했다. 기본값은 `dev`지만 프로젝트별로 `develop`, `dev-happy` 같은 브랜치명을 사용할 수 있다.
+- `GETTING_STARTED`, `CONCEPTS`, `UPGRADE_AND_DASHBOARD`, `ROADMAP`을 0.3.0 기준으로 보강하고, 브랜치 전략과 `QA-000` workspace 재사용 흐름을 그림과 절차로 설명했다.
 
 ## 0.3.0 - 2026-05-24
 

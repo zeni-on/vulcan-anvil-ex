@@ -4,9 +4,9 @@
 
 ## 현재 상태
 
-**Experimental - v0.2.3**
+**Experimental - v0.3.0**
 
-`0.2.3`은 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현 흐름에 더 안전하게 연결하기 위해 worker 실행, Program Design 계약 검증, Gate 4 QA 증적 가시성을 보강한 패치 버전입니다.
+`0.3.0`은 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현/QA 흐름에 더 안전하게 연결하기 위해 audit workflow 브랜치 경계, worker 실행, staged Gate 4 QA, QA workspace 재사용, Program Design 계약 검증, Dashboard 증적 가시성을 보강한 실험 버전입니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
@@ -22,9 +22,13 @@
 - 리팩토링의 DEBT/FIND/CR 분류와 문서 영향 판단 기준
 - 변경관리/릴리즈 산출물
 - Build Wave 운영 규칙
+- `workflow.integration_branch` 기반 구현 통합 브랜치 운영
+- `branch-start impl`, `branch-status`, `run-exec`, `agent-run --mode work` 기반 worker 실행
+- `BW-000 implementation-scaffold`를 통한 구현 전 빌드 가능한 skeleton 생성 기준
 - Program Design 기반 `check-contract` 1차 검사(Python/Java class/interface/public method 존재 확인)
 - Worker dependency cache와 worktree 실행 경계
-- Gate 4 QA 로그/독립검수 문서 대시보드 표시
+- Gate 4 `QA-000`~`QA-003` staged QA 실행과 QA workspace 재사용 기준
+- Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
 - Upgrade와 Dashboard 운영 흐름
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
@@ -33,7 +37,7 @@
 
 ## 다음 초점
 
-`0.2.3` 이후의 다음 초점은 다음입니다.
+`0.3.0` 이후의 다음 초점은 다음입니다.
 
 - 실제 SI형 다중 프로젝트 구조 검토
 - Delivery Profile 도입: Audit/SI, Solution/Product, PoC, Lite 프로젝트별 문서 깊이와 Gate 강도 조절
@@ -42,7 +46,8 @@
 - 감리 제출용 DOCX/XLSX/HWPX 변환 흐름 설계
 - Dashboard A2의 반응형 밀도와 검수 화면 개선
 - Codex/Claude adapter의 실제 Run 결과 비교와 규칙 보강
-- 독립 검수 기본 절차의 실제 프로젝트 적용 결과 확인과 review-import/watch 확장 여부 판단
+- staged QA와 `qa-fix-loop`가 실제 프로젝트에서 과도하게 복잡해지지 않는지 검증
+- 독립 검수/worker 실행 기본 절차의 실제 프로젝트 적용 결과 확인과 review-import/watch 확장 여부 판단
 
 ## Delivery Profile 방향
 

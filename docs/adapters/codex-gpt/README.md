@@ -1,6 +1,6 @@
 # Codex/GPT Adapter
 
-> 상태: v0.2.3
+> 상태: v0.3.0
 > 목적: Vulcan-Anvil Ex Core 산출물과 Agent Run Protocol을 Codex/GPT 기반 개발 실행 흐름에 연결한다.
 
 ## 1. 범위
@@ -18,12 +18,14 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 
 ## 2. 현재 적용 범위
 
-`0.2.3` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
+`0.3.0` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
 
 - 새 프로젝트 컨시어지 응답
 - Phase 0부터 Gate 5까지의 단계 판단
 - 요구사항, 설계, 보안, 데이터, 테스트, 변경관리 문서 작성
 - Build Wave 기반 구현 계획과 Wave별 작업지시
+- `workflow.integration_branch` 기준 구현 통합 브랜치와 worker 실행
+- Gate 4 `qa-execution`과 `QA-000` workspace 재사용
 - Run 문서 작성과 `vulcan.py` 기반 검증
 - Dashboard가 읽는 `session.json`, Run, 문서 상태 갱신
 
@@ -87,7 +89,7 @@ Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
 | QA 결함 수정 루프 | `skills/qa-fix-loop.md` |
 | 변경요청 영향도 분석 | `skills/change-impact-analysis.md` |
 
-## 8. 0.2.3 이후 검증 작업
+## 8. 0.3.0 이후 검증 작업
 
 다음 단계에서는 실제 생성 프로젝트를 기준으로 Codex와 Claude의 Run 결과를 비교한다.
 
@@ -95,3 +97,4 @@ Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
 - 생성 문서, Run, 추적표, 테스트 증적의 차이 확인
 - 과도한 문서화와 누락 검출 기준 조정
 - Dashboard A2에서 Gate별 상태와 검수 결과가 충분히 읽히는지 확인
+- staged QA와 `qa-fix-loop` 분리가 실제 프로젝트에서 과도하게 느려지지 않는지 확인

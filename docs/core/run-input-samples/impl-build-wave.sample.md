@@ -323,7 +323,7 @@ dependency_install_policy:
   npm_cache_env: "npm_config_cache"
   playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
   if_install_blocked: "npm install/npm ci/npx playwright install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked로 보고한다."
-  worker_node_playwright_scope: "worker self-check는 보조 검증이다. 화면 서버 실행과 Playwright 최종 증적은 통합된 main 또는 QA worktree의 Gate 4에서 판정한다."
+  worker_node_playwright_scope: "worker self-check는 보조 검증이다. 화면 서버 실행과 Playwright 최종 증적은 workflow.integration_branch 기준 QA-000 workspace의 Gate 4에서 판정한다."
 worker_execution_policy:
   forbidden_actions:
     - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."

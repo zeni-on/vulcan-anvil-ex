@@ -54,6 +54,32 @@ flowchart LR
 
 Gate는 사람을 묶어두기 위한 절차가 아니라, 에이전트가 문서와 코드와 검증을 같은 맥락으로 유지하기 위한 작업 기준입니다.
 
+## Branch Workflow
+
+Audit profile은 문서 기준선과 구현 통합선을 분리합니다. 브랜치 이름 자체를 강제하지는 않지만, 구현과 QA의 기준이 되는 통합 브랜치 역할은 반드시 있어야 합니다.
+
+| 역할 | 기본 이름 | 의미 |
+| --- | --- | --- |
+| 기준 브랜치 | `main` | `init`, Phase 0, Gate 1, Gate 2, Gate 3 산출물과 사용자 승인 기준선 |
+| 통합 브랜치 | `workflow.integration_branch`, 기본 `dev` | `impl`에서 worker 결과를 통합하고 Gate 4 QA 후보를 모으는 브랜치 |
+| worker worktree | `codex/run-*`, `claude/run-*` 등 | 개별 Run을 격리해 수행하는 임시 작업공간 |
+| QA workspace | `QA-000`이 기록한 workspace/worktree | Gate 4의 `QA-001`~`QA-003`이 재사용하는 검증 공간 |
+
+`dev`는 기본값일 뿐입니다. 프로젝트/팀이 원하면 `vulcan.config.json`에서 `workflow.integration_branch`를 `develop`, `dev-happy`, `integration/*` 같은 이름으로 바꿀 수 있습니다.
+
+```mermaid
+flowchart LR
+  Main["main<br/>문서/승인 기준선"] -->|"Gate 3 승인 후<br/>branch-start impl"| Integration["workflow.integration_branch<br/>기본 dev"]
+  Integration -->|"worker Run 시작"| Worker["worker worktree<br/>codex/run-* 또는 claude/run-*"]
+  Worker -->|"Orchestrator 검토/통합"| Integration
+  Integration -->|"Gate 4 QA-000"| QA["QA workspace<br/>QA-GATE4 또는 기록된 경로"]
+  QA -->|"QA-001 명령 검증<br/>QA-002 UI/E2E<br/>QA-003 결과 정리"| QAResult["QA 결과<br/>FIND / CR / ISSUE 후보"]
+  QAResult -->|"승인된 결함 수정"| Integration
+  QAResult -->|"Gate 5 승인"| Release["main 또는 workflow.release_merge_to"]
+```
+
+대시보드는 현재 폴더가 어떤 브랜치를 checkout하고 있는지와 설정된 `workflow.integration_branch`를 보여주는 관찰 화면입니다. 실제 규약 위반 여부와 브랜치 전환은 `vulcan.py branch-status`, `branch-start impl`, `wave-start`, `run-exec` guard가 담당합니다.
+
 ## Backlog
 
 Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 나온 아이디어, QA에서 발견한 FIND, 요구/설계 변경이 필요한 CR, 판단이 필요한 ISSUE를 다음 Run 또는 필요한 Gate 진행으로 연결하는 대기열입니다.
@@ -72,13 +98,15 @@ Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 
 
 구현 단계는 작업 규모에 따라 운영 강도를 조절합니다. 작은 샘플이나 단일 기능은 하나의 worker Run으로 진행할 수 있고, 중간 이상 작업이나 subagent/여러 커밋/여러 모듈이 필요한 작업은 `implementation-plan` Run을 만든 뒤 승인된 구현 범위를 여러 `Build Wave`로 나눕니다. 이때 Wave 분할 생략은 Orchestrator 직접 구현을 의미하지 않습니다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행합니다.
 
+구현에 들어가면 먼저 `python vulcan.py branch-start impl`로 `workflow.integration_branch`를 만들거나 전환합니다. 신규 개발처럼 빌드 가능한 골격이 없으면 feature 구현 Wave 전에 `BW-000 implementation-scaffold`를 두어 package/build/test skeleton과 public class/interface/method signature를 먼저 고정합니다.
+
 ```text
 Implementation Plan
-→ BW-001 프로젝트 뼈대와 공통 설정
-→ BW-002 인증/회원가입/로그인
-→ BW-003 TODO 데이터와 CRUD
-→ BW-004 UI 상태와 오류/빈 상태
-→ BW-005 테스트 결과, 화면 증적, 추적표 정리
+→ BW-000 구현 scaffold와 빌드 가능한 골격
+→ BW-001 인증/회원가입/로그인
+→ BW-002 TODO 데이터와 CRUD
+→ BW-003 UI 상태와 오류/빈 상태
+→ Gate 4 QA-000~QA-003 테스트 실행과 증적 정리
 ```
 
 각 `Build Wave`는 하나의 검증 가능한 구현 배치입니다. Wave가 끝나면 코드, 테스트, 추적표/Run 기록, 검증 결과, 커밋 후보가 함께 남아야 합니다.
