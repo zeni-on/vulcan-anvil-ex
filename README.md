@@ -110,9 +110,6 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Tech Stack Baselines](docs/core/TECH_STACK_BASELINES.md) | Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기본 개발 규칙 |
-| [Refactoring Process](docs/core/REFACTORING_PROCESS.md) | 리팩토링의 DEBT/FIND/CR 분류, 문서 영향 판단, 검증 기록 기준 |
-| [Delivery Profiles](docs/core/DELIVERY_PROFILES.md) | Audit/SI, Solution/Product, PoC, Lite 운영 강도 |
-| [Submission Document Strategy](docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md) | 감리 제출용 DOCX/XLSX/HWPX 변환 방향 |
 | [Contributing](CONTRIBUTING.md) | 공개 기여 시 권리, 회사/고객 정보 제외, PR 기준 |
 
 ## 주의
