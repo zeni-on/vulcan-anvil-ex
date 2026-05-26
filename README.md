@@ -113,7 +113,11 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 | [Refactoring Process](docs/core/REFACTORING_PROCESS.md) | 리팩토링의 DEBT/FIND/CR 분류, 문서 영향 판단, 검증 기록 기준 |
 | [Delivery Profiles](docs/core/DELIVERY_PROFILES.md) | Audit/SI, Solution/Product, PoC, Lite 운영 강도 |
 | [Submission Document Strategy](docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md) | 감리 제출용 DOCX/XLSX/HWPX 변환 방향 |
+| [Contributing](CONTRIBUTING.md) | 공개 기여 시 권리, 회사/고객 정보 제외, PR 기준 |
 
 ## 주의
 
 이 프로젝트는 아직 실험적입니다. 모든 프로젝트에 맞는 무거운 프로세스를 강제하려는 도구가 아니라, 감리와 장기 유지보수가 필요한 프로젝트에서 AI 에이전트가 길을 잃지 않게 만드는 작업대에 가깝습니다.
+
+Vulcan-Anvil Ex는 개인이 시작하고 운영하는 오픈소스 프로젝트이며, 특정 회사·고객·조직의 공식 산출물이 아닙니다.
+이 저장소에는 회사 또는 고객의 비공개 코드, 문서, 정보가 포함되어 있지 않습니다.

@@ -4,7 +4,7 @@
 
 ## 1. 현재 작업 저장소
 
-- GitHub 저장소: `https://github.com/julyinsung/vulcan-anvil-ex`
+- GitHub 저장소: `https://github.com/zeni-on/vulcan-anvil-ex`
 - 작업 브랜치: `codex/bootstrap-ex`
 - 최근 커밋: `da321e5 docs: define Vulcan-Anvil Ex direction`
 
