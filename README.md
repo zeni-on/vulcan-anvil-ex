@@ -56,7 +56,6 @@ python vulcan.py init ../my-project "My Project" --remote https://github.com/<ow
 
 ```text
 로그인과 게시글 작성 기능이 있는 게시판 샘플을 만들고 싶어.
-감리 대응 문서와 테스트 증적까지 같이 만들어줘.
 ```
 
 자세한 시작 방법은 [Getting Started](docs/GETTING_STARTED.md)를 참고합니다.
