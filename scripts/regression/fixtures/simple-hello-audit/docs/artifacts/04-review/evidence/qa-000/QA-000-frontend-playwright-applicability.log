@@ -1,0 +1,7 @@
+cwd: <SANDBOX_CWD>
+command: Test-Path package.json; Test-Path frontend; Test-Path backend/package.json
+package_json_root: False
+frontend_dir: False
+backend_package_json: False
+result: skipped_not_applicable_api_only_per_DOC-DEV-G2-001
+exit_code: 0

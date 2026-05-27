@@ -1,0 +1,26 @@
+
+[check-trace] regression-simple-hello - Gate 4 QA 검토
+
+  Gate 진행 상태 검사: OK
+  문서 내용 경계 검사: OK
+  Phase 0 미결 항목 검사: OK
+  Gate 2 산출물 유지 검사
+  O SW 아키텍처 정의서 확인
+  O 프로그램 설계서 확인
+  O 보안가이드 확인
+  O 화면설계서 확인
+  O API 정의서 확인
+  O 개발표준정의서 확인
+  O 프로젝트 단어사전 확인
+  Gate 4 검사 (1): TRACEABILITY.md 기반 리뷰 파일 내 REQ-ID 포함 확인
+  O REQ-001-01 - 리뷰 문서 내 ID 확인 (docs\artifacts\04-review\DOC-QA-G4-001_QA-Finding_v0.1.md)
+
+  Gate 4 검사 (2): TST-ID 실행 상태
+  총 3건: Pass 3, Fail 0, Skip 0, 미실행 0
+  O UT-001 - Pass
+  O IT-001 - Pass
+  O IT-002 - Pass
+
+이슈 0건 - Gate 완료 가능합니다.
+
+EXIT_CODE=0

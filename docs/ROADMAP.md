@@ -50,6 +50,10 @@
 - Gate 4에서 `QA-000` workspace 준비, `QA-001` 명령 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리가 실제로 분리되는지 확인한다.
 - 에이전트가 직접 구현, 직접 QA 수정, Gate 승인 선행, session 통계 누락 같은 회귀를 만들지 않는지 검사한다.
 
+현재 최소 smoke harness는 `scripts/regression/run_audit_smoke.py`에 있다.
+이 스크립트는 실제 AI runner나 frontend/backend dependency 설치 없이 `init`, 핵심 check 명령, Gate 차단, Run 생성/검사, preflight 차단을 빠르게 확인한다.
+완료된 문서 세트를 사용하는 fixture smoke harness는 `scripts/regression/run_fixture_smoke.py`에 있으며, 첫 fixture는 `scripts/regression/fixtures/simple-hello-audit/`이다.
+
 하네스 fixture는 새로 사람이 작성하지 않고, 기존 샘플 프로젝트에서 완결된 산출물 문서 세트를 추출해 정규화하는 방향을 우선 검토한다.
 상세 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
 

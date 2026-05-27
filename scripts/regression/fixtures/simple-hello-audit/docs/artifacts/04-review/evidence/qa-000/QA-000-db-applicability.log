@@ -1,0 +1,5 @@
+cwd: <QA_WORKSPACE>
+command: inspect DB applicability from DOC-DEV-G2-001 and repository files
+sqlite_files: 
+result: skipped_not_applicable_no_db_per_DOC-DEV-G2-001
+exit_code: 0

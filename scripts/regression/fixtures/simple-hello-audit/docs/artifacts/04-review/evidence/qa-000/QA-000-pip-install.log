@@ -1,0 +1,27 @@
+cwd: <QA_WORKSPACE>\backend
+command: & '<PYTHON_HOME>\bin\python.exe' -m pip install -r requirements.txt
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: fastapi in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from -r requirements.txt (line 1)) (0.115.6)
+Requirement already satisfied: uvicorn in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from -r requirements.txt (line 2)) (0.34.0)
+Requirement already satisfied: pytest in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from -r requirements.txt (line 3)) (8.3.4)
+Requirement already satisfied: httpx in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from -r requirements.txt (line 4)) (0.28.1)
+Requirement already satisfied: starlette<0.42.0,>=0.40.0 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from fastapi->-r requirements.txt (line 1)) (0.41.3)
+Requirement already satisfied: pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from fastapi->-r requirements.txt (line 1)) (2.12.5)
+Requirement already satisfied: typing-extensions>=4.8.0 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from fastapi->-r requirements.txt (line 1)) (4.15.0)
+Requirement already satisfied: annotated-types>=0.6.0 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi->-r requirements.txt (line 1)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.41.5 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi->-r requirements.txt (line 1)) (2.41.5)
+Requirement already satisfied: typing-inspection>=0.4.2 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi->-r requirements.txt (line 1)) (0.4.2)
+Requirement already satisfied: anyio<5,>=3.4.0 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from starlette<0.42.0,>=0.40.0->fastapi->-r requirements.txt (line 1)) (4.12.1)
+Requirement already satisfied: idna>=2.8 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from anyio<5,>=3.4.0->starlette<0.42.0,>=0.40.0->fastapi->-r requirements.txt (line 1)) (3.11)
+Requirement already satisfied: click>=7.0 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from uvicorn->-r requirements.txt (line 2)) (8.3.1)
+Requirement already satisfied: h11>=0.8 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from uvicorn->-r requirements.txt (line 2)) (0.16.0)
+Requirement already satisfied: colorama in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pytest->-r requirements.txt (line 3)) (0.4.6)
+Requirement already satisfied: iniconfig in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pytest->-r requirements.txt (line 3)) (2.3.0)
+Requirement already satisfied: packaging in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pytest->-r requirements.txt (line 3)) (26.0)
+Requirement already satisfied: pluggy<2,>=1.5 in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from pytest->-r requirements.txt (line 3)) (1.6.0)
+Requirement already satisfied: certifi in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from httpx->-r requirements.txt (line 4)) (2026.2.25)
+Requirement already satisfied: httpcore==1.* in <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages (from httpx->-r requirements.txt (line 4)) (1.0.9)
+
+[notice] A new release of pip is available: 26.0.1 -> 26.1.1
+[notice] To update, run: <PYTHON_HOME>\pythoncore-3.14-64\python.exe -m pip install --upgrade pip
+exit_code: 0

@@ -1,0 +1,7 @@
+command: <PYTHON_HOME>\bin\python.exe vulcan.py run-check docs/runs/RUN-016_qa-002-gate-4-ui-e2e-applicability-for-python-hello-api_v0.1.md
+cwd: <QA_WORKSPACE>
+exit_code: 0
+success_criteria: Run 검증 통과
+result: Pass
+
+Run 검증 통과

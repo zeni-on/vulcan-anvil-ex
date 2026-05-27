@@ -1,0 +1,9 @@
+
+[check-contract] docs\artifacts\02-design\program\DOC-CORE-G2-002_Program-Design_v0.1.md
+  PASS 2 / WARN 1 / FAIL 0 / INFO 0
+
+  O IF-001 HelloService - interface/class 확인 (backend\app\services\hello_service.py)
+  ! IF-001 DefaultHelloService 또는 단일 service 함수 - 구현체 class를 같은 Python 파일에서 찾지 못함 (backend\app\services\hello_service.py)
+  O MTH-001 get_hello - public method 확인 (HelloService) (backend\app\services\hello_service.py)
+
+  report: docs\artifacts\04-review\evidence\qa-003\ORCH-CHECK-CONTRACT.json

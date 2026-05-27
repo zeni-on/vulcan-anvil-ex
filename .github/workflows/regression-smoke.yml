@@ -1,0 +1,44 @@
+name: Regression Smoke
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Python regression smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python entry points
+        run: |
+          python -m py_compile vulcan.py scripts/regression/run_audit_smoke.py scripts/regression/run_fixture_smoke.py
+
+      - name: Run init smoke regression
+        run: |
+          python scripts/regression/run_audit_smoke.py
+
+      - name: Run fixture smoke regression
+        run: |
+          python scripts/regression/run_fixture_smoke.py

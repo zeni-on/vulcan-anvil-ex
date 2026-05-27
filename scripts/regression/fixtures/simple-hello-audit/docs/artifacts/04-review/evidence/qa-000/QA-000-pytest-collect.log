@@ -1,0 +1,29 @@
+cwd: <QA_WORKSPACE>\backend
+command: & '<PYTHON_HOME>\bin\python.exe' -m pytest --collect-only -q
+<PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+tests/test_hello_api.py::test_IT_001_hello_route_contract_exists
+tests/test_hello_api.py::test_IT_001_get_hello_returns_200_text_plain_and_hello
+tests/test_hello_service.py::test_UT_001_hello_service_contract_exists
+tests/test_hello_service.py::test_UT_001_hello_service_returns_hello
+
+============================== warnings summary ===============================
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py:233
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py:233
+  <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
+
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+..\..\..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39
+  <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+4 tests collected in 0.22s
+exit_code: 0

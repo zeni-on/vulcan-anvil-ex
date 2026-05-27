@@ -1,0 +1,36 @@
+command: PowerShell Test-Path package.json, frontend, backend/package.json, playwright.config.ts, playwright.config.js
+cwd: <QA_WORKSPACE>
+exit_code: 0
+success_criteria: API-only scope confirmed; no UI target IDs, frontend package, or Playwright config required for Gate 4 UI evidence.
+result: Skipped
+
+{
+  "qa_stage": "QA-002",
+  "feature": "Python hello API",
+  "ui_target_ids": [],
+  "cwd": "<QA_WORKSPACE>",
+  "checks": [
+    {
+      "path": "package.json",
+      "exists": false
+    },
+    {
+      "path": "frontend",
+      "exists": false
+    },
+    {
+      "path": "backend/package.json",
+      "exists": false
+    },
+    {
+      "path": "playwright.config.ts",
+      "exists": false
+    },
+    {
+      "path": "playwright.config.js",
+      "exists": false
+    }
+  ],
+  "decision": "Skipped",
+  "reason": "API-only scope; Gate 3 test cases define UI/SCR/UIREF as not applicable and command-based HTTP verification as substitute."
+}

@@ -1,0 +1,5 @@
+cwd: <QA_WORKSPACE>\backend
+command: & '<PYTHON_HOME>\bin\python.exe' -m pip --version
+pip 26.0.1 from <PYTHON_HOME>\pythoncore-3.14-64\Lib\site-packages\pip (python 3.14)
+
+exit_code: 0

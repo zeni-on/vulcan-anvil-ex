@@ -1,0 +1,16 @@
+command: QA-003 consolidation checks
+cwd: <QA_WORKSPACE>
+qa_stage: QA-003
+run_014_exists: True
+run_015_exists_in_qa_worktree: False
+run_015_exists_on_integration_branch: True
+run_016_exists: True
+qa_000_evidence_count: 9
+qa_001_evidence_count: 9
+qa_002_evidence_count: 2
+qa_required_test_logs_present: True
+qa_ui_applicability_log_present: True
+qa_ruff_log_present: True
+result: completed_with_issues
+summary: Required QA evidence logs are present. RUN-015 was missing only inside the stale QA worktree view but exists on the dev integration branch; optional ruff check remains the only open issue.
+EXIT_CODE=0

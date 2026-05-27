@@ -1,0 +1,32 @@
+{
+  "program_design": "docs\\artifacts\\02-design\\program\\DOC-CORE-G2-002_Program-Design_v0.1.md",
+  "summary": {
+    "pass": 2,
+    "warn": 1,
+    "fail": 0,
+    "info": 0
+  },
+  "results": [
+    {
+      "level": "pass",
+      "contract_id": "IF-001",
+      "target": "HelloService",
+      "message": "interface/class 확인",
+      "path": "backend\\app\\services\\hello_service.py"
+    },
+    {
+      "level": "warn",
+      "contract_id": "IF-001",
+      "target": "DefaultHelloService 또는 단일 service 함수",
+      "message": "구현체 class를 같은 Python 파일에서 찾지 못함",
+      "path": "backend\\app\\services\\hello_service.py"
+    },
+    {
+      "level": "pass",
+      "contract_id": "MTH-001",
+      "target": "get_hello",
+      "message": "public method 확인 (HelloService)",
+      "path": "backend\\app\\services\\hello_service.py"
+    }
+  ]
+}

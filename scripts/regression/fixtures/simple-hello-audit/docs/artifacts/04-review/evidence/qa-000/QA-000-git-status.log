@@ -1,0 +1,5 @@
+cwd: <QA_WORKSPACE>
+command: git -c safe.directory=<QA_WORKSPACE> status --short --branch
+## codex/run-run-014-codex-cli
+?? docs/artifacts/04-review/evidence/qa-000/
+exit_code: 0

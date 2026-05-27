@@ -1,0 +1,54 @@
+{
+  "version": "0.3.0",
+  "runtime": {
+    "primary": null,
+    "available_runners": [
+      {
+        "name": "codex-cli",
+        "model": "gpt-5.5",
+        "effort": "high",
+        "sandbox": "workspace-write",
+        "version": "codex-cli 0.130.0"
+      },
+      {
+        "name": "claude-cli",
+        "model": "claude-opus-4-7",
+        "effort": "high",
+        "version": "2.1.142 (Claude Code)"
+      },
+      {
+        "name": "antigravity-cli",
+        "model": "gemini-3.5-flash",
+        "effort": "high",
+        "sandbox": "workspace-write",
+        "version": "1.0.1"
+      }
+    ]
+  },
+  "workflow": {
+    "branch_mode": "audit",
+    "main_branch": "main",
+    "integration_branch": "dev",
+    "impl_uses_integration_branch": true,
+    "qa_worktree_enabled": true,
+    "qa_stage_mode": "staged",
+    "release_merge_to": "main",
+    "enforce_branch_guard": true
+  },
+  "review": {
+    "independent_enabled": true,
+    "independent_sandbox": "workspace-write",
+    "independent_exec_timeout_seconds": 1800,
+    "independent_triggers": [
+      "gate2",
+      "gate4"
+    ],
+    "independent_worktree": true,
+    "independent_readonly": true
+  },
+  "execution": {
+    "independent_enabled": true,
+    "default_worktree": true,
+    "default_timeout_seconds": 2400
+  }
+}

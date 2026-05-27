@@ -1,0 +1,4 @@
+cwd: <QA_WORKSPACE>\backend
+command: & '<PYTHON_HOME>\bin\python.exe' --version
+Python 3.14.3
+exit_code: 0

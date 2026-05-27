@@ -118,6 +118,23 @@ fixture에 넣지 않는다.
 
 1차 하네스는 모델을 호출하지 않는다.
 
+최소 smoke harness는 다음 명령으로 실행한다.
+
+```powershell
+python scripts/regression/run_audit_smoke.py
+```
+
+현재 최소판은 fixture를 사용하지 않고 임시 프로젝트를 생성해 `init`, 핵심 check 명령, Gate 차단, Run 생성/검사, preflight 차단을 확인한다.
+fixture 기반 검증은 이 smoke harness 위에 후속으로 추가한다.
+
+첫 fixture smoke는 다음 명령으로 실행한다.
+
+```powershell
+python scripts/regression/run_fixture_smoke.py
+```
+
+현재 fixture는 `scripts/regression/fixtures/simple-hello-audit/`이며, `sample-ex-branch-1`에서 정규화한 공개 가능한 문서 세트와 `check-contract`용 최소 backend 소스를 포함한다.
+
 권장 흐름:
 
 ```text

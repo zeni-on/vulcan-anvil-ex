@@ -1,0 +1,14 @@
+INFO:     Started server process [37156]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+COMMAND=in-process uvicorn.Server app.main:app on 127.0.0.1:8000; urllib.request http://127.0.0.1:8000/hello
+INFO:     127.0.0.1:63466 - "GET /hello HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [37156]
+STATUS_CODE=200
+CONTENT=hello
+CONTENT_TYPE=text/plain; charset=utf-8
+EXIT_CODE=0

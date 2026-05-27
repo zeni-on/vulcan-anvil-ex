@@ -1,0 +1,12 @@
+// Physical ERD DBML
+// Status: N/A
+// REQ-001-01 hello API는 저장 데이터가 없으므로 물리 테이블을 정의하지 않는다.
+
+Project physical_erd {
+  database_type: 'N/A'
+  Note: '''
+  DB 제외 결정: ADR-002
+  관련 요구사항: REQ-001-01
+  사유: hello API는 단순 문자열 응답만 반환하며 영속 데이터가 없다.
+  '''
+}

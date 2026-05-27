@@ -1,0 +1,7 @@
+cwd: <QA_WORKSPACE>\backend
+command: in-process uvicorn.Server app.main:app host=127.0.0.1 port=8000 then urllib.request /hello
+server_started: True
+http_status: 200
+body: hello
+success_criteria_met: True
+exit_code: 0

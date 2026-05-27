@@ -1,0 +1,4 @@
+cwd: <QA_WORKSPACE>
+command: bind TCP 127.0.0.1:8000 availability check
+port_available: true
+exit_code: 0
