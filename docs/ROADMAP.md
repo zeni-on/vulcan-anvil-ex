@@ -53,6 +53,7 @@
 현재 최소 smoke harness는 `scripts/regression/run_audit_smoke.py`에 있다.
 이 스크립트는 실제 AI runner나 frontend/backend dependency 설치 없이 `init`, 핵심 check 명령, Gate 차단, Run 생성/검사, preflight 차단을 빠르게 확인한다.
 완료된 문서 세트를 사용하는 fixture smoke harness는 `scripts/regression/run_fixture_smoke.py`에 있으며, 첫 fixture는 `scripts/regression/fixtures/simple-hello-audit/`이다.
+fixture smoke는 QA-001~QA-003이 QA-000의 QA workspace 기록 없이 실행되지 않도록 `run-preflight` 차단 회귀 케이스도 포함한다.
 
 하네스 fixture는 새로 사람이 작성하지 않고, 기존 샘플 프로젝트에서 완결된 산출물 문서 세트를 추출해 정규화하는 방향을 우선 검토한다.
 상세 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
@@ -71,6 +72,7 @@ worker에게 넘기는 Run 문서 품질을 더 안정화합니다.
 현재 가장 실전 리스크가 큰 구간입니다.
 
 - `QA-000`이 만든 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 더 강하게 검증한다.
+- `run-preflight`와 fixture smoke에서 QA-000 workspace 기록이 없는 후속 QA Run을 차단한다.
 - QA worker가 테스트 실행자 역할과 수정자 역할을 섞지 않게 한다.
 - `qa-fix-loop`는 사용자 또는 Orchestrator 판단 후 별도 Run으로만 시작한다.
 - QA 결과서와 Finding 문서가 로그, 이미지, trace, command result를 Dashboard에서 확인할 수 있게 유지한다.

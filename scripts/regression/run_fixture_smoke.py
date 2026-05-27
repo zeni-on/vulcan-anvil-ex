@@ -9,6 +9,7 @@ that core document/check commands still accept the real artifact shape.
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -33,6 +34,12 @@ REPRESENTATIVE_RUNS = [
 PREFLIGHT_RUNS = [
     "RUN-011_build-wave-BW-000_python-hello-api-scaffold-and-implementation_v0.1.md",
     "RUN-012_build-wave-BW-001_python-hello-api-feature-implementation_v0.1.md",
+]
+
+QA_PREFLIGHT_RUNS = [
+    "RUN-015_qa-001-gate-4-command-validation-for-python-hello-api_v0.1.md",
+    "RUN-016_qa-002-gate-4-ui-e2e-applicability-for-python-hello-api_v0.1.md",
+    "RUN-017_qa-003-gate-4-result-summary-and-decision-candidate-for-python-hello-api_v0.1.md",
 ]
 
 
@@ -117,7 +124,7 @@ def apply_fixture(fixture_dir: Path, project_dir: Path) -> None:
 
 def validate_fixture_inputs(project_dir: Path) -> None:
     missing = []
-    for run_name in REPRESENTATIVE_RUNS + PREFLIGHT_RUNS:
+    for run_name in REPRESENTATIVE_RUNS + PREFLIGHT_RUNS + QA_PREFLIGHT_RUNS:
         path = project_dir / "docs" / "runs" / run_name
         if not path.exists():
             missing.append(str(path.relative_to(project_dir)))
@@ -207,6 +214,44 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                     cwd=project_dir,
                     expected_returncodes={0, 1},
                 )
+            )
+
+        for run_name in QA_PREFLIGHT_RUNS:
+            steps.append(
+                run_step(
+                    f"run-preflight:{run_name}",
+                    [py, "vulcan.py", "run-preflight", str(Path("docs") / "runs" / run_name)],
+                    cwd=project_dir,
+                )
+            )
+
+        session_path = project_dir / "session.json"
+        session_before_qa_guard = json.loads(session_path.read_text(encoding="utf-8"))
+        session_missing_qa_workspace = json.loads(json.dumps(session_before_qa_guard))
+        session_missing_qa_workspace.pop("qa_execution", None)
+        session_path.write_text(
+            json.dumps(session_missing_qa_workspace, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        try:
+            steps.append(
+                run_step(
+                    "run-preflight-blocks-qa001-without-qa000-workspace",
+                    [
+                        py,
+                        "vulcan.py",
+                        "run-preflight",
+                        str(Path("docs") / "runs" / QA_PREFLIGHT_RUNS[0]),
+                    ],
+                    cwd=project_dir,
+                    expected_returncodes={1},
+                    required_text=["qa_execution.gate4_workspace.path"],
+                )
+            )
+        finally:
+            session_path.write_text(
+                json.dumps(session_before_qa_guard, ensure_ascii=False, indent=2),
+                encoding="utf-8",
             )
 
         steps.append(run_step("export-snapshot", [py, "vulcan.py", "export"], cwd=project_dir))

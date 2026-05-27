@@ -32,6 +32,8 @@ python scripts/regression/run_fixture_smoke.py
 - 최소 backend 소스와 Program Design 계약에서 `check-contract`가 실패 없이 동작한다.
 - 대표 Run 문서들이 `run-check`를 통과한다.
 - 대표 Build Wave Run이 `run-preflight`에서 crash 없이 검사된다.
+- QA-001~QA-003 Run은 QA-000이 기록한 QA workspace가 있을 때만 `run-preflight`를 통과한다.
+- QA-000 workspace 기록을 제거하면 QA-001 preflight가 차단된다.
 
 ## 범위
 

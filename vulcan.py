@@ -8766,6 +8766,62 @@ def _extract_yaml_block_text(content, key):
     return "\n".join(capture).strip()
 
 
+def project_dir_for_run_file(path):
+    current = os.path.abspath(path)
+    if os.path.isfile(current):
+        current = os.path.dirname(current)
+
+    while True:
+        if os.path.exists(os.path.join(current, "session.json")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return ""
+        current = parent
+
+
+def is_placeholder_path(value):
+    text = str(value or "").strip()
+    return bool(text and text.startswith("<") and text.endswith(">"))
+
+
+def qa_workspace_preflight_blockers(run_file, stage):
+    if stage not in {"QA-001", "QA-002", "QA-003"}:
+        return []
+
+    blockers = []
+    project_dir = project_dir_for_run_file(run_file)
+    if not project_dir:
+        return [f"{stage} Run preflight에서 session.json 위치를 찾을 수 없습니다."]
+
+    session_path = os.path.join(project_dir, "session.json")
+    try:
+        with open(session_path, encoding="utf-8") as f:
+            session = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return [f"{stage} Run preflight에서 session.json을 읽을 수 없습니다: {e}"]
+
+    state = qa_workspace_state(session)
+    qa_path = str(state.get("path") or "").strip()
+    qa_status = str(state.get("status") or "").strip().lower()
+    if not qa_path:
+        blockers.append(
+            f"{stage}는 QA-000이 기록한 qa_execution.gate4_workspace.path 없이는 실행할 수 없습니다."
+        )
+        return blockers
+
+    if qa_status in {"blocked", "failed", "missing", "environment_blocked"}:
+        blockers.append(
+            f"{stage}는 QA-000 workspace 상태가 {qa_status}이면 실행할 수 없습니다: {qa_path}"
+        )
+
+    qa_abs_path = qa_path if os.path.isabs(qa_path) else os.path.join(project_dir, qa_path)
+    if not is_placeholder_path(qa_path) and not os.path.isdir(os.path.abspath(qa_abs_path)):
+        blockers.append(f"{stage} QA workspace 경로가 존재하지 않습니다: {qa_path}")
+
+    return blockers
+
+
 def run_preflight_file(path):
     blockers = []
     warnings = []
@@ -8874,6 +8930,7 @@ def run_preflight_file(path):
             warnings.append("Build Wave 결과가 추적표 Implemented/Verified/Pass 확정처럼 보입니다. worker 결과와 Orchestrator 재검증 반영을 구분하세요.")
 
     if skill == "qa-execution":
+        qa_stage = qa_stage_from_run(content, metadata)
         if "qa_execution_policy:" not in content:
             warnings.append("qa-execution Run에는 qa_execution_policy가 있는 편이 안전합니다.")
         if not re.search(r"\bQA-00[0-3]\b", content):
@@ -8882,6 +8939,7 @@ def run_preflight_file(path):
             warnings.append("QA-000 Run은 후속 QA Run이 재사용할 qa_workspace_path 또는 QA worktree 경로를 기록해야 합니다.")
         if re.search(r"\bQA-00[1-3]\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
             warnings.append("QA-001~QA-003 Run은 QA-000이 기록한 같은 qa_workspace_path를 입력으로 받아야 합니다.")
+        blockers.extend(qa_workspace_preflight_blockers(path, qa_stage))
         writable_block = _extract_yaml_block_text(content, "writable")
         if re.search(r"(^|\n)\s*-\s*(backend|frontend|src|app|packages|server|client)(/|\\|\s*$)", writable_block, re.IGNORECASE):
             blockers.append("qa-execution Run writable scope에는 소스코드 경로를 포함하지 않습니다. QA worker는 증적과 결과 문서만 작성합니다.")
