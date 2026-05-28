@@ -25,10 +25,10 @@ updated_at: 2026-05-13
 
 ## 4. 요구사항 추적 매트릭스
 
-| REQ-ID | NREQ-ID | AC-ID | FUNC-ID | SCR-ID | PGM-ID | DB-ID | IF-ID | SEC-ID | 참조 표준 | UT-ID | IT-ID | PT-ID | 상태 | 증적 | 비고 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| REQ-001-01 | NREQ-001 | AC-001-01 | FUNC-001 | SCR-001 | PGM-001 | DB-001 | 해당없음 | SEC-001 | OWASP A01 | UT-001 | IT-001 | 해당없음 | Verified | TEST-RESULT | 정상 흐름 |
-| REQ-002-01 | NREQ-001 | AC-002-01 | 미정 | SCR-002 | PGM-002 | DB-001 | 해당없음 | SEC-001 | OWASP A01 | 해당없음 | 해당없음 | 해당없음 | Draft | 미정 | 설계 보강 필요 |
+| REQ-ID | NREQ-ID | AC-ID | FUNC-ID | SCR-ID | PGM-ID | DB-ID | IF-ID | SEC-ID | 참조 표준 | UT-ID | IT-ID | UI-ID | PT-ID | 상태 | 증적 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| REQ-001-01 | NREQ-001 | AC-001-01 | FUNC-001 | SCR-001 | PGM-001 | DB-001 | 해당없음 | SEC-001 | OWASP A01 | UT-001 | IT-001 | UI-001-01 | 해당없음 | Verified | TEST-RESULT | 정상 흐름 |
+| REQ-002-01 | NREQ-001 | AC-002-01 | 미정 | SCR-002 | PGM-002 | DB-001 | 해당없음 | SEC-001 | OWASP A01 | 해당없음 | 해당없음 | UI-002-01 | 해당없음 | Draft | 미정 | UI 증적으로 검증 |
 
 ## 5. 요구사항별 검증 요약
 
@@ -47,6 +47,7 @@ updated_at: 2026-05-13
 | 결함 ID | 결함 유형 | 관련 ID | 설명 | 조치 담당 | 상태 |
 | --- | --- | --- | --- | --- | --- |
 | ISSUE-001 | 설계 연결 누락 | REQ-002-01 | FUNC 미정 | design | Open |
+| — | 없음 | — | 추적성 결함 없음 | — | — |
 `
 
 describe('traceabilityDoc parser', () => {
@@ -63,6 +64,7 @@ describe('traceabilityDoc parser', () => {
     expect(model.summaries[0].verification).toBe('Verified')
     expect(model.securityRows[0].secId).toBe('SEC-001')
     expect(model.issues[0].status).toBe('Open')
+    expect(model.issues).toHaveLength(1)
   })
 
   it('추적 누락 수를 계산한다', () => {
@@ -70,7 +72,7 @@ describe('traceabilityDoc parser', () => {
     expect(countTraceabilityGaps(model.rows)).toEqual({
       ac: 0,
       design: 1,
-      test: 1,
+      test: 0,
       evidence: 1,
     })
   })

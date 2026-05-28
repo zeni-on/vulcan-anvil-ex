@@ -167,7 +167,13 @@ function renderIssueRows(rows: TraceabilityIssueRow[]) {
   ])
 }
 
-export default function TraceabilityDocView({ model }: { model: TraceabilityDocModel }) {
+export default function TraceabilityDocView({
+  model,
+  summaryOnly = false,
+}: {
+  model: TraceabilityDocModel
+  summaryOnly?: boolean
+}) {
   const gaps = countTraceabilityGaps(model.rows)
   const verifiedCount = model.rows.filter((row) => row.status === 'Verified').length
   const openIssues = model.issues.filter((issue) => issue.status !== 'Closed').length
@@ -196,38 +202,42 @@ export default function TraceabilityDocView({ model }: { model: TraceabilityDocM
         <StatPill label="Open 이슈" value={openIssues} tone={openIssues === 0 ? 'good' : 'warn'} />
       </div>
 
-      {model.summaries.length > 0 && (
-        <Section title="요구사항별 검증 요약">
-          <SmallTable
-            headers={['REQ', '요구사항명', 'AC 수', '설계', '테스트', '검증 상태', '미해결 사항']}
-            rows={renderSummaryRows(model.summaries)}
-          />
-        </Section>
-      )}
+      {!summaryOnly && (
+        <>
+          {model.summaries.length > 0 && (
+            <Section title="요구사항별 검증 요약">
+              <SmallTable
+                headers={['REQ', '요구사항명', 'AC 수', '설계', '테스트', '검증 상태', '미해결 사항']}
+                rows={renderSummaryRows(model.summaries)}
+              />
+            </Section>
+          )}
 
-      <Section title="요구사항 추적 매트릭스">
-        <SmallTable
-          headers={['REQ', 'AC', 'FUNC', 'SCR', 'PGM', 'DB', 'SEC', 'UT', 'IT', '상태', '증적']}
-          rows={renderMatrixRows(model.rows)}
-        />
-      </Section>
+          <Section title="요구사항 추적 매트릭스">
+            <SmallTable
+              headers={['REQ', 'AC', 'FUNC', 'SCR', 'PGM', 'DB', 'SEC', 'UT', 'IT', '상태', '증적']}
+              rows={renderMatrixRows(model.rows)}
+            />
+          </Section>
 
-      {model.securityRows.length > 0 && (
-        <Section title="보안항목 추적">
-          <SmallTable
-            headers={['SEC', '보안항목', '관련 ID', '참조 표준', '검증 테스트', '상태']}
-            rows={renderSecurityRows(model.securityRows)}
-          />
-        </Section>
-      )}
+          {model.securityRows.length > 0 && (
+            <Section title="보안항목 추적">
+              <SmallTable
+                headers={['SEC', '보안항목', '관련 ID', '참조 표준', '검증 테스트', '상태']}
+                rows={renderSecurityRows(model.securityRows)}
+              />
+            </Section>
+          )}
 
-      {model.issues.length > 0 && (
-        <Section title="추적성 결함 목록">
-          <SmallTable
-            headers={['ID', '유형', '관련 ID', '설명', '담당', '상태']}
-            rows={renderIssueRows(model.issues)}
-          />
-        </Section>
+          {model.issues.length > 0 && (
+            <Section title="추적성 결함 목록">
+              <SmallTable
+                headers={['ID', '유형', '관련 ID', '설명', '담당', '상태']}
+                rows={renderIssueRows(model.issues)}
+              />
+            </Section>
+          )}
+        </>
       )}
     </div>
   )

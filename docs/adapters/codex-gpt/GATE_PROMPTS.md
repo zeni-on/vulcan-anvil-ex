@@ -69,7 +69,7 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 
 - Orchestrator는 구현 주 작성자가 아니다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 먼저 worker Run 또는 Build Wave Run을 만들고 `agent-run --mode work`나 명시적 subagent 위임으로 실행한다.
-- Orchestrator가 직접 코드를 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
+- Orchestrator가 직접 코드를 수정해야 하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
 - Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
 - 신규 개발 또는 빌드 가능한 골격이 없으면 feature 구현 전 `implementation-scaffold`로 class/interface/method/DTO skeleton과 build smoke를 먼저 만든다.
 - `build-wave` Run은 Program Design의 public signature를 `target_contracts.interface_contract`로 가져온 뒤 실행한다.

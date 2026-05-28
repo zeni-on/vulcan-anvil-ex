@@ -354,7 +354,11 @@ Orchestrator 직접 수정 예외:
 - 허용 예외: worker 결과 통합 중 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 보정, 명백한 오타나 경로 오류 수정.
 - 추가 허용 예외: worker/subagent/agent-run 실행 불가가 확인된 경우, 긴급한 1~2줄 연결 수정, 사용자가 Orchestrator 직접 구현을 명시 승인한 경우.
 - 금지 기본값: 신규 기능 코드 작성, API/DB/UI 동작 구현, 테스트 케이스 본문 작성, 개발표준 위반 리팩터링을 Orchestrator가 혼자 완료 처리하는 것.
-- 예외 사용 시 Run에 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 worker 또는 QA 검수 필요 여부를 남긴다.
+- 예외 사용 시 Run에 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 worker 또는 QA 검수 필요 여부를 남긴다.
+- 직접 구현 예외는 순 변경량 약 30 LOC 이하, 수정 파일 2개 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능할 때만 허용한다.
+- 예외 Run에는 `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, `direct_edit_scope.verification`, `direct_edit_scope.followup_review_required`를 남긴다.
+- 위 기준을 넘거나 판단이 애매하면 작업을 Build Wave Run 또는 worker Run으로 나눈다. 3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 API/메소드/DTO/DB/SCR/PGM 계약 추가는 분리 신호다.
+- subagent를 여러 개 병렬로 호출해 구현했다면 직접 구현이 아니라 Build Wave 실행으로 기록한다. 해당 Wave Run의 `target_contracts`, `scope.writable`, worker/subagent 목록, 통합 검증을 남긴다.
 
 CLI worker 실행에서는 `docs/runs/_exec/<TARGET-ID>_<runner>-status.json` heartbeat를 남긴다.
 worker는 정확한 시간 간격을 맞추는 대신 시작, 컨텍스트 로딩, 편집, 테스트, 결과 작성, 완료/차단/실패처럼 단계가 바뀔 때 `phase`와 `current_task`를 갱신한다.
@@ -438,6 +442,8 @@ Implementation Run은 다음 조건을 만족해야 완료할 수 있다.
 
 개발표준정의서는 구현자가 참고해도 되는 선택 문서가 아니라 구현 계약이다.
 구현 착수 전에 build persona 또는 Build Wave Run은 개발표준정의서의 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령 기준을 확인하고 작업지시서에 준수 항목을 남겨야 한다.
+Build Wave Run에는 `development_standards_applied`와 `development_standard_checklist`를 포함해 로깅, 주석/JavaDoc/docstring, 테스트 설명 기준을 worker에게 직접 전달한다.
+worker는 logger 선언, 주요 class/public 업무 method 설명, 테스트의 입력값/기대값/출력값 또는 Given/When/Then 설명 준수 여부를 결과에 남긴다.
 Spring Boot 프로젝트에서 `domain/{feature}` 래퍼를 쓰려면 DDD 구조 선택 사유가 개발표준정의서에 있어야 하며, 사유가 없으면 base package 바로 아래 `auth/`, `user/`, `{feature}/`, `security/`, `common/` 구조를 기준으로 구현한다.
 로깅과 주석 기준이 비어 있거나 구현자가 바로 적용할 수 없으면 코딩으로 넘어가지 않고 개발표준 보완 `FIND` 또는 범위 변경 `CR`로 분류한다.
 프로그램 설계서는 구현 계약이다. 구현 worker는 관련 `PGM-ID`, 컴포넌트 책임, Interface Contract, Abstract Base Contract, Public Method Contract, DTO/Entity/Data Contract, 오류/예외/메시지, 트랜잭션/보안/로깅 기준을 확인한 뒤 작업한다.

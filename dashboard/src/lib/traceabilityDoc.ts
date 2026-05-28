@@ -12,6 +12,7 @@ export interface TraceabilityRow {
   standard: string
   utId: string
   itId: string
+  uiId: string
   ptId: string
   status: string
   evidence: string
@@ -145,8 +146,12 @@ function isPlaceholder(value: string): boolean {
   const normalized = value.trim()
   return (
     normalized === '' ||
+    normalized === '-' ||
+    normalized === '—' ||
+    normalized === '없음' ||
     normalized === '미정' ||
     normalized === '확인필요' ||
+    normalized.toLowerCase() === 'n/a' ||
     normalized === 'REQ-' ||
     normalized === 'AC-001'
   )
@@ -155,6 +160,14 @@ function isPlaceholder(value: string): boolean {
 function isMissingVerification(value: string): boolean {
   const normalized = value.trim()
   return isPlaceholder(normalized) || normalized === '해당없음'
+}
+
+function isNoIssueRow(row: TraceabilityIssueRow): boolean {
+  return (
+    isPlaceholder(row.id) &&
+    (isPlaceholder(row.type) || row.type === '없음') &&
+    (isPlaceholder(row.status) || row.status === '없음')
+  )
 }
 
 export function isTraceabilityDoc(doc: DocNode, content: string): boolean {
@@ -193,6 +206,7 @@ export function parseTraceabilityDoc(content: string): TraceabilityDocModel {
         standard: getCell(row, ['참조 표준']),
         utId: getCell(row, ['UT-ID']),
         itId: getCell(row, ['IT-ID']),
+        uiId: getCell(row, ['UI-ID']),
         ptId: getCell(row, ['PT-ID']),
         status: getCell(row, ['상태']),
         evidence: getCell(row, ['증적']),
@@ -231,7 +245,7 @@ export function parseTraceabilityDoc(content: string): TraceabilityDocModel {
         owner: getCell(row, ['조치 담당']),
         status: getCell(row, ['상태']),
       }))
-      .filter((row) => Boolean(row.id || row.description)),
+      .filter((row) => Boolean(row.id || row.description) && !isNoIssueRow(row)),
   }
 }
 
@@ -245,6 +259,7 @@ export function countTraceabilityGaps(rows: TraceabilityRow[]) {
       if (
         isMissingVerification(row.utId) &&
         isMissingVerification(row.itId) &&
+        isMissingVerification(row.uiId) &&
         isMissingVerification(row.ptId)
       ) {
         acc.test += 1

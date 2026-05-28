@@ -442,7 +442,61 @@ development_standards_applied:
 로깅 작업이면 `DEV-LOG-001`, REST API 오류 응답 작업이면 `DEV-API-001` 또는 `DEV-ERR-001`처럼 이번 Run의 직접 구현 판단에 필요한 규칙만 넣는다.
 개발표준 문서에 아직 규칙 ID가 없으면 Orchestrator는 Gate 2에서 규칙 ID를 먼저 보강하거나, Run 안에 임시 `standard_id`와 출처를 명시한다.
 
-### 6.4 `source_documents`
+### 6.4 `development_standard_checklist`
+
+`development_standard_checklist`는 구현 worker가 코드를 작성하면서 바로 체크해야 하는 로깅, 주석, 테스트 설명 기준이다.
+개발표준정의서에 기준이 있더라도 Build Wave Run에 이 체크리스트가 없으면 worker가 구현 중 놓칠 수 있으므로, Orchestrator는 구현 Run 생성 시 직접 포함해야 한다.
+
+최소 필드는 다음과 같다.
+
+```yaml
+development_standard_checklist:
+  logging:
+    required: true
+    targets: [Controller, Service, SecurityFilter, ControllerAdvice, CoreComponent]
+    rule: "프로젝트 표준 logger를 선언하고 민감정보, 토큰, 비밀번호, 내부 stack trace를 로그에 남기지 않는다."
+  comments:
+    required: true
+    targets: ["주요 class", "public 업무 method", "보안/트랜잭션/권한 판단 method"]
+    rule: "책임, 입력, 출력, 예외, 관련 REQ/FUNC/PGM/SEC/UT/IT ID를 JavaDoc/docstring/주석으로 남긴다."
+  tests:
+    required: true
+    targets: ["@Test", "단위 테스트", "통합 테스트", "UI/E2E 테스트"]
+    rule: "테스트 이름의 추적 ID만으로 끝내지 않고 @DisplayName 또는 Given/When/Then으로 입력값, 기대값, 출력값을 설명한다."
+```
+
+worker는 Run 결과에 준수 여부와 예외 사유를 남긴다.
+기준이 기술스택과 맞지 않으면 임의로 생략하지 않고 `open_issues`, `FIND`, 또는 Orchestrator 결정 필요 항목으로 반환한다.
+
+### 6.5 `direct_edit_scope`
+
+`direct_edit_scope`는 Orchestrator가 구현 단계에서 예외적으로 직접 수정할 때만 사용한다.
+기본 구현 경로는 Build Wave worker이며, Orchestrator 직접 구현은 작은 연결 수정, 충돌 해소, 오타/경로/설정 보정 같은 예외로 제한한다.
+
+직접 수정 예외는 다음 조건을 모두 만족해야 한다.
+
+- 수정 파일 2개 이하
+- 순 변경량 약 30 LOC 이하
+- public API, PGM/IF/MTH, DTO/schema, DB migration, security boundary, SCR/UI contract 변경 없음
+- 기존 테스트 또는 작은 테스트 보정으로 검증 가능
+
+예:
+
+```yaml
+orchestrator_direct_edit_reason: "worker 결과 통합 중 import 경로 충돌을 해소하기 위한 1파일 연결 수정"
+direct_edit_scope:
+  files:
+    - backend/src/main/java/com/example/todo/auth/AuthConfig.java
+  estimated_loc: 8
+  contract_changed: false
+  verification:
+    - "./gradlew :backend:test --tests '*AuthConfig*'"
+  followup_review_required: true
+```
+
+위 조건을 넘으면 `direct_edit_scope`로 처리하지 않고 Build Wave Run 또는 worker Run으로 분리한다.
+
+### 6.6 `source_documents`
 
 `source_documents.read_first`는 worker가 작업 시작 전에 반드시 먼저 읽는 최소 문서다.
 보통 `AGENTS.md`, `session.json`, 현재 skill 문서만 둔다.
@@ -461,7 +515,7 @@ worker Run에는 `Traceability Matrix`, `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRAC
 `source_documents`에 없는 전역 memory, 과거 rollout summary, 다른 샘플 프로젝트 문서는 현재 Run의 입력 계약이 아니다.
 런타임이 memory를 자동으로 제공하더라도 worker는 현재 Run의 `source_documents`, `target_contracts`, `scope`, 최신 사용자 지시만 작업 근거로 삼는다.
 
-### 6.5 `verification`
+### 6.7 `verification`
 
 `verification.commands`에는 Orchestrator가 worker 결과를 받은 뒤 재실행할 담당 테스트케이스 명령, 빌드/린트, `python vulcan.py run-check <현재 Run>`처럼 작업자 범위에서 재현 가능한 명령만 넣는다.
 

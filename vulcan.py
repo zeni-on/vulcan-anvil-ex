@@ -451,6 +451,47 @@ AUDIT_WORKER_RUN_SIZING_POLICY = {
     ],
 }
 
+ORCHESTRATOR_DIRECT_EDIT_LIMITS = {
+    "max_files": 2,
+    "max_loc": 30,
+    "split_files": 3,
+    "split_loc": 100,
+    "split_minutes": 15,
+}
+
+AUDIT_DEVELOPMENT_STANDARDS_APPLIED = [
+    {
+        "standard_id": "DEV-LOG-001",
+        "rule": "표준 logger를 사용하고 민감정보, 토큰, 비밀번호, 내부 stack trace를 로그에 남기지 않는다.",
+    },
+    {
+        "standard_id": "DEV-COMMENT-001",
+        "rule": "주요 class와 public 업무 method에는 책임, 입력, 출력, 예외, 관련 ID를 JavaDoc/docstring/주석으로 남긴다.",
+    },
+    {
+        "standard_id": "DEV-TEST-001",
+        "rule": "테스트는 UT/IT/UI ID와 사람이 읽을 수 있는 입력값, 기대값, 출력값 또는 Given/When/Then 설명을 가진다.",
+    },
+]
+
+AUDIT_DEVELOPMENT_STANDARD_CHECKLIST = {
+    "logging": {
+        "required": True,
+        "targets": ["Controller", "Service", "SecurityFilter", "ControllerAdvice", "CoreComponent"],
+        "rule": "SLF4J LoggerFactory 또는 프로젝트 표준 logger를 선언하고 민감정보를 로그에 남기지 않는다.",
+    },
+    "comments": {
+        "required": True,
+        "targets": ["주요 class", "public 업무 method", "보안/트랜잭션/권한 판단 method"],
+        "rule": "책임, 입력, 출력, 예외, 관련 REQ/FUNC/PGM/SEC/UT/IT ID를 JavaDoc/docstring/주석으로 남긴다.",
+    },
+    "tests": {
+        "required": True,
+        "targets": ["@Test", "단위 테스트", "통합 테스트", "UI/E2E 테스트"],
+        "rule": "테스트 이름의 추적 ID만으로 끝내지 않고 @DisplayName 또는 Given/When/Then으로 입력값, 기대값, 출력값을 설명한다.",
+    },
+}
+
 AUDIT_QA_EXECUTION_POLICY = {
     "worker_can_run_tests": True,
     "worker_can_write_evidence": True,
@@ -626,7 +667,9 @@ AUDIT_GATE_PRESETS = {
             "작은 기능이라도 실제 코드/테스트/UI/API 구현은 Orchestrator 직접 구현이 아니라 worker Run 또는 agent-run --mode work로 수행한다.",
             "사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니며, 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.",
             "직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.",
-            "Orchestrator 직접 수정 예외가 있으면 orchestrator_direct_edit_reason, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.",
+            "Orchestrator 직접 수정 예외가 있으면 orchestrator_direct_edit_reason, direct_edit_scope.files, direct_edit_scope.estimated_loc, direct_edit_scope.contract_changed, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.",
+            "직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.",
+            "3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 계약 추가, 테스트 본문 대량 추가가 보이면 Build Wave로 분리한다.",
             "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다.",
             "Build Wave와 worker Run은 기능/계약 단위로 나뉘며 target_contracts의 FUNC/PGM/API/DB/SEC/TEST 묶음이 명확하다.",
             "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다.",
@@ -1252,6 +1295,32 @@ def format_yaml_sequence(items, indent=0):
     return "\n".join(f"{spaces}- {format_yaml_scalar(item)}" for item in items)
 
 
+def format_development_standards_applied(items, indent=0):
+    spaces = " " * indent
+    child = " " * (indent + 2)
+    if not items:
+        return f"{spaces}[]"
+    lines = []
+    for item in items:
+        lines.append(f"{spaces}- standard_id: {format_yaml_scalar(item.get('standard_id', 'DEV-TBD'))}")
+        lines.append(f"{child}source: \"docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md\"")
+        lines.append(f"{child}rule: {format_yaml_scalar(item.get('rule', 'TBD'))}")
+    return "\n".join(lines)
+
+
+def format_development_standard_checklist(policy, indent=0):
+    spaces = " " * indent
+    child = " " * (indent + 2)
+    lines = []
+    for key, item in policy.items():
+        lines.append(f"{spaces}{key}:")
+        lines.append(f"{child}required: {str(bool(item.get('required'))).lower()}")
+        lines.append(f"{child}targets:")
+        lines.append(format_yaml_sequence(item.get("targets", []), indent + 4))
+        lines.append(f"{child}rule: {format_yaml_scalar(item.get('rule', 'TBD'))}")
+    return "\n".join(lines)
+
+
 def merge_unique(*item_lists):
     merged = []
     seen = set()
@@ -1455,6 +1524,8 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         "qa_execution_policy": AUDIT_QA_EXECUTION_POLICY if skill == "qa-execution" else {},
         "worker_execution_policy": AUDIT_WORKER_EXECUTION_POLICY,
         "worker_run_sizing_policy": AUDIT_WORKER_RUN_SIZING_POLICY,
+        "development_standards_applied": AUDIT_DEVELOPMENT_STANDARDS_APPLIED if worker_run and skill in ("build-wave", "implementation-scaffold") else [],
+        "development_standard_checklist": AUDIT_DEVELOPMENT_STANDARD_CHECKLIST if worker_run and skill in ("build-wave", "implementation-scaffold") else {},
         "output_requirements": {
             "format": "RUN_OUTPUT_CONTRACT.md",
             "include": [
@@ -1503,6 +1574,8 @@ def render_run_input_preset(preset, ids, persona, gate):
     qa_execution = preset.get("qa_execution_policy", {})
     worker_policy = preset["worker_execution_policy"]
     sizing_policy = preset.get("worker_run_sizing_policy", AUDIT_WORKER_RUN_SIZING_POLICY)
+    dev_standards_applied = preset.get("development_standards_applied", [])
+    dev_standard_checklist = preset.get("development_standard_checklist", {})
     target_contracts = classify_related_ids(ids)
     worker_run = bool(preset.get("worker_run"))
     skill = preset.get("skill", "")
@@ -1661,12 +1734,19 @@ Run을 완료할 때 다음 항목을 반드시 남긴다.
 
 사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
     if implementation_worker:
+        development_standard_block = f"""
+development_standards_applied:
+{format_development_standards_applied(dev_standards_applied, 2)}
+development_standard_checklist:
+{format_development_standard_checklist(dev_standard_checklist, 2)}"""
         run_scope_instruction = "- worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다."
         verification_instruction = "- 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다."
     elif skill == "qa-execution":
+        development_standard_block = ""
         run_scope_instruction = "- QA 실행 worker Run은 테스트 실행/증적 수집/원인 분류 단위로 끝나는 완결 조각이어야 한다."
         verification_instruction = "- QA 실행 worker Run이면 실행한 명령과 Orchestrator가 재실행할 `verification.commands`를 결과 문서에 남긴다."
     else:
+        development_standard_block = ""
         run_scope_instruction = "- Run은 현재 Gate와 related_ids 범위 안에서 완료 가능한 산출물 또는 검토 단위로 끝나야 한다."
         verification_instruction = "- 실행하거나 확인한 검증 명령과 결과를 Run 기록에 남긴다."
     return f"""## 3. Run 입력 계약
@@ -1698,6 +1778,7 @@ scope:
 {format_yaml_sequence(scope["excluded"], 4)}
 completion_criteria:
 {format_yaml_sequence(preset["completion_criteria"], 2)}
+{development_standard_block}
 {qa_execution_block}
 verification:
   commands:
@@ -1725,6 +1806,7 @@ output_requirements:
 {"  - 구현 worker Run이면 `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음을 먼저 확인한다." if implementation_worker else ""}
 {"- 구현 worker Run이면 `target_contracts.interface_contract`의 public signature, schema, error contract를 먼저 구현 경계로 삼는다." if implementation_worker else ""}
 {"- scaffold Run이면 `target_contracts.contract_skeleton`의 파일과 smoke 검증을 먼저 확인하고 업무 로직 구현을 완료 처리하지 않는다." if skill == "implementation-scaffold" else ""}
+{"- 구현 worker Run이면 `development_standards_applied`와 `development_standard_checklist`를 코드/테스트 작성 체크리스트로 사용하고 결과 보고에 준수/예외를 남긴다." if implementation_worker else ""}
 - `source_documents.working_documents`를 중심으로 실제 산출물을 작성하거나 검토한다.
 - `source_documents.reference_on_demand`는 기준 충돌, 작성 규칙 확인, 상세 판단이 필요할 때만 참고한다.
 - 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 Run의 근거로 사용하지 않는다.
@@ -3844,6 +3926,54 @@ def is_unresolved_trace_value(value):
     return normalized in {"", "-", "미정", "확인필요", "tbd", "todo"}
 
 
+def traceability_completion_required(session, current_gate):
+    gate4_status = str(session.get("gate_status", {}).get("gate4", "")).lower()
+    return current_gate == "gate5" or gate4_status in {"done", "completed", "awaiting-approval"}
+
+
+def is_incomplete_trace_status(value):
+    normalized = clean_contract_cell(value).lower()
+    return normalized in {"draft", "defined", "designed", "planned", "implemented", "초안", "계획됨", "구현완료"}
+
+
+def validate_traceability_completion_status(project_dir=".", session=None, current_gate="phase0"):
+    session = session or load_session(project_dir)
+    if not traceability_completion_required(session, current_gate):
+        return []
+
+    path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-traceability"),
+        r"traceability.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "TRACEABILITY.md"),
+    ])
+    if not path:
+        return []
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    issues = []
+    summary_section = extract_markdown_section(content, r"요구사항별\s*검증\s*요약")
+    for _headers, rows in parse_markdown_tables(summary_section):
+        for row in rows:
+            req_id = table_cell(row, ["REQ-ID"])
+            status = table_cell(row, ["검증 상태", "상태"])
+            if re.match(r"^(REQ|NREQ)-", req_id) and is_incomplete_trace_status(status):
+                issues.append(f"  X 추적표 요구사항별 검증 요약에 Gate 4 이후 미완료 상태가 남아 있습니다: {req_id}={status}")
+
+    security_section = extract_markdown_section(content, r"보안항목\s*추적")
+    for _headers, rows in parse_markdown_tables(security_section):
+        for row in rows:
+            sec_id = table_cell(row, ["SEC-ID"])
+            status = table_cell(row, ["상태"])
+            if sec_id.startswith("SEC-") and is_incomplete_trace_status(status):
+                issues.append(f"  X 추적표 보안항목 추적에 Gate 4 이후 미완료 상태가 남아 있습니다: {sec_id}={status}")
+
+    return issues
+
+
 def check_trace(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
@@ -4230,6 +4360,13 @@ def check_trace(project_dir="."):
             for tid, _ in not_executed:
                 issues.append(f"  X {tid} - 미실행")
                 print(f"  X {tid} - 미실행")
+
+    completion_status_issues = validate_traceability_completion_status(project_dir, session, current_gate)
+    if completion_status_issues:
+        print("\n  추적표 완료 상태 검사: 위반 감지")
+        issues.extend(completion_status_issues)
+    elif traceability_completion_required(session, current_gate):
+        print("\n  추적표 완료 상태 검사: OK")
 
     # stats 계산 및 session.json 업데이트 — 이슈 유무와 무관하게 항상 실행
     try:
@@ -4997,6 +5134,10 @@ target_contracts:
     error_contracts:
       - "TBD: 오류 코드/예외/사용자 메시지 계약을 Program Design/API/Security에서 복사"
 {"  contract_skeleton:\n    mode: \"new\"\n    files:\n      - path: \"TBD: skeleton 파일 경로\"\n        create: \"TBD: 생성/확인할 class/interface/method/DTO\"\n    forbidden:\n      - \"업무 로직 완성\"\n      - \"전체 E2E 또는 Gate 4 QA Pass 선언\"\n    smoke_commands:\n      - \"TBD: compile/import/build smoke 명령\"" if is_scaffold_wave else ""}
+development_standards_applied:
+{format_development_standards_applied(AUDIT_DEVELOPMENT_STANDARDS_APPLIED, 2)}
+development_standard_checklist:
+{format_development_standard_checklist(AUDIT_DEVELOPMENT_STANDARD_CHECKLIST, 2)}
 runner_role: worker-runner
 source_documents:
   read_first:
@@ -5064,6 +5205,7 @@ open_issues: []
 
 - 먼저 `source_documents.read_first`만 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
 - `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음이 이 Run의 실제 작업 범위다.
+- `development_standards_applied`와 `development_standard_checklist`는 코드/테스트 작성 체크리스트다. 로깅, 주석/JavaDoc, 테스트 설명을 구현 결과와 자기 Run 보고에 반영한다.
 - `source_documents.working_documents`는 이번 Wave의 필수 작업 문서다.
 - `source_documents.reference_on_demand`는 설계 충돌, 기준 확인, 세부 판단이 필요할 때만 참고한다.
 - `orchestrator_reference`는 worker 입력 계약이 아니다. Orchestrator가 worker 결과 통합, 추적성 반영, Run 입출력 정규화, session/Wave 상태 갱신 판단에 사용한다.
@@ -5088,7 +5230,8 @@ open_issues: []
 - 완료 시 테스트와 Run 기록을 갱신하고, 추적표 갱신 필요 항목 및 `wave-complete {bw_id}` 실행 필요 여부를 Orchestrator에게 보고한다.
 - 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
 - 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
-- Orchestrator가 직접 수정한 예외가 있으면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 남긴다.
+- Orchestrator가 직접 수정한 예외가 있으면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 남긴다.
+- 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 
 ## 5. 수정 범위
 
@@ -8639,6 +8782,84 @@ Do not perform Gate transitions, edit session gate state, or make final approval
         sys.exit(exit_code)
 
 
+def run_body_without_yaml(content):
+    return re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
+
+
+def impl_code_result_claim(body):
+    if re.search(r"구현\s*완료|implementation-complete|직접\s*구현\s*완료", body, re.IGNORECASE):
+        return True
+
+    changed_match = re.search(
+        r"(?ims)(?:^#{2,4}\s*(?:\d+\.\s*)?(?:변경\s*파일|changed\s*files)|^changed_files\s*:)(.*?)(?=^#{1,4}\s|\Z)",
+        body,
+    )
+    if changed_match and re.search(
+        r"backend/|frontend/|src/main|src/test|app/|pages/|components/|package\.json|build\.gradle|pom\.xml",
+        changed_match.group(1),
+        re.IGNORECASE,
+    ):
+        return True
+
+    verification_match = re.search(
+        r"(?ims)(?:^#{2,4}\s*(?:\d+\.\s*)?(?:검증\s*결과|verification\s*results)|^verification_results\s*:)(.*?)(?=^#{1,4}\s|\Z)",
+        body,
+    )
+    if verification_match:
+        verification_text = verification_match.group(1)
+        has_code_command = re.search(
+            r"npm\s+run|gradlew|pytest|py_compile|browser smoke|Playwright|mvn\s+test",
+            verification_text,
+            re.IGNORECASE,
+        )
+        has_result = re.search(
+            r"통과|passed|pass\b|exit[_ -]?code\s*[:=]\s*0|성공",
+            verification_text,
+            re.IGNORECASE,
+        )
+        if has_code_command and has_result:
+            return True
+
+    return False
+
+
+def direct_edit_reason_present(content):
+    return bool(re.search(
+        r"orchestrator_direct_edit_reason|direct\s*(edit|implementation)\s*reason|직접\s*(구현|수정)\s*사유",
+        content,
+        re.IGNORECASE,
+    ))
+
+
+def direct_edit_scope_block(content):
+    match = re.search(r"(?ms)^direct_edit_scope\s*:\s*(.*?)(?=^\S|\Z)", content)
+    return match.group(1).strip() if match else ""
+
+
+def direct_edit_scope_file_count(scope_text):
+    if not scope_text:
+        return 0
+    files_match = re.search(r"(?ms)files\s*:\s*(.*?)(?=^\s{0,2}\w[\w_-]*\s*:|\Z)", scope_text)
+    target = files_match.group(1) if files_match else scope_text
+    return len(re.findall(r"(?m)^\s*-\s+", target))
+
+
+def direct_edit_scope_estimated_loc(scope_text):
+    if not scope_text:
+        return None
+    match = re.search(r"estimated_loc\s*:\s*[\"']?(\d+)", scope_text, re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def direct_edit_scope_contract_changed(scope_text):
+    if not scope_text:
+        return None
+    match = re.search(r"contract_changed\s*:\s*[\"']?(true|false|yes|no)", scope_text, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).lower() in {"true", "yes"}
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -8663,11 +8884,22 @@ def check_run_file(path):
         if status not in {"Draft", "Requested", "InProgress", "Completed", "Verified", "Blocked", "Failed", "CompletedWithIssues", "AwaitingApproval"}:
             issues.append(f"허용되지 않은 status 값: {status}")
 
+    skill = ""
     skill_match = re.search(r"^\s*skill\s*:\s*(.+)$", content, re.MULTILINE)
     if skill_match:
         skill = skill_match.group(1).strip()
         if skill not in RUN_SKILLS:
             issues.append(f"알 수 없는 skill 값: {skill}")
+
+    gate = ""
+    gate_match = re.search(r"^\s*gate\s*:\s*(.+)$", content, re.MULTILINE)
+    if gate_match:
+        gate = gate_match.group(1).strip()
+
+    run_type = ""
+    run_type_match = re.search(r"^\s*run_type\s*:\s*(.+)$", content, re.MULTILINE)
+    if run_type_match:
+        run_type = run_type_match.group(1).strip()
 
     persona_match = re.search(r"^\s*persona\s*:\s*(.+)$", content, re.MULTILINE)
     if persona_match:
@@ -8685,9 +8917,36 @@ def check_run_file(path):
         warnings.append("Completed 상태이지만 traceability_updates가 비어 있습니다.")
 
     if status in {"Completed", "Verified", "CompletedWithIssues"}:
-        body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
+        body_without_yaml = run_body_without_yaml(content)
         if re.search(r"(?im)(^|\|)\s*(TBD|확정필요|작성필요)\s*(\||$)", body_without_yaml):
             issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
+
+        is_impl_run = gate == "impl" or run_type.lower().startswith("implementation")
+        has_impl_code_result = impl_code_result_claim(body_without_yaml)
+        if is_impl_run and skill in {"implementation-plan", "orchestrator-plan"} and has_impl_code_result:
+            issues.append("구현 계획/Orchestrator Plan Run이 실제 구현 완료 보고서처럼 쓰였습니다. 구현 결과는 Build Wave Run 또는 worker Run으로 분리하세요.")
+
+        has_direct_reason = direct_edit_reason_present(content)
+        if is_impl_run and has_impl_code_result and has_direct_reason:
+            scope_text = direct_edit_scope_block(content)
+            if not scope_text:
+                warnings.append("Orchestrator 직접 구현 예외가 있지만 direct_edit_scope가 없습니다. files, estimated_loc, contract_changed, verification, followup_review_required를 남기세요.")
+            else:
+                file_count = direct_edit_scope_file_count(scope_text)
+                estimated_loc = direct_edit_scope_estimated_loc(scope_text)
+                contract_changed = direct_edit_scope_contract_changed(scope_text)
+                if file_count > ORCHESTRATOR_DIRECT_EDIT_LIMITS["max_files"]:
+                    issues.append(f"Orchestrator 직접 구현 예외 파일 수가 기준을 초과합니다: {file_count}>{ORCHESTRATOR_DIRECT_EDIT_LIMITS['max_files']}. Build Wave/worker Run으로 분리하세요.")
+                if estimated_loc is None:
+                    warnings.append("direct_edit_scope.estimated_loc가 없습니다. 직접 구현 예외의 변경량을 기록하세요.")
+                elif estimated_loc > ORCHESTRATOR_DIRECT_EDIT_LIMITS["max_loc"]:
+                    issues.append(f"Orchestrator 직접 구현 예외 변경량이 기준을 초과합니다: {estimated_loc}>{ORCHESTRATOR_DIRECT_EDIT_LIMITS['max_loc']} LOC. Build Wave/worker Run으로 분리하세요.")
+                if contract_changed is None:
+                    warnings.append("direct_edit_scope.contract_changed가 없습니다. public API/PGM/DTO/DB/security/SCR/UI 계약 변경 여부를 명시하세요.")
+                elif contract_changed:
+                    issues.append("Orchestrator 직접 구현 예외에서 contract_changed=true는 허용하지 않습니다. Build Wave/worker Run 또는 CR로 분리하세요.")
+                if not re.search(r"followup_review_required\s*:", scope_text, re.IGNORECASE):
+                    warnings.append("direct_edit_scope.followup_review_required가 없습니다. 직접 구현 후 후속 worker/review 필요 여부를 기록하세요.")
 
         is_audit_run = bool(re.search(r"^\s*profile\s*:\s*audit\s*$", content, re.MULTILINE))
         if is_audit_run:
@@ -8840,11 +9099,7 @@ def run_preflight_file(path):
     body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
 
     is_impl = gate == "impl" or metadata.get("run_type", "").lower() == "implementation"
-    has_code_result_claim = bool(re.search(
-        r"backend/|frontend/|npm\s+run|pytest|py_compile|구현 완료|implementation-complete|browser smoke",
-        body_without_yaml,
-        re.IGNORECASE,
-    ))
+    has_code_result_claim = impl_code_result_claim(body_without_yaml)
     has_trace_final_claim = any(
         (
             re.search(r"추적표|traceability", line, re.IGNORECASE)
@@ -8873,6 +9128,21 @@ def run_preflight_file(path):
     if invalid_direct_reason:
         blockers.append("Orchestrator 직접 구현 사유로 'worker/subagent를 명시하지 않았다'는 취지의 문구를 사용할 수 없습니다.")
 
+    if is_impl and has_code_result_claim and direct_edit_reason_present(content):
+        scope_text = direct_edit_scope_block(content)
+        if not scope_text:
+            warnings.append("Orchestrator 직접 구현 예외가 있지만 direct_edit_scope가 없습니다. files, estimated_loc, contract_changed, verification, followup_review_required를 남기세요.")
+        else:
+            file_count = direct_edit_scope_file_count(scope_text)
+            estimated_loc = direct_edit_scope_estimated_loc(scope_text)
+            contract_changed = direct_edit_scope_contract_changed(scope_text)
+            if file_count > ORCHESTRATOR_DIRECT_EDIT_LIMITS["max_files"]:
+                blockers.append(f"Orchestrator 직접 구현 예외 파일 수가 기준을 초과합니다: {file_count}>{ORCHESTRATOR_DIRECT_EDIT_LIMITS['max_files']}. Build Wave/worker Run으로 분리하세요.")
+            if estimated_loc is not None and estimated_loc > ORCHESTRATOR_DIRECT_EDIT_LIMITS["max_loc"]:
+                blockers.append(f"Orchestrator 직접 구현 예외 변경량이 기준을 초과합니다: {estimated_loc}>{ORCHESTRATOR_DIRECT_EDIT_LIMITS['max_loc']} LOC. Build Wave/worker Run으로 분리하세요.")
+            if contract_changed:
+                blockers.append("Orchestrator 직접 구현 예외에서 contract_changed=true는 허용하지 않습니다. Build Wave/worker Run 또는 CR로 분리하세요.")
+
     if skill in ("build-wave", "implementation-scaffold"):
         if not metadata.get("bw_id"):
             blockers.append("worker Run에는 bw_id가 필요합니다.")
@@ -8887,6 +9157,18 @@ def run_preflight_file(path):
             blockers.append("worker Run의 target_contracts에 TBD가 남아 있습니다. 실행 전 public signature/schema/skeleton을 구체화하세요.")
         if "worker_execution_policy:" not in content:
             warnings.append("worker Run에 worker_execution_policy가 없습니다.")
+        if "development_standards_applied:" not in content:
+            warnings.append("구현 worker Run에 development_standards_applied가 없습니다. 로깅/주석/테스트 설명 기준을 작업지시서에 직접 바인딩하세요.")
+        if "development_standard_checklist:" not in content:
+            warnings.append("구현 worker Run에 development_standard_checklist가 없습니다. logger, JavaDoc/docstring, 테스트 설명 체크리스트를 추가하세요.")
+        else:
+            checklist_block = _extract_yaml_block_text(content, "development_standard_checklist")
+            if not re.search(r"logging|logger|로그", checklist_block, re.IGNORECASE):
+                warnings.append("development_standard_checklist에 로깅/logger 기준이 없습니다.")
+            if not re.search(r"comments?|javadoc|docstring|주석", checklist_block, re.IGNORECASE):
+                warnings.append("development_standard_checklist에 주석/JavaDoc/docstring 기준이 없습니다.")
+            if not re.search(r"displayname|given|when|then|입력값|기대값|출력값|테스트", checklist_block, re.IGNORECASE):
+                warnings.append("development_standard_checklist에 테스트 설명 기준이 없습니다.")
         source_documents_block = _extract_yaml_block_text(content, "source_documents")
         if re.search(
             r"Traceability-Matrix|AGENT_RUN_PROTOCOL|RUN_INPUT_CONTRACT|RUN_OUTPUT_CONTRACT|TRACEABILITY_RULES",

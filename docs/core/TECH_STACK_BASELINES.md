@@ -308,6 +308,12 @@ log.debug("login token={}, password={}", token, rawPassword);
 | 통합 | Spring Boot Test, Testcontainers 또는 H2 | Repository, transaction, 주요 API flow |
 | 보안 | Spring Security Test | 인증 실패, 권한 실패, CSRF/session 정책 |
 
+테스트 설명 기준:
+
+- JUnit 테스트는 추적 ID를 메서드명에 남기고, `@DisplayName` 또는 Given/When/Then 주석으로 입력값, 기대값, 확인한 출력/상태를 설명한다.
+- 한 테스트가 여러 API 흐름을 묶는 경우 각 흐름의 입력과 기대 결과를 코드 근처에 드러내거나 테스트를 분리한다.
+- 감리 증적으로 쓰는 테스트는 테스트 파일만 읽어도 `UT/IT`가 무엇을 검증했는지 알 수 있어야 한다.
+
 ## 4. Backend Security: Spring Security
 
 Spring Security를 사용하는 경우 다음 기준을 개발표준정의서와 보안가이드에 반영한다.

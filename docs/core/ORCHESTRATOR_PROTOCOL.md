@@ -83,7 +83,17 @@ Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로
 - Run 문서, 추적표, `session.json`, 테스트 결과서 같은 운영/증적 문서 갱신
 - worker가 작성/갱신한 테스트케이스 실행과 실패 원인 분류
 
-subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run 기록에 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 남긴다. 직접 구현한 변경은 구현 완료가 아니라 worker 재검수 또는 QA 검수 대상이다.
+subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run 기록에 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 남긴다. 직접 구현한 변경은 구현 완료가 아니라 worker 재검수 또는 QA 검수 대상이다.
+
+Orchestrator 직접 구현 예외는 다음 조건을 모두 만족할 때만 허용한다.
+
+- 순수 연결 수정, 오타, 경로, 설정 보정, worker 결과 통합 충돌 해소처럼 기능 계약을 새로 만들지 않는 변경이다.
+- 순 변경량이 대략 30 LOC 이하이고, 수정 파일은 2개 이하이다.
+- public API, PGM/IF/MTH, DTO/schema, DB migration, security boundary, SCR/UI contract를 변경하지 않는다.
+- 기존 테스트 또는 같은 Run의 작은 테스트 보정으로 검증 가능하다.
+- Run에 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 검증 명령, 후속 worker/review 필요 여부를 남긴다.
+
+위 조건을 넘으면 Orchestrator가 직접 구현하지 않고 Build Wave Run 또는 worker Run으로 분리한다.
 
 사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 worker/subagent/`agent-run --mode work` 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 
@@ -108,6 +118,7 @@ Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
 
 - Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다.
+- 3개 이상 파일, 대략 100 LOC 이상, 15분 이상 예상, 새 API/메소드/DTO/DB/SCR/PGM 계약 추가, backend/frontend 동시 변경, 테스트 본문 대량 추가가 예상되면 반드시 Build Wave Run으로 분리한다.
 - Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
 - 이미 빌드 가능한 골격과 public signature가 있으면 `contract_skeleton.mode: not-required`와 확인 근거를 Run에 남긴다.
 - 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 `agent-run --mode work`나 명시적 subagent 위임으로 진행한다.

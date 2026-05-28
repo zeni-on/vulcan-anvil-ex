@@ -39,6 +39,13 @@ const qaDoc: DocNode = {
   children: [],
 }
 
+const traceabilityDoc: DocNode = {
+  name: 'DOC-CORE-G4-001_Traceability-Matrix_v0.1',
+  path: 'docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md',
+  slug: ['docs', 'artifacts', '02-traceability', 'DOC-CORE-G4-001_Traceability-Matrix_v0.1.md'],
+  children: [],
+}
+
 describe('DocDrawer', () => {
   beforeEach(() => {
     mockUseDocContent.mockReset()
@@ -79,5 +86,44 @@ updated_at: 2026-05-24
     expect(document.body.textContent).toContain(
       '[docs/artifacts/04-review/evidence/ui/gate4-backend.out.log](docs/artifacts/04-review/evidence/ui/gate4-backend.out.log)',
     )
+  })
+
+  it('요구사항추적표는 상단 통계와 전체 Markdown 본문을 함께 렌더링한다', () => {
+    mockUseDocContent.mockReturnValue({
+      content: `# 요구사항추적표
+
+\`\`\`yaml
+---
+document_id: DOC-CORE-G4-001
+title_ko: 요구사항추적표
+project: sample
+status: Draft
+updated_at: 2026-05-28
+---
+\`\`\`
+
+## 4. 요구사항 추적 매트릭스
+
+| REQ-ID | AC-ID | FUNC-ID | 상태 | 증적 |
+| --- | --- | --- | --- | --- |
+| REQ-001-01 | AC-001-01 | FUNC-001 | Verified | QA-CMD-001 |
+
+## 10. 변경 이력
+
+| 버전 | 일자 | 변경 내용 |
+| --- | --- | --- |
+| v0.1 | 2026-05-28 | 사용자 확인용 원문 섹션 |
+`,
+      isLoading: false,
+      error: undefined,
+    })
+
+    render(<DocDrawer projectId="sample-project" doc={traceabilityDoc} onClose={jest.fn()} />)
+
+    expect(screen.getByTestId('traceability-doc-view')).toBeInTheDocument()
+    expect(screen.getByText('추적 행')).toBeInTheDocument()
+    expect(screen.getByText(/## 4\. 요구사항 추적 매트릭스/)).toBeInTheDocument()
+    expect(screen.getByText(/## 10\. 변경 이력/)).toBeInTheDocument()
+    expect(screen.getByText(/사용자 확인용 원문 섹션/)).toBeInTheDocument()
   })
 })

@@ -241,6 +241,26 @@ function LoadingSkeleton() {
   )
 }
 
+const markdownBodyClassName = `prose prose-slate prose-sm max-w-none rounded-md bg-white p-5 shadow-sm
+  prose-headings:text-slate-950
+  prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-3
+  prose-h2:mt-8 prose-h2:border-l-4 prose-h2:border-blue-500 prose-h2:pl-2
+  prose-p:text-slate-700
+  prose-a:text-blue-700 prose-a:no-underline hover:prose-a:underline
+  prose-code:bg-slate-100 prose-code:text-slate-900 prose-code:px-1 prose-code:rounded prose-code:text-xs
+  prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:text-slate-800
+  prose-blockquote:border-blue-300 prose-blockquote:bg-blue-50 prose-blockquote:px-3 prose-blockquote:py-1 prose-blockquote:text-slate-700
+  prose-th:text-blue-950 prose-td:text-slate-700
+  prose-hr:border-slate-200
+  prose-strong:text-slate-950
+  prose-li:text-slate-700
+  prose-table:w-full prose-table:table-auto
+  prose-th:break-words prose-td:break-words prose-td:align-top
+  [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-md
+  [&_td]:border [&_td]:border-slate-200 [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_td]:text-xs [&_td]:break-words
+  [&_th]:border [&_th]:border-blue-300 [&_th]:bg-blue-100 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-xs [&_th]:font-semibold
+  [&_tbody_tr:nth-child(even)]:bg-slate-50`
+
 function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) {
   const { content, isLoading, error } = useDocContent(projectId, doc)
   const [showMetadata, setShowMetadata] = useState(false)
@@ -280,7 +300,18 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       className="p-6 overflow-y-auto flex-1 focus:outline-none"
     >
       {content && isTraceabilityDoc(doc, content) ? (
-        <TraceabilityDocView model={parseTraceabilityDoc(content)} />
+        <div className="space-y-4 rounded-md bg-slate-100 p-4 text-slate-800">
+          <TraceabilityDocView model={parseTraceabilityDoc(content)} summaryOnly />
+          <div className={markdownBodyClassName}>
+            <ReactMarkdown
+              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+              rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+              components={markdownComponents}
+            >
+              {genericDoc.body}
+            </ReactMarkdown>
+          </div>
+        </div>
       ) : content && isScreenSpecDoc(doc, content) ? (
         <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
       ) : (
@@ -326,25 +357,7 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
               )}
             </header>
           )}
-          <div className="prose prose-slate prose-sm max-w-none rounded-md bg-white p-5 shadow-sm
-            prose-headings:text-slate-950
-            prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-3
-            prose-h2:mt-8 prose-h2:border-l-4 prose-h2:border-blue-500 prose-h2:pl-2
-            prose-p:text-slate-700
-            prose-a:text-blue-700 prose-a:no-underline hover:prose-a:underline
-            prose-code:bg-slate-100 prose-code:text-slate-900 prose-code:px-1 prose-code:rounded prose-code:text-xs
-            prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:text-slate-800
-            prose-blockquote:border-blue-300 prose-blockquote:bg-blue-50 prose-blockquote:px-3 prose-blockquote:py-1 prose-blockquote:text-slate-700
-            prose-th:text-blue-950 prose-td:text-slate-700
-            prose-hr:border-slate-200
-            prose-strong:text-slate-950
-            prose-li:text-slate-700
-            prose-table:w-full prose-table:table-auto
-            prose-th:break-words prose-td:break-words prose-td:align-top
-            [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-md
-            [&_td]:border [&_td]:border-slate-200 [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_td]:text-xs [&_td]:break-words
-            [&_th]:border [&_th]:border-blue-300 [&_th]:bg-blue-100 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-xs [&_th]:font-semibold
-            [&_tbody_tr:nth-child(even)]:bg-slate-50">
+          <div className={markdownBodyClassName}>
             <ReactMarkdown
               remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
               rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}

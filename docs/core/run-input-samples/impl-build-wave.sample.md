@@ -16,6 +16,29 @@ target_contracts:
   api: [API-001]
   db: [DB-001]
   test: [UT-001, IT-001]
+development_standards_applied:
+  - standard_id: DEV-LOG-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "표준 logger를 사용하고 민감정보, 토큰, 비밀번호, 내부 stack trace를 로그에 남기지 않는다."
+  - standard_id: DEV-COMMENT-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "주요 class와 public 업무 method에는 책임, 입력, 출력, 예외, 관련 ID를 JavaDoc/docstring/주석으로 남긴다."
+  - standard_id: DEV-TEST-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "테스트는 UT/IT/UI ID와 사람이 읽을 수 있는 입력값, 기대값, 출력값 또는 Given/When/Then 설명을 가진다."
+development_standard_checklist:
+  logging:
+    required: true
+    targets: [Controller, Service, SecurityFilter, ControllerAdvice, CoreComponent]
+    rule: "SLF4J LoggerFactory 또는 프로젝트 표준 logger를 선언하고 민감정보를 로그에 남기지 않는다."
+  comments:
+    required: true
+    targets: ["주요 class", "public 업무 method", "보안/트랜잭션/권한 판단 method"]
+    rule: "책임, 입력, 출력, 예외, 관련 REQ/FUNC/PGM/SEC/UT/IT ID를 JavaDoc/docstring/주석으로 남긴다."
+  tests:
+    required: true
+    targets: ["@Test", "단위 테스트", "통합 테스트", "UI/E2E 테스트"]
+    rule: "테스트 이름의 추적 ID만으로 끝내지 않고 @DisplayName 또는 Given/When/Then으로 입력값, 기대값, 출력값을 설명한다."
 runner_hint:
   frontend: "claude-cli"
   backend: "codex-cli"
@@ -57,6 +80,7 @@ completion_criteria:
   - "Spring Boot 구현은 개발표준의 base package와 feature 우선 패키지 구조를 따른다. domain 래퍼는 DDD 선택 사유가 있을 때만 사용한다."
   - "로깅은 개발표준의 SLF4J/Logback 또는 Log4j2 선택, logger 선언, 로그 레벨, 민감정보 금지 기준을 따른다."
   - "Java/Spring 주요 클래스와 public 업무 메서드는 개발표준의 JavaDoc/추적 ID 기준을 따른다."
+  - "Build Wave 작업지시서에는 `development_standards_applied`와 `development_standard_checklist`를 포함하고, worker는 로깅/주석/테스트 설명 준수 여부를 결과에 남긴다."
   - "화면 구현은 관련 SCR의 UI Implementation Contract와 Gate 3 UI 테스트 기준을 먼저 확인한다."
   - "Build Wave 범위, 소유 파일, 관련 ID, 검증 명령이 명확하다."
   - "Frontend Wave와 Backend Wave가 분리되어 있고, 기본 runner가 각각 claude-cli/codex-cli로 제안되어 있다."
@@ -114,7 +138,9 @@ ui_implementation_contract_policy:
 - 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. 단일 worker Run 또는 `agent-run --mode work`로 실행한다.
 - 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
 - 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
-- Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
+- Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
+- 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
+- 3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 계약 추가, 테스트 본문 대량 추가가 보이면 Build Wave로 분리한다.
 - 실제 `build-wave` 작업자 Run은 이 계획 Run보다 더 좁은 focused source를 사용한다. 전체 설계 산출물을 `working_documents`에 모두 넣지 않고, 현재 Build Wave Run, 개발표준, 관련 테스트케이스 또는 테스트 파일, 필요한 직접 구현 기준만 우선 작업 문서로 둔다.
 - API/화면/프로그램/DB/보안 설계는 related ID나 기준 충돌이 있을 때 필요한 문서만 `reference_on_demand`에서 확인한다.
 - 추적표와 Core Run 입출력/절차 문서는 worker 입력이 아니라 `orchestrator_reference`로 분리한다. worker는 갱신 필요 항목만 보고하고 Orchestrator가 추적표/session/Wave 상태를 확정한다.
@@ -179,6 +205,29 @@ target_contracts:
     smoke_commands:
       - "python -m compileall backend/app"
       - "cd frontend && npm run build"
+development_standards_applied:
+  - standard_id: DEV-LOG-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "표준 logger를 사용하고 민감정보를 로그에 남기지 않는다."
+  - standard_id: DEV-COMMENT-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "주요 class와 public 업무 method에는 책임, 입력, 출력, 예외, 관련 ID를 JavaDoc/docstring/주석으로 남긴다."
+  - standard_id: DEV-TEST-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "테스트는 UT/IT/UI ID와 사람이 읽을 수 있는 입력값, 기대값, 출력값 또는 Given/When/Then 설명을 가진다."
+development_standard_checklist:
+  logging:
+    required: true
+    targets: [Controller, Service, SecurityFilter, ControllerAdvice, CoreComponent]
+    rule: "담당 skeleton 대상에 logger 선언이 필요한 위치를 표시하고 민감정보 로그 금지 기준을 남긴다."
+  comments:
+    required: true
+    targets: ["주요 class", "public 업무 method"]
+    rule: "skeleton class/method에 책임, 입력, 출력, 예외, 관련 ID를 JavaDoc/docstring/주석 기준으로 남긴다."
+  tests:
+    required: true
+    targets: ["test stub"]
+    rule: "다음 Build Wave가 채울 테스트 stub에는 UT/IT/UI ID와 Given/When/Then 또는 입력/기대/출력 설명을 남긴다."
 source_documents:
   read_first:
     - AGENTS.md
@@ -259,6 +308,29 @@ target_contracts:
       - "Todo: id, text, completed, createdAt, updatedAt"
     error_contracts:
       - "UI error state must not expose stack, SQL, DB path, token, or internal exception details."
+development_standards_applied:
+  - standard_id: DEV-LOG-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "표준 logger를 사용하고 민감정보를 로그에 남기지 않는다."
+  - standard_id: DEV-COMMENT-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "주요 class와 public 업무 method에는 책임, 입력, 출력, 예외, 관련 ID를 JavaDoc/docstring/주석으로 남긴다."
+  - standard_id: DEV-TEST-001
+    source: docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md
+    rule: "테스트는 UT/IT/UI ID와 사람이 읽을 수 있는 입력값, 기대값, 출력값 또는 Given/When/Then 설명을 가진다."
+development_standard_checklist:
+  logging:
+    required: true
+    targets: [API client, state store, error boundary]
+    rule: "프론트엔드는 사용자 화면/콘솔에 민감정보, token, stack, SQL/DB path를 남기지 않는다."
+  comments:
+    required: true
+    targets: ["복잡한 상태 전이", "권한 가드", "API 오류 변환"]
+    rule: "단순 렌더링 설명은 반복하지 않고, 보안 판단/상태 전이/예외 사유와 관련 ID를 주석으로 남긴다."
+  tests:
+    required: true
+    targets: ["unit test", "component test", "Playwright test"]
+    rule: "테스트는 UI/UT/IT ID와 입력값, 기대 화면/상태, 실제 확인 결과를 @DisplayName 또는 Given/When/Then으로 설명한다."
 source_documents:
   read_first:
     - AGENTS.md
@@ -299,6 +371,7 @@ completion_criteria:
   - "담당 Wave 범위만 구현하고 다른 worker 범위는 수정하지 않는다."
   - "target_contracts의 기능/화면/UI/테스트 계약을 완결된 조각으로 닫는다."
   - "target_contracts.interface_contract의 public signature, schema, error contract를 다른 이름이나 타입으로 대체하지 않는다."
+  - "development_standards_applied와 development_standard_checklist를 코드/테스트 작성 체크리스트로 사용하고 준수/예외를 Run 결과에 남긴다."
   - "UI Implementation Contract와 Gate 3 UI 테스트 기준을 구현 전 확인한다."
   - "10분 내외, 최대 15분은 보조 기준이며, 시간이 부족하다는 이유로 깨진 중간 구현을 완료 처리하지 않는다."
   - "담당 테스트케이스를 작성/갱신하고 Orchestrator가 재실행할 테스트, 린트, 빌드 명령을 현재 Run에 남긴다."
