@@ -181,7 +181,7 @@ export default function TraceExplorerOverlay({
         role="dialog"
         aria-modal="true"
         aria-label="Trace Explorer"
-        className="absolute bottom-4 right-4 top-4 flex w-[min(960px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-slate-600 bg-slate-950 shadow-2xl"
+        className="absolute bottom-4 right-4 top-4 flex w-[min(1180px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-slate-600 bg-slate-950 shadow-2xl"
       >
         <header className="flex items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
@@ -203,7 +203,7 @@ export default function TraceExplorerOverlay({
           </button>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)]">
           <aside className="min-h-0 overflow-y-auto border-r border-slate-800 bg-slate-900/80 p-4">
             <div className="mb-3 flex items-center gap-2">
               <select
@@ -298,6 +298,14 @@ export default function TraceExplorerOverlay({
                 </div>
 
                 <div className="rounded-md border border-slate-800 bg-slate-900/70 p-3">
+                  <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      {result.seed_id} 직접 추적 그래프
+                    </h3>
+                    <span className="text-xs text-slate-500">
+                      {direction} / depth {depth}
+                    </span>
+                  </div>
                   {mermaid ? (
                     <MermaidBlock code={mermaid} />
                   ) : (
