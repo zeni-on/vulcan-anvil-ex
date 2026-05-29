@@ -18,9 +18,17 @@ interface TraceDocument {
   ids: string[]
 }
 
+interface TraceNode {
+  id: string
+  label?: string
+  status?: string
+  sources?: string[]
+}
+
 interface TraceContextResult {
   seed_id: string
   related_ids: string[]
+  nodes?: Record<string, TraceNode>
   target_contracts?: Record<string, string[]>
   edges?: TraceEdge[]
   related_documents?: TraceDocument[]
@@ -77,6 +85,17 @@ function mermaidLabel(value: string): string {
   return value.replace(/"/g, '&quot;')
 }
 
+function shortenLabel(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  return normalized.length > 34 ? `${normalized.slice(0, 33)}...` : normalized
+}
+
+function nodeMermaidLabel(id: string, result: TraceContextResult): string {
+  const label = result.nodes?.[id]?.label?.trim()
+  if (!label || label === id) return mermaidLabel(id)
+  return `${mermaidLabel(id)}<br/>${mermaidLabel(shortenLabel(label))}`
+}
+
 function buildTraceMermaid(result: TraceContextResult): string {
   const edges = directEdgesFor(result)
   if (edges.length === 0) return ''
@@ -88,7 +107,7 @@ function buildTraceMermaid(result: TraceContextResult): string {
   for (const id of ids) {
     const node = nodeNames.get(id)
     if (!node) continue
-    lines.push(`  ${node}["${mermaidLabel(id)}"]`)
+    lines.push(`  ${node}["${nodeMermaidLabel(id, result)}"]`)
   }
 
   for (const edge of edges) {

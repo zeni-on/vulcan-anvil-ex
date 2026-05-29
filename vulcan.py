@@ -2582,6 +2582,31 @@ TRACE_ID_PATTERN = re.compile(
 TRACE_TEST_PREFIXES = {"UT", "IT", "PT"}
 TRACE_UNRESOLVED_VALUES = {"", "-", "미정", "확인필요", "해당없음", "tbd", "todo", "n/a", "na"}
 TRACE_EXCLUDED_STATUSES = {"deferred", "rejected"}
+TRACE_LABEL_HIGH_PRIORITY_COLUMNS = [
+    "요구사항명",
+    "상세 요구사항명",
+    "요구사항",
+    "상세 요구사항",
+    "인수기준",
+    "기능명",
+    "프로그램/컴포넌트",
+    "화면명",
+    "프로그램명",
+    "API명",
+    "테이블명",
+    "인터페이스명",
+    "보안항목",
+    "검증항목",
+    "검증 대상",
+    "테스트명",
+    "제목",
+    "명칭",
+    "이름",
+    "Name",
+    "Title",
+    "Description",
+]
+TRACE_LABEL_LOW_PRIORITY_COLUMNS = ["비고", "Note", "Notes", "Remark", "Remarks"]
 
 
 def trace_find_ids(value):
@@ -2601,12 +2626,59 @@ def trace_cell_ids(row, candidates):
     return trace_find_ids(table_cell(row, candidates))
 
 
-def trace_add_node(nodes, trace_id, status="", source=""):
+def trace_clean_label(value):
+    label = clean_contract_cell(value or "")
+    if not label:
+        return ""
+    if label.strip().lower() in TRACE_UNRESOLVED_VALUES:
+        return ""
+    label = re.sub(r"`([^`]+)`", r"\1", label)
+    label = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", label)
+    label = re.sub(r"\s+", " ", label).strip()
+    return label
+
+
+def trace_table_cell_exact(row, candidates, default=""):
+    normalized = {normalize_md_header(key): value for key, value in row.items()}
+    for candidate in candidates:
+        key = normalize_md_header(candidate)
+        if key in normalized:
+            return clean_contract_cell(normalized[key])
+    return default
+
+
+def trace_row_label(row):
+    label = trace_clean_label(trace_table_cell_exact(row, TRACE_LABEL_HIGH_PRIORITY_COLUMNS))
+    if label:
+        return label, 2
+    label = trace_clean_label(trace_table_cell_exact(row, TRACE_LABEL_LOW_PRIORITY_COLUMNS))
+    if label:
+        return label, 1
+    return "", 0
+
+
+def trace_primary_ids_for_row(row):
+    for header, value in row.items():
+        normalized_header = normalize_md_header(header)
+        if any(token in normalized_header for token in ["관련", "영향", "증적", "참조", "evidence", "source", "run"]):
+            continue
+        ids = trace_find_ids(value)
+        if ids:
+            return ids
+    return []
+
+
+def trace_add_node(nodes, trace_id, status="", source="", label="", label_priority=0):
     if not trace_id:
         return
-    node = nodes.setdefault(trace_id, {"id": trace_id, "status": "", "sources": set()})
+    node = nodes.setdefault(trace_id, {"id": trace_id, "status": "", "label": "", "label_priority": 0, "sources": set()})
     if status and not node.get("status"):
         node["status"] = status
+    clean_label = trace_clean_label(label)
+    current_priority = int(node.get("label_priority") or 0)
+    if clean_label and (label_priority > current_priority or not node.get("label")):
+        node["label"] = clean_label
+        node["label_priority"] = label_priority
     if source:
         node["sources"].add(source)
 
@@ -2653,8 +2725,13 @@ def build_trace_graph(project_dir="."):
                 continue
             rows_processed += 1
             status = table_cell(row, ["상태", "Status"])
+            label, label_priority = trace_row_label(row)
             for trace_id in row_ids:
                 trace_add_node(nodes, trace_id, status=status, source=rel_source)
+            if label:
+                label_ids = trace_primary_ids_for_row(row) if label_priority > 1 else row_ids
+                for trace_id in label_ids:
+                    trace_add_node(nodes, trace_id, status=status, source=rel_source, label=label, label_priority=label_priority)
 
             req_ids = trace_cell_ids(row, ["REQ-ID", "관련 REQ", "관련 REQ/NREQ", "영향받는 REQ"])
             nreq_ids = trace_cell_ids(row, ["NREQ-ID", "관련 NREQ", "관련 REQ/NREQ"])
@@ -2730,6 +2807,7 @@ def build_trace_graph(project_dir="."):
         edge_items.append(item)
     for node in nodes.values():
         node["sources"] = sorted(node.get("sources", []))
+        node.pop("label_priority", None)
     return {
         "nodes": nodes,
         "edges": sorted(edge_items, key=lambda item: (item["source"], item["target"], item["type"])),
@@ -2789,6 +2867,8 @@ def trace_related_documents(project_dir, ids, limit=12):
         if not os.path.isdir(base):
             continue
         for root, dirs, files in os.walk(base):
+            dirs.sort()
+            files.sort()
             dirs[:] = [d for d in dirs if d not in {"node_modules", ".next", "__pycache__"}]
             for filename in files:
                 if not filename.lower().endswith(".md"):
@@ -2807,6 +2887,47 @@ def trace_related_documents(project_dir, ids, limit=12):
     return [{"path": path, "ids": found} for path, found in sorted(matches)[:limit]]
 
 
+def trace_document_label_index(project_dir, ids):
+    id_set = set(ids or [])
+    labels = {}
+    search_dirs = [
+        os.path.join(project_dir, "docs", "artifacts"),
+    ]
+    for base in search_dirs:
+        if not os.path.isdir(base):
+            continue
+        for root, dirs, files in os.walk(base):
+            dirs.sort()
+            files.sort()
+            dirs[:] = [d for d in dirs if d not in {"node_modules", ".next", "__pycache__"}]
+            for filename in files:
+                if not filename.lower().endswith(".md"):
+                    continue
+                path = os.path.join(root, filename)
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        content = f.read()
+                except (OSError, UnicodeDecodeError):
+                    continue
+                if not id_set.intersection(trace_find_ids(content)):
+                    continue
+                rel_path = normalize_repo_path(os.path.relpath(path, project_dir))
+                for _headers, rows in parse_markdown_tables(content):
+                    for row in rows:
+                        primary_ids = [item for item in trace_primary_ids_for_row(row) if item in id_set]
+                        if not primary_ids:
+                            continue
+                        label, priority = trace_row_label(row)
+                        if not label or priority < 2:
+                            continue
+                        for trace_id in primary_ids:
+                            current = labels.get(trace_id)
+                            if current and current.get("priority", 0) >= priority:
+                                continue
+                            labels[trace_id] = {"label": label, "source": rel_path, "priority": priority}
+    return labels
+
+
 def trace_context_yaml(context):
     lines = [
         f"seed_id: {context['seed_id']}",
@@ -2815,10 +2936,22 @@ def trace_context_yaml(context):
         f"traceability_source: {format_yaml_scalar(context.get('traceability_source', ''))}",
         "related_ids:",
         format_yaml_sequence(context["related_ids"], 2),
+        "nodes:",
+    ]
+    if context.get("nodes"):
+        for node_id, node in context["nodes"].items():
+            lines.append(f"  {format_yaml_scalar(node_id)}:")
+            if node.get("label"):
+                lines.append(f"    label: {format_yaml_scalar(node['label'])}")
+            if node.get("status"):
+                lines.append(f"    status: {format_yaml_scalar(node['status'])}")
+    else:
+        lines.append("  {}")
+    lines.extend([
         "target_contracts:",
         format_yaml_mapping_sequences(context["target_contracts"], 2),
         "edges:",
-    ]
+    ])
     if context["edges"]:
         for edge in context["edges"]:
             lines.append(f"  - source: {format_yaml_scalar(edge['source'])}")
@@ -2856,6 +2989,7 @@ def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_ty
             "direction": direction,
             "traceability_source": graph.get("source", ""),
             "related_ids": [seed_id] if seed_id else [],
+            "nodes": {},
             "target_contracts": classify_related_ids([seed_id] if seed_id else []),
             "edges": [],
             "related_documents": [],
@@ -2867,6 +3001,15 @@ def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_ty
         }
     visited, edges = trace_bfs(graph, seed_id, depth=depth, direction=direction, edge_types=edge_types, include_excluded=include_excluded)
     related_ids = sorted(visited, key=lambda item: (visited[item], item))
+    related_nodes = {
+        trace_id: dict(graph.get("nodes", {}).get(trace_id, {"id": trace_id, "label": "", "status": "", "sources": []}))
+        for trace_id in related_ids
+    }
+    document_labels = trace_document_label_index(project_dir, related_ids)
+    for trace_id, label_info in document_labels.items():
+        if trace_id in related_nodes:
+            related_nodes[trace_id]["label"] = label_info.get("label", related_nodes[trace_id].get("label", ""))
+            related_nodes[trace_id]["label_source"] = label_info.get("source", "")
     related_documents = trace_related_documents(project_dir, related_ids)
     warnings = [
         "scope.writable은 trace graph가 확정하지 않는다. Orchestrator가 Run 생성 전 직접 좁혀야 한다.",
@@ -2879,6 +3022,7 @@ def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_ty
         "direction": direction,
         "traceability_source": graph.get("source", ""),
         "related_ids": related_ids,
+        "nodes": related_nodes,
         "target_contracts": classify_related_ids(related_ids),
         "edges": sorted(edges, key=lambda item: (item["source"], item["target"], item["type"])),
         "related_documents": related_documents,

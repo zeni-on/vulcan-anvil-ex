@@ -147,6 +147,7 @@ def assert_trace_context_json(result: StepResult) -> None:
 
     related_ids = set(payload.get("related_ids") or [])
     target_contracts = payload.get("target_contracts") or {}
+    nodes = payload.get("nodes") or {}
     expected_related = {"REQ-001-01", "API-001", "PGM-001", "SEC-001", "UT-001", "IT-001"}
     missing = sorted(expected_related - related_ids)
     if missing:
@@ -155,6 +156,10 @@ def assert_trace_context_json(result: StepResult) -> None:
         raise FixtureSmokeFailure("trace-context JSON target_contracts.api did not include API-001")
     if "PGM-001" not in set(target_contracts.get("pgm") or []):
         raise FixtureSmokeFailure("trace-context JSON target_contracts.pgm did not include PGM-001")
+    if not (nodes.get("API-001") or {}).get("label"):
+        raise FixtureSmokeFailure("trace-context JSON nodes.API-001.label was empty")
+    if not (nodes.get("PGM-001") or {}).get("label"):
+        raise FixtureSmokeFailure("trace-context JSON nodes.PGM-001.label was empty")
 
 
 def release_pr_body_path_from_output(output: str) -> Path:
