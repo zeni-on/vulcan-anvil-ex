@@ -49,3 +49,5 @@ fixture 기반 전체 회귀 검증은 `docs/reference/REGRESSION-HARNESS-FIXTUR
 `.github/workflows/regression-smoke.yml`은 `main` push, pull request, 수동 실행에서 위 두 smoke harness를 실행한다.
 
 CI에는 외부 AI runner, npm install, Playwright, Gradle build를 넣지 않는다. 공개 저장소에서 빠르게 반복 가능한 Python 기반 회귀 검증만 수행한다.
+
+Dashboard Trace Context는 dashboard 빌드와 가벼운 Playwright smoke로 별도 확인한다. 이 검증은 로컬 Dashboard와 샘플 프로젝트가 필요하므로 Python fixture smoke에는 포함하지 않는다.

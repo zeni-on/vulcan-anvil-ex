@@ -6,6 +6,7 @@
 
 - `trace-context` 명령을 추가했다. 요구사항추적표를 그래프 원장으로 파싱해 seed ID 주변의 `related_ids`, `target_contracts`, 관련 문서 후보를 YAML/JSON으로 출력한다.
 - Gate 4 `qa-execution` Run에 `qa_failure_report_contract`와 `failure_reports` 출력 기준을 추가했다. QA worker는 실패를 고치지 않고 명령, cwd, exit code, 로그, 재현 명령, 영향 ID, FIND/CR/ISSUE 후보를 구조화해 반환한다.
+- Dashboard 문서 Drawer에 Trace Context 패널을 추가했다. 문서에서 감지한 ID를 클릭하거나 직접 입력하면 로컬 프로젝트 기준 `trace-context` 결과를 확인할 수 있다.
 
 ### Changed
 

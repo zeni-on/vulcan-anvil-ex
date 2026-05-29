@@ -25,6 +25,7 @@ import { isQaDoc } from '@/lib/qaDoc'
 import MermaidBlock from './MermaidBlock'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
+import TraceContextPanel from './TraceContextPanel'
 
 // rehype-sanitize 기본 스키마는 <code>의 className을 제거한다. mermaid 코드 블록을
 // 식별하려면 language-* 클래스가 보존되어야 하므로 code의 className을 허용한다.
@@ -299,6 +300,8 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       data-drawer-scroll
       className="p-6 overflow-y-auto flex-1 focus:outline-none"
     >
+      {content && <TraceContextPanel projectId={projectId} content={content} />}
+
       {content && isTraceabilityDoc(doc, content) ? (
         <div className="space-y-4 rounded-md bg-slate-100 p-4 text-slate-800">
           <TraceabilityDocView model={parseTraceabilityDoc(content)} summaryOnly />
