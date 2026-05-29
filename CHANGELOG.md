@@ -6,6 +6,8 @@
 
 `0.4.0`은 `0.3.x`의 브랜치/worker/QA 실행 흐름 위에 trace-context 그래프, Dashboard Trace Explorer, Gate 4 실패 보고 계약, Release PR 안정화, 회귀 smoke 검증을 묶어 올린 마이너 릴리즈다. 요구사항추적표를 단순 표가 아니라 ID 그래프 원장으로 활용하고, Run/QA/release 자동화가 같은 기준으로 검증되도록 정리했다.
 
+Release notes: [docs/releases/v0.4.0.md](docs/releases/v0.4.0.md)
+
 ### Added
 
 - `trace-context` 명령을 추가했다. 요구사항추적표를 그래프 원장으로 파싱해 seed ID 주변의 `related_ids`, `target_contracts`, 관련 문서 후보를 YAML/JSON으로 출력한다.
