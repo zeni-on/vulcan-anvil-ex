@@ -60,9 +60,9 @@
 4. **회귀 검증 하네스 확장**
    - 새 기능이 추가될 때마다 fixture smoke에 고정 입력/고정 결과 검증을 붙인다.
    - trace-context, release-pr, QA workspace 같은 흐름은 이미 최소 검증이 있으므로 샘플에서 나온 실제 회귀를 우선 추가한다.
-5. **Dashboard Trace Explorer 개선**
-   - 현재 MVP는 문서 Drawer의 Trace 버튼에서 `depth 1` 직접 edge 그래프와 목록을 표시한다.
-   - 다음 단계는 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어, Run 입력 후보 복사 UX를 검토한다.
+5. **Dashboard Trace Explorer 후속 polish**
+   - `0.4.0`에서 문서 Drawer의 Trace 버튼, `depth 1` 직접 edge 그래프, ID 제목 표시, 관련 목록 MVP는 완료했다.
+   - 다음 단계는 실제 샘플 사용 후 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어, Run 입력 후보 복사 UX가 필요한지 판단한다.
 6. **PR 교차검증 자동화와 Dispatcher**
    - `run-exec`, `agent-run`, release-pr, QA 흐름이 충분히 안정된 뒤 자동 큐와 PR 교차검증을 검토한다.
 
@@ -136,7 +136,7 @@ Run 품질 게이트 다음에 진행할 실전 리스크 영역이다.
 ### P3. Dashboard 관제성 개선
 
 Dashboard는 기능 수보다 사용자가 판단해야 할 신호를 잘 보여주는 방향으로 발전한다.
-Trace Explorer MVP는 문서 Drawer 안에서 시작했다. 다음 단계는 탐색성과 복잡도 제어를 높이는 것이다.
+Trace Explorer MVP는 `0.4.0`에서 문서 Drawer 안에 들어갔다. 다음 단계는 샘플 프로젝트 사용 결과를 보고 탐색성과 복잡도 제어가 실제로 필요한 만큼만 보강하는 것이다.
 
 - 현재 Gate에서 다음에 해야 할 일
 - 승인 대기와 차단 상태
