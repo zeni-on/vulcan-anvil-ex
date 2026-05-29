@@ -5,7 +5,7 @@
 
 ## 현재 기준
 
-Vulcan-Anvil Ex는 `0.3.0` 기준 Experimental 상태다. 현재 방향은 "문서와 Gate 중심의 audit workflow"를 유지하면서, worker 실행, staged QA, Program Design 계약 검증, Dashboard 관제를 실제 프로젝트에서 반복 가능하게 만드는 것이다.
+Vulcan-Anvil Ex는 `0.4.0` 기준 Experimental 상태다. 현재 방향은 "문서와 Gate 중심의 audit workflow"를 유지하면서, worker 실행, staged QA, Program Design 계약 검증, trace-context 그래프, Dashboard 관제를 실제 프로젝트에서 반복 가능하게 만드는 것이다.
 
 작업을 이어갈 때는 다음 문서를 먼저 본다.
 

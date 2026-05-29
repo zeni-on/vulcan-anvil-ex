@@ -1,7 +1,7 @@
 # Run-first Multi-Agent Dispatcher 구상
 
 > 상태: 장기 설계 메모.
-> `0.3.0` 기준으로 `run-exec`, `agent-run --mode work`, `agent-run --mode review`, worktree 실행, worker 로그/증적 수집의 일부는 이미 구현되었다.
+> `0.4.0` 기준으로 `run-exec`, `agent-run --mode work`, `agent-run --mode review`, worktree 실행, worker 로그/증적 수집의 일부는 이미 구현되었다.
 > 이 문서는 자동 큐, fan-in review, PR cross validation, lock/worktree 고도화를 검토할 때 참고한다. 현재 우선순위는 `docs/ROADMAP.md`를 따른다.
 
 ## 목적

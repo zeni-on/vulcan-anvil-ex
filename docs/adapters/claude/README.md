@@ -1,13 +1,13 @@
 # Claude Adapter
 
-> 상태: v0.3.0
+> 상태: v0.4.0
 > 목적: Vulcan-Anvil Ex Core 산출물과 Agent Run Protocol을 Claude Code 기반 개발 실행 흐름에 연결한다.
 
 ## 1. 범위
 
 Claude Adapter는 공통 Run Input Contract를 Claude Code CLI 또는 IDE 확장 실행 방식으로 변환한다.
 
-`0.3.0` 기준 Claude Adapter는 Core persona, Build Wave, SW Architecture, DBML ERD, 변경관리/릴리즈 산출물, Gate 종료 승인, UI Implementation Contract, 검증 명령 메타 기록, `workflow.integration_branch`, Gate 4 `qa-execution` 흐름을 Claude의 `.claude/agents`와 `.claude/skills` 구조에 연결한다.
+`0.4.0` 기준 Claude Adapter는 Core persona, Build Wave, SW Architecture, DBML ERD, 변경관리/릴리즈 산출물, Gate 종료 승인, UI Implementation Contract, 검증 명령 메타 기록, `workflow.integration_branch`, Gate 4 `qa-execution` 흐름을 Claude의 `.claude/agents`와 `.claude/skills` 구조에 연결한다.
 
 이 Adapter는 다음 작업을 지원한다.
 

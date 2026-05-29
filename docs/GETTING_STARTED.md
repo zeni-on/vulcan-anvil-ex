@@ -131,9 +131,9 @@ Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude
 독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
 `init`은 현재 PC의 `codex`와 `claude` CLI 설치 여부를 감지해 `vulcan.config.json.runtime.available_runners`에 기록한다. Codex만 있으면 같은 runner 기반 독립검수/동시 worktree 작업으로 운영하고, Codex와 Claude가 모두 있으면 Gate/PR/QA 교차검증과 cross-runner 작업을 기본 후보로 둔다.
 
-## 5. 0.3 구현/QA 흐름
+## 5. 0.4 구현/QA 흐름
 
-`0.3.x` audit workflow에서는 구현과 QA를 `main`에 바로 누적하지 않습니다. `impl`에 진입하면 Orchestrator는 먼저 통합 브랜치를 시작합니다.
+`0.4.x` audit workflow에서는 구현과 QA를 `main`에 바로 누적하지 않습니다. `impl`에 진입하면 Orchestrator는 먼저 통합 브랜치를 시작합니다.
 
 ```powershell
 python vulcan.py branch-status

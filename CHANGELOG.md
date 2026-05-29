@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-05-29
+
+`0.4.0`은 `0.3.x`의 브랜치/worker/QA 실행 흐름 위에 trace-context 그래프, Dashboard Trace Explorer, Gate 4 실패 보고 계약, Release PR 안정화, 회귀 smoke 검증을 묶어 올린 마이너 릴리즈다. 요구사항추적표를 단순 표가 아니라 ID 그래프 원장으로 활용하고, Run/QA/release 자동화가 같은 기준으로 검증되도록 정리했다.
+
 ### Added
 
 - `trace-context` 명령을 추가했다. 요구사항추적표를 그래프 원장으로 파싱해 seed ID 주변의 `related_ids`, `target_contracts`, 관련 문서 후보를 YAML/JSON으로 출력한다.
@@ -15,7 +19,7 @@
 - `release-pr`가 base/head 브랜치 존재 여부를 먼저 확인하고 명확한 오류를 출력하도록 보강했다.
 - Gate 5에서 `workflow.integration_branch`를 `workflow.release_merge_to` 또는 `main`으로 보내는 `release-pr` 명령을 추가했다. Release PR은 생성/갱신까지만 자동화하며 merge는 명시 승인 뒤 수동으로 수행한다.
 - `dev`를 고정 브랜치명처럼 설명하던 문구를 `workflow.integration_branch` 역할 기준으로 정리했다. 기본값은 `dev`지만 프로젝트별로 `develop`, `dev-happy` 같은 브랜치명을 사용할 수 있다.
-- `GETTING_STARTED`, `CONCEPTS`, `UPGRADE_AND_DASHBOARD`, `ROADMAP`을 0.3.0 기준으로 보강하고, 브랜치 전략과 `QA-000` workspace 재사용 흐름을 그림과 절차로 설명했다.
+- `GETTING_STARTED`, `CONCEPTS`, `UPGRADE_AND_DASHBOARD`, `ROADMAP`을 0.4.0 기준으로 보강하고, 브랜치 전략, `QA-000` workspace 재사용 흐름, trace-context 탐색 흐름을 그림과 절차로 설명했다.
 
 ## 0.3.0 - 2026-05-24
 

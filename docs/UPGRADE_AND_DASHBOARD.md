@@ -41,9 +41,9 @@ Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상
 
 `upgrade`는 없는 공식 산출물 템플릿은 새로 만들 수 있지만, 이미 작성된 산출물은 기본적으로 덮어쓰지 않습니다.
 
-## 0.3.x 업그레이드 후 확인할 것
+## 0.4.x 업그레이드 후 확인할 것
 
-`0.3.x`는 구현/QA 실행 방식에 브랜치 경계와 QA workspace 개념을 도입합니다. 기존 프로젝트를 업그레이드했다면 다음 항목을 확인합니다.
+`0.4.x`는 구현/QA 실행 방식의 브랜치 경계와 QA workspace 개념에 더해 trace-context와 release-pr 안정화 흐름을 포함합니다. 기존 프로젝트를 업그레이드했다면 다음 항목을 확인합니다.
 
 ```powershell
 python vulcan.py version

@@ -6,9 +6,9 @@
 
 ## 현재 상태
 
-**Experimental - v0.3.0**
+**Experimental - v0.4.0**
 
-`0.3.0`은 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현/QA 흐름에 더 안전하게 연결하기 위해 audit workflow 브랜치 경계, worker 실행, staged Gate 4 QA, QA workspace 재사용, Program Design 계약 검증, Dashboard 증적 가시성을 보강한 실험 버전입니다.
+`0.4.0`은 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현/QA 흐름에 더 안전하게 연결하기 위해 audit workflow 브랜치 경계, worker 실행, staged Gate 4 QA, QA workspace 재사용, Program Design 계약 검증, trace-context 그래프, Dashboard 증적/추적 가시성을 보강한 실험 버전입니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
@@ -31,6 +31,9 @@
 - Worker dependency cache와 worktree 실행 경계
 - Gate 4 `QA-000`~`QA-003` staged QA 실행과 QA workspace 재사용 기준
 - Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
+- 요구사항추적표 기반 `trace-context` CLI와 Dashboard Trace Explorer
+- Gate 5 `release-pr` dry-run/body/branch guard
+- fixture 기반 회귀 smoke harness
 - Upgrade와 Dashboard 운영 흐름
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
@@ -39,7 +42,7 @@
 
 ## 다음 초점
 
-`0.3.0` 이후에는 기능을 무작정 늘리기보다, 실제 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중합니다.
+`0.4.0` 이후에는 기능을 무작정 늘리기보다, 실제 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중합니다.
 
 ### 실행 순서
 

@@ -8,7 +8,7 @@
 
 이 문서는 Vulcan-Anvil Ex 초기 단계에서 감리 산출물 템플릿을 어떻게 구성할지 정리한 참고 문서다.
 
-`0.3.0` 기준으로 요구사항정의서, SW Architecture, Program Design, API Spec, DB Spec, Security Guide, Test Case, Test Result, Traceability, Backlog, Release Approval 등 핵심 템플릿은 이미 `docs/templates/`와 `docs/core/`에 상당 부분 반영되어 있다.
+`0.4.0` 기준으로 요구사항정의서, SW Architecture, Program Design, API Spec, DB Spec, Security Guide, Test Case, Test Result, Traceability, Backlog, Release Approval 등 핵심 템플릿은 이미 `docs/templates/`와 `docs/core/`에 상당 부분 반영되어 있다.
 
 따라서 이 문서의 "다음 작업"은 최신 실행 우선순위가 아니라, 산출물 템플릿 설계의 배경 메모로 본다. 현재 작업 우선순위는 `docs/ROADMAP.md`를 따른다.
 

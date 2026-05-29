@@ -1,6 +1,6 @@
 # Codex/GPT Adapter
 
-> 상태: v0.3.0
+> 상태: v0.4.0
 > 목적: Vulcan-Anvil Ex Core 산출물과 Agent Run Protocol을 Codex/GPT 기반 개발 실행 흐름에 연결한다.
 
 ## 1. 범위
@@ -18,7 +18,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 
 ## 2. 현재 적용 범위
 
-`0.3.0` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
+`0.4.0` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
 
 - 새 프로젝트 컨시어지 응답
 - Phase 0부터 Gate 5까지의 단계 판단
@@ -89,7 +89,7 @@ Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
 | QA 결함 수정 루프 | `skills/qa-fix-loop.md` |
 | 변경요청 영향도 분석 | `skills/change-impact-analysis.md` |
 
-## 8. 0.3.0 이후 검증 작업
+## 8. 0.4.0 이후 검증 작업
 
 다음 단계에서는 실제 생성 프로젝트를 기준으로 Codex와 Claude의 Run 결과를 비교한다.
 
