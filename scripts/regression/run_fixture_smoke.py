@@ -170,8 +170,19 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         apply_fixture(fixture_dir, project_dir)
         validate_fixture_inputs(project_dir)
+        steps.append(run_step("commit-fixture-state:add", ["git", "add", "-A"], cwd=project_dir))
+        steps.append(run_step("commit-fixture-state:commit", ["git", "commit", "-m", "test: apply completed fixture"], cwd=project_dir))
+        steps.append(run_step("checkout-integration-branch", ["git", "checkout", "-B", "dev"], cwd=project_dir))
 
         steps.append(run_step("branch-status", [py, "vulcan.py", "branch-status"], cwd=project_dir))
+        steps.append(
+            run_step(
+                "release-pr-dry-run",
+                [py, "vulcan.py", "release-pr", "--dry-run"],
+                cwd=project_dir,
+                required_text=["Vulcan release PR", "Merge policy: manual only after Gate 5 approval"],
+            )
+        )
         steps.append(
             run_step(
                 "check-trace",

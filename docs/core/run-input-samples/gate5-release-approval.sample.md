@@ -55,4 +55,6 @@ gate_exit_policy:
 - `working_documents`에는 릴리즈 승인서, 변경요청, 추적표처럼 승인 판단 결과를 직접 작성/갱신할 문서만 둔다.
 - Gate 5는 기능 추가 단계가 아니다. 승인 전 미해결 항목과 릴리즈 판단 근거를 고정한다.
 - 릴리즈 승인 여부는 대화상 명시 승인 또는 보류 사유로 남긴다.
+- audit workflow에서 구현/QA가 `workflow.integration_branch`에서 진행됐다면, Gate 5 승인 전 `python vulcan.py release-pr`로 통합 브랜치 -> 기준 브랜치 Release PR을 생성하거나 갱신한다.
+- Release PR은 릴리즈 후보 검토 단위이며 자동 merge가 아니다. PR 교차검증 결과도 merge 가능 후보일 뿐이고, merge는 사용자 명시 승인 또는 Gate 5 승인 절차 뒤에 수행한다.
 

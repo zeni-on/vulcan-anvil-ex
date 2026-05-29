@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Gate 5에서 `workflow.integration_branch`를 `workflow.release_merge_to` 또는 `main`으로 보내는 `release-pr` 명령을 추가했다. Release PR은 생성/갱신까지만 자동화하며 merge는 명시 승인 뒤 수동으로 수행한다.
 - `dev`를 고정 브랜치명처럼 설명하던 문구를 `workflow.integration_branch` 역할 기준으로 정리했다. 기본값은 `dev`지만 프로젝트별로 `develop`, `dev-happy` 같은 브랜치명을 사용할 수 있다.
 - `GETTING_STARTED`, `CONCEPTS`, `UPGRADE_AND_DASHBOARD`, `ROADMAP`을 0.3.0 기준으로 보강하고, 브랜치 전략과 `QA-000` workspace 재사용 흐름을 그림과 절차로 설명했다.
 

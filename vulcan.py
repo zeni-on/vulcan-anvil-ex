@@ -36,6 +36,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from datetime import date, datetime, timedelta
@@ -9550,6 +9551,222 @@ def cmd_branch_start(stage="impl", project_dir="."):
         git_push_if_remote(project_abs)
 
 
+def release_pr_body(project_dir, base_branch, head_branch, title):
+    session = load_session(project_dir)
+    project_name = session.get("project") or session.get("name") or os.path.basename(project_dir)
+    release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+    qa_finding = "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"
+    qa_result = "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"
+    traceability = "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"
+
+    diff_stat = git_text(["diff", "--stat", f"{base_branch}...{head_branch}"], project_dir)
+    commit_log = git_text(["log", "--oneline", "--decorate", f"{base_branch}..{head_branch}"], project_dir)
+    if not diff_stat:
+        diff_stat = "(no local diff stat available)"
+    if not commit_log:
+        commit_log = "(no local commits found between base/head)"
+
+    doc_lines = []
+    for rel_path in [release_doc, qa_finding, qa_result, traceability]:
+        marker = "OK" if os.path.exists(os.path.join(project_dir, rel_path)) else "MISSING"
+        doc_lines.append(f"- [{marker}] `{rel_path}`")
+
+    return f"""# {title}
+
+## Release Candidate
+
+- Project: `{project_name}`
+- Base: `{base_branch}`
+- Head: `{head_branch}`
+- Source of truth: `{release_doc}`
+- Merge policy: manual only after Gate 5 approval
+
+## Gate 5 Evidence Documents
+
+{chr(10).join(doc_lines)}
+
+## Verification Checklist
+
+- [ ] `python vulcan.py check-trace`
+- [ ] `python vulcan.py check-contract` if Program Design contracts are in scope
+- [ ] Gate 4 QA command logs and evidence reviewed
+- [ ] Open FIND/CR/ISSUE/Backlog items reviewed
+- [ ] Release approval document reviewed
+- [ ] Independent PR review completed or explicitly waived
+
+## Diff Stat
+
+```text
+{diff_stat}
+```
+
+## Commits
+
+```text
+{commit_log}
+```
+
+## Notes
+
+This PR is a Gate 5 release candidate from the integration branch to the release baseline.
+It must not be auto-merged by runner output alone. Merge requires explicit user approval or the project's Gate 5 release approval process.
+"""
+
+
+def gh_available():
+    return bool(shutil.which("gh"))
+
+
+def gh_open_release_pr(project_dir, base_branch, head_branch, title, body_path, dry_run=False):
+    list_cmd = [
+        "gh", "pr", "list",
+        "--base", base_branch,
+        "--head", head_branch,
+        "--state", "open",
+        "--json", "number,url",
+        "--limit", "10",
+    ]
+    create_cmd = [
+        "gh", "pr", "create",
+        "--base", base_branch,
+        "--head", head_branch,
+        "--title", title,
+        "--body-file", body_path,
+    ]
+
+    if dry_run:
+        print("Dry-run: GitHub PR command")
+        print("  " + " ".join(create_cmd))
+        return
+
+    list_result = subprocess.run(
+        list_cmd,
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if list_result.returncode == 0:
+        try:
+            existing = json.loads(list_result.stdout or "[]")
+        except json.JSONDecodeError:
+            existing = []
+        if existing:
+            pr = existing[0]
+            number = str(pr.get("number") or "")
+            edit_cmd = ["gh", "pr", "edit", number, "--title", title, "--body-file", body_path]
+            edit_result = subprocess.run(
+                edit_cmd,
+                cwd=project_dir,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            if edit_result.returncode != 0:
+                detail = (edit_result.stderr or edit_result.stdout or "").strip()
+                print(f"오류: 기존 PR 갱신 실패 - {detail}")
+                sys.exit(edit_result.returncode)
+            print(f"Release PR 갱신: {pr.get('url') or ('#' + number)}")
+            return
+
+    create_result = subprocess.run(
+        create_cmd,
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if create_result.returncode != 0:
+        detail = (create_result.stderr or create_result.stdout or "").strip()
+        print(f"오류: Release PR 생성 실패 - {detail}")
+        sys.exit(create_result.returncode)
+    print(f"Release PR 생성: {(create_result.stdout or '').strip()}")
+
+
+def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    workflow = workflow_policy(project_abs)
+    if workflow.get("branch_mode") in ("none", "single", "disabled") or not workflow.get("impl_uses_integration_branch", True):
+        print("Release PR 생략: workflow가 통합 브랜치 기반이 아닙니다.")
+        return
+
+    session = load_session(project_abs)
+    current_gate = session.get("current_gate")
+    gate_status = session.get("gate_status", {}) if isinstance(session.get("gate_status"), dict) else {}
+    if current_gate != "gate5" and gate_status.get("gate5") != "done":
+        print(f"오류: release-pr은 Gate 5에서 실행합니다. 현재 Gate: {current_gate or '-'}")
+        print("  먼저 Gate 4 완료 후 python vulcan.py gate-start gate5 를 실행하세요.")
+        sys.exit(1)
+
+    base_branch = base or workflow.get("release_merge_to") or workflow.get("main_branch") or "main"
+    head_branch = head or workflow.get("integration_branch") or "dev"
+    current_branch = git_current_branch(project_abs)
+    if current_branch != head_branch:
+        print(f"오류: release-pr은 통합 브랜치 `{head_branch}`에서 실행합니다. 현재 브랜치: `{current_branch}`")
+        sys.exit(1)
+
+    release_doc = os.path.join(project_abs, "docs", "artifacts", "07-release", "DOC-PM-G5-001_Release-Approval_v0.1.md")
+    if not os.path.exists(release_doc):
+        print("오류: Gate 5 릴리즈 승인서가 없습니다.")
+        print("  필요 문서: docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md")
+        sys.exit(1)
+
+    if has_blocking_dirty_status(project_abs):
+        print("오류: release-pr 생성 전 미커밋 변경이 있습니다.")
+        print("  Gate 5 승인서와 QA 결과를 먼저 커밋한 뒤 다시 실행하세요.")
+        sys.exit(1)
+
+    pr_title = title or f"Gate 5 release: {session.get('project') or os.path.basename(project_abs)}"
+    body = release_pr_body(project_abs, base_branch, head_branch, pr_title)
+    body_dir = tempfile.mkdtemp(prefix="vulcan-release-pr-")
+    os.makedirs(body_dir, exist_ok=True)
+    body_path = os.path.join(body_dir, "release-pr-body.md")
+    with open(body_path, "w", encoding="utf-8") as f:
+        f.write(body)
+
+    print("Vulcan release PR")
+    print(f"  base: {base_branch}")
+    print(f"  head: {head_branch}")
+    print(f"  title: {pr_title}")
+    print(f"  body: {body_path}")
+
+    if dry_run:
+        print("\n--- PR body preview ---")
+        print(body)
+        if gh_available():
+            gh_open_release_pr(project_abs, base_branch, head_branch, pr_title, body_path, dry_run=True)
+        else:
+            print("Dry-run: gh CLI 없음. 아래 명령을 사용할 수 있습니다.")
+            print(f"  gh pr create --base {base_branch} --head {head_branch} --title \"{pr_title}\" --body-file \"{body_path}\"")
+        return
+
+    if not gh_available() or not has_git_remote(project_abs):
+        print("Release PR 자동 생성 생략: gh CLI 또는 git remote origin이 없습니다.")
+        print("아래 명령으로 수동 생성할 수 있습니다.")
+        print(f"  gh pr create --base {base_branch} --head {head_branch} --title \"{pr_title}\" --body-file \"{body_path}\"")
+        return
+
+    if not no_push:
+        push_result = subprocess.run(
+            ["git", "push", "-u", "origin", head_branch],
+            cwd=project_abs,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if push_result.returncode != 0:
+            detail = (push_result.stderr or push_result.stdout or "").strip()
+            print(f"오류: release-pr 전 통합 브랜치 push 실패 - {detail}")
+            sys.exit(push_result.returncode)
+        print(f"  푸시 완료: origin {head_branch}")
+
+    gh_open_release_pr(project_abs, base_branch, head_branch, pr_title, body_path, dry_run=False)
+
+
 def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE):
     import shutil
     print(f"\nVulcan-Anvil 초기화")
@@ -9628,7 +9845,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         print(f"  생성: vulcan_core/")
 
     # .gitignore
-    gitignore = "node_modules/\n.env\n.env.local\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n"
+    gitignore = "node_modules/\n.env\n.env.local\n__pycache__/\n*.pyc\n.pytest_cache/\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n.vulcan/release/\n"
     write_file(target_dir, ".gitignore", gitignore)
 
     # git init + 초기 커밋
@@ -9698,6 +9915,7 @@ def main():
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
+  release-pr   Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
@@ -9716,6 +9934,7 @@ def main():
   python vulcan.py sync-session
   python vulcan.py branch-status
   python vulcan.py branch-start impl
+  python vulcan.py release-pr --dry-run
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
   python vulcan.py export
@@ -9760,6 +9979,13 @@ def main():
 
     p_branch_start = subparsers.add_parser("branch-start", help="workflow 단계별 통합 브랜치 시작")
     p_branch_start.add_argument("stage", choices=["impl"], help="시작할 브랜치 단계")
+
+    p_release_pr = subparsers.add_parser("release-pr", help="Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신")
+    p_release_pr.add_argument("--base", default="", help="PR base branch (기본: workflow.release_merge_to 또는 main)")
+    p_release_pr.add_argument("--head", default="", help="PR head branch (기본: workflow.integration_branch)")
+    p_release_pr.add_argument("--title", default="", help="PR 제목")
+    p_release_pr.add_argument("--no-push", action="store_true", help="PR 생성 전 통합 브랜치 push를 생략")
+    p_release_pr.add_argument("--dry-run", action="store_true", help="PR을 만들지 않고 body와 명령만 출력")
 
     p_wave_start = subparsers.add_parser("wave-start", help="Build Wave 시작 및 작업지시 Run 생성")
     p_wave_start.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
@@ -9936,6 +10162,14 @@ def main():
         cmd_branch_status()
     elif args.command == "branch-start":
         cmd_branch_start(stage=args.stage)
+    elif args.command == "release-pr":
+        cmd_release_pr(
+            base=args.base,
+            head=args.head,
+            title=args.title,
+            dry_run=args.dry_run,
+            no_push=args.no_push,
+        )
     elif args.command == "wave-start":
         cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
     elif args.command == "wave-complete":

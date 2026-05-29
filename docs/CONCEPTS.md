@@ -75,10 +75,15 @@ flowchart LR
   Integration -->|"Gate 4 QA-000"| QA["QA workspace<br/>QA-GATE4 또는 기록된 경로"]
   QA -->|"QA-001 명령 검증<br/>QA-002 UI/E2E<br/>QA-003 결과 정리"| QAResult["QA 결과<br/>FIND / CR / ISSUE 후보"]
   QAResult -->|"승인된 결함 수정"| Integration
-  QAResult -->|"Gate 5 승인"| Release["main 또는 workflow.release_merge_to"]
+  QAResult -->|"Gate 5 release-pr"| PR["Release PR<br/>integration -> release baseline"]
+  PR -->|"명시 승인 후 수동 merge"| Release["main 또는 workflow.release_merge_to"]
 ```
 
 대시보드는 현재 폴더가 어떤 브랜치를 checkout하고 있는지와 설정된 `workflow.integration_branch`를 보여주는 관찰 화면입니다. 실제 규약 위반 여부와 브랜치 전환은 `vulcan.py branch-status`, `branch-start impl`, `wave-start`, `run-exec` guard가 담당합니다.
+
+Gate 5에서는 `python vulcan.py release-pr`로 통합 브랜치에서 기준 브랜치로 가는 Release PR을 만들 수 있습니다.
+Release PR은 릴리즈 후보를 검토하기 위한 단위이며, runner 결과만으로 자동 merge하지 않습니다.
+merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤에 수행합니다.
 
 ## Backlog
 

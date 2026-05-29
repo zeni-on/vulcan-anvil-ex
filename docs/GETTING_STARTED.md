@@ -111,6 +111,7 @@ my-project/
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
+| `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
 | `agent-run --mode work` | Run 문서를 worker runner로 실행 |
 | `run-exec` | 특정 Run을 codex-cli, claude-cli, antigravity-cli 같은 runner로 실행 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
