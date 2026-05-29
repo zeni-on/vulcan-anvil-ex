@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -138,6 +139,52 @@ def validate_fixture_inputs(project_dir: Path) -> None:
         raise FixtureSmokeFailure("fixture missing required files:\n" + "\n".join(f"  - {item}" for item in missing))
 
 
+def assert_trace_context_json(result: StepResult) -> None:
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"trace-context JSON output is invalid: {exc}\n{result.combined_output}") from exc
+
+    related_ids = set(payload.get("related_ids") or [])
+    target_contracts = payload.get("target_contracts") or {}
+    expected_related = {"REQ-001-01", "API-001", "PGM-001", "SEC-001", "UT-001", "IT-001"}
+    missing = sorted(expected_related - related_ids)
+    if missing:
+        raise FixtureSmokeFailure(f"trace-context JSON missing related IDs: {missing}")
+    if "API-001" not in set(target_contracts.get("api") or []):
+        raise FixtureSmokeFailure("trace-context JSON target_contracts.api did not include API-001")
+    if "PGM-001" not in set(target_contracts.get("pgm") or []):
+        raise FixtureSmokeFailure("trace-context JSON target_contracts.pgm did not include PGM-001")
+
+
+def release_pr_body_path_from_output(output: str) -> Path:
+    match = re.search(r"(?m)^\s*body:\s+(.+?)\s*$", output)
+    if not match:
+        raise FixtureSmokeFailure(f"release-pr output did not include body path\n{output}")
+    return Path(match.group(1).strip())
+
+
+def assert_release_pr_body(result: StepResult) -> None:
+    body_path = release_pr_body_path_from_output(result.combined_output)
+    normalized = body_path.as_posix()
+    if "/.vulcan/release/release-pr-body.md" not in normalized and "\\.vulcan\\release\\release-pr-body.md" not in str(body_path):
+        raise FixtureSmokeFailure(f"release-pr body path should be under .vulcan/release: {body_path}")
+    if not body_path.exists():
+        raise FixtureSmokeFailure(f"release-pr body file was not created: {body_path}")
+    body = body_path.read_text(encoding="utf-8")
+    required = [
+        "## Gate 5 Evidence Documents",
+        "- [OK] `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md`",
+        "- [OK] `docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md`",
+        "- [OK] `docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md`",
+        "Independent PR review completed or explicitly waived",
+        "must not be auto-merged",
+    ]
+    missing = [text for text in required if text not in body]
+    if missing:
+        raise FixtureSmokeFailure(f"release-pr body missing required text: {missing}\n{body}")
+
+
 def run_fixture_smoke(args: argparse.Namespace) -> int:
     root = repo_root()
     fixture_dir = root / "scripts" / "regression" / "fixtures" / args.fixture
@@ -177,12 +224,69 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         steps.append(run_step("branch-status", [py, "vulcan.py", "branch-status"], cwd=project_dir))
         steps.append(
             run_step(
+                "trace-context:req-001-01",
+                [py, "vulcan.py", "trace-context", "--id", "REQ-001-01", "--depth", "2", "--emit", "yaml"],
+                cwd=project_dir,
+                required_text=[
+                    "seed_id: REQ-001-01",
+                    "target_contracts:",
+                    "API-001",
+                    "scope.writable은 trace graph가 확정하지 않는다",
+                ],
+            )
+        )
+        trace_json = run_step(
+            "trace-context:api-001-json",
+            [py, "vulcan.py", "trace-context", "--id", "API-001", "--depth", "2", "--direction", "both", "--emit", "json"],
+            cwd=project_dir,
+        )
+        assert_trace_context_json(trace_json)
+        steps.append(trace_json)
+
+        release_pr_dry_run = run_step(
                 "release-pr-dry-run",
                 [py, "vulcan.py", "release-pr", "--dry-run"],
                 cwd=project_dir,
                 required_text=["Vulcan release PR", "Merge policy: manual only after Gate 5 approval"],
+        )
+        assert_release_pr_body(release_pr_dry_run)
+        steps.append(release_pr_dry_run)
+        steps.append(
+            run_step(
+                "release-pr-blocks-missing-base",
+                [py, "vulcan.py", "release-pr", "--dry-run", "--base", "missing-release-base"],
+                cwd=project_dir,
+                expected_returncodes={1},
+                required_text=["release-pr base 브랜치를 찾을 수 없습니다"],
             )
         )
+        steps.append(run_step("checkout-main-for-release-pr-guard", ["git", "checkout", "main"], cwd=project_dir))
+        try:
+            steps.append(
+                run_step(
+                    "release-pr-blocks-wrong-branch",
+                    [py, "vulcan.py", "release-pr", "--dry-run"],
+                    cwd=project_dir,
+                    expected_returncodes={1},
+                    required_text=["release-pr은 통합 브랜치 `dev`에서 실행합니다"],
+                )
+            )
+        finally:
+            steps.append(run_step("checkout-dev-after-release-pr-guard", ["git", "checkout", "dev"], cwd=project_dir))
+        dirty_guard = project_dir / "docs" / "runs" / "_release_dirty_guard.md"
+        dirty_guard.write_text("dirty guard\n", encoding="utf-8")
+        try:
+            steps.append(
+                run_step(
+                    "release-pr-blocks-dirty-worktree",
+                    [py, "vulcan.py", "release-pr", "--dry-run"],
+                    cwd=project_dir,
+                    expected_returncodes={1},
+                    required_text=["release-pr 생성 전 미커밋 변경이 있습니다"],
+                )
+            )
+        finally:
+            dirty_guard.unlink(missing_ok=True)
         steps.append(
             run_step(
                 "check-trace",

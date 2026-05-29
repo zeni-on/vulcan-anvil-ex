@@ -69,6 +69,7 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 | `ui_evidence_policy` | UI 테스트, 화면 캡처, Playwright 증적이 이번 Run의 직접 결과일 때 |
 | `ui_implementation_contract_policy` | UIREF/ui-baseline을 기준으로 구현 또는 검수할 때 |
 | `qa_execution_policy` | Gate 4에서 worker가 테스트 실행, 로그, 화면 증적, 후보 FIND/CR/ISSUE를 수집할 때 |
+| `qa_failure_report_contract` | Gate 4 QA worker가 실패/미실행/환경 차단을 구조화해 보고해야 할 때 |
 | `gate_exit_policy` | Orchestrator Run이 Gate 종료와 사용자 승인 질문을 직접 다룰 때 |
 | `worker_execution_policy` | 기본 worker 금지사항을 Run 안에 명시적으로 재기입해야 할 때 |
 | `question_policy` / `security_policy` | 프로젝트별 질문/보안 예외가 기본 Core 규칙보다 더 좁거나 다를 때 |
@@ -660,9 +661,33 @@ QA 실행 worker는 다음을 수행하지 않는다.
 - `qa-fix-loop`까지 이어서 수행
 - QA Pass, Gate 완료, 릴리즈 가능 여부 확정
 
-실패가 나오면 worker는 즉시 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다.
+실패가 나오면 worker는 즉시 수정하지 않고 `failure_reports`에 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다.
 Orchestrator는 사용자와 처리 방향을 정한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 보낸다.
 요구사항/API/DB/보안/화면 계약 변경이 필요하면 `CR` 후보로 분류한다.
+
+QA 실행 worker의 Run 입력 계약에는 실패 보고 기준을 포함한다.
+
+```yaml
+qa_failure_report_contract:
+  required_when: [Fail, Not Run, environment_blocked]
+  required_fields:
+    - qa_stage
+    - failing_command
+    - cwd
+    - exit_code
+    - observed_error
+    - log_path
+    - reproduction_command
+    - impact_ids
+    - candidate_classification
+    - orchestrator_decision_needed
+  candidate_classification_values: [FIND, CR, ISSUE, environment_blocked]
+  forbidden_actions:
+    - source_code_edit
+    - new_api_or_method_creation
+    - qa_fix_loop_execution
+    - gate_pass_decision
+```
 
 ## 10. Worker 전달 프롬프트 기본형
 

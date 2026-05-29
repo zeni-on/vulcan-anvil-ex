@@ -109,6 +109,7 @@ my-project/
 | `orchestrator-plan` | Orchestrator 실행 계획 Run 생성 |
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
+| `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
 | `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |

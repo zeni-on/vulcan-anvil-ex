@@ -34,6 +34,9 @@ python scripts/regression/run_fixture_smoke.py
 - 대표 Build Wave Run이 `run-preflight`에서 crash 없이 검사된다.
 - QA-001~QA-003 Run은 QA-000이 기록한 QA workspace가 있을 때만 `run-preflight`를 통과한다.
 - QA-000 workspace 기록을 제거하면 QA-001 preflight가 차단된다.
+- `trace-context`는 YAML/JSON 고정 seed에서 기대 ID와 `target_contracts`를 반환한다.
+- `release-pr --dry-run`은 `.vulcan/release/release-pr-body.md`를 만들고 Gate 5 증적, 수동 merge 정책, 독립 PR review 체크리스트를 포함한다.
+- `release-pr`는 잘못된 브랜치, 없는 base 브랜치, 미커밋 변경이 있을 때 차단된다.
 
 ## 범위
 

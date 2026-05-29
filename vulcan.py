@@ -525,6 +525,28 @@ AUDIT_QA_EXECUTION_POLICY = {
         "승인된 설계 범위 안의 결함이면 FIND 후보로 남긴다.",
         "요구사항/API/DB/보안/화면 계약 변경이 필요하면 CR 후보로 남긴다.",
     ],
+    "failure_report_contract": {
+        "required_when": ["Fail", "Not Run", "environment_blocked"],
+        "required_fields": [
+            "qa_stage",
+            "failing_command",
+            "cwd",
+            "exit_code",
+            "observed_error",
+            "log_path",
+            "reproduction_command",
+            "impact_ids",
+            "candidate_classification",
+            "orchestrator_decision_needed",
+        ],
+        "candidate_classification_values": ["FIND", "CR", "ISSUE", "environment_blocked"],
+        "forbidden_actions": [
+            "source_code_edit",
+            "new_api_or_method_creation",
+            "qa_fix_loop_execution",
+            "gate_pass_decision",
+        ],
+    },
 }
 
 AUDIT_GATE2_DESIGN_SEQUENCE = [
@@ -1534,6 +1556,13 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
                 "related_ids",
                 "verification_results",
                 "evidence",
+                *(
+                    [
+                        "failure_reports",
+                    ]
+                    if skill == "qa-execution"
+                    else []
+                ),
                 "traceability_updates",
                 "gate_exit_summary",
                 "approval_request",
@@ -1607,10 +1636,17 @@ qa_execution_policy:
   stages:
 {format_yaml_sequence(qa_execution.get("stages", []), 4)}
   on_failure:
-{format_yaml_sequence(qa_execution["on_failure"], 4)}"""
+{format_yaml_sequence(qa_execution["on_failure"], 4)}
+qa_failure_report_contract:
+  required_when: {format_yaml_list(qa_execution["failure_report_contract"]["required_when"])}
+  required_fields:
+{format_yaml_sequence(qa_execution["failure_report_contract"]["required_fields"], 4)}
+  candidate_classification_values: {format_yaml_list(qa_execution["failure_report_contract"]["candidate_classification_values"])}
+  forbidden_actions:
+{format_yaml_sequence(qa_execution["failure_report_contract"]["forbidden_actions"], 4)}"""
         qa_execution_instruction = """
 - QA 실행 worker이면 테스트 실패 또는 이상 동작을 발견해도 소스코드를 수정하지 않는다.
-- QA 실패는 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE로 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
+- QA 실패는 `qa_failure_report_contract` 필드에 맞춰 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE 또는 environment_blocked를 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
 - Gate 4 전체 QA를 한 Run에서 모두 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run의 범위를 명시한다.
 - QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace/worktree 경로를 남긴다.
 - QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace/worktree에서 실행한다.
@@ -2529,6 +2565,344 @@ def parse_traceability(project_dir="."):
                 "test_columns": test_columns,
             }
     return result
+
+
+TRACE_ID_PATTERN = re.compile(
+    r"\b(?:"
+    r"REQ-\d{3}(?:-\d{2})?|NREQ-\d{3}(?:-\d{2})?|AC-\d{3}-\d{2}|"
+    r"FUNC-\d{3}|SCR-\d{3}|UIREF-\d{3}|UICON-\d{3}|"
+    r"API-\d{3}|PGM-\d{3}|IF-\d{3}|MTH-\d{3}|DB-\d{3}|SEC-\d{3}|"
+    r"UT-\d{3}|IT-\d{3}|PT-\d{3}|UI-\d{3}(?:-\d{2})?|EV-[A-Z0-9-]+|"
+    r"FIND-\d{3}|CR-\d{3}|DEC-\d{3}|BL-\d{3}|ISSUE-[A-Z0-9-]+|"
+    r"RUN-\d{3}|RV-\d{3}"
+    r")\b",
+    re.IGNORECASE,
+)
+
+TRACE_TEST_PREFIXES = {"UT", "IT", "PT"}
+TRACE_UNRESOLVED_VALUES = {"", "-", "미정", "확인필요", "해당없음", "tbd", "todo", "n/a", "na"}
+TRACE_EXCLUDED_STATUSES = {"deferred", "rejected"}
+
+
+def trace_find_ids(value):
+    ids = []
+    for match in TRACE_ID_PATTERN.finditer(value or ""):
+        item = match.group(0).upper()
+        if item not in ids:
+            ids.append(item)
+    return ids
+
+
+def trace_id_prefix(trace_id):
+    return (trace_id or "").split("-", 1)[0].upper()
+
+
+def trace_cell_ids(row, candidates):
+    return trace_find_ids(table_cell(row, candidates))
+
+
+def trace_add_node(nodes, trace_id, status="", source=""):
+    if not trace_id:
+        return
+    node = nodes.setdefault(trace_id, {"id": trace_id, "status": "", "sources": set()})
+    if status and not node.get("status"):
+        node["status"] = status
+    if source:
+        node["sources"].add(source)
+
+
+def trace_add_edge(edges, nodes, source_id, target_id, edge_type, status="", source=""):
+    if not source_id or not target_id or source_id == target_id:
+        return
+    trace_add_node(nodes, source_id, status=status, source=source)
+    trace_add_node(nodes, target_id, status=status, source=source)
+    key = (source_id, target_id, edge_type)
+    edge = edges.setdefault(key, {"source": source_id, "target": target_id, "type": edge_type, "sources": set()})
+    if source:
+        edge["sources"].add(source)
+
+
+def traceability_matrix_path(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-traceability"),
+        r"traceability.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "TRACEABILITY.md"),
+    ])
+
+
+def build_trace_graph(project_dir="."):
+    path = traceability_matrix_path(project_dir)
+    nodes = {}
+    edges = {}
+    rows_processed = 0
+    if not path:
+        return {"nodes": nodes, "edges": [], "source": "", "rows": 0}
+
+    rel_source = normalize_repo_path(os.path.relpath(path, project_dir))
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    for _headers, rows in parse_markdown_tables(content):
+        for row in rows:
+            row_ids = []
+            for value in row.values():
+                row_ids.extend(trace_find_ids(value))
+            if not row_ids:
+                continue
+            rows_processed += 1
+            status = table_cell(row, ["상태", "Status"])
+            for trace_id in row_ids:
+                trace_add_node(nodes, trace_id, status=status, source=rel_source)
+
+            req_ids = trace_cell_ids(row, ["REQ-ID", "관련 REQ", "관련 REQ/NREQ", "영향받는 REQ"])
+            nreq_ids = trace_cell_ids(row, ["NREQ-ID", "관련 NREQ", "관련 REQ/NREQ"])
+            ac_ids = trace_cell_ids(row, ["AC-ID", "인수기준"])
+            func_ids = trace_cell_ids(row, ["FUNC-ID", "기능"])
+            scr_ids = trace_cell_ids(row, ["SCR-ID", "화면"])
+            uiref_ids = trace_cell_ids(row, ["UIREF-ID", "UIREF"])
+            uicon_ids = trace_cell_ids(row, ["UICON-ID", "UICON"])
+            pgm_ids = trace_cell_ids(row, ["PGM-ID", "프로그램", "적용 대상", "영향받는 설계"])
+            api_ids = trace_cell_ids(row, ["API-ID", "API", "PGM-ID", "적용 대상", "영향받는 설계"])
+            db_ids = trace_cell_ids(row, ["DB-ID", "데이터", "영향받는 설계"])
+            if_ids = trace_cell_ids(row, ["IF-ID", "Interface-ID", "영향받는 설계"])
+            sec_ids = trace_cell_ids(row, ["SEC-ID", "보안", "보안항목", "적용 대상"])
+            ut_ids = trace_cell_ids(row, ["UT-ID", "검증 테스트", "영향받는 테스트"])
+            it_ids = trace_cell_ids(row, ["IT-ID", "검증 테스트", "영향받는 테스트"])
+            pt_ids = trace_cell_ids(row, ["PT-ID", "검증 테스트", "영향받는 테스트"])
+            ui_ids = trace_cell_ids(row, ["UI-ID", "검증 테스트", "영향받는 테스트"])
+            ev_ids = trace_cell_ids(row, ["증적", "Evidence"])
+            issue_ids = trace_cell_ids(row, ["결함 ID", "FIND-ID", "CR-ID", "ISSUE-ID", "Backlog-ID"])
+            run_ids = trace_cell_ids(row, ["증적", "Run", "RUN-ID"])
+
+            upstream_ids = req_ids + nreq_ids
+            if ac_ids:
+                for upstream_id in upstream_ids:
+                    for ac_id in ac_ids:
+                        trace_add_edge(edges, nodes, upstream_id, ac_id, "decomposes", status, rel_source)
+            elif upstream_ids:
+                ac_ids = upstream_ids
+
+            for ac_id in ac_ids:
+                for func_id in func_ids:
+                    trace_add_edge(edges, nodes, ac_id, func_id, "satisfies", status, rel_source)
+                for sec_id in sec_ids:
+                    trace_add_edge(edges, nodes, ac_id, sec_id, "implements", status, rel_source)
+
+            design_ids = scr_ids + uiref_ids + uicon_ids + api_ids + pgm_ids + db_ids + if_ids + sec_ids
+            for func_id in func_ids:
+                for design_id in design_ids:
+                    trace_add_edge(edges, nodes, func_id, design_id, "implements", status, rel_source)
+            if not func_ids:
+                for upstream_id in ac_ids or upstream_ids:
+                    for design_id in design_ids:
+                        trace_add_edge(edges, nodes, upstream_id, design_id, "implements", status, rel_source)
+
+            test_ids = ut_ids + it_ids + pt_ids + ui_ids
+            test_sources = design_ids or func_ids or ac_ids or upstream_ids
+            for source_id in test_sources:
+                for test_id in test_ids:
+                    trace_add_edge(edges, nodes, source_id, test_id, "verifies", status, rel_source)
+
+            for test_id in test_ids:
+                for ev_id in ev_ids:
+                    if trace_id_prefix(ev_id) in {"RUN", "RV"}:
+                        trace_add_edge(edges, nodes, ev_id, test_id, "documents", status, rel_source)
+                    else:
+                        trace_add_edge(edges, nodes, test_id, ev_id, "evidence_of", status, rel_source)
+
+            for issue_id in issue_ids:
+                for related_id in row_ids:
+                    if related_id != issue_id:
+                        trace_add_edge(edges, nodes, issue_id, related_id, "impacts", status, rel_source)
+
+            for run_id in run_ids:
+                if trace_id_prefix(run_id) == "RUN":
+                    for related_id in row_ids:
+                        if related_id != run_id:
+                            trace_add_edge(edges, nodes, run_id, related_id, "documents", status, rel_source)
+
+    edge_items = []
+    for edge in edges.values():
+        item = dict(edge)
+        item["sources"] = sorted(item.get("sources", []))
+        edge_items.append(item)
+    for node in nodes.values():
+        node["sources"] = sorted(node.get("sources", []))
+    return {
+        "nodes": nodes,
+        "edges": sorted(edge_items, key=lambda item: (item["source"], item["target"], item["type"])),
+        "source": rel_source,
+        "rows": rows_processed,
+    }
+
+
+def trace_bfs(graph, seed_id, depth=2, direction="downstream", edge_types=None, include_excluded=False):
+    nodes = graph.get("nodes", {})
+    edges = graph.get("edges", [])
+    allowed_edge_types = set(edge_types or [])
+    forward = {}
+    backward = {}
+    for edge in edges:
+        if allowed_edge_types and edge.get("type") not in allowed_edge_types:
+            continue
+        forward.setdefault(edge["source"], []).append(edge)
+        backward.setdefault(edge["target"], []).append(edge)
+
+    seed_id = seed_id.upper()
+    visited = {seed_id: 0}
+    kept_edges = []
+    queue = [(seed_id, 0)]
+    while queue:
+        current, current_depth = queue.pop(0)
+        if current_depth >= depth:
+            continue
+        candidates = []
+        if direction in ("downstream", "both"):
+            candidates.extend(forward.get(current, []))
+        if direction in ("upstream", "both"):
+            for edge in backward.get(current, []):
+                candidates.append({"source": edge["target"], "target": edge["source"], "type": edge["type"], "sources": edge.get("sources", [])})
+
+        for edge in candidates:
+            target = edge["target"]
+            status = (nodes.get(target, {}).get("status") or "").strip().lower()
+            if not include_excluded and status in TRACE_EXCLUDED_STATUSES:
+                continue
+            kept_edges.append(edge)
+            if target not in visited:
+                visited[target] = current_depth + 1
+                queue.append((target, current_depth + 1))
+    return visited, kept_edges
+
+
+def trace_related_documents(project_dir, ids, limit=12):
+    search_dirs = [
+        os.path.join(project_dir, "docs", "artifacts"),
+        os.path.join(project_dir, "docs", "runs"),
+        os.path.join(project_dir, "docs", "reviews"),
+    ]
+    id_set = set(ids or [])
+    matches = []
+    for base in search_dirs:
+        if not os.path.isdir(base):
+            continue
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if d not in {"node_modules", ".next", "__pycache__"}]
+            for filename in files:
+                if not filename.lower().endswith(".md"):
+                    continue
+                path = os.path.join(root, filename)
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        content = f.read()
+                except (OSError, UnicodeDecodeError):
+                    continue
+                found = id_set.intersection(trace_find_ids(content))
+                if not found:
+                    continue
+                rel_path = normalize_repo_path(os.path.relpath(path, project_dir))
+                matches.append((rel_path, sorted(found)))
+    return [{"path": path, "ids": found} for path, found in sorted(matches)[:limit]]
+
+
+def trace_context_yaml(context):
+    lines = [
+        f"seed_id: {context['seed_id']}",
+        f"depth: {context['depth']}",
+        f"direction: {context['direction']}",
+        f"traceability_source: {format_yaml_scalar(context.get('traceability_source', ''))}",
+        "related_ids:",
+        format_yaml_sequence(context["related_ids"], 2),
+        "target_contracts:",
+        format_yaml_mapping_sequences(context["target_contracts"], 2),
+        "edges:",
+    ]
+    if context["edges"]:
+        for edge in context["edges"]:
+            lines.append(f"  - source: {format_yaml_scalar(edge['source'])}")
+            lines.append(f"    target: {format_yaml_scalar(edge['target'])}")
+            lines.append(f"    type: {format_yaml_scalar(edge['type'])}")
+    else:
+        lines.append("  []")
+
+    lines.append("source_documents:")
+    lines.append("  orchestrator_reference:")
+    if context.get("traceability_source"):
+        lines.append(f"    - {format_yaml_scalar(context['traceability_source'])}")
+    else:
+        lines.append("    []")
+    lines.append("  reference_on_demand:")
+    if context["related_documents"]:
+        for doc in context["related_documents"]:
+            lines.append(f"    - path: {format_yaml_scalar(doc['path'])}")
+            lines.append(f"      ids: {format_yaml_list(doc['ids'])}")
+    else:
+        lines.append("    []")
+    lines.append("warnings:")
+    for warning in context["warnings"]:
+        lines.append(f"  - {format_yaml_scalar(warning)}")
+    return "\n".join(lines)
+
+
+def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_types=None, include_excluded=False):
+    graph = build_trace_graph(project_dir)
+    seed_id = (seed_id or "").strip().upper()
+    if seed_id not in graph.get("nodes", {}):
+        return {
+            "seed_id": seed_id,
+            "depth": depth,
+            "direction": direction,
+            "traceability_source": graph.get("source", ""),
+            "related_ids": [seed_id] if seed_id else [],
+            "target_contracts": classify_related_ids([seed_id] if seed_id else []),
+            "edges": [],
+            "related_documents": [],
+            "warnings": [
+                f"seed ID를 traceability graph에서 찾지 못했습니다: {seed_id}",
+                "scope.writable은 trace graph가 확정하지 않는다. Orchestrator가 Run 생성 전 직접 좁혀야 한다.",
+                "interface_contract는 Program Design에서 별도 확인해야 한다.",
+            ],
+        }
+    visited, edges = trace_bfs(graph, seed_id, depth=depth, direction=direction, edge_types=edge_types, include_excluded=include_excluded)
+    related_ids = sorted(visited, key=lambda item: (visited[item], item))
+    related_documents = trace_related_documents(project_dir, related_ids)
+    warnings = [
+        "scope.writable은 trace graph가 확정하지 않는다. Orchestrator가 Run 생성 전 직접 좁혀야 한다.",
+        "interface_contract는 Program Design에서 별도 확인해야 한다.",
+        "target_contracts는 추천값이며 Orchestrator가 확정해야 한다.",
+    ]
+    return {
+        "seed_id": seed_id,
+        "depth": depth,
+        "direction": direction,
+        "traceability_source": graph.get("source", ""),
+        "related_ids": related_ids,
+        "target_contracts": classify_related_ids(related_ids),
+        "edges": sorted(edges, key=lambda item: (item["source"], item["target"], item["type"])),
+        "related_documents": related_documents,
+        "warnings": warnings,
+    }
+
+
+def cmd_trace_context(seed_id, depth=2, direction="downstream", emit="yaml", edge_types="", include_excluded=False, project_dir="."):
+    if not seed_id:
+        print("오류: --id 값이 필요합니다.")
+        sys.exit(1)
+    edge_type_list = split_csv(edge_types)
+    context = trace_context(
+        os.path.abspath(project_dir),
+        seed_id=seed_id,
+        depth=max(0, int(depth)),
+        direction=direction,
+        edge_types=edge_type_list,
+        include_excluded=include_excluded,
+    )
+    if emit == "json":
+        print(json.dumps(context, ensure_ascii=False, indent=2))
+    else:
+        print(trace_context_yaml(context))
 
 
 def parse_test_plan(project_dir="."):
@@ -9216,6 +9590,8 @@ def run_preflight_file(path):
         qa_stage = qa_stage_from_run(content, metadata)
         if "qa_execution_policy:" not in content:
             warnings.append("qa-execution Run에는 qa_execution_policy가 있는 편이 안전합니다.")
+        if "qa_failure_report_contract:" not in content:
+            warnings.append("qa-execution Run에는 실패/차단 시 worker가 남길 qa_failure_report_contract가 필요합니다.")
         if not re.search(r"\bQA-00[0-3]\b", content):
             warnings.append("qa-execution Run은 QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 단계가 드러나야 합니다.")
         if re.search(r"\bQA-000\b", content) and not re.search(r"qa_workspace|qa_workspace_path|worktree", content, re.IGNORECASE):
@@ -9230,6 +9606,13 @@ def run_preflight_file(path):
             blockers.append("qa-execution Run writable scope에 session.json을 포함할 수 없습니다.")
         if re.search(r"새\s*(API|메소드|method)|소스.*수정|코드.*수정|fix.*code", content, re.IGNORECASE):
             warnings.append("qa-execution Run이 수정 지시처럼 보입니다. 실패는 FIND/CR 후보로 보고하고 수정은 qa-fix-loop로 분리하세요.")
+        if status in {"Completed", "Verified", "CompletedWithIssues", "Failed", "Blocked"}:
+            has_failure_like_result = re.search(
+                r"\b(Fail|Failed|failed|Not Run|not_run|environment_blocked)\b",
+                body_without_yaml,
+            )
+            if has_failure_like_result and "failure_reports" not in content:
+                warnings.append("qa-execution 결과에 실패/차단이 있지만 failure_reports가 없습니다. 명령, cwd, exit code, 로그, 재현 명령, 영향 ID를 구조화하세요.")
 
     return blockers, warnings
 
@@ -9613,6 +9996,12 @@ It must not be auto-merged by runner output alone. Merge requires explicit user 
 """
 
 
+def release_pr_body_path(project_dir):
+    body_dir = os.path.join(project_dir, ".vulcan", "release")
+    os.makedirs(body_dir, exist_ok=True)
+    return os.path.join(body_dir, "release-pr-body.md")
+
+
 def gh_available():
     return bool(shutil.which("gh"))
 
@@ -9707,6 +10096,14 @@ def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, pro
     if current_branch != head_branch:
         print(f"오류: release-pr은 통합 브랜치 `{head_branch}`에서 실행합니다. 현재 브랜치: `{current_branch}`")
         sys.exit(1)
+    if not git_branch_exists(base_branch, project_abs):
+        print(f"오류: release-pr base 브랜치를 찾을 수 없습니다: `{base_branch}`")
+        print("  workflow.release_merge_to 또는 --base 값을 확인하세요.")
+        sys.exit(1)
+    if not git_branch_exists(head_branch, project_abs):
+        print(f"오류: release-pr head 브랜치를 찾을 수 없습니다: `{head_branch}`")
+        print("  workflow.integration_branch 또는 --head 값을 확인하세요.")
+        sys.exit(1)
 
     release_doc = os.path.join(project_abs, "docs", "artifacts", "07-release", "DOC-PM-G5-001_Release-Approval_v0.1.md")
     if not os.path.exists(release_doc):
@@ -9721,9 +10118,7 @@ def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, pro
 
     pr_title = title or f"Gate 5 release: {session.get('project') or os.path.basename(project_abs)}"
     body = release_pr_body(project_abs, base_branch, head_branch, pr_title)
-    body_dir = tempfile.mkdtemp(prefix="vulcan-release-pr-")
-    os.makedirs(body_dir, exist_ok=True)
-    body_path = os.path.join(body_dir, "release-pr-body.md")
+    body_path = release_pr_body_path(project_abs)
     with open(body_path, "w", encoding="utf-8") as f:
         f.write(body)
 
@@ -9912,6 +10307,7 @@ def main():
   init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
   check-contract Program Design 구현 계약과 코드 구조 대조
+  trace-context 추적성 그래프에서 ID 주변 Run 입력 후보 출력
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
@@ -9928,6 +10324,7 @@ def main():
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git --require-remote
   python vulcan.py check-trace
   python vulcan.py check-contract --report docs/artifacts/04-review/evidence/contract/contract-conformance.json
+  python vulcan.py trace-context --id REQ-001-01 --depth 2 --emit yaml
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
@@ -9961,6 +10358,14 @@ def main():
 
     p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
     p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
+
+    p_trace_context = subparsers.add_parser("trace-context", help="추적성 그래프에서 ID 주변 Run 입력 후보 출력")
+    p_trace_context.add_argument("--id", required=True, help="시작 ID (예: REQ-001-01)")
+    p_trace_context.add_argument("--depth", type=int, default=2, help="탐색 깊이")
+    p_trace_context.add_argument("--direction", default="downstream", choices=["upstream", "downstream", "both"], help="탐색 방향")
+    p_trace_context.add_argument("--edge-types", default="", help="허용 edge type 콤마 구분")
+    p_trace_context.add_argument("--emit", default="yaml", choices=["yaml", "json"], help="출력 형식")
+    p_trace_context.add_argument("--include-excluded", action="store_true", help="Deferred/Rejected 상태도 포함")
 
     p_gate_start = subparsers.add_parser("gate-start", help="현재 진행 Gate 전환")
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
@@ -10146,6 +10551,15 @@ def main():
         ))
     elif args.command == "check-architecture":
         cmd_check_architecture(level=args.level)
+    elif args.command == "trace-context":
+        cmd_trace_context(
+            seed_id=args.id,
+            depth=args.depth,
+            direction=args.direction,
+            emit=args.emit,
+            edge_types=args.edge_types,
+            include_excluded=args.include_excluded,
+        )
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":

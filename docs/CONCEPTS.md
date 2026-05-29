@@ -83,6 +83,7 @@ flowchart LR
 
 Gate 5에서는 `python vulcan.py release-pr`로 통합 브랜치에서 기준 브랜치로 가는 Release PR을 만들 수 있습니다.
 Release PR은 릴리즈 후보를 검토하기 위한 단위이며, runner 결과만으로 자동 merge하지 않습니다.
+`release-pr --dry-run`도 동일한 PR body를 `.vulcan/release/release-pr-body.md`에 만들며, 현재 브랜치가 통합 브랜치인지, base/head 브랜치가 존재하는지, 미커밋 변경이 없는지 먼저 확인합니다.
 merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤에 수행합니다.
 
 ## Backlog

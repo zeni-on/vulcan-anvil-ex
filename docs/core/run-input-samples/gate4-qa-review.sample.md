@@ -94,6 +94,25 @@ qa_execution_policy:
     - "원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다."
     - "승인된 설계 범위 안의 결함이면 FIND 후보로 남긴다."
     - "요구사항/API/DB/보안/화면 계약 변경이 필요하면 CR 후보로 남긴다."
+qa_failure_report_contract:
+  required_when: [Fail, Not Run, environment_blocked]
+  required_fields:
+    - qa_stage
+    - failing_command
+    - cwd
+    - exit_code
+    - observed_error
+    - log_path
+    - reproduction_command
+    - impact_ids
+    - candidate_classification
+    - orchestrator_decision_needed
+  candidate_classification_values: [FIND, CR, ISSUE, environment_blocked]
+  forbidden_actions:
+    - source_code_edit
+    - new_api_or_method_creation
+    - qa_fix_loop_execution
+    - gate_pass_decision
 gate_exit_policy:
   stop_required: true
   next_gate_requires_user_approval: true

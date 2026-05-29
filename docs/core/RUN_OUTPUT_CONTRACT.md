@@ -46,6 +46,7 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 | `approval_request` | 다음 Gate 진행 전 사용자 승인 질문을 남길 때 |
 | `findings` | QA/리뷰 중 발견한 결함과 처리 결과를 남길 때 |
 | `change_requests` | 요구사항, 설계, 기준선 변경이 필요한 항목을 남길 때 |
+| `failure_reports` | QA 실행 중 `Fail`, `Not Run`, `environment_blocked`가 발생했을 때 |
 | `next_run_suggestion` | 후속 Run을 제안할 때 |
 | `failure` | `Failed` 상태의 실패 원인을 구조화할 때 |
 | `blocked_reason` / `questions` | `Blocked` 상태의 질문과 차단 사유를 남길 때 |
@@ -132,6 +133,7 @@ orchestrator_decision_needed:
 
 findings: []
 change_requests: []
+failure_reports: []
 
 next_run_suggestion:
   run_type: Review
@@ -235,6 +237,23 @@ verification_results:
 | `not_run` | 실행하지 못함. `reason` 필수 |
 | `environment_blocked` | worker 실행 환경의 권한, 인증, 네트워크, registry, cache 문제로 실행 차단. `reason`, `exit_code`, `log_path`, `followup` 필수 |
 | `partial` | 일부만 실행 |
+
+QA 실행 Run에서 `failed`, `not_run`, `environment_blocked` 결과가 있으면 `failure_reports`를 함께 남긴다.
+
+```yaml
+failure_reports:
+  - qa_stage: QA-001
+    failing_command: "npm run build"
+    cwd: "frontend"
+    exit_code: 1
+    observed_error: "Next build failed with module resolution error"
+    log_path: docs/artifacts/04-review/evidence/logs/QA-CMD-003_frontend-build.err.log
+    reproduction_command: "cd frontend && npm run build"
+    impact_ids: [IT-002, NREQ-002]
+    candidate_classification: FIND
+    orchestrator_decision_needed:
+      - "qa-fix-loop로 수정할지 사용자와 협의 필요"
+```
 
 ## 7. 증적 작성 규칙
 
