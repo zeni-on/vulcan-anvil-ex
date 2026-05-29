@@ -12,11 +12,11 @@
  * @see docs/02-design/ui-design.md §DocDrawer (REQ-010)
  */
 
-import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Children, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import { X, AlertCircle, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { X, AlertCircle, ChevronDown, Maximize2, Minimize2, Network } from 'lucide-react'
 import { DocNode } from '@/lib/types'
 import { useDocContent } from '@/hooks/useDocContent'
 import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
@@ -25,7 +25,7 @@ import { isQaDoc } from '@/lib/qaDoc'
 import MermaidBlock from './MermaidBlock'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
-import TraceContextPanel from './TraceContextPanel'
+import TraceExplorerOverlay, { extractTraceIds } from './TraceExplorerOverlay'
 
 // rehype-sanitize 기본 스키마는 <code>의 className을 제거한다. mermaid 코드 블록을
 // 식별하려면 language-* 클래스가 보존되어야 하므로 code의 className을 허용한다.
@@ -265,7 +265,10 @@ const markdownBodyClassName = `prose prose-slate prose-sm max-w-none rounded-md 
 function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) {
   const { content, isLoading, error } = useDocContent(projectId, doc)
   const [showMetadata, setShowMetadata] = useState(false)
+  const [traceOpen, setTraceOpen] = useState(false)
+  const [traceSeed, setTraceSeed] = useState('')
   const genericDoc = splitDocumentMetadata(content ?? '')
+  const detectedTraceIds = useMemo(() => extractTraceIds(content ?? ''), [content])
   const isQaMarkdownDoc = Boolean(content && isQaDoc(doc, content))
   const markdownBody = isQaMarkdownDoc
     ? linkBareEvidencePaths(genericDoc.body)
@@ -300,7 +303,33 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       data-drawer-scroll
       className="p-6 overflow-y-auto flex-1 focus:outline-none"
     >
-      {content && <TraceContextPanel projectId={projectId} content={content} />}
+      {content && detectedTraceIds.length > 0 && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setTraceSeed(detectedTraceIds[0] ?? '')
+              setTraceOpen(true)
+            }}
+            className="inline-flex max-w-full items-center gap-1.5 rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            title="Trace Explorer"
+          >
+            <Network className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+            <span>Trace</span>
+            <span className="truncate font-mono text-[11px] text-cyan-200">{detectedTraceIds[0]}</span>
+          </button>
+        </div>
+      )}
+
+      {content && (
+        <TraceExplorerOverlay
+          projectId={projectId}
+          content={content}
+          initialId={traceSeed || detectedTraceIds[0] || ''}
+          isOpen={traceOpen}
+          onClose={() => setTraceOpen(false)}
+        />
+      )}
 
       {content && isTraceabilityDoc(doc, content) ? (
         <div className="space-y-4 rounded-md bg-slate-100 p-4 text-slate-800">

@@ -61,8 +61,8 @@
    - 자동 merge와 자동 PR 교차검증은 후속 단계로 둔다.
    - PR body는 `.vulcan/release/release-pr-body.md`에 생성하고, base/head 브랜치와 dirty worktree를 먼저 검사한다.
 5. **Dashboard Trace Context**
-   - CLI trace graph 기준이 안정된 뒤 Dashboard ID 클릭/검색 패널을 붙인다.
-   - 현재 MVP는 문서 Drawer에서 감지 ID 칩/검색 입력으로 `trace-context` 결과를 조회한다.
+   - CLI trace graph 기준이 안정된 뒤 Dashboard ID 클릭/검색 레이어를 붙인다.
+   - 현재 MVP는 문서 Drawer의 작은 Trace 버튼에서 Trace Explorer를 열고, `depth 1` 직접 edge 그래프와 목록을 우선 표시한다.
 6. **PR 교차검증 자동화와 Dispatcher**
    - `run-exec`, `agent-run`, release-pr, QA 흐름이 안정된 뒤 자동 큐와 PR 교차검증을 검토한다.
 
