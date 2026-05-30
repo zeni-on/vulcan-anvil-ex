@@ -49,6 +49,10 @@
   "execution": {
     "independent_enabled": true,
     "default_worktree": true,
-    "default_timeout_seconds": 2400
+    "default_timeout_seconds": 2400,
+    "hard_timeout_seconds": 5400,
+    "extension_seconds": 600,
+    "max_extensions": 3,
+    "progress_grace_seconds": 300
   }
 }

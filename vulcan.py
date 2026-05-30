@@ -34,6 +34,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -46,7 +47,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.4.0"
+VULCAN_VERSION = "0.4.1"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -2147,7 +2148,7 @@ def compute_stats(project_dir="."):
 
 WAVE_DONE_STATUSES = {"Implemented", "Verified", "Completed", "Done"}
 WAVE_ACTIVE_STATUSES = {"InProgress", "In Progress", "Running", "Review Requested"}
-WAVE_KNOWN_STATUSES = WAVE_DONE_STATUSES | WAVE_ACTIVE_STATUSES | {"Planned", "Blocked", "Rolled Back"}
+WAVE_KNOWN_STATUSES = WAVE_DONE_STATUSES | WAVE_ACTIVE_STATUSES | {"Planned", "Blocked", "CompletedWithIssues", "Rolled Back"}
 WAVE_STATUS_RANK = {
     "Planned": 0,
     "InProgress": 1,
@@ -2155,6 +2156,7 @@ WAVE_STATUS_RANK = {
     "Running": 1,
     "Review Requested": 2,
     "Blocked": 2,
+    "CompletedWithIssues": 2,
     "Implemented": 3,
     "Verified": 4,
     "Completed": 4,
@@ -2356,6 +2358,36 @@ def update_wave_run_status(project_dir, bw_id, status):
         with open(path, "w", encoding="utf-8") as f:
             f.write(updated)
     return os.path.relpath(path, project_dir)
+
+
+def wave_completion_blockers(project_dir, bw_id, requested_status):
+    blockers = []
+    if requested_status not in {"Verified", "Completed", "Done"}:
+        return blockers
+
+    path = find_wave_run_file(project_dir, bw_id)
+    if not path:
+        return blockers
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError as e:
+        return [f"Wave Run 문서를 읽을 수 없습니다: {e}"]
+
+    metadata = parse_simple_yaml_block(content)
+    run_status = metadata.get("status", "")
+    if run_status in {"Blocked", "Failed", "CompletedWithIssues"}:
+        blockers.append(
+            f"{bw_id} Run 상태가 {run_status}입니다. {requested_status}로 닫기 전에 이슈를 해소하거나 Wave 상태를 낮추세요."
+        )
+
+    if yaml_field_has_nonempty_items(content, "open_issues"):
+        blockers.append(
+            f"{bw_id} Run에 open_issues가 남아 있습니다. Verified/Completed 처리 전 이슈를 닫거나 CompletedWithIssues/Blocked로 남기세요."
+        )
+
+    return blockers
 
 
 def compute_implementation_progress(project_dir=".", session=None):
@@ -5813,6 +5845,13 @@ def cmd_wave_complete(bw_id, status="Verified", req_ids="", project_dir="."):
         print(f"  사용 가능: {', '.join(sorted(WAVE_KNOWN_STATUSES))}")
         sys.exit(1)
 
+    blockers = wave_completion_blockers(project_dir, bw_id, status)
+    if blockers:
+        print("오류: Wave 완료 전 Run 이슈 정리가 필요합니다.")
+        for blocker in blockers:
+            print(f"  - {blocker}")
+        sys.exit(1)
+
     session = sync_session(project_dir)
     impl = session.setdefault("implementation", {})
     waves = impl.setdefault("waves", {})
@@ -6671,9 +6710,7 @@ def runner_resume_info(runner, stdout):
             "resume_supported": True,
             "resume_hint": "claude --continue",
         }
-    return {
-        "resume_supported": False,
-    }
+    return {}
 
 
 def runner_last_message(runner, stdout):
@@ -6891,6 +6928,97 @@ def collect_runner_log_updates(runner, log_path):
     return updates
 
 
+def antigravity_conversation_id_from_log(log_path):
+    if not log_path or not os.path.exists(log_path):
+        return ""
+    conversation_id = ""
+    try:
+        with open(log_path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                match = re.search(r"(?:Created|Streaming) conversation ([0-9a-fA-F-]{20,})", line)
+                if match:
+                    conversation_id = match.group(1)
+    except OSError:
+        return ""
+    return conversation_id
+
+
+def antigravity_transcript_path(conversation_id):
+    if not conversation_id:
+        return ""
+    return os.path.join(
+        os.path.expanduser("~"),
+        ".gemini",
+        "antigravity-cli",
+        "brain",
+        conversation_id,
+        ".system_generated",
+        "logs",
+        "transcript.jsonl",
+    )
+
+
+def extract_antigravity_event_text(event):
+    if not isinstance(event, dict):
+        return ""
+    source = str(event.get("source") or "")
+    event_type = str(event.get("type") or "")
+    if source != "MODEL":
+        return ""
+    if event_type not in {"PLANNER_RESPONSE", "FINAL_RESPONSE", "MODEL_RESPONSE", "TEXT", "CODE_ACTION"}:
+        return ""
+    for key in ("content", "text", "message", "thinking"):
+        value = event.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def antigravity_transcript_probe(log_path):
+    conversation_id = antigravity_conversation_id_from_log(log_path)
+    transcript = antigravity_transcript_path(conversation_id)
+    probe = {
+        "conversation_id": conversation_id,
+        "transcript_path": transcript if os.path.exists(transcript) else "",
+        "transcript_message": "",
+        "has_transcript_response": False,
+    }
+    if not probe["transcript_path"]:
+        return probe
+    last_message = ""
+    has_response = False
+    try:
+        with open(transcript, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("source") == "MODEL":
+                    has_response = True
+                text = extract_antigravity_event_text(event)
+                if text:
+                    last_message = text
+    except OSError:
+        return probe
+    probe["transcript_message"] = last_message
+    probe["has_transcript_response"] = has_response
+    return probe
+
+
+def project_display_path(project_dir, path):
+    if not path:
+        return ""
+    project_abs = os.path.abspath(project_dir)
+    path_abs = os.path.abspath(path)
+    try:
+        if os.path.commonpath([project_abs, path_abs]) == project_abs:
+            return os.path.relpath(path_abs, project_abs).replace("\\", "/")
+    except ValueError:
+        pass
+    return path_abs
+
+
 def runner_log_identity_fields(updates):
     return {
         key: value
@@ -7057,6 +7185,156 @@ def coerce_process_output(value):
     return str(value)
 
 
+def command_output_or_empty(cmd, cwd, timeout=10):
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        return (result.stdout or "") + (result.stderr or "")
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def file_hash_or_empty(path):
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        return ""
+
+
+def load_status_probe(path):
+    if not path or not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def git_progress_fingerprint(cwd):
+    status_text = command_output_or_empty(
+        ["git", "-c", "core.quotePath=false", "status", "--porcelain", "-uall"],
+        cwd,
+        timeout=10,
+    )
+    diff_text = command_output_or_empty(
+        ["git", "-c", "core.quotePath=false", "diff", "--no-ext-diff", "--binary"],
+        cwd,
+        timeout=20,
+    )
+    cached_text = command_output_or_empty(
+        ["git", "-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--binary"],
+        cwd,
+        timeout=20,
+    )
+    combined = "\n".join([status_text, diff_text, cached_text])
+    return {
+        "hash": hashlib.sha256(combined.encode("utf-8", errors="replace")).hexdigest(),
+        "changed_file_count": len(parse_git_status_files(status_text)),
+    }
+
+
+def capture_worker_progress_snapshot(cwd, project_dir, status_rel, stdout_len, stderr_len, log_path=None):
+    status_abs = os.path.abspath(os.path.join(project_dir, status_rel)) if status_rel else ""
+    status_data = load_status_probe(status_abs)
+    status_is_heartbeat = bool(status_data.get("heartbeat"))
+    status_signal = ""
+    if status_data and not status_is_heartbeat:
+        status_signal = "|".join([
+            str(status_data.get("status") or ""),
+            str(status_data.get("phase") or ""),
+            str(status_data.get("current_task") or status_data.get("current_message") or ""),
+        ])
+    git_probe = git_progress_fingerprint(cwd)
+    log_size = 0
+    if log_path:
+        try:
+            log_size = os.path.getsize(log_path)
+        except OSError:
+            log_size = 0
+    return {
+        "captured_at": datetime.now().isoformat(timespec="seconds"),
+        "status_hash": file_hash_or_empty(status_abs) if status_data and not status_is_heartbeat else "",
+        "status_signal": status_signal,
+        "status_phase": str(status_data.get("phase") or ""),
+        "status_task": str(status_data.get("current_task") or status_data.get("current_message") or ""),
+        "status_is_heartbeat": status_is_heartbeat,
+        "git_hash": git_probe["hash"],
+        "changed_file_count": git_probe["changed_file_count"],
+        "stdout_len": stdout_len,
+        "stderr_len": stderr_len,
+        "log_size": log_size,
+    }
+
+
+def worker_progress_reasons(before, after):
+    reasons = []
+    if not before:
+        return reasons
+    if after.get("status_signal") and after.get("status_signal") != before.get("status_signal"):
+        reasons.append("worker status changed")
+    elif after.get("status_hash") and after.get("status_hash") != before.get("status_hash"):
+        reasons.append("worker status updated")
+    if after.get("git_hash") and after.get("git_hash") != before.get("git_hash"):
+        reasons.append("worktree diff changed")
+    if int(after.get("changed_file_count") or 0) > int(before.get("changed_file_count") or 0):
+        reasons.append("changed file count increased")
+    log_grew = (
+        int(after.get("stdout_len") or 0) > int(before.get("stdout_len") or 0)
+        or int(after.get("stderr_len") or 0) > int(before.get("stderr_len") or 0)
+        or int(after.get("log_size") or 0) > int(before.get("log_size") or 0)
+    )
+    active_phase = re.search(
+        r"edit|test|build|writing|running|실행|수정|작성|검증|테스트|빌드",
+        str(after.get("status_phase") or "") + " " + str(after.get("status_task") or ""),
+        re.IGNORECASE,
+    )
+    if log_grew and (active_phase or reasons):
+        reasons.append("runner output/log advanced")
+    return reasons
+
+
+def terminate_process_tree(process, force=True):
+    if process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        try:
+            cmd = ["taskkill", "/PID", str(process.pid), "/T"]
+            if force:
+                cmd.append("/F")
+            subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            return
+        except OSError:
+            pass
+    else:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL if force else signal.SIGTERM)
+            return
+        except OSError:
+            pass
+    try:
+        process.kill() if force else process.terminate()
+    except OSError:
+        pass
+
+
 def run_command_with_status_heartbeat(
     cmd,
     cwd,
@@ -7065,12 +7343,21 @@ def run_command_with_status_heartbeat(
     status_payload,
     current_task,
     heartbeat_seconds=30,
+    hard_timeout_seconds=None,
+    extension_seconds=0,
+    max_extensions=0,
+    progress_grace_seconds=300,
     on_stdout_line=None,
     tail_file_path=None,
     on_tail_line=None,
     env=None,
 ):
     stop_event = threading.Event()
+    popen_kwargs = {}
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    else:
+        popen_kwargs["start_new_session"] = True
     process = subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -7080,7 +7367,27 @@ def run_command_with_status_heartbeat(
         encoding="utf-8",
         errors="replace",
         env=env,
+        **popen_kwargs,
     )
+    soft_timeout_seconds = max(1, int(timeout_seconds or 1))
+    hard_timeout_seconds = int(hard_timeout_seconds or soft_timeout_seconds)
+    if hard_timeout_seconds < soft_timeout_seconds:
+        hard_timeout_seconds = soft_timeout_seconds
+    extension_seconds = max(0, int(extension_seconds or 0))
+    max_extensions = max(0, int(max_extensions or 0))
+    progress_grace_seconds = max(1, int(progress_grace_seconds or 1))
+    pid_payload = dict(status_payload)
+    pid_payload.update({
+        "status": "running",
+        "phase": pid_payload.get("phase") or "process_started",
+        "current_task": current_task,
+        "pid": process.pid,
+        "soft_timeout_seconds": soft_timeout_seconds,
+        "hard_timeout_seconds": hard_timeout_seconds,
+        "extension_seconds": extension_seconds,
+        "max_extensions": max_extensions,
+    })
+    write_agent_status(project_dir, pid_payload)
 
     def heartbeat():
         while not stop_event.wait(heartbeat_seconds):
@@ -7100,6 +7407,7 @@ def run_command_with_status_heartbeat(
                 "phase": payload.get("phase") or "runner_waiting",
                 "current_task": current_task,
                 "heartbeat": True,
+                "pid": process.pid,
             })
             write_agent_status(project_dir, payload)
 
@@ -7154,15 +7462,108 @@ def run_command_with_status_heartbeat(
     stderr_thread.start()
     tail_thread.start()
     timed_out = False
+    timeout_reason = ""
+    extension_events = []
+    extensions_used = 0
+    started_monotonic = time.monotonic()
+    soft_deadline = started_monotonic + soft_timeout_seconds
+    hard_deadline = started_monotonic + hard_timeout_seconds
+    status_rel = status_payload.get("status_file", "")
+    last_snapshot = capture_worker_progress_snapshot(
+        cwd,
+        project_dir,
+        status_rel,
+        stdout_len=0,
+        stderr_len=0,
+        log_path=tail_file_path,
+    )
     try:
-        exit_code = process.wait(timeout=timeout_seconds)
-        stdout_thread.join(timeout=5)
-        stderr_thread.join(timeout=5)
-        exit_code = process.returncode
+        while True:
+            remaining = min(soft_deadline, hard_deadline) - time.monotonic()
+            if remaining > 0:
+                try:
+                    process.wait(timeout=min(remaining, 5))
+                except subprocess.TimeoutExpired:
+                    pass
+                if process.poll() is not None:
+                    break
+                continue
+
+            now_monotonic = time.monotonic()
+            if now_monotonic >= hard_deadline:
+                timed_out = True
+                timeout_reason = "hard_timeout"
+                break
+
+            current_snapshot = capture_worker_progress_snapshot(
+                cwd,
+                project_dir,
+                status_rel,
+                stdout_len=sum(len(chunk) for chunk in stdout_chunks),
+                stderr_len=sum(len(chunk) for chunk in stderr_chunks),
+                log_path=tail_file_path,
+            )
+            reasons = worker_progress_reasons(last_snapshot, current_snapshot)
+            within_grace = (
+                datetime.fromisoformat(current_snapshot["captured_at"]) - datetime.fromisoformat(last_snapshot["captured_at"])
+            ).total_seconds() <= max(progress_grace_seconds, soft_timeout_seconds + 5)
+            if reasons and within_grace and extensions_used < max_extensions and extension_seconds > 0:
+                extensions_used += 1
+                old_deadline = datetime.now().isoformat(timespec="seconds")
+                soft_deadline = min(now_monotonic + extension_seconds, hard_deadline)
+                event = {
+                    "at": datetime.now().isoformat(timespec="seconds"),
+                    "extension": extensions_used,
+                    "added_seconds": int(max(0, soft_deadline - now_monotonic)),
+                    "reasons": reasons,
+                    "old_deadline_at": old_deadline,
+                    "new_deadline_at": (
+                        datetime.now() + timedelta(seconds=max(0, soft_deadline - now_monotonic))
+                    ).isoformat(timespec="seconds"),
+                }
+                extension_events.append(event)
+                payload = dict(status_payload)
+                payload.update({
+                    "status": "running",
+                    "phase": "timeout_extended",
+                    "current_task": f"soft timeout extended ({extensions_used}/{max_extensions})",
+                    "timeout_extended": True,
+                    "extension_count": extensions_used,
+                    "extension_reasons": reasons,
+                    "deadline_at": event["new_deadline_at"],
+                    "hard_timeout_seconds": hard_timeout_seconds,
+                    "pid": process.pid,
+                })
+                write_agent_status(project_dir, payload)
+                last_snapshot = current_snapshot
+                continue
+
+            timed_out = True
+            timeout_reason = "soft_timeout_no_progress" if not reasons else "extensions_exhausted"
+            break
+
+        if process.poll() is not None:
+            stdout_thread.join(timeout=5)
+            stderr_thread.join(timeout=5)
+            exit_code = process.returncode
+        else:
+            terminate_process_tree(process, force=True)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            stdout_thread.join(timeout=5)
+            stderr_thread.join(timeout=5)
+            exit_code = 124
+            stderr_chunks.append(f"\nTIMEOUT after {timeout_seconds} seconds ({timeout_reason or 'timeout'})")
     except subprocess.TimeoutExpired:
         timed_out = True
-        process.kill()
-        process.wait(timeout=5)
+        timeout_reason = "wait_timeout"
+        terminate_process_tree(process, force=True)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
         stdout_thread.join(timeout=5)
         stderr_thread.join(timeout=5)
         exit_code = 124
@@ -7174,7 +7575,17 @@ def run_command_with_status_heartbeat(
 
     stdout = "".join(stdout_chunks)
     stderr = "".join(stderr_chunks)
-    return exit_code, stdout or "", stderr or "", timed_out
+    timeout_meta = {
+        "soft_timeout_seconds": soft_timeout_seconds,
+        "hard_timeout_seconds": hard_timeout_seconds,
+        "extension_seconds": extension_seconds,
+        "max_extensions": max_extensions,
+        "extensions_used": extensions_used,
+        "extension_events": extension_events,
+        "timeout_reason": timeout_reason,
+        "pid": process.pid,
+    }
+    return exit_code, stdout or "", stderr or "", timed_out, timeout_meta
 
 
 def worker_dependency_cache_env(project_dir, base_env=None):
@@ -7286,10 +7697,21 @@ def parse_git_status_files(status_text):
     for line in (status_text or "").splitlines():
         if not line.strip():
             continue
-        value = line[3:] if len(line) > 3 else line.strip()
+
+        # Accept both `git status --porcelain` (`XY path`) and
+        # `git diff --name-status` (`M<TAB>path`) shaped inputs. Older summary
+        # files showed paths like `ocs/...` and `ackend/...` when tab-separated
+        # name-status lines were sliced as fixed-width porcelain lines.
+        if "\t" in line:
+            parts = line.split("\t")
+            value = parts[-1] if len(parts) > 1 else line.strip()
+        else:
+            match = re.match(r"^(.{2})\s+(.*)$", line)
+            value = match.group(2) if match else line.strip()
+
         if " -> " in value:
             value = value.split(" -> ", 1)[1]
-        files.append(value.strip())
+        files.append(value.strip().strip('"'))
     return files
 
 
@@ -8073,7 +8495,7 @@ Rules:
         "exec_dir": exec_dir,
         "status_file": status_rel_path,
     })
-    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+    exit_code, stdout, stderr, timed_out, timeout_meta = run_command_with_status_heartbeat(
         cmd=cmd,
         cwd=exec_dir,
         timeout_seconds=timeout_seconds,
@@ -8116,13 +8538,21 @@ Rules:
             f.write(stdout)
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
+    agy_probe = antigravity_transcript_probe(log_abs) if runner_normalized == "antigravity-cli" else {}
     if runner_normalized in ("claude-cli", "antigravity-cli"):
+        last_message_text = runner_last_message(runner_normalized, stdout)
+        if runner_normalized == "antigravity-cli" and not (last_message_text or "").strip():
+            last_message_text = agy_probe.get("transcript_message") or ""
         with open(last_message_abs, "w", encoding="utf-8") as f:
-            f.write(runner_last_message(runner_normalized, stdout))
+            f.write(last_message_text)
 
     after_hash = file_sha256(exec_result_abs)
     result_changed = bool(before_hash and after_hash and before_hash != after_hash)
-    empty_output = runner_normalized == "antigravity-cli" and runner_empty_output(stdout, stderr)
+    empty_output = (
+        runner_normalized == "antigravity-cli"
+        and runner_empty_output(stdout, stderr)
+        and not agy_probe.get("has_transcript_response")
+    )
     if timed_out:
         run_status = "timeout"
     elif exit_code != 0:
@@ -8144,6 +8574,16 @@ Rules:
     })
     activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
+    if runner_normalized == "antigravity-cli" and agy_probe:
+        if agy_probe.get("conversation_id"):
+            activity.update({
+                "conversation_id": agy_probe["conversation_id"],
+                "resume_supported": True,
+                "resume_hint": f"agy.exe --conversation {agy_probe['conversation_id']}",
+            })
+        if agy_probe.get("transcript_path"):
+            activity["transcript"] = project_display_path(project_abs, agy_probe["transcript_path"])
+            activity["transcript_response_detected"] = bool(agy_probe.get("has_transcript_response"))
     append_agent_event(
         activity,
         "completed" if run_status == "completed" else run_status,
@@ -8190,6 +8630,11 @@ deadline_at: {deadline_at}
 completed_at: {completed_at}
 duration_seconds: {duration_seconds}
 timeout_seconds: {timeout_seconds}
+hard_timeout_seconds: {timeout_meta.get("hard_timeout_seconds")}
+extension_seconds: {timeout_meta.get("extension_seconds")}
+max_extensions: {timeout_meta.get("max_extensions")}
+extensions_used: {timeout_meta.get("extensions_used")}
+timeout_reason: {timeout_meta.get("timeout_reason") or ""}
 timed_out: {str(timed_out).lower()}
 empty_output: {str(empty_output).lower()}
 status: {run_status}
@@ -8205,6 +8650,8 @@ stderr_log: {stderr_rel_path}
 last_message: {last_message_rel_path}
 activity: {activity_rel_path}
 result_file_changed: {str(result_changed).lower()}
+transcript: {project_display_path(project_abs, agy_probe.get("transcript_path") or "") if runner_normalized == "antigravity-cli" else ""}
+transcript_response_detected: {str(bool(agy_probe.get("has_transcript_response"))).lower() if runner_normalized == "antigravity-cli" else "false"}
 ```
 """
         with open(run_abs, "a", encoding="utf-8") as f:
@@ -8328,6 +8775,10 @@ def cmd_run_exec(
         )
     sandbox = sandbox or runner_config.get("sandbox") or "workspace-write"
     timeout_seconds = int(timeout_seconds or execution_config.get("default_timeout_seconds", 2400))
+    hard_timeout_seconds = int(execution_config.get("hard_timeout_seconds") or max(timeout_seconds, 5400))
+    extension_seconds = int(execution_config.get("extension_seconds") or 0)
+    max_extensions = int(execution_config.get("max_extensions") or 0)
+    progress_grace_seconds = int(execution_config.get("progress_grace_seconds") or 300)
 
     if create_worktree is None:
         create_worktree = bool(execution_config.get("default_worktree", True))
@@ -8510,6 +8961,9 @@ Worker dependency cache:
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
         print(f"  sandbox: {sandbox}")
         print(f"  timeout_seconds: {timeout_seconds}")
+        print(f"  hard_timeout_seconds: {hard_timeout_seconds}")
+        print(f"  extension_seconds: {extension_seconds}")
+        print(f"  max_extensions: {max_extensions}")
         print(f"  npm_config_cache: {dependency_cache['npm_config_cache']}")
         print(f"  PLAYWRIGHT_BROWSERS_PATH: {dependency_cache['PLAYWRIGHT_BROWSERS_PATH']}")
         print(f"  worktree: {str(create_worktree).lower()}")
@@ -8587,6 +9041,9 @@ Worker dependency cache:
         "started_at": started_at,
         "deadline_at": deadline_at,
         "timeout_seconds": timeout_seconds,
+        "hard_timeout_seconds": hard_timeout_seconds,
+        "extension_seconds": extension_seconds,
+        "max_extensions": max_extensions,
         "timed_out": False,
         "log": log_rel_path.replace("\\", "/"),
         "stderr_log": stderr_rel_path.replace("\\", "/"),
@@ -8607,16 +9064,23 @@ Worker dependency cache:
         "current_task": f"{run_id} worker 실행 시작",
         "started_at": started_at,
         "deadline_at": deadline_at,
+        "hard_timeout_seconds": hard_timeout_seconds,
+        "extension_seconds": extension_seconds,
+        "max_extensions": max_extensions,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
         "branch": execution_branch or None,
         "status_file": status_rel_path,
         "dependency_cache": dependency_cache,
     })
-    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+    exit_code, stdout, stderr, timed_out, timeout_meta = run_command_with_status_heartbeat(
         cmd=cmd,
         cwd=exec_dir,
         timeout_seconds=timeout_seconds,
+        hard_timeout_seconds=hard_timeout_seconds,
+        extension_seconds=extension_seconds,
+        max_extensions=max_extensions,
+        progress_grace_seconds=progress_grace_seconds,
         project_dir=project_abs,
         status_payload={
             "target_type": "run",
@@ -8654,7 +9118,12 @@ Worker dependency cache:
     after_hash = file_sha256(exec_run_abs)
     run_file_changed = bool(before_hash and after_hash and before_hash != after_hash)
 
-    empty_output = runner_normalized == "antigravity-cli" and runner_empty_output(stdout, stderr)
+    agy_probe = antigravity_transcript_probe(log_abs) if runner_normalized == "antigravity-cli" else {}
+    empty_output = (
+        runner_normalized == "antigravity-cli"
+        and runner_empty_output(stdout, stderr)
+        and not agy_probe.get("has_transcript_response")
+    )
     if timed_out:
         run_status = "timeout"
     elif exit_code != 0:
@@ -8674,9 +9143,20 @@ Worker dependency cache:
         "empty_output": empty_output,
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
+        "timeout_policy": timeout_meta,
     })
     activity.update(collect_runner_log_updates(runner_normalized, log_abs))
     activity.update(runner_resume_info(runner_normalized, stdout))
+    if runner_normalized == "antigravity-cli" and agy_probe:
+        if agy_probe.get("conversation_id"):
+            activity.update({
+                "conversation_id": agy_probe["conversation_id"],
+                "resume_supported": True,
+                "resume_hint": f"agy.exe --conversation {agy_probe['conversation_id']}",
+            })
+        if agy_probe.get("transcript_path"):
+            activity["transcript"] = project_display_path(project_abs, agy_probe["transcript_path"])
+            activity["transcript_response_detected"] = bool(agy_probe.get("has_transcript_response"))
     append_agent_event(
         activity,
         "completed" if run_status == "completed" else run_status,
@@ -8707,6 +9187,7 @@ Worker dependency cache:
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
         "exit_code": exit_code,
+        "timeout_policy": timeout_meta,
         **runner_log_identity_fields(collect_runner_log_updates(runner_normalized, log_abs)),
         **runner_resume_info(runner_normalized, stdout),
     })
@@ -8722,8 +9203,11 @@ Worker dependency cache:
     with open(stderr_abs, "w", encoding="utf-8") as f:
         f.write(stderr)
     if runner_normalized in ("claude-cli", "antigravity-cli"):
+        last_message_text = runner_last_message(runner_normalized, stdout)
+        if runner_normalized == "antigravity-cli" and not (last_message_text or "").strip():
+            last_message_text = agy_probe.get("transcript_message") or ""
         with open(last_message_abs, "w", encoding="utf-8") as f:
-            f.write(runner_last_message(runner_normalized, stdout))
+            f.write(last_message_text)
 
     if qa_stage:
         if qa_stage == "QA-000":
@@ -8751,6 +9235,7 @@ Worker dependency cache:
         "duration_seconds": duration_seconds,
         "timeout_seconds": timeout_seconds,
         "timed_out": timed_out,
+        "timeout_policy": timeout_meta,
         "status": run_status,
         "runner": runner_normalized,
         "model": model or "(runner default)",
@@ -8771,6 +9256,9 @@ Worker dependency cache:
         "run_file_changed": run_file_changed,
         "changed_files": changed_files,
     }
+    if runner_normalized == "antigravity-cli" and agy_probe:
+        summary["transcript"] = project_display_path(project_abs, agy_probe.get("transcript_path") or "")
+        summary["transcript_response_detected"] = bool(agy_probe.get("has_transcript_response"))
     with open(summary_abs, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
         f.write("\n")
@@ -8785,6 +9273,11 @@ deadline_at: {deadline_at}
 completed_at: {completed_at}
 duration_seconds: {duration_seconds}
 timeout_seconds: {timeout_seconds}
+hard_timeout_seconds: {timeout_meta.get("hard_timeout_seconds")}
+extension_seconds: {timeout_meta.get("extension_seconds")}
+max_extensions: {timeout_meta.get("max_extensions")}
+extensions_used: {timeout_meta.get("extensions_used")}
+timeout_reason: {timeout_meta.get("timeout_reason") or ""}
 timed_out: {str(timed_out).lower()}
 empty_output: {str(empty_output).lower()}
 status: {run_status}
@@ -8805,6 +9298,8 @@ activity: {activity_rel_path}
 npm_config_cache: {dependency_cache["npm_config_cache"]}
 PLAYWRIGHT_BROWSERS_PATH: {dependency_cache["PLAYWRIGHT_BROWSERS_PATH"]}
 run_file_changed: {str(run_file_changed).lower()}
+transcript: {project_display_path(project_abs, agy_probe.get("transcript_path") or "") if runner_normalized == "antigravity-cli" else ""}
+transcript_response_detected: {str(bool(agy_probe.get("has_transcript_response"))).lower() if runner_normalized == "antigravity-cli" else "false"}
 changed_files:
 {format_yaml_sequence(changed_files, indent=2)}
 ```
@@ -9222,7 +9717,7 @@ Do not perform Gate transitions, edit session gate state, or make final approval
         "resume": True,
     })
 
-    exit_code, stdout, stderr, timed_out = run_command_with_status_heartbeat(
+    exit_code, stdout, stderr, timed_out, timeout_meta = run_command_with_status_heartbeat(
         cmd=cmd,
         cwd=exec_dir,
         timeout_seconds=timeout_seconds,
@@ -9303,6 +9798,28 @@ Do not perform Gate transitions, edit session gate state, or make final approval
 
 def run_body_without_yaml(content):
     return re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
+
+
+def yaml_field_has_nonempty_items(content, key):
+    inline_match = re.search(rf"(?m)^\s*{re.escape(key)}\s*:\s*\[(.*?)\]\s*$", content)
+    if inline_match:
+        raw = inline_match.group(1).strip()
+        return bool(raw)
+
+    block_match = re.search(
+        rf"(?ms)^\s*{re.escape(key)}\s*:\s*\n((?:[ \t]+.*(?:\n|$)|\s*\n)*)",
+        content,
+    )
+    if not block_match:
+        return False
+
+    block_text = block_match.group(1)
+    for item_match in re.finditer(r"(?m)^\s*-\s*(.*?)\s*$", block_text):
+        item = item_match.group(1).strip().strip('"').strip("'")
+        if item and item not in {"[]", "{}", "null", "~"} and not item.startswith("#"):
+            return True
+
+    return bool(re.search(r"(?m)^\s{2,}[\w_-]+\s*:\s*(?!\[\]\s*$|null\s*$|~\s*$).+", block_text))
 
 
 def impl_code_result_claim(body):
@@ -9434,6 +9951,12 @@ def check_run_file(path):
 
     if re.search(r"status\s*:\s*Completed", content) and re.search(r"traceability_updates\s*:\s*\[\]", content):
         warnings.append("Completed 상태이지만 traceability_updates가 비어 있습니다.")
+
+    has_open_issues = yaml_field_has_nonempty_items(content, "open_issues")
+    if status == "Verified" and has_open_issues:
+        issues.append("Verified 상태이지만 open_issues가 남아 있습니다. 미해결 항목을 닫거나 status를 CompletedWithIssues/Blocked로 낮추세요.")
+    elif status == "Completed" and has_open_issues:
+        warnings.append("Completed 상태이지만 open_issues가 남아 있습니다. 후속 이슈가 완료 조건에 영향을 주면 CompletedWithIssues를 사용하세요.")
 
     if status in {"Completed", "Verified", "CompletedWithIssues"}:
         body_without_yaml = run_body_without_yaml(content)
@@ -9874,7 +10397,11 @@ def default_vulcan_config(available_runners=None):
         "execution": {
             "independent_enabled": has_runner,
             "default_worktree": True,
-            "default_timeout_seconds": 2400
+            "default_timeout_seconds": 2400,
+            "hard_timeout_seconds": 5400,
+            "extension_seconds": 600,
+            "max_extensions": 3,
+            "progress_grace_seconds": 300
         }
     }
     return config

@@ -183,7 +183,7 @@ python vulcan.py run-integrate --run-id RUN-010 --apply
 - `activity.json.events`에는 최근 100개의 정규화된 worker 이벤트를 저장한다. 대시보드는 기본 화면에는 마지막 상태만 표시하고, worker를 클릭하면 `events` timeline 레이어를 보여준다.
 - `codex-cli`는 `--json` JSONL stdout을 파싱하되, stdout 앞에 섞일 수 있는 non-JSON 경고 줄은 무시한다. `thread.started`, `turn.started`, `item.started/completed` 같은 상태 이벤트는 대시보드 `current_task`와 activity timeline으로 정규화한다.
 - `claude-cli`는 `--output-format stream-json --include-partial-messages`를 파싱해 `session_id`와 부분 메시지를 수집한다.
-- `antigravity-cli`/`agy.exe`는 현재 stdout 결과를 신뢰하지 않고 `--log-file`을 필수로 지정해 conversation id, 모델 선택, stream 상태를 tail 하여 activity/status에 반영한다. `--add-dir`는 절대경로를 사용한다.
+- `antigravity-cli`/`agy.exe`는 현재 stdout 결과를 단독 신뢰하지 않고 `--log-file`을 필수로 지정해 conversation id, 모델 선택, stream 상태를 tail 하여 activity/status에 반영한다. Windows `agy.exe 1.0.3`에서는 stdout이 비어 있어도 transcript에 모델 응답이 남을 수 있으므로, result 파일 변경 여부와 log/transcript fallback을 함께 확인한다. `--add-dir`는 절대경로를 사용한다.
 
 Context attach 기본값:
 
@@ -232,7 +232,11 @@ Context attach 기본값:
   "execution": {
     "independent_enabled": true,
     "default_worktree": true,
-    "default_timeout_seconds": 2400
+    "default_timeout_seconds": 2400,
+    "hard_timeout_seconds": 5400,
+    "extension_seconds": 600,
+    "max_extensions": 3,
+    "progress_grace_seconds": 300
   }
 }
 ```
@@ -260,6 +264,10 @@ Runner 실행은 timeout과 종료 상태를 반드시 기록한다.
 
 - review 실행: `review.independent_exec_timeout_seconds`, 기본 1800초
 - build/evidence/qa-fix 실행: `execution.default_timeout_seconds`, 기본 2400초
+- build/evidence/qa-fix 실행에서 `default_timeout_seconds`는 soft timeout이다.
+- soft timeout에 도달했을 때 worker status, worktree diff, stdout/stderr/log 진척이 있으면 `execution.extension_seconds`만큼 연장할 수 있다.
+- 연장은 `execution.max_extensions`까지만 허용하고, `execution.hard_timeout_seconds`에 도달하면 진척 신호와 무관하게 timeout으로 종료한다.
+- heartbeat만으로는 연장하지 않는다. worker status 변화, worktree diff 변화, 의미 있는 runner 출력 변화 중 하나 이상이 있어야 한다.
 
 실행 기록에는 다음 필드를 남긴다.
 
@@ -269,6 +277,11 @@ deadline_at: "2026-05-20T23:30:00"
 completed_at: "2026-05-20T23:12:10"
 duration_seconds: 1330
 timeout_seconds: 2400
+hard_timeout_seconds: 5400
+extension_seconds: 600
+max_extensions: 3
+extensions_used: 1
+timeout_reason: ""
 timed_out: false
 status: completed
 exit_code: 0
@@ -290,15 +303,42 @@ thread_id: "019e..."
 | `completed_no_result_change` | runner는 정상 종료했지만 결과 파일을 쓰지 않았다 | 출력 로그를 확인하고 재실행 또는 수동 정리 |
 | `failed_empty_output` | runner가 exit code 0으로 종료됐지만 stdout/stderr와 결과 변경이 모두 없다 | wrapper, 인증, 세션 문제로 보고 직접 로그 확인 또는 수동 재실행 |
 | `failed` | timeout 전 비정상 종료했다 | stderr/stdout에서 인증, 토큰, 권한, 실행 오류 확인 |
-| `timeout` | 지정된 timeout을 넘겨 프로세스가 중단됐다 | 부분 로그를 확인하고 Run을 쪼개거나 timeout을 조정 |
+| `timeout` | soft timeout에서 진척이 없거나, 연장 한도를 소진했거나, hard timeout에 도달해 프로세스 트리가 종료됐다 | `timeout_reason`, `extensions_used`, 부분 로그, worktree diff를 확인하고 Run 분리, 재개, 재실행, 정책 조정 중 하나를 선택 |
 
 토큰 소진 여부는 모든 runner가 표준화해서 알려주지 않는다.
 따라서 Vulcan은 토큰 소진을 직접 판정하지 않고, exit code, stderr/stdout, 마지막 응답, 결과 파일 변경 여부로 비정상 종료를 판단한다.
 runner가 토큰 또는 사용량 한도 때문에 종료하면 보통 `failed`나 `completed_no_result_change`로 남고, Orchestrator가 로그에서 원인을 확인한다.
 
-장시간 build/evidence 실행은 현재 timeout, exit code, stderr/stdout, 마지막 응답, Run 문서 변경 여부로 판정한다.
-heartbeat status 파일이 있으면 Orchestrator와 대시보드는 파일 수정시각을 기준으로 멈춤 상태를 더 빨리 감지한다.
-worker가 `running` 상태인데 status 파일이 오래 갱신되지 않으면 `stale`로 보고 로그와 마지막 메시지를 확인한다.
+장시간 build/evidence 실행은 soft timeout과 hard timeout을 분리해서 판정한다.
+`execution.default_timeout_seconds`는 첫 판정 시점이며, 이 시점에 의미 있는 진척이 있으면 `execution.extension_seconds`만큼 연장할 수 있다.
+진척 신호는 다음 항목을 함께 본다.
+
+- worker status 파일의 `phase`, `status`, `current_task` 같은 비-heartbeat 상태 변화
+- worktree의 git status/diff fingerprint 변화
+- 변경 파일 수 증가
+- runner stdout/stderr/log 증가. 단, 출력 증가만 있고 상태나 diff가 없으면 보조 신호로만 취급한다.
+
+heartbeat 파일 수정시각만으로는 연장하지 않는다.
+`execution.max_extensions`를 초과하거나 `execution.hard_timeout_seconds`에 도달하면 진척 신호가 있어도 프로세스 트리를 종료하고 `timeout`으로 기록한다.
+worker가 `running` 상태인데 status 파일이 오래 갱신되지 않으면 `stale`로 보고 로그, 마지막 메시지, worktree diff를 확인한다.
+
+soft timeout 연장이 발생하면 `summary.json`, `activity.json`, Run Execution Record에 다음 정보를 남긴다.
+
+```yaml
+timeout_policy:
+  soft_timeout_seconds: 2400
+  hard_timeout_seconds: 5400
+  extension_seconds: 600
+  max_extensions: 3
+  extensions_used: 1
+  extension_events:
+    - extended_at: "2026-05-30T12:10:00"
+      deadline_at: "2026-05-30T12:20:00"
+      reasons:
+        - "worktree diff changed"
+        - "runner output/log advanced during active phase"
+timeout_reason: ""
+```
 
 ## 8.1 Worker Heartbeat와 Resume
 

@@ -152,7 +152,19 @@ next_run_suggestion:
 - 모든 변경 파일
 - 모든 검증 결과
 - 증적 위치
-- 미해결 이슈 없음 또는 후속 이슈가 완료 조건에 영향 없음
+- `open_issues: []`
+
+`open_issues`가 남아 있으면 `Completed`로 닫지 않는다. 후속 이슈가 완료 조건에 영향을 주지 않는다고 판단하더라도 이슈 성격과 처리 위치를 `findings`, `change_requests`, `orchestrator_decision_needed` 중 하나로 분류한 뒤 `open_issues`를 비운다.
+
+### Verified
+
+Orchestrator가 worker 결과를 통합하고 담당 검증을 재실행해 Wave 또는 Run 완료 조건을 확인했을 때 사용한다.
+
+필수:
+
+- `open_issues: []`
+- 실패/차단/미실행 항목이 `findings`, `change_requests`, `orchestrator_decision_needed`, 또는 후속 Run으로 분류되어 있다.
+- Gate 4 QA Pass나 전체 릴리즈 승인과 혼동하지 않는다.
 
 ### CompletedWithIssues
 

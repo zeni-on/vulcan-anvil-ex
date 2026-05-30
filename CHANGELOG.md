@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-05-30
+
+`0.4.1`은 `0.4.0`의 trace-context, staged QA, release-pr 흐름을 유지하면서 worker 실행 안정성을 보강한 패치 릴리즈다. 장시간 worker 실행에서 즉시 kill 대신 soft timeout 기반 연장을 적용하고, Windows Agy runner의 빈 stdout 문제를 transcript fallback으로 보완했다.
+
+Release notes: [docs/releases/v0.4.1.md](docs/releases/v0.4.1.md)
+
+### Added
+
+- `run-exec`/`agent-run --mode work`에 soft timeout 진행 감지와 hard timeout cap을 추가했다. status JSON, worktree diff, 변경 파일 수, runner log 진척을 확인해 의미 있는 진행이 있으면 제한적으로 실행 시간을 연장한다.
+- worker 실행 기록에 `timeout_policy`, `extensions_used`, `timeout_reason`, extension event 정보를 남긴다.
+- Windows `agy.exe` runner에서 stdout이 비어 있어도 Antigravity transcript의 `MODEL` 응답을 찾아 last-message와 실행 판정에 반영한다.
+
+### Changed
+
+- `Verified`/`Completed` Wave 처리 전에 Run 상태와 `open_issues`를 확인해 미해결 이슈가 있는 Run을 완료로 닫지 못하게 했다.
+- `git diff --name-status`와 porcelain status 파싱을 정리해 한글 경로와 tab-separated path에서 첫 글자가 잘리는 문제를 줄였다.
+- Independent Execution, Getting Started, Gemini runtime 문서를 worker timeout과 Agy transcript fallback 기준으로 현행화했다.
+
+### Verification
+
+- `python -m py_compile vulcan.py`
+- `python scripts/regression/run_audit_smoke.py`
+- `git diff --check`
+
 ## 0.4.0 - 2026-05-29
 
 `0.4.0`은 `0.3.x`의 브랜치/worker/QA 실행 흐름 위에 trace-context 그래프, Dashboard Trace Explorer, Gate 4 실패 보고 계약, Release PR 안정화, 회귀 smoke 검증을 묶어 올린 마이너 릴리즈다. 요구사항추적표를 단순 표가 아니라 ID 그래프 원장으로 활용하고, Run/QA/release 자동화가 같은 기준으로 검증되도록 정리했다.

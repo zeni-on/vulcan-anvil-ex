@@ -92,9 +92,9 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 
 ## 현재 상태
 
-**Experimental - v0.4.0**
+**Experimental - v0.4.1**
 
-`0.4.0`은 `0.3.x`의 Gate/Run 기반 흐름 위에 trace-context 그래프, Dashboard Trace Explorer, staged QA 실패 보고, release-pr 안정화, 회귀 smoke 검증을 묶어 정리한 실험 버전입니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
+`0.4.1`은 `0.4.0`의 trace-context, staged QA, release-pr 흐름을 유지하면서 worker soft timeout, Agy transcript fallback, Run/Wave 이슈 가드를 보강한 안정화 패치입니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 

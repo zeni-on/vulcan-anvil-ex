@@ -165,6 +165,21 @@ Gate 3 승인
 
 신규 개발이거나 빌드 가능한 코드 골격이 없으면 `BW-000 implementation-scaffold`를 먼저 둡니다. 이 단계는 업무 로직을 완성하는 것이 아니라, 빌드 설정, entrypoint, public class/interface/method signature, DTO/schema, 테스트 skeleton을 고정하는 단계입니다.
 
+worker 실행 timeout은 즉시 kill 기준이 아니라 soft timeout 기준입니다. `execution.default_timeout_seconds`에 도달했을 때 status 변화, worktree diff, 변경 파일 수, runner 로그 진척이 있으면 `execution.extension_seconds`만큼 연장할 수 있고, `execution.hard_timeout_seconds`에 도달하면 반드시 종료합니다.
+
+```json
+{
+  "execution": {
+    "default_timeout_seconds": 2400,
+    "hard_timeout_seconds": 5400,
+    "extension_seconds": 600,
+    "max_extensions": 3
+  }
+}
+```
+
+연장 여부와 종료 사유는 `docs/runs/_exec/*-summary.json`, `activity.json`, Run Execution Record에 기록됩니다. Orchestrator는 timeout이 발생하면 즉시 실패로 단정하지 않고, 남은 diff와 로그를 보고 Run 분리, resume, 재실행, 사용자 협의 중 하나를 선택합니다.
+
 Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 
 | QA Run | 목적 |
