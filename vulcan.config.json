@@ -53,6 +53,9 @@
     "hard_timeout_seconds": 5400,
     "extension_seconds": 600,
     "max_extensions": 3,
-    "progress_grace_seconds": 300
+    "progress_grace_seconds": 300,
+    "progress_probe_seconds": 300,
+    "no_progress_timeout_seconds": 900,
+    "min_runtime_seconds": 120
   }
 }

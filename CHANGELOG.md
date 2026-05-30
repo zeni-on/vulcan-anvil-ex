@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.4.2 - 2026-05-30
+
+`0.4.2`는 `0.4.1`의 worker timeout 안정화 흐름을 한 단계 더 다듬어, 장시간 worker를 즉시 kill하거나 soft extension에만 의존하지 않고 주기적 progress watchdog으로 관제하는 패치 릴리즈다.
+
+Release notes: [docs/releases/v0.4.2.md](docs/releases/v0.4.2.md)
+
+- `run-exec`/`agent-run --mode work`의 worker timeout 정책을 soft-timeout 중심에서 progress watchdog 중심으로 확장했다. `progress_probe_seconds`, `no_progress_timeout_seconds`, `min_runtime_seconds`를 추가하고, 주기적 progress probe로 `active`, `quiet`, `stalled`, `timeout_hard` 상태를 기록한다.
+- Dashboard Agent 패널에서 worker watchdog 상태, 마지막 진척, timeout policy/reason을 확인할 수 있게 했다.
+- `ROADMAP.md`를 `0.4.x` 안정화 흐름과 worker watchdog 관제 항목 기준으로 현행화했다.
+
 ## 0.4.1 - 2026-05-30
 
 `0.4.1`은 `0.4.0`의 trace-context, staged QA, release-pr 흐름을 유지하면서 worker 실행 안정성을 보강한 패치 릴리즈다. 장시간 worker 실행에서 즉시 kill 대신 soft timeout 기반 연장을 적용하고, Windows Agy runner의 빈 stdout 문제를 transcript fallback으로 보완했다.

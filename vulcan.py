@@ -47,7 +47,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.4.1"
+VULCAN_VERSION = "0.4.2"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -7250,8 +7250,11 @@ def capture_worker_progress_snapshot(cwd, project_dir, status_rel, stdout_len, s
     status_abs = os.path.abspath(os.path.join(project_dir, status_rel)) if status_rel else ""
     status_data = load_status_probe(status_abs)
     status_is_heartbeat = bool(status_data.get("heartbeat"))
+    status_is_watchdog_probe = bool(status_data.get("watchdog_probe"))
     status_signal = ""
-    if status_data and not status_is_heartbeat:
+    if status_data and status_is_watchdog_probe:
+        status_signal = str(status_data.get("observed_status_signal") or "")
+    elif status_data and not status_is_heartbeat:
         status_signal = "|".join([
             str(status_data.get("status") or ""),
             str(status_data.get("phase") or ""),
@@ -7266,11 +7269,12 @@ def capture_worker_progress_snapshot(cwd, project_dir, status_rel, stdout_len, s
             log_size = 0
     return {
         "captured_at": datetime.now().isoformat(timespec="seconds"),
-        "status_hash": file_hash_or_empty(status_abs) if status_data and not status_is_heartbeat else "",
+        "status_hash": file_hash_or_empty(status_abs) if status_data and not status_is_heartbeat and not status_is_watchdog_probe else "",
         "status_signal": status_signal,
         "status_phase": str(status_data.get("phase") or ""),
         "status_task": str(status_data.get("current_task") or status_data.get("current_message") or ""),
         "status_is_heartbeat": status_is_heartbeat,
+        "status_is_watchdog_probe": status_is_watchdog_probe,
         "git_hash": git_probe["hash"],
         "changed_file_count": git_probe["changed_file_count"],
         "stdout_len": stdout_len,
@@ -7285,8 +7289,6 @@ def worker_progress_reasons(before, after):
         return reasons
     if after.get("status_signal") and after.get("status_signal") != before.get("status_signal"):
         reasons.append("worker status changed")
-    elif after.get("status_hash") and after.get("status_hash") != before.get("status_hash"):
-        reasons.append("worker status updated")
     if after.get("git_hash") and after.get("git_hash") != before.get("git_hash"):
         reasons.append("worktree diff changed")
     if int(after.get("changed_file_count") or 0) > int(before.get("changed_file_count") or 0):
@@ -7347,6 +7349,9 @@ def run_command_with_status_heartbeat(
     extension_seconds=0,
     max_extensions=0,
     progress_grace_seconds=300,
+    progress_probe_seconds=0,
+    no_progress_timeout_seconds=0,
+    min_runtime_seconds=120,
     on_stdout_line=None,
     tail_file_path=None,
     on_tail_line=None,
@@ -7376,6 +7381,10 @@ def run_command_with_status_heartbeat(
     extension_seconds = max(0, int(extension_seconds or 0))
     max_extensions = max(0, int(max_extensions or 0))
     progress_grace_seconds = max(1, int(progress_grace_seconds or 1))
+    progress_probe_seconds = max(0, int(progress_probe_seconds or 0))
+    no_progress_timeout_seconds = max(0, int(no_progress_timeout_seconds or 0))
+    min_runtime_seconds = max(0, int(min_runtime_seconds or 0))
+    watchdog_enabled = progress_probe_seconds > 0 and no_progress_timeout_seconds > 0
     pid_payload = dict(status_payload)
     pid_payload.update({
         "status": "running",
@@ -7386,6 +7395,10 @@ def run_command_with_status_heartbeat(
         "hard_timeout_seconds": hard_timeout_seconds,
         "extension_seconds": extension_seconds,
         "max_extensions": max_extensions,
+        "watchdog_enabled": watchdog_enabled,
+        "progress_probe_seconds": progress_probe_seconds,
+        "no_progress_timeout_seconds": no_progress_timeout_seconds,
+        "min_runtime_seconds": min_runtime_seconds,
     })
     write_agent_status(project_dir, pid_payload)
 
@@ -7465,9 +7478,17 @@ def run_command_with_status_heartbeat(
     timeout_reason = ""
     extension_events = []
     extensions_used = 0
+    watchdog_events = []
+    watchdog_state = "running"
+    quiet_probe_count = 0
+    last_probe_at = ""
+    last_progress_at = datetime.now().isoformat(timespec="seconds")
+    last_progress_reasons = []
     started_monotonic = time.monotonic()
     soft_deadline = started_monotonic + soft_timeout_seconds
     hard_deadline = started_monotonic + hard_timeout_seconds
+    next_probe = started_monotonic + (progress_probe_seconds or soft_timeout_seconds)
+    last_progress_monotonic = started_monotonic
     status_rel = status_payload.get("status_file", "")
     last_snapshot = capture_worker_progress_snapshot(
         cwd,
@@ -7479,6 +7500,119 @@ def run_command_with_status_heartbeat(
     )
     try:
         while True:
+            if watchdog_enabled:
+                now_monotonic = time.monotonic()
+                remaining = min(next_probe, hard_deadline) - now_monotonic
+                if remaining > 0:
+                    try:
+                        process.wait(timeout=min(remaining, 5))
+                    except subprocess.TimeoutExpired:
+                        pass
+                    if process.poll() is not None:
+                        watchdog_state = "completed"
+                        break
+                    continue
+
+                now_monotonic = time.monotonic()
+                if now_monotonic >= hard_deadline:
+                    timed_out = True
+                    timeout_reason = "hard_timeout"
+                    watchdog_state = "timeout_hard"
+                    break
+
+                current_snapshot = capture_worker_progress_snapshot(
+                    cwd,
+                    project_dir,
+                    status_rel,
+                    stdout_len=sum(len(chunk) for chunk in stdout_chunks),
+                    stderr_len=sum(len(chunk) for chunk in stderr_chunks),
+                    log_path=tail_file_path,
+                )
+                reasons = worker_progress_reasons(last_snapshot, current_snapshot)
+                last_probe_at = current_snapshot["captured_at"]
+                runtime_seconds = int(now_monotonic - started_monotonic)
+                no_progress_age = int(now_monotonic - last_progress_monotonic)
+
+                if reasons:
+                    watchdog_state = "active"
+                    quiet_probe_count = 0
+                    last_progress_monotonic = now_monotonic
+                    last_progress_at = current_snapshot["captured_at"]
+                    last_progress_reasons = reasons
+                    last_snapshot = current_snapshot
+                else:
+                    quiet_probe_count += 1
+                    watchdog_state = "quiet"
+
+                event = {
+                    "probe_at": current_snapshot["captured_at"],
+                    "state": watchdog_state,
+                    "reasons": reasons,
+                    "quiet_probe_count": quiet_probe_count,
+                    "last_progress_age_seconds": int(now_monotonic - last_progress_monotonic),
+                    "changed_file_count": current_snapshot.get("changed_file_count", 0),
+                }
+                watchdog_events.append(event)
+                if len(watchdog_events) > 20:
+                    watchdog_events = watchdog_events[-20:]
+
+                status_abs = os.path.abspath(os.path.join(project_dir, status_rel)) if status_rel else ""
+                status_age = None
+                if status_abs and os.path.exists(status_abs):
+                    try:
+                        status_age = time.time() - os.path.getmtime(status_abs)
+                    except OSError:
+                        status_age = None
+                stall_candidate = (
+                    runtime_seconds >= min_runtime_seconds
+                    and now_monotonic - last_progress_monotonic >= no_progress_timeout_seconds
+                )
+                write_watchdog_status = (
+                    stall_candidate
+                    or (
+                        not reasons
+                        and (
+                            status_age is None
+                            or status_age >= max(2, progress_probe_seconds * 0.75)
+                            or current_snapshot.get("status_is_watchdog_probe")
+                        )
+                    )
+                )
+                if write_watchdog_status:
+                    payload = dict(status_payload)
+                    payload.update({
+                        "status": "running",
+                        "phase": f"watchdog_{watchdog_state}",
+                        "current_task": f"worker quiet for {no_progress_age}s",
+                        "watchdog_probe": True,
+                        "observed_status_signal": current_snapshot.get("status_signal") or last_snapshot.get("status_signal") or "",
+                        "pid": process.pid,
+                        "watchdog": {
+                            "enabled": True,
+                            "state": watchdog_state,
+                            "last_probe_at": last_probe_at,
+                            "last_progress_at": last_progress_at,
+                            "last_progress_age_seconds": int(now_monotonic - last_progress_monotonic),
+                            "last_progress_reasons": last_progress_reasons,
+                            "quiet_probe_count": quiet_probe_count,
+                            "progress_probe_seconds": progress_probe_seconds,
+                            "no_progress_timeout_seconds": no_progress_timeout_seconds,
+                            "min_runtime_seconds": min_runtime_seconds,
+                        },
+                        "hard_timeout_seconds": hard_timeout_seconds,
+                    })
+                    write_agent_status(project_dir, payload)
+                last_snapshot = current_snapshot
+
+                if stall_candidate:
+                    timed_out = True
+                    timeout_reason = "no_progress_timeout"
+                    watchdog_state = "stalled"
+                    break
+
+                next_probe = now_monotonic + progress_probe_seconds
+                continue
+
             remaining = min(soft_deadline, hard_deadline) - time.monotonic()
             if remaining > 0:
                 try:
@@ -7555,7 +7689,8 @@ def run_command_with_status_heartbeat(
             stdout_thread.join(timeout=5)
             stderr_thread.join(timeout=5)
             exit_code = 124
-            stderr_chunks.append(f"\nTIMEOUT after {timeout_seconds} seconds ({timeout_reason or 'timeout'})")
+            elapsed_seconds = int(time.monotonic() - started_monotonic)
+            stderr_chunks.append(f"\nTIMEOUT after {elapsed_seconds} seconds ({timeout_reason or 'timeout'})")
     except subprocess.TimeoutExpired:
         timed_out = True
         timeout_reason = "wait_timeout"
@@ -7582,6 +7717,17 @@ def run_command_with_status_heartbeat(
         "max_extensions": max_extensions,
         "extensions_used": extensions_used,
         "extension_events": extension_events,
+        "watchdog_enabled": watchdog_enabled,
+        "progress_probe_seconds": progress_probe_seconds,
+        "no_progress_timeout_seconds": no_progress_timeout_seconds,
+        "min_runtime_seconds": min_runtime_seconds,
+        "watchdog_state": watchdog_state,
+        "last_probe_at": last_probe_at,
+        "last_progress_at": last_progress_at,
+        "last_progress_age_seconds": int(time.monotonic() - last_progress_monotonic),
+        "last_progress_reasons": last_progress_reasons,
+        "quiet_probe_count": quiet_probe_count,
+        "watchdog_events": watchdog_events,
         "timeout_reason": timeout_reason,
         "pid": process.pid,
     }
@@ -8779,6 +8925,9 @@ def cmd_run_exec(
     extension_seconds = int(execution_config.get("extension_seconds") or 0)
     max_extensions = int(execution_config.get("max_extensions") or 0)
     progress_grace_seconds = int(execution_config.get("progress_grace_seconds") or 300)
+    progress_probe_seconds = int(execution_config.get("progress_probe_seconds") or 0)
+    no_progress_timeout_seconds = int(execution_config.get("no_progress_timeout_seconds") or 0)
+    min_runtime_seconds = int(execution_config.get("min_runtime_seconds") or 120)
 
     if create_worktree is None:
         create_worktree = bool(execution_config.get("default_worktree", True))
@@ -8964,6 +9113,9 @@ Worker dependency cache:
         print(f"  hard_timeout_seconds: {hard_timeout_seconds}")
         print(f"  extension_seconds: {extension_seconds}")
         print(f"  max_extensions: {max_extensions}")
+        print(f"  progress_probe_seconds: {progress_probe_seconds}")
+        print(f"  no_progress_timeout_seconds: {no_progress_timeout_seconds}")
+        print(f"  min_runtime_seconds: {min_runtime_seconds}")
         print(f"  npm_config_cache: {dependency_cache['npm_config_cache']}")
         print(f"  PLAYWRIGHT_BROWSERS_PATH: {dependency_cache['PLAYWRIGHT_BROWSERS_PATH']}")
         print(f"  worktree: {str(create_worktree).lower()}")
@@ -9044,6 +9196,9 @@ Worker dependency cache:
         "hard_timeout_seconds": hard_timeout_seconds,
         "extension_seconds": extension_seconds,
         "max_extensions": max_extensions,
+        "progress_probe_seconds": progress_probe_seconds,
+        "no_progress_timeout_seconds": no_progress_timeout_seconds,
+        "min_runtime_seconds": min_runtime_seconds,
         "timed_out": False,
         "log": log_rel_path.replace("\\", "/"),
         "stderr_log": stderr_rel_path.replace("\\", "/"),
@@ -9067,6 +9222,9 @@ Worker dependency cache:
         "hard_timeout_seconds": hard_timeout_seconds,
         "extension_seconds": extension_seconds,
         "max_extensions": max_extensions,
+        "progress_probe_seconds": progress_probe_seconds,
+        "no_progress_timeout_seconds": no_progress_timeout_seconds,
+        "min_runtime_seconds": min_runtime_seconds,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
         "branch": execution_branch or None,
@@ -9081,6 +9239,9 @@ Worker dependency cache:
         extension_seconds=extension_seconds,
         max_extensions=max_extensions,
         progress_grace_seconds=progress_grace_seconds,
+        progress_probe_seconds=progress_probe_seconds,
+        no_progress_timeout_seconds=no_progress_timeout_seconds,
+        min_runtime_seconds=min_runtime_seconds,
         project_dir=project_abs,
         status_payload={
             "target_type": "run",
@@ -10401,7 +10562,10 @@ def default_vulcan_config(available_runners=None):
             "hard_timeout_seconds": 5400,
             "extension_seconds": 600,
             "max_extensions": 3,
-            "progress_grace_seconds": 300
+            "progress_grace_seconds": 300,
+            "progress_probe_seconds": 300,
+            "no_progress_timeout_seconds": 900,
+            "min_runtime_seconds": 120
         }
     }
     return config

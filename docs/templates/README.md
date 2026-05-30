@@ -5,7 +5,7 @@
 루트의 `templates/` 디렉터리는 `vulcan.py init`이 새 프로젝트 골격을 만들 때 복사하는 시드 파일 영역이다.
 이 디렉터리(`docs/templates/`)는 Gate 산출물의 공식 문서 양식만 다룬다.
 
-`0.4.1` 기준 공식 템플릿:
+`0.4.2` 기준 공식 템플릿:
 
 - `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서
 - `STAKEHOLDER_SCOPE_TEMPLATE.md`: 이해관계자 및 범위 정의서

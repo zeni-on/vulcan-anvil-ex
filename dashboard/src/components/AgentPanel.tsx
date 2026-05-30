@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, RefreshCw, X, XCircle, type LucideIcon } from 'lucide-react'
 import RunnerStatusPanel from '@/components/RunnerStatusPanel'
-import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeWorktree } from '@/lib/types'
+import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeWatchdog, RuntimeWorktree } from '@/lib/types'
 
 function worktreeTone(status: string): {
   label: string
@@ -68,6 +68,14 @@ function formatAge(seconds?: number): string {
   return `${Math.floor(minutes / 60)}시간 전`
 }
 
+function formatSeconds(seconds?: number): string {
+  if (seconds === undefined || !Number.isFinite(seconds)) return ''
+  if (seconds < 60) return `${Math.max(0, Math.floor(seconds))}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+}
+
 function compactWorktreePath(path?: string | null): string {
   if (!path) return ''
   const normalized = path.replace(/\\/g, '/')
@@ -75,11 +83,52 @@ function compactWorktreePath(path?: string | null): string {
   return parts[parts.length - 1] ?? normalized
 }
 
+function activityWatchdog(activity: RuntimeActivity): RuntimeWatchdog | null {
+  if (activity.watchdog) return activity.watchdog
+  const policy = activity.timeout_policy
+  if (!policy) return null
+  if (!policy.watchdog_enabled && !policy.watchdog_state && !policy.last_progress_at) return null
+  return {
+    enabled: policy.watchdog_enabled,
+    state: policy.watchdog_state,
+    last_probe_at: policy.last_probe_at,
+    last_progress_at: policy.last_progress_at,
+    last_progress_age_seconds: policy.last_progress_age_seconds,
+    last_progress_reasons: policy.last_progress_reasons,
+    quiet_probe_count: policy.quiet_probe_count,
+    progress_probe_seconds: policy.progress_probe_seconds,
+    no_progress_timeout_seconds: policy.no_progress_timeout_seconds,
+    min_runtime_seconds: policy.min_runtime_seconds,
+  }
+}
+
+function watchdogLabel(activity: RuntimeActivity): string {
+  const watchdog = activityWatchdog(activity)
+  if (!watchdog) return ''
+  const rawState = watchdog.state ?? 'watchdog'
+  const state =
+    rawState === 'active' ? 'active' :
+    rawState === 'quiet' ? 'quiet' :
+    rawState === 'stalled' ? 'stalled' :
+    rawState === 'timeout_hard' ? 'hard timeout' :
+    rawState
+  const age = formatSeconds(watchdog.last_progress_age_seconds)
+  if (age) return `${state} · 마지막 진척 ${age} 전`
+  return state
+}
+
 function activityTone(activity: RuntimeActivity): {
   dotClassName: string
   label: string
 } {
   if (activity.status === 'running') {
+    const state = activityWatchdog(activity)?.state
+    if (state === 'quiet') {
+      return { dotClassName: 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.55)]', label: 'quiet' }
+    }
+    if (state === 'stalled' || state === 'timeout_hard') {
+      return { dotClassName: 'bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.65)]', label: 'stalled' }
+    }
     return { dotClassName: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]', label: 'running' }
   }
   if (activity.status === 'stale' || activity.status === 'completed_no_result_change') {
@@ -92,8 +141,10 @@ function activityTone(activity: RuntimeActivity): {
 }
 
 function activityTask(activity: RuntimeActivity): string {
+  const watchdog = watchdogLabel(activity)
   if (activity.current_message) return activity.current_message
   if (activity.current_task) return activity.current_task
+  if (watchdog && activity.status === 'running') return watchdog
   if (activity.status === 'running') return '작업 진행 중'
   if (activity.result_file_changed === false || activity.run_file_changed === false) return '결과 파일 미갱신'
   return activity.phase || activity.status
@@ -121,6 +172,15 @@ function eventTime(value?: string): string {
   return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
+function useDashboardRefresh(): () => void {
+  try {
+    const router = useRouter()
+    return () => router.refresh()
+  } catch {
+    return () => undefined
+  }
+}
+
 function ActivityRow({
   activity,
   onSelect,
@@ -132,12 +192,14 @@ function ActivityRow({
   const age = formatAge(activity.last_update_age_seconds)
   const targetType = activity.target_type === 'review' ? 'Review' : 'Run'
   const worktree = compactWorktreePath(activity.worktree_path)
+  const watchdog = watchdogLabel(activity)
   const title = [
     `${runnerLabel(activity.runner)} · ${targetType} ${activity.target_id}`,
     activity.current_task || activity.phase || activity.status,
     activity.current_message,
     age,
     activity.resume_supported ? 'resume 가능' : '',
+    watchdog,
   ].filter(Boolean).join('\n')
 
   return (
@@ -157,6 +219,11 @@ function ActivityRow({
       {worktree && (
         <p className="mt-1 truncate pl-4 text-[11px] leading-4 text-slate-500">
           worktree: {worktree}
+        </p>
+      )}
+      {watchdog && (
+        <p className="mt-0.5 truncate pl-4 text-[11px] leading-4 text-slate-400">
+          {watchdog}
         </p>
       )}
       <span className="sr-only">{tone.label}</span>
@@ -179,6 +246,8 @@ function ActivityDrawer({
   const targetType = activity.target_type === 'review' ? 'Review' : 'Run'
   const events = activityEvents(activity).slice(-100).reverse()
   const identity = activity.thread_id || activity.session_id || activity.resume_hint
+  const watchdog = activityWatchdog(activity)
+  const timeoutPolicy = activity.timeout_policy
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="worker activity detail">
@@ -238,6 +307,52 @@ function ActivityDrawer({
             <div className="grid grid-cols-[80px_1fr] gap-2">
               <span className="text-slate-600">log</span>
               <span className="truncate">{activity.log}</span>
+            </div>
+          )}
+          {activity.transcript && (
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <span className="text-slate-600">transcript</span>
+              <span className="truncate">
+                {activity.transcript_response_detected ? '응답 감지 · ' : ''}
+                {activity.transcript}
+              </span>
+            </div>
+          )}
+          {(watchdog || timeoutPolicy) && (
+            <div className="mt-1 rounded-md border border-slate-800 bg-slate-900/45 p-2">
+              <div className="grid grid-cols-[80px_1fr] gap-2">
+                <span className="text-slate-600">watchdog</span>
+                <span className="truncate">
+                  {watchdog?.state ?? timeoutPolicy?.watchdog_state ?? 'enabled'}
+                  {watchdog?.last_progress_age_seconds !== undefined && (
+                    <> · 마지막 진척 {formatSeconds(watchdog.last_progress_age_seconds)} 전</>
+                  )}
+                </span>
+              </div>
+              <div className="mt-1 grid grid-cols-[80px_1fr] gap-2">
+                <span className="text-slate-600">policy</span>
+                <span className="truncate">
+                  probe {formatSeconds(watchdog?.progress_probe_seconds ?? timeoutPolicy?.progress_probe_seconds)}
+                  {' / '}
+                  no progress {formatSeconds(watchdog?.no_progress_timeout_seconds ?? timeoutPolicy?.no_progress_timeout_seconds)}
+                  {' / '}
+                  hard {formatSeconds(timeoutPolicy?.hard_timeout_seconds ?? activity.hard_timeout_seconds)}
+                </span>
+              </div>
+              {(watchdog?.last_progress_reasons?.length ?? timeoutPolicy?.last_progress_reasons?.length ?? 0) > 0 && (
+                <div className="mt-1 grid grid-cols-[80px_1fr] gap-2">
+                  <span className="text-slate-600">progress</span>
+                  <span className="truncate">
+                    {(watchdog?.last_progress_reasons ?? timeoutPolicy?.last_progress_reasons ?? []).join(', ')}
+                  </span>
+                </div>
+              )}
+              {(activity.timeout_reason || timeoutPolicy?.timeout_reason) && (
+                <div className="mt-1 grid grid-cols-[80px_1fr] gap-2">
+                  <span className="text-slate-600">reason</span>
+                  <span className="truncate">{activity.timeout_reason ?? timeoutPolicy?.timeout_reason}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -364,7 +479,7 @@ export default function AgentPanel({
   isLoading?: boolean
   error?: unknown
 }) {
-  const router = useRouter()
+  const refreshDashboard = useDashboardRefresh()
   const [selectedActivityKey, setSelectedActivityKey] = useState<string | null>(null)
   const activities = runtime?.active_executions ?? []
   const worktrees = runtime?.worktrees ?? []
@@ -379,7 +494,7 @@ export default function AgentPanel({
     <div className="space-y-4" data-testid="agent-panel">
       <WorkspaceSummary runtime={runtime} />
       <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={(activity) => setSelectedActivityKey(activityKey(activity))} />
-      <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivityKey(null)} onRefresh={() => router.refresh()} />
+      <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivityKey(null)} onRefresh={refreshDashboard} />
 
       <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">

@@ -180,7 +180,13 @@ export interface RuntimeActivity {
   completed_at?: string
   duration_seconds?: number
   timeout_seconds?: number
+  hard_timeout_seconds?: number
+  extension_seconds?: number
+  max_extensions?: number
   timed_out?: boolean
+  timeout_reason?: string
+  timeout_policy?: RuntimeTimeoutPolicy
+  watchdog?: RuntimeWatchdog
   exit_code?: number
   result_file_changed?: boolean
   run_file_changed?: boolean
@@ -200,8 +206,41 @@ export interface RuntimeActivity {
   stderr_log?: string
   last_message?: string
   summary?: string
+  transcript?: string
+  transcript_response_detected?: boolean
   result_file?: string
   events: RuntimeActivityEvent[]
+}
+
+export interface RuntimeTimeoutPolicy {
+  watchdog_enabled?: boolean
+  progress_probe_seconds?: number
+  no_progress_timeout_seconds?: number
+  min_runtime_seconds?: number
+  hard_timeout_seconds?: number
+  extension_seconds?: number
+  max_extensions?: number
+  extensions_used?: number
+  watchdog_state?: string
+  last_probe_at?: string
+  last_progress_at?: string
+  last_progress_age_seconds?: number
+  last_progress_reasons?: string[]
+  quiet_probe_count?: number
+  timeout_reason?: string
+}
+
+export interface RuntimeWatchdog {
+  enabled?: boolean
+  state?: string
+  last_probe_at?: string
+  last_progress_at?: string
+  last_progress_age_seconds?: number
+  last_progress_reasons?: string[]
+  quiet_probe_count?: number
+  progress_probe_seconds?: number
+  no_progress_timeout_seconds?: number
+  min_runtime_seconds?: number
 }
 
 export interface RuntimeActivityEvent {
