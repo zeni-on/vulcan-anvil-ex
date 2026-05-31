@@ -47,9 +47,65 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.4.3"
+VULCAN_VERSION = "0.4.4"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+CODEX_MODEL_POLICY_DEFAULTS = {
+    "enabled": True,
+    "fallback": {
+        "model": "gpt-5.5",
+        "effort": "high",
+    },
+    "roles": {
+        "review": {
+            "model": "gpt-5.5",
+            "effort": "high",
+            "description": "독립 검수, 설계/QA 정합성 검토",
+        },
+        "critical_judgment": {
+            "model": "gpt-5.5",
+            "effort": "high",
+            "description": "Gate 승인 후보, FIND/CR 분류, 릴리즈 판단 후보",
+        },
+        "build": {
+            "model": "gpt-5.3-codex",
+            "effort": "high",
+            "description": "일반 구현 worker",
+        },
+        "build-backend": {
+            "model": "gpt-5.3-codex",
+            "effort": "high",
+            "description": "Backend/API/DB 구현 worker",
+        },
+        "build-frontend": {
+            "model": "gpt-5.3-codex",
+            "effort": "high",
+            "description": "Frontend/UI 구현 worker",
+        },
+        "qa-execution": {
+            "model": "gpt-5.4",
+            "effort": "medium",
+            "description": "QA 명령 실행, 로그 수집, 결과 정리",
+        },
+        "qa-fix-loop": {
+            "model": "gpt-5.3-codex",
+            "effort": "high",
+            "description": "승인된 FIND 범위 안의 QA 수정 worker",
+        },
+        "run-draft": {
+            "model": "gpt-5.4-mini",
+            "effort": "medium",
+            "description": "Run 초안, trace-context 후보, 문서 정리",
+        },
+        "evidence-summary": {
+            "model": "gpt-5.4-mini",
+            "effort": "low",
+            "description": "로그/증적 index, 단순 요약",
+        },
+    },
+}
 
 
 def _bootstrap_vulcan_core():
@@ -244,6 +300,39 @@ GATE_LABELS = {
 
 GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 DEFAULT_DELIVERY_PROFILE = "audit"
+SUPPORTED_DELIVERY_PROFILES = ("audit", "solution", "poc")
+DELIVERY_PROFILE_RULES = {
+    "audit": {
+        "gate_approval": "all-gates-explicit",
+        "required_artifacts": "full-audit-set",
+        "traceability_level": "full",
+        "program_contract_level": "class-interface-public-method",
+        "qa_evidence_level": "qa-000-to-qa-003-command-ui-log-finding",
+        "independent_review_level": "gate2-gate4-pr-as-needed",
+        "run_preflight_strictness": "blocking",
+        "release_control": "gate5-release-approval-pr",
+    },
+    "solution": {
+        "gate_approval": "major-gates-and-release",
+        "required_artifacts": "architecture-api-db-security-release-core",
+        "traceability_level": "core-requirement-api-db-security-regression",
+        "program_contract_level": "public-api-service-dto",
+        "qa_evidence_level": "release-regression-major-ui-api",
+        "independent_review_level": "release-candidate-or-large-change",
+        "run_preflight_strictness": "scope-contract-blocking-other-warning",
+        "release_control": "release-note-backlog-pr",
+    },
+    "poc": {
+        "gate_approval": "start-checkpoint-finish",
+        "required_artifacts": "goal-hypothesis-key-design-result",
+        "traceability_level": "hypothesis-to-implementation-to-result",
+        "program_contract_level": "main-interface-entrypoint",
+        "qa_evidence_level": "smoke-demo-log",
+        "independent_review_level": "optional",
+        "run_preflight_strictness": "warning-first",
+        "release_control": "poc-result-summary",
+    },
+}
 
 RUN_TYPES_BY_GATE = {
     "phase0": "Discovery",
@@ -1367,6 +1456,39 @@ def merge_unique(*item_lists):
     return merged
 
 
+def compact_reference_documents_for_profile(profile, paths, limit=None):
+    normalized_profile = normalize_delivery_profile(profile)
+    unique_paths = merge_unique(paths)
+    if normalized_profile != "poc":
+        return unique_paths
+    limit = POC_REFERENCE_DOC_LIMIT if limit is None else max(0, int(limit))
+    if not unique_paths or limit == 0:
+        return []
+
+    priority_tokens = [
+        "/program/",
+        "/api/",
+        "/data/",
+        "/security/",
+        "/function/",
+        "/screen/",
+        "/03-test/",
+        "/01-requirements/",
+        "/00-discovery/",
+        "docs/core/",
+    ]
+
+    def priority(path):
+        normalized = normalize_repo_path(path)
+        for index, token in enumerate(priority_tokens):
+            if token in normalized:
+                return index
+        return len(priority_tokens)
+
+    ranked = sorted(unique_paths, key=lambda item: (priority(item), unique_paths.index(item)))
+    return ranked[:limit]
+
+
 def is_orchestrator_only_command(command):
     normalized = command.strip().lower()
     return any(
@@ -1418,22 +1540,284 @@ def split_working_and_reference(paths):
     return working, reference
 
 
+def normalize_delivery_profile(profile):
+    normalized = str(profile or DEFAULT_DELIVERY_PROFILE).strip().lower()
+    if normalized not in SUPPORTED_DELIVERY_PROFILES:
+        return DEFAULT_DELIVERY_PROFILE
+    return normalized
+
+
+def delivery_profile_rules(profile):
+    normalized = normalize_delivery_profile(profile)
+    return dict(DELIVERY_PROFILE_RULES.get(normalized, DELIVERY_PROFILE_RULES[DEFAULT_DELIVERY_PROFILE]))
+
+
 def load_delivery_profile(project_dir="."):
     path = os.path.join(project_dir, "session.json")
-    if not os.path.exists(path):
-        return DEFAULT_DELIVERY_PROFILE
+    config_path = os.path.join(project_dir, "vulcan.config.json")
 
-    try:
-        with open(path, encoding="utf-8") as f:
-            session = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return DEFAULT_DELIVERY_PROFILE
+    session = {}
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                session = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            session = {}
 
-    profile = session.get("profile") or session.get("delivery_profile") or DEFAULT_DELIVERY_PROFILE
-    return str(profile).strip().lower() or DEFAULT_DELIVERY_PROFILE
+    config = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            config = {}
+
+    profile = (
+        session.get("profile")
+        or session.get("delivery_profile")
+        or config.get("delivery_profile")
+        or DEFAULT_DELIVERY_PROFILE
+    )
+    return normalize_delivery_profile(profile)
+
+
+def effective_trace_depth(project_dir=".", trace_depth=None):
+    if trace_depth is not None:
+        return trace_depth
+    profile = load_delivery_profile(project_dir)
+    if profile == "poc":
+        return POC_TRACE_DEPTH_DEFAULT
+    return 2
+
+
+POC_COMMON_READ_FIRST_DOCS = [
+    "AGENTS.md",
+    "session.json",
+    "docs/core/DELIVERY_PROFILES.md",
+]
+
+POC_TRACE_DEPTH_DEFAULT = 1
+POC_REFERENCE_DOC_LIMIT = 5
+
+POC_COMMON_READONLY_DOCS = [
+    "docs/core/",
+    "docs/templates/",
+]
+
+POC_COMMON_EXCLUDED_PATHS = [
+    "docs/ref-docs/",
+    "**/*.db",
+    "**/__pycache__/",
+    "**/.ruff_cache/",
+    "**/node_modules/",
+    "**/.next/",
+]
+
+POC_GATE_WORKING_DOCUMENTS = {
+    "phase0": [
+        "docs/artifacts/00-discovery/",
+    ],
+    "gate1": [
+        "docs/artifacts/01-requirements/",
+    ],
+    "gate2": [
+        "docs/artifacts/02-design/",
+    ],
+    "gate3": [
+        "docs/artifacts/03-test/",
+    ],
+    "impl": [
+        "docs/runs/",
+        "backend/",
+        "frontend/",
+        "docs/artifacts/04-review/evidence/",
+    ],
+    "gate4": [
+        "docs/artifacts/04-review/",
+        "docs/artifacts/04-review/evidence/",
+    ],
+    "gate5": [
+        "docs/artifacts/07-release/",
+        "docs/backlog/",
+    ],
+}
+
+POC_GATE_REFERENCES = {
+    "phase0": [
+        "docs/core/ORCHESTRATOR_PROTOCOL.md",
+    ],
+    "gate1": [
+        "docs/core/TRACEABILITY_RULES.md",
+        "docs/artifacts/00-discovery/",
+    ],
+    "gate2": [
+        "docs/artifacts/01-requirements/",
+        "docs/core/GATE2_DESIGN_SEQUENCE.md",
+    ],
+    "gate3": [
+        "docs/artifacts/01-requirements/",
+        "docs/artifacts/02-design/",
+    ],
+    "impl": [
+        "docs/artifacts/01-requirements/",
+        "docs/artifacts/02-design/",
+        "docs/artifacts/03-test/",
+    ],
+    "gate4": [
+        "docs/artifacts/03-test/",
+        "docs/runs/",
+    ],
+    "gate5": [
+        "docs/artifacts/04-review/",
+        "docs/runs/",
+    ],
+}
+
+POC_GATE_COMPLETION_CRITERIA = {
+    "phase0": [
+        "PoC 목표, 가설, 성공 기준, 비목표가 짧게 정리되어 있다.",
+        "불확실한 정보와 다음 질문이 open_issues에 남아 있다.",
+        "PoC 종료 시 제품화/감리 전환 여부를 판단할 기준이 적혀 있다.",
+    ],
+    "gate1": [
+        "핵심 요구사항 또는 가설이 검증 가능한 문장으로 정리되어 있다.",
+        "각 요구사항은 최소 한 개의 성공 기준 또는 관찰 기준과 연결되어 있다.",
+        "PoC 범위를 넘는 요구는 backlog 또는 open_issues로 분리되어 있다.",
+    ],
+    "gate2": [
+        "핵심 아키텍처, 데이터, API 또는 화면 결정이 구현자가 이해할 수준으로 정리되어 있다.",
+        "실험 코드의 주요 진입점, public interface, smoke 검증 기준이 식별되어 있다.",
+        "제품화 또는 audit 전환 시 보강해야 할 설계 항목이 남아 있다.",
+    ],
+    "gate3": [
+        "PoC 가설을 확인할 smoke, demo, 핵심 회귀 테스트가 정의되어 있다.",
+        "미실행 또는 수동 확인 항목은 Pass로 기록하지 않고 Not Run 또는 open_issues로 남긴다.",
+    ],
+    "impl": [
+        "PoC 목표를 확인하는 최소 구현과 smoke 검증이 가능하다.",
+        "실패한 실험은 구현 성공처럼 포장하지 않고 결과와 원인을 기록한다.",
+        "제품화 전환 시 필요한 리팩토링, 보안, 테스트 보강 후보가 남아 있다.",
+    ],
+    "gate4": [
+        "PoC smoke/demo 검증 결과와 로그 또는 캡처 증적이 남아 있다.",
+        "실패, 차단, 미실행 항목은 원인과 다음 판단 기준으로 분류되어 있다.",
+    ],
+    "gate5": [
+        "PoC 결과 요약, 성공/실패 판단, 계속 진행/중단/전환 제안이 기록되어 있다.",
+        "제품화 또는 audit 전환 시 보강해야 할 산출물과 기술부채가 분리되어 있다.",
+    ],
+}
+
+POC_GATE_EXIT_POLICY = {
+    "stop_required": True,
+    "next_gate_requires_user_approval": True,
+    "approval_evidence_required": False,
+    "allowed_next_action": "PoC 결과와 다음 선택지를 짧게 정리하고 사용자 확인을 받는다.",
+    "forbidden_actions": [
+        "PoC smoke 결과를 운영 또는 감리 수준 검증 완료로 표현하지 않는다.",
+        "실제로 실행하지 않은 테스트를 Pass로 기록하지 않는다.",
+        "제품화 또는 audit 전환 보강 항목을 완료된 것으로 처리하지 않는다.",
+    ],
+}
+
+POC_WORKER_EXECUTION_POLICY = {
+    "forbidden_actions": [
+        "Gate 전환을 수행하지 않는다.",
+        "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다.",
+        "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다.",
+        "scope.writable 밖 파일을 수정하지 않는다.",
+    ],
+    "required_outputs": [
+        "수행한 변경과 smoke 검증 결과를 Run 결과에 남긴다.",
+        "실패 또는 미실행 항목은 원인과 다음 판단 필요 항목으로 반환한다.",
+    ],
+}
+
+
+def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path):
+    gate_working = POC_GATE_WORKING_DOCUMENTS.get(gate, ["docs/runs/"])
+    gate_reference = compact_reference_documents_for_profile("poc", POC_GATE_REFERENCES.get(gate, []))
+    run_rel_path = run_rel_path.replace("\\", "/")
+    worker_run = skill in ("implementation-scaffold", "build-wave", "qa-execution", "qa-fix-loop")
+    working_documents = merge_unique([run_rel_path], gate_working)
+    source_read_first = merge_unique(POC_COMMON_READ_FIRST_DOCS, [skill_path] if skill_path else [])
+    verification_commands = [
+        f"python vulcan.py run-check {run_rel_path}",
+        "python vulcan.py profile-status",
+    ]
+    if gate in ("gate3", "impl", "gate4"):
+        verification_commands.append("python vulcan.py check-trace")
+    output_include = [
+        "changed_files",
+        "related_ids",
+        "verification_results",
+        "evidence",
+        "open_issues",
+        "next_run_suggestion",
+    ]
+    if gate in ("gate4", "gate5"):
+        output_include.extend(["findings", "change_requests"])
+    return {
+        "profile": "poc",
+        "skill": skill,
+        "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
+        "worker_run": worker_run,
+        "focused_source": False,
+        "source_documents": {
+            "read_first": source_read_first,
+            "working_documents": working_documents,
+            "reference_on_demand": merge_unique(gate_reference),
+            "optional": [],
+        },
+        "scope": {
+            "writable": working_documents,
+            "readonly": POC_COMMON_READONLY_DOCS,
+            "excluded": POC_COMMON_EXCLUDED_PATHS,
+        },
+        "completion_criteria": POC_GATE_COMPLETION_CRITERIA.get(gate, POC_GATE_COMPLETION_CRITERIA["phase0"]),
+        "design_sequence": [],
+        "include_ui_policies": False,
+        "verification": {
+            "commands": verification_commands,
+            "evidence": {
+                "required": gate in ("impl", "gate4", "gate5"),
+                "target_documents": merge_unique([run_rel_path], gate_working[:1]),
+            },
+        },
+        "gate_exit_policy": POC_GATE_EXIT_POLICY,
+        "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
+        "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
+        "qa_execution_policy": {},
+        "worker_execution_policy": POC_WORKER_EXECUTION_POLICY,
+        "development_standards_applied": [],
+        "development_standard_checklist": {},
+        "output_requirements": {
+            "format": "RUN_OUTPUT_CONTRACT.md",
+            "include": merge_unique(output_include),
+        },
+        "question_policy": {
+            "ask_when": [
+                "PoC 목표, 가설, 성공 기준이 불명확하다.",
+                "scope.writable 밖의 파일 수정이 필요하다.",
+                "PoC 범위를 넘어 제품화 또는 audit 수준 결정이 필요하다.",
+            ],
+        },
+        "security_policy": {
+            "forbidden_paths": ["docs/ref-docs/"],
+            "allowed_reference_paths": [],
+            "forbidden_actions": [
+                "토큰, 비밀번호, 개인식별정보를 커밋하지 않는다.",
+                "민감문서 내용을 출력에 원문 인용하지 않는다.",
+                "PoC 편의를 이유로 보안 위험을 완료 상태로 숨기지 않는다.",
+            ],
+        },
+    }
 
 
 def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
+    if profile == "poc":
+        return build_poc_run_input_preset(gate, skill, skill_path, run_rel_path)
+
     if profile != "audit":
         return None
 
@@ -1615,7 +1999,7 @@ def render_run_input_preset(preset, ids, persona, gate, trace_info=None):
     ui_contract = preset["ui_implementation_contract_policy"]
     qa_execution = preset.get("qa_execution_policy", {})
     worker_policy = preset["worker_execution_policy"]
-    sizing_policy = preset.get("worker_run_sizing_policy", AUDIT_WORKER_RUN_SIZING_POLICY)
+    sizing_policy = preset.get("worker_run_sizing_policy")
     dev_standards_applied = preset.get("development_standards_applied", [])
     dev_standard_checklist = preset.get("development_standard_checklist", {})
     target_contracts = classify_related_ids(ids)
@@ -1782,20 +2166,23 @@ Run을 완료할 때 다음 항목을 반드시 남긴다.
 | 승인 증적 | 대화에서 사용자가 명시 승인한 문구 또는 승인 보류 사유 |
 
 사용자 승인 전에는 다음 Gate 산출물 작성, 구현 착수, QA Pass, Gate 5 승인 선언을 하지 않는다."""
-    if implementation_worker:
+    if implementation_worker and (dev_standards_applied or dev_standard_checklist):
         development_standard_block = f"""
 development_standards_applied:
 {format_development_standards_applied(dev_standards_applied, 2)}
 development_standard_checklist:
 {format_development_standard_checklist(dev_standard_checklist, 2)}"""
+    elif implementation_worker:
+        development_standard_block = ""
+    else:
+        development_standard_block = ""
+    if implementation_worker:
         run_scope_instruction = "- worker Run은 기능/계약 단위로 끝나는 완결 조각이어야 하며, 시간은 10분 내외/최대 15분 권장 보조 기준으로만 사용한다."
         verification_instruction = "- 구현 worker Run이면 테스트케이스와 Orchestrator가 재실행할 `verification.commands`를 남긴다. 가능하면 self-check로 실행하되 최종 검증은 Orchestrator가 재실행한다."
     elif skill == "qa-execution":
-        development_standard_block = ""
         run_scope_instruction = "- QA 실행 worker Run은 테스트 실행/증적 수집/원인 분류 단위로 끝나는 완결 조각이어야 한다."
         verification_instruction = "- QA 실행 worker Run이면 실행한 명령과 Orchestrator가 재실행할 `verification.commands`를 결과 문서에 남긴다."
     else:
-        development_standard_block = ""
         run_scope_instruction = "- Run은 현재 Gate와 related_ids 범위 안에서 완료 가능한 산출물 또는 검토 단위로 끝나야 한다."
         verification_instruction = "- 실행하거나 확인한 검증 명령과 결과를 Run 기록에 남긴다."
     return f"""## 3. Run 입력 계약
@@ -1843,7 +2230,7 @@ verification:
   target_duration_minutes: {sizing_policy["target_duration_minutes"]}
   max_duration_minutes: {sizing_policy["max_duration_minutes"]}
   rules:
-{format_yaml_sequence(sizing_policy["rules"], 4)}''' if implementation_worker else ""}
+{format_yaml_sequence(sizing_policy["rules"], 4)}''' if implementation_worker and sizing_policy else ""}
 output_requirements:
   format: {format_yaml_scalar(output["format"])}
   include:
@@ -4991,11 +5378,16 @@ def check_trace(project_dir="."):
         else:
             not_passed = [(tid, status) for tid, status in tst_results if status != "pass"]
             passed = [(tid, status) for tid, status in tst_results if status == "pass"]
-            print(f"  총 {len(tst_results)}건: Pass {len(passed)}, 미통과 {len(not_passed)}")
+            print(
+                f"  출처: Gate 3 테스트 계획 / 총 {len(tst_results)}건: "
+                f"Pass {len(passed)}, Gate 4 예정 {len(not_passed)}"
+            )
+            print("  ! Impl 단계에서는 Gate 3 테스트케이스를 실행 결과 원본으로 보지 않습니다.")
+            print("  ! 실제 Pass/Fail/Not Run 판정은 Gate 4 QA 결과서와 증적으로 확정합니다.")
             for tid, _ in passed:
                 print(f"  O {tid} - Pass")
             for tid, status in not_passed:
-                issues.append(f"  X {tid} - {status}")
+                print(f"  - {tid} - Gate 4 예정 ({status})")
 
     # ── Gate 4: 리뷰 파일 내 REQ-ID 포함 여부 + TST-ID 실행 상태
     if current_gate == "gate4":
@@ -5768,7 +6160,7 @@ def cmd_sync_session(project_dir="."):
         print(f"  현재 Wave: {waves.get('current')}")
 
 
-def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2, project_dir="."):
+def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=None, project_dir="."):
     if not re.fullmatch(r"BW-\d{3}", bw_id):
         print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
         print("  예: BW-001")
@@ -5793,6 +6185,8 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2
             sys.exit(1)
 
     existing = next((item for item in items if item.get("id") == bw_id), None)
+    profile = load_delivery_profile(project_dir)
+    trace_depth = effective_trace_depth(project_dir, trace_depth)
     trace_info = trace_context_run_enrichment(
         os.path.abspath(project_dir),
         trace_seed=trace_seed,
@@ -5843,6 +6237,7 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2
             wave_reference_documents.append("docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md")
         if trace_info.get("reference_on_demand"):
             wave_reference_documents = merge_unique(trace_info["reference_on_demand"], wave_reference_documents)
+        wave_reference_documents = compact_reference_documents_for_profile(profile, wave_reference_documents)
         orchestrator_reference_documents = [
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/core/TRACEABILITY_RULES.md",
@@ -5855,7 +6250,52 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2
             "docs/artifacts/04-review/evidence/",
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
-        content = f"""# {run_id} Build Wave {bw_id} - {run_title}
+        if profile == "poc":
+            poc_preset = build_poc_run_input_preset("impl", wave_skill, skill_path, rel_path)
+            poc_preset["source_documents"]["reference_on_demand"] = compact_reference_documents_for_profile(
+                "poc",
+                merge_unique(trace_info.get("reference_on_demand", []), wave_reference_documents, poc_preset["source_documents"].get("reference_on_demand", [])),
+            )
+            poc_preset["scope"]["writable"] = wave_writable
+            input_sections = render_run_input_preset(poc_preset, ids, "build", "impl", trace_info=trace_info)
+            content = f"""# {run_id} Build Wave {bw_id} - {run_title}
+
+```yaml
+run_id: {run_id}
+gate: impl
+persona: build
+adapter: codex-gpt
+skill: {wave_skill}
+skill_path: {skill_path}
+profile: poc
+bw_id: {bw_id}
+run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
+status: InProgress
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
+verification_results: []
+evidence: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Wave 목표
+
+{run_title}
+
+## 2. PoC 경량화 기준
+
+- 이 Run은 PoC profile compact Run이다.
+- 참조 문서는 trace-context 직접 연결과 필수 작업 문서 중심으로 제한한다.
+- 자세한 audit 절차 설명은 Run 본문에 반복하지 않고, 필요할 때 Core 문서를 확인한다.
+
+{input_sections}
+"""
+        else:
+            content = f"""# {run_id} Build Wave {bw_id} - {run_title}
 
 ```yaml
 run_id: {run_id}
@@ -6443,7 +6883,7 @@ def cmd_version(project_dir="."):
 
 # ── init ───────────────────────────────────────────────────────────────────
 
-def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_seed="", trace_depth=2, project_dir="."):
+def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_seed="", trace_depth=None, project_dir="."):
     if skill not in RUN_SKILLS:
         print(f"오류: 알 수 없는 skill입니다: {skill}")
         print("사용 가능 skill:")
@@ -6466,6 +6906,8 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         if skill == "qa-fix-loop" and "qa-fix-loop" not in slugify(title):
             file_title = f"qa-fix-loop-{title}"
         rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(file_title)}_v0.1.md")
+        profile = load_delivery_profile(project_dir)
+        trace_depth = effective_trace_depth(project_dir, trace_depth)
         trace_info = trace_context_run_enrichment(
             os.path.abspath(project_dir),
             trace_seed=trace_seed,
@@ -6475,13 +6917,12 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         )
         ids = trace_info.get("related_ids", split_csv(related_ids))
         skill_path = RUN_SKILLS[skill]
-        profile = load_delivery_profile(project_dir)
         preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
         if preset and trace_info.get("reference_on_demand"):
             source_docs = preset.setdefault("source_documents", {})
-            source_docs["reference_on_demand"] = merge_unique(
-                trace_info["reference_on_demand"],
-                source_docs.get("reference_on_demand", []),
+            source_docs["reference_on_demand"] = compact_reference_documents_for_profile(
+                profile,
+                merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
             )
         run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
         completion_section_number = "6" if preset else "5"
@@ -7163,7 +7604,7 @@ def antigravity_conversation_id_from_log(log_path):
     return conversation_id
 
 
-def antigravity_transcript_path(conversation_id):
+def antigravity_transcript_log_dir(conversation_id):
     if not conversation_id:
         return ""
     return os.path.join(
@@ -7174,6 +7615,28 @@ def antigravity_transcript_path(conversation_id):
         conversation_id,
         ".system_generated",
         "logs",
+    )
+
+
+def antigravity_transcript_paths(conversation_id):
+    log_dir = antigravity_transcript_log_dir(conversation_id)
+    if not log_dir:
+        return []
+    return [
+        os.path.join(log_dir, "transcript_full.jsonl"),
+        os.path.join(log_dir, "transcript.jsonl"),
+    ]
+
+
+def antigravity_transcript_path(conversation_id):
+    for path in antigravity_transcript_paths(conversation_id):
+        if os.path.exists(path):
+            return path
+    log_dir = antigravity_transcript_log_dir(conversation_id)
+    if not log_dir:
+        return ""
+    return os.path.join(
+        log_dir,
         "transcript.jsonl",
     )
 
@@ -7187,7 +7650,7 @@ def extract_antigravity_event_text(event):
         return ""
     if event_type not in {"PLANNER_RESPONSE", "FINAL_RESPONSE", "MODEL_RESPONSE", "TEXT", "CODE_ACTION"}:
         return ""
-    for key in ("content", "text", "message", "thinking"):
+    for key in ("content", "text", "message"):
         value = event.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
@@ -7196,17 +7659,20 @@ def extract_antigravity_event_text(event):
 
 def antigravity_transcript_probe(log_path):
     conversation_id = antigravity_conversation_id_from_log(log_path)
-    transcript = antigravity_transcript_path(conversation_id)
+    transcript_paths = antigravity_transcript_paths(conversation_id)
+    transcript = next((path for path in transcript_paths if os.path.exists(path)), "")
     probe = {
         "conversation_id": conversation_id,
-        "transcript_path": transcript if os.path.exists(transcript) else "",
+        "transcript_path": transcript,
+        "transcript_paths": [path for path in transcript_paths if os.path.exists(path)],
         "transcript_message": "",
         "has_transcript_response": False,
+        "has_transcript_model_event": False,
     }
     if not probe["transcript_path"]:
         return probe
     last_message = ""
-    has_response = False
+    has_model_event = False
     try:
         with open(transcript, encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -7215,14 +7681,15 @@ def antigravity_transcript_probe(log_path):
                 except json.JSONDecodeError:
                     continue
                 if event.get("source") == "MODEL":
-                    has_response = True
+                    has_model_event = True
                 text = extract_antigravity_event_text(event)
                 if text:
                     last_message = text
     except OSError:
         return probe
     probe["transcript_message"] = last_message
-    probe["has_transcript_response"] = has_response
+    probe["has_transcript_response"] = bool(last_message)
+    probe["has_transcript_model_event"] = has_model_event
     return probe
 
 
@@ -8703,15 +9170,43 @@ def cmd_review_run(
         exec_result_abs = result_abs
 
     runner_config = runtime_runner_config(config, runner_normalized)
+    model_resolution = {
+        "model_source": runner_model_source(runner_normalized),
+        "effort_source": "runner-config",
+        "policy_role": "",
+    }
     if runner_normalized == "codex-cli":
-        model = model or review_config_get(review_config, "model", "") or runner_config.get("model") or "gpt-5.5"
-        reasoning_effort = (
-            reasoning_effort
-            or review_config_get(review_config, "reasoning_effort", "")
-            or runner_config.get("reasoning_effort")
-            or runner_config.get("effort")
-            or "high"
-        )
+        cli_model = model
+        cli_effort = reasoning_effort
+        review_model = review_config_get(review_config, "model", "")
+        review_effort = review_config_get(review_config, "reasoning_effort", "")
+        if cli_model or cli_effort:
+            model, reasoning_effort, model_resolution = resolve_codex_model_effort(
+                config,
+                "review",
+                explicit_model=cli_model,
+                explicit_effort=cli_effort,
+                runner_config=runner_config,
+            )
+        elif review_model or review_effort:
+            model = review_model or runner_config.get("model") or "gpt-5.5"
+            reasoning_effort = (
+                review_effort
+                or runner_config.get("reasoning_effort")
+                or runner_config.get("effort")
+                or "high"
+            )
+            model_resolution = {
+                "model_source": "review-config" if review_model else "runner-config",
+                "effort_source": "review-config" if review_effort else "runner-config",
+                "policy_role": "review",
+            }
+        else:
+            model, reasoning_effort, model_resolution = resolve_codex_model_effort(
+                config,
+                "review",
+                runner_config=runner_config,
+            )
     elif runner_normalized == "claude-cli":
         model = model or review_config_get(review_config, "claude_model", "") or runner_config.get("model") or "claude-opus-4-7"
         reasoning_effort = (
@@ -8864,6 +9359,10 @@ Rules:
         print(f"  runner: {runner_normalized}")
         print(f"  model: {model or '(runner default)'}")
         print(f"  reasoning_effort: {reasoning_effort}")
+        print(f"  model_source: {model_resolution.get('model_source')}")
+        print(f"  effort_source: {model_resolution.get('effort_source')}")
+        if model_resolution.get("policy_role"):
+            print(f"  model_policy_role: {model_resolution.get('policy_role')}")
         if runner_normalized == "antigravity-cli":
             print("  model_source: agy-config-inherited")
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
@@ -8886,7 +9385,9 @@ Rules:
         "requested_runner": requested_runner or runner_normalized,
         "model": model or "(runner default)",
         "reasoning_effort": reasoning_effort,
-        "model_source": runner_model_source(runner_normalized),
+        "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
+        "effort_source": model_resolution.get("effort_source") or "",
+        "model_policy_role": model_resolution.get("policy_role") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "started_at": started_at,
@@ -9061,7 +9562,9 @@ status: {run_status}
 runner: {runner_normalized}
 model: {model or "(runner default)"}
 reasoning_effort: {reasoning_effort}
-model_source: {runner_model_source(runner_normalized)}
+model_source: {model_resolution.get("model_source") or runner_model_source(runner_normalized)}
+effort_source: {model_resolution.get("effort_source") or ""}
+model_policy_role: {model_resolution.get("policy_role") or ""}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 exit_code: {exit_code}
@@ -9104,10 +9607,26 @@ transcript_response_detected: {str(bool(agy_probe.get("has_transcript_response")
 def infer_execution_role(run_content, metadata):
     persona = (metadata.get("persona") or "").lower()
     skill = (metadata.get("skill") or "").lower()
-    title_hint = (metadata.get("run_id") or "").lower()
+    title_hint = f"{metadata.get('run_id') or ''} {metadata.get('title') or ''} {metadata.get('bw_id') or ''}".lower()
     text = run_content.lower()
+    header_text = run_content[:2000].lower()
+
+    if skill == "qa-execution" or "qa-execution" in text:
+        return "qa-execution"
+    if skill == "qa-fix-loop" or "qa-fix-loop" in text:
+        return "qa-fix-loop"
 
     if skill in ("build-wave", "implementation-scaffold") or persona in ("build", "frontend", "backend", "ui", "screen"):
+        if persona == "backend" or "backend" in title_hint or "백엔드" in title_hint:
+            return "build-backend"
+        if persona in ("ui", "screen", "frontend") or "frontend" in title_hint or "프론트" in title_hint:
+            return "build-frontend"
+        header_frontend = min([idx for idx in [header_text.find("frontend"), header_text.find("front-end"), header_text.find("프론트")] if idx >= 0] or [999999])
+        header_backend = min([idx for idx in [header_text.find("backend"), header_text.find("back-end"), header_text.find("백엔드")] if idx >= 0] or [999999])
+        if header_backend < header_frontend:
+            return "build-backend"
+        if header_frontend < header_backend:
+            return "build-frontend"
         if "frontend" in text or "front-end" in text or "프론트" in run_content or persona in ("ui", "screen", "frontend"):
             return "build-frontend"
         if "backend" in text or "back-end" in text or "백엔드" in run_content or persona == "backend":
@@ -9169,13 +9688,18 @@ def cmd_run_exec(
         sys.exit(1)
 
     runner_config = runtime_runner_config(config, runner_normalized)
+    model_resolution = {
+        "model_source": runner_model_source(runner_normalized),
+        "effort_source": "runner-config",
+        "policy_role": "",
+    }
     if runner_normalized == "codex-cli":
-        model = model or runner_config.get("model") or "gpt-5.5"
-        reasoning_effort = (
-            reasoning_effort
-            or runner_config.get("reasoning_effort")
-            or runner_config.get("effort")
-            or "high"
+        model, reasoning_effort, model_resolution = resolve_codex_model_effort(
+            config,
+            role,
+            explicit_model=model,
+            explicit_effort=reasoning_effort,
+            runner_config=runner_config,
         )
     elif runner_normalized == "claude-cli":
         model = model or runner_config.get("model") or "claude-opus-4-7"
@@ -9379,6 +9903,10 @@ Worker dependency cache:
         print(f"  runner: {runner_normalized}")
         print(f"  model: {model or '(runner default)'}")
         print(f"  reasoning_effort: {reasoning_effort}")
+        print(f"  model_source: {model_resolution.get('model_source')}")
+        print(f"  effort_source: {model_resolution.get('effort_source')}")
+        if model_resolution.get("policy_role"):
+            print(f"  model_policy_role: {model_resolution.get('policy_role')}")
         if runner_normalized == "antigravity-cli":
             print("  model_source: agy-config-inherited")
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
@@ -9469,7 +9997,9 @@ Worker dependency cache:
         "runner": runner_normalized,
         "model": model or "(runner default)",
         "reasoning_effort": reasoning_effort,
-        "model_source": runner_model_source(runner_normalized),
+        "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
+        "effort_source": model_resolution.get("effort_source") or "",
+        "model_policy_role": model_resolution.get("policy_role") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
@@ -9687,7 +10217,9 @@ Worker dependency cache:
         "runner": runner_normalized,
         "model": model or "(runner default)",
         "reasoning_effort": reasoning_effort,
-        "model_source": runner_model_source(runner_normalized),
+        "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
+        "effort_source": model_resolution.get("effort_source") or "",
+        "model_policy_role": model_resolution.get("policy_role") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
@@ -9731,7 +10263,9 @@ status: {run_status}
 runner: {runner_normalized}
 model: {model or "(runner default)"}
 reasoning_effort: {reasoning_effort}
-model_source: {runner_model_source(runner_normalized)}
+model_source: {model_resolution.get("model_source") or runner_model_source(runner_normalized)}
+effort_source: {model_resolution.get("effort_source") or ""}
+model_policy_role: {model_resolution.get("policy_role") or ""}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 worktree_path: {worktree_path or ""}
@@ -10825,6 +11359,7 @@ def run_preflight_or_exit(run_file, context="run-exec"):
 
 
 def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFILE):
+    profile = normalize_delivery_profile(profile)
     session = {
         "project": project_name,
         "vulcan_src": VULCAN_DIR,
@@ -10858,13 +11393,68 @@ def deep_merge_dict(base, updates):
     return base
 
 
-def default_vulcan_config(available_runners=None):
+def codex_model_policy(config):
+    runtime = config.get("runtime", {}) if isinstance(config.get("runtime"), dict) else {}
+    policy_root = runtime.get("model_policy", {}) if isinstance(runtime.get("model_policy"), dict) else {}
+    codex_policy = policy_root.get("codex-cli", {}) if isinstance(policy_root.get("codex-cli"), dict) else {}
+    policy = json.loads(json.dumps(CODEX_MODEL_POLICY_DEFAULTS))
+    deep_merge_dict(policy, codex_policy)
+    return policy
+
+
+def resolve_codex_model_effort(config, role, explicit_model=None, explicit_effort=None, runner_config=None):
+    runner_config = runner_config or {}
+    policy = codex_model_policy(config)
+    policy_enabled = bool(policy.get("enabled", True))
+    roles = policy.get("roles", {}) if isinstance(policy.get("roles"), dict) else {}
+    fallback = policy.get("fallback", {}) if isinstance(policy.get("fallback"), dict) else {}
+    role_config = roles.get(role, {}) if policy_enabled and isinstance(roles.get(role), dict) else {}
+
+    model_source = "cli-argument" if explicit_model else ""
+    effort_source = "cli-argument" if explicit_effort else ""
+    model = explicit_model or role_config.get("model")
+    reasoning_effort = explicit_effort or role_config.get("effort") or role_config.get("reasoning_effort")
+    if model and not model_source:
+        model_source = f"codex-model-policy:{role}"
+    if reasoning_effort and not effort_source:
+        effort_source = f"codex-model-policy:{role}"
+
+    if not model:
+        model = runner_config.get("model") or fallback.get("model") or "gpt-5.5"
+        model_source = "runner-config" if runner_config.get("model") else "codex-model-policy:fallback"
+    if not reasoning_effort:
+        reasoning_effort = (
+            runner_config.get("reasoning_effort")
+            or runner_config.get("effort")
+            or fallback.get("effort")
+            or fallback.get("reasoning_effort")
+            or "high"
+        )
+        effort_source = (
+            "runner-config"
+            if runner_config.get("reasoning_effort") or runner_config.get("effort")
+            else "codex-model-policy:fallback"
+        )
+    return model, reasoning_effort, {
+        "model_source": model_source,
+        "effort_source": effort_source,
+        "policy_role": role if role_config else "fallback",
+    }
+
+
+def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFILE):
     has_runner = bool(available_runners) if available_runners is not None else True
+    normalized_profile = normalize_delivery_profile(profile)
     config = {
         "version": VULCAN_VERSION,
+        "delivery_profile": normalized_profile,
+        "profile_rules": delivery_profile_rules(normalized_profile),
         "runtime": {
             "primary": None,
-            "available_runners": available_runners or []
+            "available_runners": available_runners or [],
+            "model_policy": {
+                "codex-cli": CODEX_MODEL_POLICY_DEFAULTS
+            }
         },
         "workflow": {
             "branch_mode": "audit",
@@ -10900,13 +11490,13 @@ def default_vulcan_config(available_runners=None):
     return config
 
 
-def create_vulcan_config(target_dir):
+def create_vulcan_config(target_dir, profile=DEFAULT_DELIVERY_PROFILE):
     rel_path = "vulcan.config.json"
     path = os.path.join(target_dir, rel_path)
     if os.path.exists(path):
         return
     available_runners = detect_runtime_runners()
-    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners), ensure_ascii=False, indent=2))
+    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners, profile=profile), ensure_ascii=False, indent=2))
 
 
 def load_vulcan_config(project_dir="."):
@@ -11038,6 +11628,47 @@ def cmd_branch_status(project_dir="."):
         print(f"  qa_workspace_last_stage: {qa_state.get('last_stage') or '-'}")
     print(f"  integration_exists: {git_branch_exists(integration_branch, project_abs)}")
     print(f"  dirty_blocking: {has_blocking_dirty_status(project_abs)}")
+
+
+def cmd_profile_status(project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    session = {}
+    session_path = os.path.join(project_abs, "session.json")
+    if os.path.exists(session_path):
+        try:
+            session = load_session(project_abs)
+        except SystemExit:
+            session = {}
+    config = load_vulcan_config(project_abs)
+    profile = load_delivery_profile(project_abs)
+    config_profile = normalize_delivery_profile(config.get("delivery_profile") or profile)
+    config_rules = config.get("profile_rules", {}) if isinstance(config.get("profile_rules"), dict) else {}
+    default_rules = delivery_profile_rules(profile)
+    merged_rules = dict(default_rules)
+    merged_rules.update(config_rules)
+
+    print("Vulcan delivery profile status")
+    print(f"  project: {session.get('project') or os.path.basename(project_abs)}")
+    print(f"  session_profile: {normalize_delivery_profile(session.get('profile') or session.get('delivery_profile') or profile)}")
+    print(f"  config_profile: {config_profile}")
+    print(f"  effective_profile: {profile}")
+    if config_profile != profile:
+        print("  warning: session profile and config delivery_profile differ; session wins for Run preset selection")
+    print("  supported_profiles: " + ", ".join(SUPPORTED_DELIVERY_PROFILES))
+    print("  profile_rules:")
+    for key in (
+        "gate_approval",
+        "required_artifacts",
+        "traceability_level",
+        "program_contract_level",
+        "qa_evidence_level",
+        "independent_review_level",
+        "run_preflight_strictness",
+        "release_control",
+    ):
+        print(f"    {key}: {merged_rules.get(key) or '-'}")
+    if profile != "audit":
+        print("  note: non-audit profiles are recorded as overlay policy first; most checks still share audit-safe defaults until profile-specific strictness is implemented.")
 
 
 def cmd_branch_start(stage="impl", project_dir="."):
@@ -11391,8 +12022,9 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     install_project_artifacts(target_dir, variables, overwrite=False)
 
     # session.json
+    profile = normalize_delivery_profile(profile)
     create_session_json(target_dir, project_name, profile)
-    create_vulcan_config(target_dir)
+    create_vulcan_config(target_dir, profile=profile)
 
     # vulcan.py 자신을 프로젝트에 복사
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
@@ -11475,6 +12107,7 @@ def main():
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
+  profile-status Delivery Profile과 profile_rules 확인
   release-pr   Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
@@ -11493,6 +12126,7 @@ def main():
   python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py sync-session
+  python vulcan.py profile-status
   python vulcan.py branch-status
   python vulcan.py branch-start impl
   python vulcan.py release-pr --dry-run
@@ -11510,9 +12144,10 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
-    p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=["audit", "solution", "poc", "lite"], help="Delivery Profile")
+    p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=list(SUPPORTED_DELIVERY_PROFILES), help="Delivery Profile")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+    subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
 
     p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
     p_check_contract.add_argument("--program-design", default="", help="프로그램 설계서 경로")
@@ -11561,7 +12196,7 @@ def main():
     p_wave_start.add_argument("--title", default="", help="Wave 제목")
     p_wave_start.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
     p_wave_start.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
-    p_wave_start.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이")
+    p_wave_start.add_argument("--trace-depth", type=int, default=None, help="trace-context 탐색 깊이 (기본: audit 2, poc 1)")
 
     p_wave_complete = subparsers.add_parser("wave-complete", help="Build Wave 완료/상태 갱신")
     p_wave_complete.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
@@ -11576,7 +12211,7 @@ def main():
     p_run_new.add_argument("--title", required=True, help="Run 제목")
     p_run_new.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
     p_run_new.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
-    p_run_new.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이")
+    p_run_new.add_argument("--trace-depth", type=int, default=None, help="trace-context 탐색 깊이 (기본: audit 2, poc 1)")
 
     p_run_check = subparsers.add_parser("run-check", help="Run 결과 문서 검사")
     p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
@@ -11710,6 +12345,8 @@ def main():
         )
     elif args.command == "check-trace":
         check_trace()
+    elif args.command == "profile-status":
+        cmd_profile_status()
     elif args.command == "check-contract":
         sys.exit(cmd_check_contract(
             program_design=args.program_design,

@@ -67,12 +67,13 @@ Vulcan-Anvil Ex의 리뷰는 두 가지로만 구분한다.
 
 ## 4. 모델과 추론 강도
 
-독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 Codex 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
+독립 검수는 작성자가 놓친 누락, 모순, 미실행 검증을 잡아내는 역할이므로 Codex `review` role 기본값은 `gpt-5.5`와 `high` reasoning effort를 권장한다.
+Codex runner의 역할별 model/effort 정책은 `CODEX_MODEL_POLICY.md`와 `vulcan.config.json.runtime.model_policy.codex-cli`를 따른다.
 Claude runner 기본값은 `claude-opus-4-7`과 `high` effort를 사용한다.
 Antigravity runner 기본값은 `gemini-3.5-flash`와 `high` effort를 사용한다.
 Claude runner는 worktree 또는 독립 실행 디렉터리 격리를 전제로 `--dangerously-skip-permissions`를 사용해 권한 확인 대기 없이 검수 명령을 끝까지 수행한다. Orchestrator는 결과 파일과 diff를 다시 확인한 뒤 반영 여부를 판단한다.
 
-프로젝트 기본 모델과 effort는 `runtime.available_runners`에서 정한다.
+프로젝트 기본 모델과 effort는 `runtime.available_runners`에서 정하고, Codex는 `runtime.model_policy.codex-cli`로 역할별 override를 둘 수 있다.
 
 ```json
 {
@@ -190,10 +191,10 @@ python vulcan.py agent-run --mode review --review-id RV-001
 - `claude-cli`는 `claude -p`를 새 비대화형 실행으로 사용한다.
 - `antigravity-cli`는 `agy.exe --print`를 새 headless 실행으로 사용한다.
 - worktree가 있으면 해당 worktree를 `--cd`로 사용한다.
-- 모델과 reasoning effort는 기본적으로 `vulcan.config.json.review` 값을 사용하며, `--model`, `--reasoning-effort`로 실행 단위 override가 가능하다.
+- 모델과 reasoning effort는 기본적으로 `vulcan.config.json.review` 또는 Codex role policy 값을 사용하며, `--model`, `--reasoning-effort`로 실행 단위 override가 가능하다.
 - Antigravity runner는 `--add-dir <worktree>`와 프롬프트에 포함된 review request/result 경로를 기본 입력으로 사용한다. 나머지 상류/작업 문서는 request 안의 계약을 따라 worker가 직접 읽는다.
 - 실행 로그를 `docs/reviews/RV-NNN_{runner}-exec.*`에 남긴다.
-- 마지막 응답을 `docs/reviews/RV-NNN_{runner}-last-message.md`에 남긴다.
+- 마지막 응답을 `docs/reviews/RV-NNN_{runner}-last-message.md`에 남긴다. Antigravity runner는 stdout이 비어 있을 수 있으므로 `transcript_full.jsonl` 우선, `transcript.jsonl` fallback 순서로 마지막 모델 응답을 회수한다.
 - 실행 시작과 종료 상태를 `docs/runs/_exec/RV-NNN_{runner}-activity.json`에 남긴다. 로컬 대시보드는 이 파일로 `running`, `completed`, `failed`, `timeout` 상태를 표시한다.
 - result 파일 변경 여부와 exit code를 Independent Review Run에 기록한다.
 

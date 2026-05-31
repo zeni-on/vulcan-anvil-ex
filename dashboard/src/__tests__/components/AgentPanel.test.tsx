@@ -78,4 +78,27 @@ describe('AgentPanel worker activity drawer', () => {
 
     expect(refreshMock).toHaveBeenCalledTimes(1)
   })
+
+  it('완료됐지만 결과 파일이 미갱신된 worker는 진행 작업 목록에서 숨긴다', () => {
+    const completedRuntime: ProjectRuntime = {
+      ...runtime,
+      active_executions: [
+        {
+          target_type: 'run',
+          target_id: 'RUN-016',
+          runner: 'antigravity-cli',
+          status: 'completed_no_result_change',
+          phase: 'completed_no_result_change',
+          current_task: 'RUN-016 worker 결과 작성 완료',
+          completed_at: '2026-05-31T20:54:17',
+          log: 'docs/runs/_exec/RUN-016_antigravity-exec.txt',
+        },
+      ],
+    }
+
+    render(<AgentPanel runtime={completedRuntime} />)
+
+    expect(screen.queryByTestId('agent-worker-line')).not.toBeInTheDocument()
+    expect(screen.getByText('실행 중인 worker가 없습니다.')).toBeInTheDocument()
+  })
 })

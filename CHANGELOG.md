@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.4.4 - 2026-05-31
+
+`0.4.4`는 `0.4.3`의 trace-seed와 Gate 4 QA 안정화 흐름을 유지하면서 PoC Profile의 Run 입력 문서와 Antigravity 결과 회수를 경량화한 패치 릴리즈다.
+
+Release notes: [docs/releases/v0.4.4.md](docs/releases/v0.4.4.md)
+
+- PoC Profile에서 `run-new`와 `wave-start`의 기본 `--trace-depth`를 1로 낮췄다. audit profile은 기존 기본 depth 2를 유지한다.
+- PoC Run의 `source_documents.reference_on_demand`를 직접 관련 문서 중심으로 제한하고, worker Run에 `worker_run_sizing_policy`와 오케스트레이터용 Run protocol 문서가 반복 삽입되지 않도록 했다.
+- `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 추가해 PoC 경량화의 목적, 적용 범위, 후속 작업을 문서화했다.
+- Windows `agy.exe` runner가 stdout을 비워도 `transcript_full.jsonl` 우선, `transcript.jsonl` fallback 순서로 마지막 모델 응답을 회수한다.
+- fixture smoke에 PoC compact Run과 PoC trace-depth 기본값 검증을 추가했다.
+
 ## 0.4.3 - 2026-05-31
 
 `0.4.3`은 `0.4.2`의 worker watchdog 흐름을 유지하면서 Run 입력 품질, Gate 4 QA 결과 판정, 요구사항추적표 최종 상태 정리를 보강한 패치 릴리즈다.

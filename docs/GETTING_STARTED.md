@@ -6,9 +6,20 @@ Vulcan-Anvil Ex는 사용자가 명령어를 하나씩 넣어 산출물을 수�
 
 ```powershell
 python vulcan.py init ../my-project "My Project"
+python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-poc "My PoC" --profile poc
 ```
 
 초기화하면 Core 문서, 템플릿, adapter 문서, 공개 표준 참고자료, `AGENTS.md`, `session.json`, 프로젝트용 `vulcan.py`가 생성됩니다.
+
+`--profile`을 지정하지 않으면 기본값은 `audit`입니다.
+`solution`, `poc`는 초기화 시 선택할 수 있으며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
+Profile은 결과물의 품질 등급이 아니라 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식의 차이입니다.
+현재 프로젝트의 Profile은 다음 명령으로 확인합니다.
+
+```powershell
+python vulcan.py profile-status
+```
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
@@ -58,6 +69,20 @@ cd ../my-project
 ```
 
 이 요청은 구현을 바로 시작하라는 뜻이 아닙니다. 메인 에이전트가 `AGENTS.md`, `session.json`, `docs/core/`, adapter 문서, 현재 Gate 상태를 먼저 확인하고, 이후 Gate별 진행을 안정적으로 조율하도록 만드는 초기 정렬 단계입니다.
+
+PoC Profile로 시작했다면 다음처럼 목표와 운영 강도를 함께 알려주는 것이 좋습니다.
+
+```text
+이 프로젝트는 PoC profile이야.
+감리 제출 수준 문서가 아니라 목표, 가설, 성공 기준, smoke/demo 검증 결과를 중심으로 진행해줘.
+실패하거나 미실행한 항목은 Pass로 기록하지 말고 PoC 결과나 다음 판단 항목으로 남겨줘.
+```
+
+PoC Run 초안은 다음처럼 생성할 수 있습니다.
+
+```powershell
+python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
+```
 
 그 다음 만들고 싶은 기능이나 제약을 말합니다.
 
@@ -112,6 +137,7 @@ my-project/
 | `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
 | `run-new --trace-seed <ID>` | 추적성 그래프 기반으로 Run 초안의 관련 ID와 참조 문서 후보 보강 |
 | `wave-start <BW-ID> --trace-seed <ID>` | Build Wave Run 초안의 `related_ids`, `target_contracts`, 참조 문서 후보 보강 |
+| `profile-status` | 현재 Delivery Profile과 `profile_rules` 확인 |
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
 | `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
@@ -126,7 +152,10 @@ my-project/
 | `upgrade` | 기존 프로젝트에 최신 framework 문서 반영 |
 | `version` | 현재 Vulcan-Anvil Ex 버전 확인 |
 
-독립 검수와 교차검증의 기본 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`에서 정한다. 감리/QA 목적의 Gate 2, Gate 4 검수는 Codex 기준 `gpt-5.5` + `high`를 권장한다.
+독립 검수와 교차검증의 기본 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`와 `runtime.model_policy`에서 정한다.
+Codex runner는 기본적으로 역할별 model/effort 정책을 사용한다.
+감리/QA 목적의 Gate 2, Gate 4 검수는 Codex 기준 `gpt-5.5` + `high`를 권장하고, QA 실행/로그 정리 같은 작업은 더 가벼운 정책을 사용할 수 있다.
+자세한 기준은 `docs/core/CODEX_MODEL_POLICY.md`를 따른다.
 Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude CLI는 `claude -p` 기반 비대화형 실행을 사용하며 기본값은 `claude-opus-4-7` + `high` effort다.
 
 새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 교차검증을 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.

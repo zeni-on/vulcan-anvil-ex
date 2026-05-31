@@ -57,9 +57,10 @@ text_drip.go:173] Drip stopped: lastStepIdx=2, charIdx=2, length=2
 Stopping conversation stream
 ```
 
-Windows에서 stdout이 비어 있는데도 실제 응답이 생성된 경우 다음 transcript에 `MODEL` 또는 `PLANNER_RESPONSE` 이벤트가 남을 수 있다.
+Windows에서 stdout이 비어 있는데도 실제 응답이 생성된 경우 다음 transcript에 `MODEL` 또는 `PLANNER_RESPONSE` 이벤트가 남을 수 있다. 회수는 `transcript_full.jsonl`을 우선하고, 없으면 `transcript.jsonl`로 fallback한다.
 
 ```text
+%USERPROFILE%/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/transcript_full.jsonl
 %USERPROFILE%/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/transcript.jsonl
 ```
 
@@ -126,6 +127,6 @@ Windows `agy.exe` runner는 다음 순서로 결과를 판정한다.
 1. Run/result 파일이 변경됐는지 확인한다.
 2. stdout에 유효한 최종 응답이 있으면 last-message로 저장한다.
 3. stdout이 비어 있으면 `--log-file`에서 conversation id와 stream 상태를 확인한다.
-4. conversation id가 있으면 transcript fallback에서 마지막 `MODEL` 또는 `PLANNER_RESPONSE`를 추출한다.
+4. conversation id가 있으면 transcript fallback에서 마지막 `MODEL` 또는 `PLANNER_RESPONSE`의 실제 응답 본문을 추출한다. `transcript_full.jsonl`을 먼저 읽고, 없으면 `transcript.jsonl`을 읽는다.
 5. result 파일 변경이 없고 stdout/log/transcript도 의미 있는 응답이 없으면 `failed_empty_output`으로 처리한다.
 6. stdout 또는 transcript에 응답이 있어도 result 파일을 갱신하지 않았다면 `completed_no_result_change`로 처리하고 Orchestrator가 재실행, resume, 수동 정규화 중 하나를 선택한다.

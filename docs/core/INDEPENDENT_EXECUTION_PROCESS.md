@@ -183,7 +183,7 @@ python vulcan.py run-integrate --run-id RUN-010 --apply
 - `activity.json.events`에는 최근 100개의 정규화된 worker 이벤트를 저장한다. 대시보드는 기본 화면에는 마지막 상태만 표시하고, worker를 클릭하면 `events` timeline 레이어를 보여준다.
 - `codex-cli`는 `--json` JSONL stdout을 파싱하되, stdout 앞에 섞일 수 있는 non-JSON 경고 줄은 무시한다. `thread.started`, `turn.started`, `item.started/completed` 같은 상태 이벤트는 대시보드 `current_task`와 activity timeline으로 정규화한다.
 - `claude-cli`는 `--output-format stream-json --include-partial-messages`를 파싱해 `session_id`와 부분 메시지를 수집한다.
-- `antigravity-cli`/`agy.exe`는 현재 stdout 결과를 단독 신뢰하지 않고 `--log-file`을 필수로 지정해 conversation id, 모델 선택, stream 상태를 tail 하여 activity/status에 반영한다. Windows `agy.exe 1.0.3`에서는 stdout이 비어 있어도 transcript에 모델 응답이 남을 수 있으므로, result 파일 변경 여부와 log/transcript fallback을 함께 확인한다. `--add-dir`는 절대경로를 사용한다.
+- `antigravity-cli`/`agy.exe`는 현재 stdout 결과를 단독 신뢰하지 않고 `--log-file`을 필수로 지정해 conversation id, 모델 선택, stream 상태를 tail 하여 activity/status에 반영한다. Windows `agy.exe 1.0.3`에서는 stdout이 비어 있어도 transcript에 모델 응답이 남을 수 있으므로, result 파일 변경 여부와 log/transcript fallback을 함께 확인한다. transcript는 `transcript_full.jsonl`을 먼저 읽고, 없으면 `transcript.jsonl`을 읽어 마지막 모델 응답을 last-message로 회수한다. `--add-dir`는 절대경로를 사용한다.
 
 Context attach 기본값:
 
@@ -227,7 +227,38 @@ Context attach 기본값:
         "sandbox": "workspace-write",
         "version": "1.0.0"
       }
-    ]
+    ],
+    "model_policy": {
+      "codex-cli": {
+        "enabled": true,
+        "fallback": {
+          "model": "gpt-5.5",
+          "effort": "high"
+        },
+        "roles": {
+          "review": {
+            "model": "gpt-5.5",
+            "effort": "high"
+          },
+          "build": {
+            "model": "gpt-5.3-codex",
+            "effort": "high"
+          },
+          "qa-execution": {
+            "model": "gpt-5.4",
+            "effort": "medium"
+          },
+          "qa-fix-loop": {
+            "model": "gpt-5.3-codex",
+            "effort": "high"
+          },
+          "evidence-summary": {
+            "model": "gpt-5.4-mini",
+            "effort": "low"
+          }
+        }
+      }
+    }
   },
   "execution": {
     "independent_enabled": true,
@@ -258,6 +289,13 @@ Runner 목록 해석:
 
 예를 들어 Codex만 설치되어 있으면 교차검증은 아니지만 Codex CLI를 별도 세션/worktree로 실행해 독립검수와 동시 Build Wave를 수행할 수 있다.
 Codex, Claude, Antigravity 중 둘 이상이 설치되어 있으면 Gate 2, PR, Gate 4에서 교차검증을 기본 운영 후보로 둔다.
+
+Codex runner는 `runtime.model_policy.codex-cli`의 role 정책으로 model/effort를 동적으로 선택할 수 있다.
+명시 옵션 `--model`, `--reasoning-effort`가 있으면 항상 실행 옵션이 우선한다.
+명시 옵션이 없으면 `run-exec`/`agent-run --mode work`는 Run의 `skill`, `persona`, 제목, 내용을 기준으로 `build`, `build-backend`, `build-frontend`, `qa-execution`, `qa-fix-loop`, `review` 같은 role을 추론하고 해당 정책을 적용한다.
+`review-run`은 기본적으로 `review` role 정책을 적용한다.
+
+자세한 기준은 `CODEX_MODEL_POLICY.md`를 따른다.
 
 ## 8. Timeout과 runner 상태
 

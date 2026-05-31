@@ -94,9 +94,9 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.3**
+**Experimental - v0.4.4**
 
-`0.4.3`은 `0.4.2`의 worker watchdog 흐름을 유지하면서 Run 생성 trace-seed 보강, Gate 4 QA 결과서 우선 판정, 요구사항추적표 최종 검증 상태 정리를 보강한 안정화 패치입니다. 현재 worker 실행은 주기적 progress probe, no-progress timeout, hard timeout cap을 함께 사용합니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
+`0.4.4`는 `0.4.3`의 trace-seed와 Gate 4 QA 안정화 흐름을 유지하면서 PoC Profile Run 입력 계약을 경량화한 패치입니다. PoC는 기본 trace depth 1, compact `source_documents`, AGY transcript 회수 보강을 사용해 빠른 검증 비용을 줄이고, audit profile은 기존 강한 기준을 유지합니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 

@@ -200,6 +200,59 @@ def assert_trace_seed_generated_run(project_dir: Path, result: StepResult) -> No
         raise FixtureSmokeFailure(f"trace-seed generated Run missing required text: {missing}\n{content[:2000]}")
 
 
+def assert_poc_generated_run(project_dir: Path, result: StepResult) -> None:
+    run_path = run_doc_path_from_output(project_dir, result.combined_output)
+    if not run_path.exists():
+        raise FixtureSmokeFailure(f"PoC generated Run file was not found: {run_path}")
+    content = run_path.read_text(encoding="utf-8")
+    required = [
+        "profile: poc",
+        "PoC 목표, 가설, 성공 기준",
+        "python vulcan.py profile-status",
+        "제품화/감리 전환",
+        "docs/core/DELIVERY_PROFILES.md",
+    ]
+    missing = [text for text in required if text not in content]
+    if missing:
+        raise FixtureSmokeFailure(f"PoC generated Run missing required text: {missing}\n{content[:2000]}")
+    forbidden = [
+        "worker_run_sizing_policy:",
+        "docs/core/AGENT_RUN_PROTOCOL.md",
+        "docs/core/RUN_INPUT_CONTRACT.md",
+        "docs/core/RUN_OUTPUT_CONTRACT.md",
+    ]
+    present = [text for text in forbidden if text in content]
+    if present:
+        raise FixtureSmokeFailure(f"PoC generated Run should stay compact but included: {present}\n{content[:2000]}")
+
+
+def assert_poc_trace_seed_generated_run(project_dir: Path, result: StepResult) -> None:
+    run_path = run_doc_path_from_output(project_dir, result.combined_output)
+    if not run_path.exists():
+        raise FixtureSmokeFailure(f"PoC trace-seed generated Run file was not found: {run_path}")
+    content = run_path.read_text(encoding="utf-8")
+    required = [
+        "profile: poc",
+        "trace_context:",
+        "seeds: [REQ-001-01]",
+        "depth: 1",
+        "API-001",
+        "PGM-001",
+    ]
+    missing = [text for text in required if text not in content]
+    if missing:
+        raise FixtureSmokeFailure(f"PoC trace-seed generated Run missing required text: {missing}\n{content[:2000]}")
+    forbidden = [
+        "worker_run_sizing_policy:",
+        "docs/core/AGENT_RUN_PROTOCOL.md",
+        "docs/core/RUN_INPUT_CONTRACT.md",
+        "docs/core/RUN_OUTPUT_CONTRACT.md",
+    ]
+    present = [text for text in forbidden if text in content]
+    if present:
+        raise FixtureSmokeFailure(f"PoC trace-seed generated Run should stay compact but included: {present}\n{content[:2000]}")
+
+
 def assert_release_pr_body(result: StepResult) -> None:
     body_path = release_pr_body_path_from_output(result.combined_output)
     normalized = body_path.as_posix()
@@ -239,16 +292,87 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         base_dir = Path(temp_ctx.name)
 
     project_dir = base_dir / "regression-simple-hello"
+    profile_solution_dir = base_dir / "profile-solution-smoke"
+    profile_poc_dir = base_dir / "profile-poc-smoke"
     py = sys.executable
     steps: list[StepResult] = []
 
     try:
         steps.append(
             run_step(
+                "init-profile-solution",
+                [py, str(vulcan_py), "init", str(profile_solution_dir), "profile-solution-smoke", "--profile", "solution"],
+                cwd=root,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        steps.append(
+            run_step(
+                "profile-status-solution",
+                [py, "vulcan.py", "profile-status"],
+                cwd=profile_solution_dir,
+                required_text=[
+                    "effective_profile: solution",
+                    "run_preflight_strictness: scope-contract-blocking-other-warning",
+                ],
+            )
+        )
+        steps.append(
+            run_step(
+                "init-profile-poc",
+                [py, str(vulcan_py), "init", str(profile_poc_dir), "profile-poc-smoke", "--profile", "poc"],
+                cwd=root,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        steps.append(
+            run_step(
+                "profile-status-poc",
+                [py, "vulcan.py", "profile-status"],
+                cwd=profile_poc_dir,
+                required_text=[
+                    "effective_profile: poc",
+                    "run_preflight_strictness: warning-first",
+                ],
+            )
+        )
+        poc_run_new = run_step(
+            "run-new-profile-poc",
+            [
+                py,
+                "vulcan.py",
+                "run-new",
+                "--gate",
+                "phase0",
+                "--skill",
+                "orchestrator-plan",
+                "--title",
+                "PoC Hypothesis Smoke",
+                "--related-ids",
+                "POC-001",
+            ],
+            cwd=profile_poc_dir,
+            required_text=["Run 초안 생성 완료"],
+        )
+        assert_poc_generated_run(profile_poc_dir, poc_run_new)
+        steps.append(poc_run_new)
+        steps.append(
+            run_step(
                 "init",
                 [py, str(vulcan_py), "init", str(project_dir), "regression-simple-hello"],
                 cwd=root,
                 timeout_seconds=args.timeout_seconds,
+            )
+        )
+        steps.append(
+            run_step(
+                "profile-status-audit",
+                [py, "vulcan.py", "profile-status"],
+                cwd=project_dir,
+                required_text=[
+                    "effective_profile: audit",
+                    "run_preflight_strictness: blocking",
+                ],
             )
         )
         apply_fixture(fixture_dir, project_dir)
@@ -459,6 +583,42 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         assert_trace_seed_generated_run(project_dir, trace_seed_wave)
         steps.append(trace_seed_wave)
+
+        session_poc_trace_seed = json.loads(session_path.read_text(encoding="utf-8"))
+        session_poc_trace_seed["profile"] = "poc"
+        session_poc_trace_seed["delivery_profile"] = "poc"
+        session_poc_trace_seed["current_gate"] = "impl"
+        session_path.write_text(
+            json.dumps(session_poc_trace_seed, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        config_path = project_dir / "vulcan.config.json"
+        config_poc_trace_seed = json.loads(config_path.read_text(encoding="utf-8"))
+        config_poc_trace_seed["delivery_profile"] = "poc"
+        config_path.write_text(
+            json.dumps(config_poc_trace_seed, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        poc_trace_seed_run_new = run_step(
+            "run-new-poc-trace-depth-default",
+            [
+                py,
+                "vulcan.py",
+                "run-new",
+                "--gate",
+                "impl",
+                "--skill",
+                "build-wave",
+                "--title",
+                "PoC Trace Depth Default Smoke",
+                "--trace-seed",
+                "REQ-001-01",
+            ],
+            cwd=project_dir,
+            required_text=["trace-context 보강", "related_ids"],
+        )
+        assert_poc_trace_seed_generated_run(project_dir, poc_trace_seed_run_new)
+        steps.append(poc_trace_seed_run_new)
 
         print("Vulcan fixture smoke regression: PASS")
         print(f"  fixture: {args.fixture}")

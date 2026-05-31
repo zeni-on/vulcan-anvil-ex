@@ -28,7 +28,7 @@ Profile은 Core 규칙을 없애는 예외가 아니다.
 Core의 ID, Run, Traceability, Gate 원칙은 유지하되, 프로젝트 목적에 맞게 산출물 깊이와 검증 범위를 조절한다.
 
 Profile은 별도 Core 문서 세트가 아니라 `Core + Profile Overlay`로 운영한다.
-즉 `audit`, `solution`, `poc`, `lite`마다 규칙을 복제하지 않고, 동일한 Core 문서와 명령을 사용하되 산출물 필수 여부, 검사 엄격도, 승인 지점, 증적 수준만 Profile Overlay로 조정한다.
+즉 `audit`, `solution`, `poc`마다 규칙을 복제하지 않고, 동일한 Core 문서와 명령을 사용하되 산출물 필수 여부, 검사 엄격도, 승인 지점, 증적 수준만 Profile Overlay로 조정한다.
 Profile이 달라져도 Run, ID, Traceability, Gate, Worker, QA의 기본 의미는 바뀌지 않는다.
 
 ## 3. Profile 분류
@@ -36,9 +36,8 @@ Profile이 달라져도 Run, ID, Traceability, Gate, Worker, QA의 기본 의미
 | Profile | 대상 | 특징 | 기본 강도 |
 | --- | --- | --- | --- |
 | `Audit Profile` | 공공/SI/감리 대응 프로젝트 | 요구사항, 설계, 테스트, 보안, 증적, CR을 가장 엄격하게 관리 | 높음 |
-| `Solution Profile` | 제품/솔루션 개발 | 감리 제출보다 제품 로드맵, 릴리즈, 아키텍처 결정, 품질 기준 중심 | 중간 |
+| `Solution Profile` | 일반 앱/제품/솔루션 개발 | 품질은 유지하되 감리 제출 수준의 문서/증적 밀도는 줄이고, 제품 로드맵, 릴리즈, 아키텍처 결정, 품질 기준 중심으로 운영 | 중간 |
 | `PoC Profile` | 실험/검증/프로토타입 | Phase 0, Gate 1, Gate 2를 가볍게 묶고 핵심 가설 검증에 집중 | 낮음~중간 |
-| `Lite Profile` | 개인/소규모 기능 개발 | 문서보다 Run 기록, 요구사항 요약, 테스트 결과 중심 | 낮음 |
 
 ## 4. Profile별 운영 기준
 
@@ -55,6 +54,10 @@ Profile Overlay는 다음 필드를 기준으로 정의한다.
 | `run_preflight_strictness` | Run 입력 계약 사전 차단/경고 기준 |
 | `release_control` | 릴리즈 승인, backlog, CR, release note 관리 수준 |
 
+Profile은 결과물의 품질 등급이 아니다.
+모든 Profile은 정상 동작, 검증 가능한 테스트, 실패/미실행의 정직한 기록을 요구한다.
+차이는 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식이다.
+
 Profile별 기본 Overlay는 다음과 같다.
 
 | Profile | `gate_approval` | `traceability_level` | `program_contract_level` | `qa_evidence_level` | `independent_review_level` | `run_preflight_strictness` |
@@ -62,10 +65,10 @@ Profile별 기본 Overlay는 다음과 같다.
 | `audit` | 모든 Gate 명시 승인 | 전체 REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI | class/interface/public method 수준 | QA-000~QA-003, 명령 로그, UI 증적, FIND/CR | Gate 2, Gate 4, 필요 시 PR | 강한 차단 중심 |
 | `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | 릴리즈 회귀, 주요 UI/API 증적 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
 | `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | smoke, 데모 캡처, 결과 로그 | 선택 | 경고 중심 |
-| `lite` | 필요 시 승인 | 주요 요구사항, 변경 파일, 테스트 결과 | 선택. 복잡한 모듈만 작성 | 명령 로그와 간단한 smoke | 기본 off | 최소 차단 |
 
 `--trace-seed`는 모든 Profile에서 사용할 수 있다.
-다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `solution`, `poc`, `lite`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
+다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `solution`, `poc`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
+PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본값으로 사용한다. 사용자가 더 넓은 영향 분석이 필요하다고 판단하면 `--trace-depth 2` 이상을 명시한다.
 
 ### 4.1 Audit Profile
 
@@ -104,33 +107,23 @@ Profile별 기본 Overlay는 다음과 같다.
 - PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Solution Profile로 승격한다.
 - Run은 가설 검증 단위로 작게 만들고, 실패한 실험은 구현 결함이 아니라 검증 결과로 기록할 수 있다.
 - worker 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
-
-### 4.4 Lite Profile
-
-개인 프로젝트, 작은 기능, 빠른 내부 자동화에 사용한다.
-
-- Run 문서와 요구사항 요약을 중심으로 운영한다.
-- Gate는 단계명보다 체크리스트처럼 가볍게 사용할 수 있다.
-- 추적성은 주요 요구사항, 구현 파일, 테스트 결과 연결만 남긴다.
-- 화면 증적과 상세 산출물은 필요한 경우에만 작성한다.
-- 장기 유지보수나 외부 제출이 필요해지면 Solution 또는 Audit Profile로 승격한다.
-- `run-preflight`는 위험한 scope, Gate/session 직접 변경, 명백한 계약 누락만 차단하고 나머지는 경고로 둘 수 있다.
-- 대시보드는 문서 완성률보다 현재 Run, 변경 파일, 검증 결과를 우선 표시한다.
+- Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
+- `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.
 
 ## 5. Profile 선택 기준
 
 | 질문 | 예라면 |
 | --- | --- |
 | 외부 감리, 고객 검수, 공식 산출물 제출이 필요한가? | `Audit Profile` |
+| 일반 앱/솔루션 개발이며 품질은 유지하되 감리 수준 산출물 밀도는 줄이고 싶은가? | `Solution Profile` |
 | 반복 릴리즈와 제품 로드맵, 품질 기준이 중요한가? | `Solution Profile` |
 | 핵심 가설이나 기술 가능성을 빠르게 검증하려는가? | `PoC Profile` |
-| 개인/소규모 기능이며 문서 비용을 최소화해야 하는가? | `Lite Profile` |
 
 ## 6. 도구 적용 기준
 
-`0.4.3` 기준 새 프로젝트의 기본 Profile은 `audit`이다.
+`0.4.x` 기준 새 프로젝트의 기본 Profile은 `audit`이다.
 
-`vulcan.py init`은 `session.json.profile`에 선택한 Profile을 기록한다.
+`vulcan.py init`은 `session.json.profile`, `vulcan.config.json.delivery_profile`, `vulcan.config.json.profile_rules`에 선택한 Profile과 Overlay 기준을 기록한다.
 Profile을 지정하지 않으면 `audit`으로 초기화한다.
 
 사용 예:
@@ -139,7 +132,6 @@ Profile을 지정하지 않으면 `audit`으로 초기화한다.
 python vulcan.py init ../my-project "My Project" --profile audit
 python vulcan.py init ../my-product "My Product" --profile solution
 python vulcan.py init ../my-poc "My PoC" --profile poc
-python vulcan.py init ../my-tool "My Tool" --profile lite
 ```
 
 현재 구현 상태는 다음과 같다.
@@ -147,8 +139,10 @@ python vulcan.py init ../my-tool "My Tool" --profile lite
 | 항목 | 현재 상태 |
 | --- | --- |
 | `audit` | 기본 Profile이며 가장 강하게 문서화/검증된다. |
-| `solution`, `poc`, `lite` | `init --profile`로 선택할 수 있지만, 검사 엄격도와 대시보드 표시는 아직 대부분 audit 기준을 공유한다. |
-| `profile_rules` | 향후 `vulcan.config.json`에 명시적으로 기록할 Profile Overlay 후보이다. |
+| `solution` | `init --profile solution`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
+| `poc` | `init --profile poc`으로 선택할 수 있고, `run-new`/`gate-start`가 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
+| `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
+| `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. 초기 단계에서는 관찰/문서화 기준이며, 일부 검사 엄격도 조정은 후속 작업이다. |
 
 예상 설정 예:
 
@@ -169,13 +163,35 @@ python vulcan.py init ../my-tool "My Tool" --profile lite
 구현 순서는 다음을 원칙으로 한다.
 
 1. Profile별 의미와 Overlay 기준을 문서로 먼저 고정한다.
-2. `vulcan.config.json` 또는 `session.json`에 선택된 Profile과 `profile_rules` 기본값을 기록한다.
-3. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다.
-4. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다.
-5. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
-6. `solution`, `poc`, `lite`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
+2. `vulcan.config.json` 또는 `session.json`에 선택된 Profile과 `profile_rules` 기본값을 기록한다. (완료)
+3. `profile-status`로 현재 Profile과 Overlay를 확인한다. (완료)
+4. PoC Profile의 Run 입력 계약은 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심으로 얇게 생성한다. (완료)
+5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다.
+6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다.
+7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
+8. `solution`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
 
 `run-new`는 Profile과 Gate, skill 조합을 보고 가능한 경우 Run 입력 계약을 자동 확장한다.
+
+PoC Profile에서는 Phase 0부터 Gate 5까지 다음 원칙으로 Run 입력 계약을 생성한다.
+
+- `read_first`는 `AGENTS.md`, `session.json`, `DELIVERY_PROFILES.md`, 현재 skill 카드 중심으로 제한한다.
+- `working_documents`는 현재 Run 문서와 해당 Gate의 핵심 산출물 폴더를 중심으로 둔다.
+- `reference_on_demand`는 이전 Gate 산출물 또는 Core 규칙 확인이 필요할 때만 읽는다.
+- 완료 기준은 "문서 완성"보다 목표/가설/성공 기준, smoke/demo 결과, 실패/미실행의 정직한 기록, 제품화 또는 audit 전환 보강 항목을 우선한다.
+- PoC에서 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과 또는 다음 판단 항목으로 기록한다.
+
+모든 Profile에서 Impl 단계의 `check-trace`는 Gate 3 테스트케이스의 `Planned`/미실행 항목을 Gate 4 실행 대기 항목으로 취급한다.
+실제 Pass/Fail/Not Run 판정은 Gate 4 QA 결과서와 증적으로 확정한다.
+
+PoC 빠른 시작 예:
+
+```powershell
+python vulcan.py init ../my-poc "My PoC" --profile poc
+cd ../my-poc
+python vulcan.py profile-status
+python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
+```
 
 Audit Profile에서는 Phase 0부터 Gate 5까지 빈 Run 껍데기를 만들지 않고 다음 항목을 포함한다.
 

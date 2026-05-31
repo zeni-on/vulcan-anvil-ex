@@ -516,7 +516,7 @@ export default function AgentPanel({
     ? activities.find((activity) => activityKey(activity) === selectedActivityKey) ?? null
     : null
   const visibleActivities = activities
-    .filter((activity) => ['running', 'stale', 'completed_no_result_change', 'failed', 'timeout', 'failed_empty_output'].includes(activity.status))
+    .filter((activity) => ['running', 'stale', 'failed', 'timeout', 'failed_empty_output'].includes(activity.status))
     .slice(0, 4)
 
   return (
