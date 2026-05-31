@@ -31,6 +31,7 @@
 - Program Design 기반 `check-contract` 1차 검사(Python/Java class/interface/public method 존재 확인)
 - Worker dependency cache와 worktree 실행 경계
 - Gate 4 `QA-000`~`QA-003` staged QA 실행과 QA workspace 재사용 기준
+- Gate 4 테스트 결과서를 실제 실행 상태 원본으로 사용하고, 요구사항추적표에 최종 검증 상태를 반영하는 기준
 - Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
 - 요구사항추적표 기반 `trace-context` CLI와 Dashboard Trace Explorer
 - Gate 5 `release-pr` dry-run/body/branch guard
@@ -53,8 +54,8 @@
    - 새 `v0.4.x` 기준으로 sample 프로젝트를 다시 진행해 Run 품질, trace-context, Gate 4 QA, release-pr, worker watchdog 흐름을 실제 사용감으로 확인한다.
    - 발견한 회귀는 fixture smoke 또는 문서 규칙으로 흡수한다.
 2. **Run 생성 품질 자동화**
-   - `trace-context` 결과를 사람이 복사하는 수준에서 `run-new`/`wave-start` 초안 품질 개선으로 연결한다.
-   - worker Run의 `related_ids`, `target_contracts`, `source_documents`가 추적표 그래프에서 더 안정적으로 파생되도록 한다.
+   - `run-new --trace-seed`와 `wave-start --trace-seed`의 최소 연동은 들어갔다.
+   - 다음 단계는 샘플 프로젝트에서 생성된 Run 초안의 `scope.writable`, `interface_contract`, `source_documents` 품질을 확인하고 보강한다.
 3. **Gate 4 QA 실사용 안정화**
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않는지 샘플 프로젝트로 반복 확인한다.
    - 실패 보고가 실제 사용자 판단에 충분한지 보고서/대시보드 관점에서 다듬는다.
@@ -74,6 +75,7 @@
 - 최소 샘플 프로젝트를 `init -> Phase 0 -> Gate 1 -> Gate 2 -> Gate 3 -> impl -> Gate 4`까지 반복 검증하는 시나리오를 만든다.
 - 구현 단계에서 `branch-start impl`, `BW-000 implementation-scaffold`, `Build Wave`, `agent-run --mode work`, `run-preflight`, `run-integrate`가 기대대로 연결되는지 확인한다.
 - Gate 4에서 `QA-000` workspace 준비, `QA-001` 명령 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리가 실제로 분리되는지 확인한다.
+- Gate 3 테스트케이스는 계획 상태로 유지하고, Gate 4 테스트 결과서와 요구사항추적표가 실제 Pass/Fail/Not Run 상태를 담당하는지 확인한다.
 - 에이전트가 직접 구현, 직접 QA 수정, Gate 승인 선행, session 통계 누락 같은 회귀를 만들지 않는지 검사한다.
 
 현재 최소 smoke harness는 `scripts/regression/run_audit_smoke.py`에 있다.
@@ -87,7 +89,7 @@ fixture smoke는 QA-001~QA-003이 QA-000의 QA workspace 기록 없이 실행되
 
 ### P1. Run 품질 게이트 강화
 
-`0.4.0`에서 최소 CLI와 smoke 검증은 들어갔다.
+`0.4.x`에서 최소 CLI와 smoke 검증, `run-new`/`wave-start` trace seed 연동은 들어갔다.
 다음 단계는 worker에게 넘기는 Run 문서 초안 품질을 생성 시점부터 더 안정화하는 것이다.
 
 - `run-check`: 형식과 완료 보고 기준 검사
@@ -100,10 +102,10 @@ Run 입력 ID는 agent가 여러 문서를 뒤져 수동으로 긁어넣기보�
 
 다음 구현 후보:
 
-- `run-new` 또는 `wave-start`에서 trace seed를 받아 Run 입력 계약 초안을 보강한다.
+- `run-new`/`wave-start --trace-seed`가 만든 초안에서 `scope.writable`과 `interface_contract`를 더 잘 좁히는 보조 규칙을 추가한다.
 - edge type과 status 필터를 Run 작성 규칙에 더 직접적으로 연결한다.
 - fixture smoke에 샘플 프로젝트에서 발견한 실제 trace-context 회귀 케이스를 추가한다.
-- `run-new --trace-seed` 또는 동등한 옵션은 사용자 경험을 확인한 뒤 도입한다.
+- 샘플 프로젝트에서 `--trace-seed` UX를 확인한 뒤 기본 추천 여부를 판단한다.
 
 ### P1. Gate 4 QA 안정화
 

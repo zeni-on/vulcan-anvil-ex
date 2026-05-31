@@ -47,7 +47,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.4.2"
+VULCAN_VERSION = "0.4.3"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -938,13 +938,24 @@ AUDIT_GATE_SKILL_PRESETS = {
         ],
     },
     ("gate4", "qa-fix-loop"): {
+        "run_type": "QAFix",
+        "worker_run": True,
         "required": [
             "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
+        ],
+        "working": [
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+        ],
+        "writable": [
+            "docs/runs/",
+            "docs/artifacts/04-review/evidence/",
         ],
         "completion_criteria": [
             "승인된 설계 범위 안의 결함만 FIND로 수정한다.",
             "요구사항 또는 범위 변경이 필요한 항목은 CR로 승격한다.",
             "재검증 명령과 결과가 테스트 결과서에 반영되어 있다.",
+            "수정은 worker/subagent/agent-run으로 수행하고 Orchestrator는 결과 통합과 재검증을 담당한다.",
         ],
     },
     ("gate4", "qa-execution"): {
@@ -1591,7 +1602,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     }
 
 
-def render_run_input_preset(preset, ids, persona, gate):
+def render_run_input_preset(preset, ids, persona, gate, trace_info=None):
     source = preset["source_documents"]
     scope = preset["scope"]
     verification = preset["verification"]
@@ -1795,6 +1806,7 @@ adapter: "codex-gpt"
 run_type: {format_yaml_scalar(preset["run_type"])}
 gate: {format_yaml_scalar(gate)}
 related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
 target_contracts:
 {format_yaml_mapping_sequences(target_contracts, 2)}{contract_detail_block}
 persona: {format_yaml_scalar(persona)}
@@ -2101,13 +2113,13 @@ def compute_stats(project_dir="."):
 
     # tests 섹션
     try:
-        tst_results = parse_test_plan_status(project_dir)
+        tst_results, _source = parse_effective_test_status(project_dir)
         tests_stats = {
             "total":   len(tst_results),
             "passed":  sum(1 for _, s in tst_results if s == "pass"),
             "failed":  sum(1 for _, s in tst_results if s == "fail"),
             "skipped": sum(1 for _, s in tst_results if s == "skip"),
-            "pending": sum(1 for _, s in tst_results if s == "not_executed"),
+            "pending": sum(1 for _, s in tst_results if s in ("not_executed", "environment_blocked")),
         }
     except Exception:
         tests_stats = {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
@@ -3062,6 +3074,69 @@ def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_ty
     }
 
 
+def trace_context_run_enrichment(project_dir, trace_seed="", related_ids=None, depth=2, direction="both"):
+    seeds = split_csv(trace_seed)
+    base_ids = split_csv(",".join(related_ids or [])) if isinstance(related_ids, list) else split_csv(related_ids or "")
+    if not seeds:
+        return {
+            "seeds": [],
+            "depth": depth,
+            "direction": direction,
+            "related_ids": base_ids,
+            "target_contracts": classify_related_ids(base_ids),
+            "reference_on_demand": [],
+            "warnings": [],
+        }
+
+    merged_ids = list(base_ids)
+    reference_paths = []
+    warnings = []
+    for seed in seeds:
+        context = trace_context(
+            project_dir,
+            seed_id=seed,
+            depth=max(0, int(depth)),
+            direction=direction,
+            edge_types=None,
+            include_excluded=False,
+        )
+        merged_ids = merge_unique(merged_ids, context.get("related_ids", []))
+        warnings = merge_unique(warnings, context.get("warnings", []))
+        for doc in context.get("related_documents", []):
+            path = normalize_repo_path(doc.get("path", ""))
+            if not path:
+                continue
+            if path.startswith("docs/runs/") or path.startswith("docs/reviews/"):
+                continue
+            if "/02-traceability/" in path or path.startswith("docs/artifacts/02-traceability/"):
+                continue
+            reference_paths.append(path)
+
+    return {
+        "seeds": seeds,
+        "depth": depth,
+        "direction": direction,
+        "related_ids": merged_ids,
+        "target_contracts": classify_related_ids(merged_ids),
+        "reference_on_demand": merge_unique(reference_paths),
+        "warnings": warnings,
+    }
+
+
+def format_trace_context_metadata(trace_info, indent=0):
+    if not trace_info or not trace_info.get("seeds"):
+        return ""
+    prefix = " " * indent
+    child = " " * (indent + 2)
+    return "\n".join([
+        f"{prefix}trace_context:",
+        f"{child}seeds: {format_yaml_list(trace_info.get('seeds', []))}",
+        f"{child}depth: {trace_info.get('depth', 2)}",
+        f"{child}direction: {format_yaml_scalar(trace_info.get('direction', 'both'))}",
+        f"{child}source: \"trace-context\"",
+    ])
+
+
 def cmd_trace_context(seed_id, depth=2, direction="downstream", emit="yaml", edge_types="", include_excluded=False, project_dir="."):
     if not seed_id:
         print("오류: --id 값이 필요합니다.")
@@ -3149,6 +3224,94 @@ def parse_test_plan_status(project_dir="."):
         results[tst_id] = status
 
     return list(results.items())
+
+
+def normalize_test_execution_status(value):
+    status_cell = clean_contract_cell(value or "").lower()
+    if not status_cell:
+        return None
+    if re.search(r"pass\s*/\s*fail|fail\s*/\s*not\s*run|pass\s*/\s*fail\s*/\s*not\s*run|pass\s*/\s*find|find\s*/\s*cr", status_cell):
+        return None
+    if re.search(r"environment[_ -]?blocked|환경\s*차단|blocked", status_cell):
+        return "environment_blocked"
+    if re.search(r"not[_ -]?run|미실행", status_cell):
+        return "not_executed"
+    if re.search(r"\bskip(?:ped)?\b|생략", status_cell):
+        return "skip"
+    if re.search(r"\bfail(?:ed)?\b|실패", status_cell):
+        return "fail"
+    if re.search(r"\bpass(?:ed)?\b|성공|통과", status_cell):
+        return "pass"
+    return None
+
+
+def find_qa_test_result_file(project_dir="."):
+    return find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "04-review"),
+        r"(test.*result|qa.*result|테스트.*결과).*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "04-review", "Test-Result.md"),
+    ])
+
+
+def is_test_execution_result_id(trace_id):
+    item = (trace_id or "").upper()
+    if re.fullmatch(r"UI-\d{3}-\d{2}", item):
+        return True
+    if re.fullmatch(r"(?:UT|IT|PT)-\d{3}", item):
+        return True
+    if re.fullmatch(r"TST-(?:\d{3}(?:-\d{2})?|SEC-\d{2})", item):
+        return True
+    return False
+
+
+def parse_qa_test_result_status(project_dir="."):
+    """Gate 4 QA 결과서에서 실제 테스트 실행 상태를 파싱한다.
+
+    Gate 3 테스트케이스 문서는 계획/기준이고, Gate 4의 실제 Pass/Fail/Not Run
+    원본은 QA Test Result다. 이 함수는 QA 결과서의 요구사항 검증 요약,
+    실행 검증, 화면 증적 표에서 UT/IT/PT/UI ID와 결과를 수집한다.
+    """
+    path = find_qa_test_result_file(project_dir)
+    if not path:
+        return []
+
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    results = {}
+    for headers, rows in parse_markdown_tables(content):
+        header_text = " ".join(headers).lower()
+        if re.search(r"비교|comparison|uicmp|contract", header_text):
+            continue
+        for row in rows:
+            row_text = " ".join(row.values())
+            if re.search(r"\bUICMP-\d{3}\b", row_text, re.IGNORECASE):
+                continue
+            test_ids = [
+                item for item in trace_find_ids(row_text)
+                if is_test_execution_result_id(item)
+            ]
+            if not test_ids:
+                continue
+
+            status_text = table_cell(row, ["결과", "상태", "처리", "판정"])
+            status = normalize_test_execution_status(status_text)
+            if status is None:
+                continue
+
+            for test_id in test_ids:
+                results[test_id] = status
+
+    return list(results.items())
+
+
+def parse_effective_test_status(project_dir="."):
+    qa_results = parse_qa_test_result_status(project_dir)
+    if qa_results:
+        return qa_results, "QA Test Result"
+    return parse_test_plan_status(project_dir), "Gate 3 Test Cases"
 
 
 def find_development_standard_file(project_dir="."):
@@ -3259,7 +3422,7 @@ def find_risk_assumption_file(project_dir="."):
 def split_trace_values(value):
     return [
         item.strip().strip("`")
-        for item in re.split(r",|\n", value or "")
+        for item in re.split(r",|\n|\s+/\s+", value or "")
         if item.strip() and item.strip() not in ("-", "미정", "해당없음")
     ]
 
@@ -4890,16 +5053,28 @@ def check_trace(project_dir="."):
                     issues.append(f"  X {group} - docs/artifacts/04-review 리뷰 문서 안에 {group} 없음")
 
         print("\n  Gate 4 검사 (2): TST-ID 실행 상태")
-        tst_results = parse_test_plan_status(project_dir)
+        qa_results = parse_qa_test_result_status(project_dir)
+        if qa_results:
+            tst_results = qa_results
+            source_label = "QA 결과서"
+        else:
+            tst_results = parse_test_plan_status(project_dir)
+            source_label = "Gate 3 테스트케이스 fallback"
+            issues.append("  X QA 결과서(DOC-QA-G4-002)에 실제 테스트 실행 결과가 없습니다.")
         if not tst_results:
-            issues.append("Test-Plan.md에 TST-ID가 없거나 파일이 존재하지 않습니다.")
+            issues.append("Test-Plan.md 또는 QA 결과서에 TST/UT/IT/PT/UI 실행 상태가 없습니다.")
         else:
             not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
+            environment_blocked = [(tid, s) for tid, s in tst_results if s == 'environment_blocked']
             failed = [(tid, s) for tid, s in tst_results if s == 'fail']
             passed = [(tid, s) for tid, s in tst_results if s == 'pass']
             skipped = [(tid, s) for tid, s in tst_results if s == 'skip']
 
-            print(f"  총 {len(tst_results)}건: Pass {len(passed)}, Fail {len(failed)}, Skip {len(skipped)}, 미실행 {len(not_executed)}")
+            print(
+                f"  출처: {source_label} / 총 {len(tst_results)}건: "
+                f"Pass {len(passed)}, Fail {len(failed)}, Skip {len(skipped)}, "
+                f"미실행 {len(not_executed)}, 환경차단 {len(environment_blocked)}"
+            )
 
             for tid, _ in passed:
                 print(f"  O {tid} - Pass")
@@ -4911,6 +5086,9 @@ def check_trace(project_dir="."):
             for tid, _ in not_executed:
                 issues.append(f"  X {tid} - 미실행")
                 print(f"  X {tid} - 미실행")
+            for tid, _ in environment_blocked:
+                issues.append(f"  X {tid} - environment_blocked")
+                print(f"  X {tid} - environment_blocked")
 
     completion_status_issues = validate_traceability_completion_status(project_dir, session, current_gate)
     if completion_status_issues:
@@ -5590,7 +5768,7 @@ def cmd_sync_session(project_dir="."):
         print(f"  현재 Wave: {waves.get('current')}")
 
 
-def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
+def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2, project_dir="."):
     if not re.fullmatch(r"BW-\d{3}", bw_id):
         print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
         print("  예: BW-001")
@@ -5615,7 +5793,14 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
             sys.exit(1)
 
     existing = next((item for item in items if item.get("id") == bw_id), None)
-    ids = split_csv(related_ids)
+    trace_info = trace_context_run_enrichment(
+        os.path.abspath(project_dir),
+        trace_seed=trace_seed,
+        related_ids=related_ids,
+        depth=trace_depth,
+        direction="both",
+    )
+    ids = trace_info.get("related_ids", split_csv(related_ids))
     run_path = find_wave_run_file(project_dir, bw_id)
     if not run_path:
         run_id = next_run_id(project_dir)
@@ -5634,7 +5819,15 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
             "docs/artifacts/02-design/development-standard/DOC-DEV-G2-001_Development-Standard_v0.1.md",
             "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
         ]
-        wave_contracts = classify_related_ids(ids)
+        wave_contracts = trace_info.get("target_contracts") or classify_related_ids(ids)
+        scaffold_reference_contracts = {}
+        if is_scaffold_wave:
+            scaffold_reference_contracts = {
+                "scr": list(wave_contracts.get("scr", [])),
+                "ui": list(wave_contracts.get("ui", [])),
+            }
+            wave_contracts["ui"] = []
+            wave_contracts["test"] = [item for item in wave_contracts.get("test", []) if not str(item).startswith("UI-")]
         wave_reference_documents = ["docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md"]
         if wave_contracts.get("func"):
             wave_reference_documents.append("docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md")
@@ -5648,6 +5841,8 @@ def cmd_wave_start(bw_id, title="", related_ids="", project_dir="."):
             wave_reference_documents.append("docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md")
         if wave_contracts.get("sec"):
             wave_reference_documents.append("docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md")
+        if trace_info.get("reference_on_demand"):
+            wave_reference_documents = merge_unique(trace_info["reference_on_demand"], wave_reference_documents)
         orchestrator_reference_documents = [
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/core/TRACEABILITY_RULES.md",
@@ -5674,8 +5869,10 @@ run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
 status: InProgress
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
 target_contracts:
 {format_yaml_mapping_sequences(wave_contracts, 2)}
+{"scaffold_reference_contracts:\n  note: \"SCR/UI IDs from trace-context are reference-only for skeleton structure. UI evidence and UI Pass are Gate 4 QA targets.\"\n  scr: " + format_yaml_list(scaffold_reference_contracts.get("scr", [])) + "\n  ui: " + format_yaml_list(scaffold_reference_contracts.get("ui", [])) if is_scaffold_wave else ""}
   interface_contract:
     language: "TBD: Program Design 기준 언어/런타임"
     signatures:
@@ -5756,6 +5953,7 @@ open_issues: []
 
 - 먼저 `source_documents.read_first`만 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
 - `target_contracts`의 FUNC/PGM/API/DB/SEC/TEST 묶음이 이 Run의 실제 작업 범위다.
+- BW-000 scaffold Run에서 `scaffold_reference_contracts`에 SCR/UI가 있으면 화면 구조 참고용이다. UI-001-* Pass, 상태별 캡처, Playwright 증적은 이번 Run의 직접 완료 조건이 아니라 Gate 4 QA 대상이다.
 - `development_standards_applied`와 `development_standard_checklist`는 코드/테스트 작성 체크리스트다. 로깅, 주석/JavaDoc, 테스트 설명을 구현 결과와 자기 Run 보고에 반영한다.
 - `source_documents.working_documents`는 이번 Wave의 필수 작업 문서다.
 - `source_documents.reference_on_demand`는 설계 충돌, 기준 확인, 세부 판단이 필요할 때만 참고한다.
@@ -5833,6 +6031,8 @@ TBD
     save_session(session, project_dir)
     print(f"  Build Wave 시작: {bw_id}")
     print(f"  Run 문서: {rel_run}")
+    if trace_info.get("seeds"):
+        print(f"  trace-context 보강: {format_yaml_list(trace_info['seeds'])} → related_ids {len(ids)}개")
     print_run_preflight_notice(run_path, context="wave-start")
 
 
@@ -6243,7 +6443,7 @@ def cmd_version(project_dir="."):
 
 # ── init ───────────────────────────────────────────────────────────────────
 
-def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_dir="."):
+def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_seed="", trace_depth=2, project_dir="."):
     if skill not in RUN_SKILLS:
         print(f"오류: 알 수 없는 skill입니다: {skill}")
         print("사용 가능 skill:")
@@ -6262,11 +6462,27 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
     lock = acquire_run_generation_lock(project_dir)
     try:
         run_id = next_run_id(project_dir)
-        rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
-        ids = split_csv(related_ids)
+        file_title = title
+        if skill == "qa-fix-loop" and "qa-fix-loop" not in slugify(title):
+            file_title = f"qa-fix-loop-{title}"
+        rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(file_title)}_v0.1.md")
+        trace_info = trace_context_run_enrichment(
+            os.path.abspath(project_dir),
+            trace_seed=trace_seed,
+            related_ids=related_ids,
+            depth=trace_depth,
+            direction="both",
+        )
+        ids = trace_info.get("related_ids", split_csv(related_ids))
         skill_path = RUN_SKILLS[skill]
         profile = load_delivery_profile(project_dir)
         preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
+        if preset and trace_info.get("reference_on_demand"):
+            source_docs = preset.setdefault("source_documents", {})
+            source_docs["reference_on_demand"] = merge_unique(
+                trace_info["reference_on_demand"],
+                source_docs.get("reference_on_demand", []),
+            )
         run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
         completion_section_number = "6" if preset else "5"
         first_read_docs = preset["source_documents"]["read_first"] if preset else [
@@ -6276,11 +6492,12 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, project_
             skill_path,
         ]
         first_read_section = "\n".join(f"- `{path}`" for path in first_read_docs)
-        input_sections = render_run_input_preset(preset, ids, persona, gate) if preset else f"""## 3. 입력 범위
+        input_sections = render_run_input_preset(preset, ids, persona, gate, trace_info=trace_info) if preset else f"""## 3. 입력 범위
 
 | 항목 | 내용 |
 | --- | --- |
 | 관련 ID | `{format_yaml_list(ids)}` |
+| Trace Context | `{format_yaml_list(trace_info.get("seeds", [])) if trace_info.get("seeds") else "없음"}` |
 | Persona | `{persona}` |
 | 대상 문서 | 실행 전 Run 작성자가 구체 경로를 기입 |
 | 대상 코드 | 실행 전 Run 작성자가 구체 경로를 기입 |
@@ -6310,6 +6527,7 @@ run_type: {run_type}
 status: Draft
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
 verification_results: []
 evidence: []
 traceability_updates: []
@@ -6352,6 +6570,8 @@ Draft 상태. 작업 완료 후 후속 조치나 다음 Run 제안을 기록한�
     finally:
         release_run_generation_lock(lock)
     print(f"\nRun 초안 생성 완료: {rel_path}")
+    if trace_info.get("seeds"):
+        print(f"  trace-context 보강: {format_yaml_list(trace_info['seeds'])} → related_ids {len(ids)}개")
     version_run_document(rel_path, f"run: create {run_id} - {title}", project_dir)
     if skill == "build-wave":
         print_run_preflight_notice(os.path.join(project_dir, rel_path), context="run-new")
@@ -7283,6 +7503,39 @@ def capture_worker_progress_snapshot(cwd, project_dir, status_rel, stdout_len, s
     }
 
 
+def build_timeout_policy_payload(
+    soft_timeout_seconds,
+    hard_timeout_seconds=None,
+    extension_seconds=0,
+    max_extensions=0,
+    progress_probe_seconds=0,
+    no_progress_timeout_seconds=0,
+    min_runtime_seconds=0,
+    started_at="",
+    watchdog_state=None,
+):
+    watchdog_enabled = int(progress_probe_seconds or 0) > 0 and int(no_progress_timeout_seconds or 0) > 0
+    return {
+        "soft_timeout_seconds": int(soft_timeout_seconds or 0),
+        "hard_timeout_seconds": int(hard_timeout_seconds or soft_timeout_seconds or 0),
+        "extension_seconds": int(extension_seconds or 0),
+        "max_extensions": int(max_extensions or 0),
+        "extensions_used": 0,
+        "extension_events": [],
+        "watchdog_enabled": watchdog_enabled,
+        "progress_probe_seconds": int(progress_probe_seconds or 0),
+        "no_progress_timeout_seconds": int(no_progress_timeout_seconds or 0),
+        "min_runtime_seconds": int(min_runtime_seconds or 0),
+        "watchdog_state": watchdog_state if watchdog_state is not None else ("running" if watchdog_enabled else ""),
+        "last_probe_at": "",
+        "last_progress_at": started_at,
+        "last_progress_age_seconds": 0,
+        "last_progress_reasons": [],
+        "quiet_probe_count": 0,
+        "timeout_reason": "",
+    }
+
+
 def worker_progress_reasons(before, after):
     reasons = []
     if not before:
@@ -7385,6 +7638,16 @@ def run_command_with_status_heartbeat(
     no_progress_timeout_seconds = max(0, int(no_progress_timeout_seconds or 0))
     min_runtime_seconds = max(0, int(min_runtime_seconds or 0))
     watchdog_enabled = progress_probe_seconds > 0 and no_progress_timeout_seconds > 0
+    timeout_policy = build_timeout_policy_payload(
+        soft_timeout_seconds,
+        hard_timeout_seconds=hard_timeout_seconds,
+        extension_seconds=extension_seconds,
+        max_extensions=max_extensions,
+        progress_probe_seconds=progress_probe_seconds,
+        no_progress_timeout_seconds=no_progress_timeout_seconds,
+        min_runtime_seconds=min_runtime_seconds,
+        started_at=datetime.now().isoformat(timespec="seconds"),
+    )
     pid_payload = dict(status_payload)
     pid_payload.update({
         "status": "running",
@@ -7399,6 +7662,7 @@ def run_command_with_status_heartbeat(
         "progress_probe_seconds": progress_probe_seconds,
         "no_progress_timeout_seconds": no_progress_timeout_seconds,
         "min_runtime_seconds": min_runtime_seconds,
+        "timeout_policy": timeout_policy,
     })
     write_agent_status(project_dir, pid_payload)
 
@@ -7421,6 +7685,7 @@ def run_command_with_status_heartbeat(
                 "current_task": current_task,
                 "heartbeat": True,
                 "pid": process.pid,
+                "timeout_policy": timeout_policy,
             })
             write_agent_status(project_dir, payload)
 
@@ -7567,23 +7832,30 @@ def run_command_with_status_heartbeat(
                     runtime_seconds >= min_runtime_seconds
                     and now_monotonic - last_progress_monotonic >= no_progress_timeout_seconds
                 )
-                write_watchdog_status = (
-                    stall_candidate
-                    or (
-                        not reasons
-                        and (
-                            status_age is None
-                            or status_age >= max(2, progress_probe_seconds * 0.75)
-                            or current_snapshot.get("status_is_watchdog_probe")
-                        )
-                    )
-                )
+                timeout_policy.update({
+                    "extensions_used": extensions_used,
+                    "extension_events": extension_events,
+                    "watchdog_state": watchdog_state,
+                    "last_probe_at": last_probe_at,
+                    "last_progress_at": last_progress_at,
+                    "last_progress_age_seconds": int(now_monotonic - last_progress_monotonic),
+                    "last_progress_reasons": last_progress_reasons,
+                    "quiet_probe_count": quiet_probe_count,
+                    "timeout_reason": timeout_reason,
+                })
+                write_watchdog_status = True
                 if write_watchdog_status:
+                    if watchdog_state == "active":
+                        watchdog_task = "watchdog active; progress detected"
+                    elif watchdog_state == "quiet":
+                        watchdog_task = f"worker quiet for {no_progress_age}s"
+                    else:
+                        watchdog_task = f"watchdog {watchdog_state}"
                     payload = dict(status_payload)
                     payload.update({
                         "status": "running",
                         "phase": f"watchdog_{watchdog_state}",
-                        "current_task": f"worker quiet for {no_progress_age}s",
+                        "current_task": watchdog_task,
                         "watchdog_probe": True,
                         "observed_status_signal": current_snapshot.get("status_signal") or last_snapshot.get("status_signal") or "",
                         "pid": process.pid,
@@ -7600,6 +7872,7 @@ def run_command_with_status_heartbeat(
                             "min_runtime_seconds": min_runtime_seconds,
                         },
                         "hard_timeout_seconds": hard_timeout_seconds,
+                        "timeout_policy": dict(timeout_policy),
                     })
                     write_agent_status(project_dir, payload)
                 last_snapshot = current_snapshot
@@ -8603,6 +8876,7 @@ Rules:
     deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
     started_at = started_dt.isoformat(timespec="seconds")
     deadline_at = deadline_dt.isoformat(timespec="seconds")
+    initial_timeout_policy = build_timeout_policy_payload(timeout_seconds, started_at=started_at)
     activity = {
         "target_type": "review",
         "target_id": review_id,
@@ -9175,6 +9449,16 @@ Worker dependency cache:
     deadline_dt = started_dt + timedelta(seconds=timeout_seconds)
     started_at = started_dt.isoformat(timespec="seconds")
     deadline_at = deadline_dt.isoformat(timespec="seconds")
+    initial_timeout_policy = build_timeout_policy_payload(
+        timeout_seconds,
+        hard_timeout_seconds=hard_timeout_seconds,
+        extension_seconds=extension_seconds,
+        max_extensions=max_extensions,
+        progress_probe_seconds=progress_probe_seconds,
+        no_progress_timeout_seconds=no_progress_timeout_seconds,
+        min_runtime_seconds=min_runtime_seconds,
+        started_at=started_at,
+    )
     activity = {
         "target_type": "run",
         "target_id": run_id,
@@ -9199,6 +9483,7 @@ Worker dependency cache:
         "progress_probe_seconds": progress_probe_seconds,
         "no_progress_timeout_seconds": no_progress_timeout_seconds,
         "min_runtime_seconds": min_runtime_seconds,
+        "timeout_policy": initial_timeout_policy,
         "timed_out": False,
         "log": log_rel_path.replace("\\", "/"),
         "stderr_log": stderr_rel_path.replace("\\", "/"),
@@ -9225,6 +9510,7 @@ Worker dependency cache:
         "progress_probe_seconds": progress_probe_seconds,
         "no_progress_timeout_seconds": no_progress_timeout_seconds,
         "min_runtime_seconds": min_runtime_seconds,
+        "timeout_policy": initial_timeout_policy,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
         "branch": execution_branch or None,
@@ -10021,11 +10307,16 @@ def impl_code_result_claim(body):
 
 
 def direct_edit_reason_present(content):
-    return bool(re.search(
-        r"orchestrator_direct_edit_reason|direct\s*(edit|implementation)\s*reason|직접\s*(구현|수정)\s*사유",
-        content,
-        re.IGNORECASE,
-    ))
+    return bool(
+        re.search(
+            r"(?im)^\s*(?:[-*]\s*)?(?:orchestrator_direct_edit_reason|direct\s*(?:edit|implementation)\s*reason)\s*:",
+            content,
+        )
+        or re.search(
+            r"(?im)^\s*(?:[-*]\s*)?직접\s*(?:구현|수정)\s*사유\s*[:：]",
+            content,
+        )
+    )
 
 
 def direct_edit_scope_block(content):
@@ -10124,7 +10415,12 @@ def check_run_file(path):
         if re.search(r"(?im)(^|\|)\s*(TBD|확정필요|작성필요)\s*(\||$)", body_without_yaml):
             issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
 
-        is_impl_run = gate == "impl" or run_type.lower().startswith("implementation")
+        is_impl_run = (
+            gate == "impl"
+            or run_type.lower().startswith("implementation")
+            or run_type.lower() == "qafix"
+            or skill == "qa-fix-loop"
+        )
         has_impl_code_result = impl_code_result_claim(body_without_yaml)
         if is_impl_run and skill in {"implementation-plan", "orchestrator-plan"} and has_impl_code_result:
             issues.append("구현 계획/Orchestrator Plan Run이 실제 구현 완료 보고서처럼 쓰였습니다. 구현 결과는 Build Wave Run 또는 worker Run으로 분리하세요.")
@@ -10158,22 +10454,29 @@ def check_run_file(path):
             if not re.search(r"approval_request\s*:", content):
                 issues.append("Audit Run 완료 상태이지만 다음 Gate 승인 질문(approval_request)이 없습니다.")
 
-        has_ui_reference = bool(re.search(r"\bUI-\d{3}\b", content))
-        has_state_level_ui = bool(re.search(r"\bUI-\d{3}-\d{2}\b", content))
-        if has_ui_reference and not has_state_level_ui and re.search(r"ui|화면|캡처|증적", content, re.IGNORECASE):
-            issues.append("UI 증적이 포함된 완료 Run이지만 상태/시나리오 단위 UI-ID(UI-001-01)가 없습니다.")
-        has_ui_pass_evidence = (
-            has_ui_reference
-            and re.search(r"result\s*:\s*(passed|Pass)|\|\s*Pass\s*\|", content, re.IGNORECASE)
-            and re.search(r"캡처|screenshot|UI Evidence|증적|actual_path|file\s*:", content, re.IGNORECASE)
-        )
-        has_playwright_evidence = bool(re.search(
-            r"capture_tool\s*:\s*Playwright|npx\s+playwright\s+test|playwright\s+test|Playwright.+exit code",
-            content,
-            re.IGNORECASE,
-        ))
-        if has_ui_pass_evidence and not has_playwright_evidence:
-            issues.append("UI Pass 증적이 있지만 Playwright 실행 결과 또는 capture_tool: Playwright 기록이 없습니다.")
+        is_scaffold_run = skill == "implementation-scaffold" or run_type.lower() == "implementationscaffold"
+        if not is_scaffold_run:
+            has_ui_reference = bool(re.search(r"\bUI-\d{3}\b", content))
+            has_state_level_ui = bool(re.search(r"\bUI-\d{3}-\d{2}\b", content))
+            has_ui_evidence_context = bool(re.search(
+                r"UI Evidence|화면\s*증적|actual_path|capture_tool|screenshot|캡처",
+                content,
+                re.IGNORECASE,
+            ))
+            if has_ui_reference and has_ui_evidence_context and not has_state_level_ui:
+                issues.append("UI 증적이 포함된 완료 Run이지만 상태/시나리오 단위 UI-ID(UI-001-01)가 없습니다.")
+            has_ui_pass_evidence = (
+                has_ui_reference
+                and has_ui_evidence_context
+                and re.search(r"result\s*:\s*(passed|Pass)|\|\s*Pass\s*\|", content, re.IGNORECASE)
+            )
+            has_playwright_evidence = bool(re.search(
+                r"capture_tool\s*:\s*Playwright|npx\s+playwright\s+test|playwright\s+test|Playwright.+exit code",
+                content,
+                re.IGNORECASE,
+            ))
+            if has_ui_pass_evidence and not has_playwright_evidence:
+                issues.append("UI Pass 증적이 있지만 Playwright 실행 결과 또는 capture_tool: Playwright 기록이 없습니다.")
 
     return issues, warnings
 
@@ -10301,7 +10604,11 @@ def run_preflight_file(path):
     lower_content = content.lower()
     body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
 
-    is_impl = gate == "impl" or metadata.get("run_type", "").lower() == "implementation"
+    is_impl = (
+        gate == "impl"
+        or metadata.get("run_type", "").lower() in {"implementation", "qafix"}
+        or skill == "qa-fix-loop"
+    )
     has_code_result_claim = impl_code_result_claim(body_without_yaml)
     has_trace_final_claim = any(
         (
@@ -10441,6 +10748,28 @@ def run_preflight_file(path):
             )
             if has_failure_like_result and "failure_reports" not in content:
                 warnings.append("qa-execution 결과에 실패/차단이 있지만 failure_reports가 없습니다. 명령, cwd, exit code, 로그, 재현 명령, 영향 ID를 구조화하세요.")
+
+    if skill == "qa-fix-loop":
+        if not re.search(r"\bFIND-\d{3}(?:-\d{2})?\b", content):
+            warnings.append("qa-fix-loop Run에는 수정 대상 FIND-ID가 명시되어야 합니다.")
+        if "target_contracts:" not in content:
+            blockers.append("qa-fix-loop Run에는 수정할 설계/코드 계약 target_contracts가 필요합니다.")
+        if "worker_execution_policy:" not in content:
+            warnings.append("qa-fix-loop Run에는 worker_execution_policy가 필요합니다.")
+        writable_block = _extract_yaml_block_text(content, "writable")
+        if re.search(r"\bsession\.json\b", writable_block):
+            blockers.append("qa-fix-loop Run writable scope에 session.json을 포함할 수 없습니다.")
+        if re.search(r"docs/artifacts/02-traceability|Traceability-Matrix", writable_block, re.IGNORECASE):
+            warnings.append("qa-fix-loop worker는 추적표를 직접 확정하지 않고 갱신 필요 항목을 보고하는 편이 안전합니다.")
+        if re.search(r"docs/artifacts/03-test|Test-Cases", writable_block, re.IGNORECASE):
+            warnings.append("qa-fix-loop worker는 Gate3 테스트 설계 문서를 직접 수정하지 않고 테스트 코드와 자기 Run 결과 중심으로 수정하세요.")
+        commands_block = _extract_yaml_block_text(content, "commands")
+        if re.search(r"check-trace|sync-session|wave-complete|gate-start|python\s+vulcan\.py\s+session", commands_block, re.IGNORECASE):
+            warnings.append("qa-fix-loop Run에 Orchestrator 전용 명령이 포함되어 있을 수 있습니다. worker self-check와 Orchestrator 재실행 명령을 분리하세요.")
+        if re.search(r"새\s*(요구사항|API|화면|DB)|new\s+(requirement|api|screen|table)", body_without_yaml, re.IGNORECASE):
+            warnings.append("qa-fix-loop가 새 계약 생성처럼 보입니다. 승인된 설계 범위를 넘으면 CR 후보로 멈추세요.")
+        if status in {"Completed", "Verified"} and not re.search(r"check-contract|pytest|npm\s+run|gradlew|mvn\s+test|run-check", body_without_yaml, re.IGNORECASE):
+            warnings.append("qa-fix-loop 완료 상태이지만 재검증 명령 기록이 약합니다. 관련 check-contract/test/run-check 결과를 남기세요.")
 
     return blockers, warnings
 
@@ -11231,6 +11560,8 @@ def main():
     p_wave_start.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
     p_wave_start.add_argument("--title", default="", help="Wave 제목")
     p_wave_start.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+    p_wave_start.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
+    p_wave_start.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이")
 
     p_wave_complete = subparsers.add_parser("wave-complete", help="Build Wave 완료/상태 갱신")
     p_wave_complete.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
@@ -11244,6 +11575,8 @@ def main():
     p_run_new.add_argument("--skill", required=True, choices=sorted(RUN_SKILLS.keys()), help="Run skill")
     p_run_new.add_argument("--title", required=True, help="Run 제목")
     p_run_new.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
+    p_run_new.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
+    p_run_new.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이")
 
     p_run_check = subparsers.add_parser("run-check", help="Run 결과 문서 검사")
     p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
@@ -11420,7 +11753,13 @@ def main():
             no_push=args.no_push,
         )
     elif args.command == "wave-start":
-        cmd_wave_start(bw_id=args.bw_id, title=args.title, related_ids=args.related_ids)
+        cmd_wave_start(
+            bw_id=args.bw_id,
+            title=args.title,
+            related_ids=args.related_ids,
+            trace_seed=args.trace_seed,
+            trace_depth=args.trace_depth,
+        )
     elif args.command == "wave-complete":
         cmd_wave_complete(bw_id=args.bw_id, status=args.status, req_ids=args.req)
     elif args.command == "run-new":
@@ -11431,6 +11770,8 @@ def main():
             title=args.title,
             related_ids=args.related_ids,
             persona=args.persona or None,
+            trace_seed=args.trace_seed,
+            trace_depth=args.trace_depth,
         )
     elif args.command == "run-check":
         cmd_run_check(args.run_file)

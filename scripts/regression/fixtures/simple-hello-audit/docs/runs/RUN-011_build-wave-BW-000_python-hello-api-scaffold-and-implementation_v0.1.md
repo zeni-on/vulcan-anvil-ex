@@ -143,9 +143,10 @@ traceability_updates:
   - "UT-001 and IT-001 skeleton tests created; full hello behavior assertions are explicitly skipped until BW-001."
 findings: []
 change_requests: []
-open_issues:
-  - "Default PATH python launcher resolves to WindowsApps shim in this worker environment. Orchestrator should use <PYTHON_HOME>\\bin\\python.exe or fix PATH before re-running standard commands."
-  - "wave-complete BW-000, sync-session, check-trace, and any traceability matrix status changes remain Orchestrator responsibilities."
+operational_notes:
+  - "Default PATH python launcher resolved to WindowsApps shim in this worker environment; Orchestrator revalidated with an available Python interpreter."
+  - "wave-complete BW-000, sync-session, check-trace, and traceability matrix status changes were handled as Orchestrator responsibilities."
+open_issues: []
 ```
 
 ## 1. Wave 작업지시

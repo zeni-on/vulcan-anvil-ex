@@ -32,6 +32,8 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
    - 이미 충분하면 `contract_skeleton.mode: not-required`와 생략 근거, 확인한 파일/명령을 남긴다.
 5. 의존성을 기준으로 `Build Wave`를 정의하되, 각 Build Wave Run은 기능/계약 단위의 완결 조각으로 나눈다.
 6. 각 Wave에 목표, target_contracts, 관련 ID, 수정 파일 후보, 테스트, 추적표 갱신 항목, 커밋 후보를 연결한다.
+   - Build Wave Run을 생성할 때는 가능한 한 `wave-start <BW-ID> --trace-seed <상세 REQ/AC/FUNC/PGM/API/SCR/DB/SEC/UT/IT/UI ID>`를 사용해 추적성 그래프 기반 초안을 만든다.
+   - `--trace-seed`가 추천한 ID/문서는 초안이며, `scope.writable`, `interface_contract`, `contract_skeleton`, 검증 명령은 Orchestrator가 확정한다.
 7. subagent 또는 독립 runner 위임이 가능한 Wave와 메인 Orchestrator가 직접 통합해야 할 Wave를 구분한다.
    - Frontend Build Wave는 기본 후보 runner를 `claude-cli`로 둔다.
    - Backend Build Wave는 기본 후보 runner를 `codex-cli`로 둔다.
@@ -72,6 +74,7 @@ Implementation Plan은 feature Build Wave를 만들기 전에 scaffold 필요 �
 ## 실행 운영 기준
 
 - Implementation Plan은 전체 구현 지도이고, 실제 구현 지시는 Wave별 `build-wave` Run으로 만든다.
+- Wave별 `build-wave` Run을 만들 때 대표 상세 ID가 있으면 `wave-start --trace-seed`를 기본 후보로 사용한다. trace seed가 없거나 추적표가 아직 부실하면 `--related-ids`를 보조로 사용하되, parent REQ만 넣고 끝내지 않는다.
 - 작은 단일 구현은 Implementation Plan 없이 단일 worker Run으로 갈 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로로 쓰지 않는다.
 - Wave 수가 4개이고 scaffold가 필요하면 보통 `implementation-plan` Run 1개, `implementation-scaffold` Run 1개, `build-wave` Run 3개 이상이 생긴다.
 - Wave/worker Run의 1차 분할 기준은 시간 분량이 아니라 기능/계약 단위다.

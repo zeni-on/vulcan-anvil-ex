@@ -131,10 +131,10 @@ warnings:
   - "interface_contract는 Program Design에서 별도 확인해야 한다."
 ```
 
-`trace-context`는 처음에는 Run 문서를 직접 수정하지 않는다.
+`trace-context`는 단독 실행 시 Run 문서를 직접 수정하지 않는다.
 Orchestrator가 출력된 YAML 조각을 확인한 뒤 Run에 반영한다.
 
-2차 이후에 Run 생성 명령과 연결한다.
+Run 생성 명령에서는 최소 연동을 제공한다.
 
 ```powershell
 python vulcan.py run-new `
@@ -145,7 +145,14 @@ python vulcan.py run-new `
   --trace-depth 2
 ```
 
-이 경우 `related_ids`, `target_contracts`, 일부 `source_documents`를 trace graph에서 자동 추천한다.
+```powershell
+python vulcan.py wave-start BW-001 `
+  --title "회원가입 API 구현" `
+  --trace-seed REQ-001-01 `
+  --trace-depth 2
+```
+
+이 경우 `related_ids`, `target_contracts`, 일부 `source_documents.reference_on_demand`를 trace graph에서 자동 추천한다.
 다만 `target_contracts`, `interface_contract`, `scope.writable`은 자동 확정하지 않는다.
 그래프는 추천만 하고, Orchestrator가 확인한 뒤 확정한다.
 
@@ -198,6 +205,14 @@ python vulcan.py run-new `
 
 - `run-new --trace-seed`, `wave-start --trace-seed`에서 trace graph 추천을 사용할 수 있게 한다.
 - 자동 확정이 아니라 Orchestrator 확인을 전제로 한다.
+
+현재 최소 구현:
+
+- `run-new`와 `wave-start`는 `--trace-seed`, `--trace-depth`를 받는다.
+- seed 주변 graph에서 `related_ids`를 확장한다.
+- 확장된 ID로 `target_contracts`를 분류한다.
+- 관련 산출물 문서를 `source_documents.reference_on_demand` 후보로 넣는다.
+- 생성 Run에는 `trace_context` 메타데이터를 남긴다.
 
 원칙:
 

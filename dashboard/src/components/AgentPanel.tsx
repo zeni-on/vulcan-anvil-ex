@@ -85,7 +85,7 @@ function compactWorktreePath(path?: string | null): string {
 
 function activityWatchdog(activity: RuntimeActivity): RuntimeWatchdog | null {
   if (activity.watchdog) return activity.watchdog
-  const policy = activity.timeout_policy
+  const policy = activityTimeoutPolicy(activity)
   if (!policy) return null
   if (!policy.watchdog_enabled && !policy.watchdog_state && !policy.last_progress_at) return null
   return {
@@ -102,19 +102,48 @@ function activityWatchdog(activity: RuntimeActivity): RuntimeWatchdog | null {
   }
 }
 
+function activityTimeoutPolicy(activity: RuntimeActivity): RuntimeActivity['timeout_policy'] {
+  if (activity.timeout_policy) return activity.timeout_policy
+  if (
+    activity.progress_probe_seconds === undefined &&
+    activity.no_progress_timeout_seconds === undefined &&
+    activity.hard_timeout_seconds === undefined &&
+    activity.extension_seconds === undefined &&
+    activity.max_extensions === undefined
+  ) {
+    return undefined
+  }
+  const watchdogEnabled = Boolean(activity.progress_probe_seconds && activity.no_progress_timeout_seconds)
+  return {
+    watchdog_enabled: watchdogEnabled,
+    progress_probe_seconds: activity.progress_probe_seconds,
+    no_progress_timeout_seconds: activity.no_progress_timeout_seconds,
+    min_runtime_seconds: activity.min_runtime_seconds,
+    hard_timeout_seconds: activity.hard_timeout_seconds,
+    extension_seconds: activity.extension_seconds,
+    max_extensions: activity.max_extensions,
+    extensions_used: 0,
+    watchdog_state: watchdogEnabled && activity.status === 'running' ? 'running' : undefined,
+  }
+}
+
 function watchdogLabel(activity: RuntimeActivity): string {
   const watchdog = activityWatchdog(activity)
   if (!watchdog) return ''
   const rawState = watchdog.state ?? 'watchdog'
-  const state =
-    rawState === 'active' ? 'active' :
-    rawState === 'quiet' ? 'quiet' :
-    rawState === 'stalled' ? 'stalled' :
-    rawState === 'timeout_hard' ? 'hard timeout' :
-    rawState
+  if (rawState === 'active' || rawState === 'running') return 'Worker active · 활동 중'
+  if (rawState === 'quiet') {
+    const age = formatSeconds(watchdog.last_progress_age_seconds)
+    return `Worker quiet · 새 활동 없음${age ? ` ${age}` : ''}`
+  }
+  if (rawState === 'stalled') {
+    const age = formatSeconds(watchdog.last_progress_age_seconds)
+    return `Worker stalled · 응답 없음${age ? ` ${age}` : ''}`
+  }
+  if (rawState === 'timeout_hard') return 'Hard timeout · 강제 종료 기준 도달'
   const age = formatSeconds(watchdog.last_progress_age_seconds)
-  if (age) return `${state} · 마지막 진척 ${age} 전`
-  return state
+  if (age) return `Worker ${rawState} · 마지막 활동 ${age} 전`
+  return `Worker ${rawState}`
 }
 
 function activityTone(activity: RuntimeActivity): {
@@ -247,7 +276,7 @@ function ActivityDrawer({
   const events = activityEvents(activity).slice(-100).reverse()
   const identity = activity.thread_id || activity.session_id || activity.resume_hint
   const watchdog = activityWatchdog(activity)
-  const timeoutPolicy = activity.timeout_policy
+  const timeoutPolicy = activityTimeoutPolicy(activity)
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="worker activity detail">

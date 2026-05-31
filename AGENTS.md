@@ -124,6 +124,8 @@ docs/adapters/codex-gpt/skills/
 - 신규 개발이거나 빌드 가능한 프로젝트 골격/class/interface/method/DTO skeleton이 없으면 feature 구현 Build Wave 전에 `BW-000 implementation-scaffold` Run을 먼저 만든다. 이미 골격이 충분하면 `contract_skeleton.mode: not-required`와 생략 근거를 Implementation Plan 또는 Run에 남긴다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent/worker에게 전달할 최소 입력 계약이 된다.
+- Build Wave Run을 만들 때는 관련 ID를 수동으로 넓게 나열하는 대신 가능한 한 상세 `REQ-NNN-NN`, `AC-NNN-NN`, `FUNC`, `PGM`, `API`, `SCR`, `DB`, `SEC`, `UT/IT/UI` 중 대표 seed를 정하고 `python vulcan.py wave-start <BW-ID> --trace-seed <ID>` 또는 `python vulcan.py run-new ... --trace-seed <ID>`를 우선 사용한다.
+- `--trace-seed`는 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추적성 그래프에서 추천하는 기능이다. 추천값은 자동 확정이 아니므로 Orchestrator가 `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 Program Design과 실제 작업 범위 기준으로 확정한 뒤 worker에게 넘긴다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 - Wave 완료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다.
 - 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.
@@ -131,6 +133,7 @@ docs/adapters/codex-gpt/skills/
 - Gate 4 QA는 한 번에 전부 수행하지 않는다. `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나누며, `QA-000`이 차단되면 후속 QA를 진행하지 않고 사유를 보고한다.
 - `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하고 경로를 남긴다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
 - QA에서 승인된 설계 범위 안의 결함을 고치기로 결정한 뒤에만 별도 `qa-fix-loop` Run을 만든다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
+- `qa-fix-loop` Run 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고 `run_type: QAFix`로 작성한다. Orchestrator는 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한 뒤 worker/subagent/agent-run에게 구현 수정을 맡기며, 직접 구현하지 않는다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계

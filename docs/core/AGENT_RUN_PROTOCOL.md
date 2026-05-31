@@ -258,6 +258,8 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 - Orchestrator는 기능 구현의 주 작성자가 아니라 작업지시, 검토, 통합, 검증, 상태 갱신 책임자다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 곧바로 구현하지 않는다. 먼저 단일 worker Run 또는 Build Wave Run으로 작업 범위와 검증 기준을 만든다.
 - Wave 시작과 완료는 `session.json` 수동 편집이 아니라 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 처리한다.
+- Build Wave Run 생성 시 Orchestrator는 관련 ID를 손으로 넓게 나열하지 않고, 가능하면 상세 요구사항 또는 계약 seed를 사용해 `vulcan.py wave-start <BW-ID> --trace-seed <ID>` 또는 `vulcan.py run-new ... --trace-seed <ID>`를 먼저 사용한다.
+- `--trace-seed`가 보강한 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`는 추천값이다. Orchestrator는 worker 실행 전에 `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 Program Design, Gate 3 테스트케이스, 실제 수정 범위 기준으로 확인하고 확정한다.
 
 Wave 완료 검증은 전체 Gate 4 QA와 구분한다.
 
@@ -275,6 +277,12 @@ Wave 검증은 Gate 3 테스트 설계 중 해당 Wave의 `target_contracts`에 
 
 Gate 4 QA 검증은 가능하면 `qa-execution` worker Run으로 수행한다. QA worker는 테스트 명령, Playwright, 로그/증적 생성, 후보 FIND/CR/ISSUE 분류를 담당하고 소스코드 수정은 하지 않는다. 실패가 나오면 `Fail`, `Not Run`, `Skipped`, `environment_blocked` 중 하나로 기록하고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다. Orchestrator는 이 보고를 사용자와 검토한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 수정한다.
 
+`qa-fix-loop`는 코드/테스트 수정 Run이다.
+파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고, `run_type: QAFix`로 작성한다.
+Orchestrator는 `qa-fix-loop` Run의 수정 범위와 검증 명령을 확정한 뒤 worker/subagent/agent-run에게 구현 수정을 맡긴다.
+Orchestrator는 직접 구현하지 않고 worker 결과 통합, `check-contract`, 관련 테스트, `run-check` 재검증, FIND 닫힘/CR 승격 후보 판단을 담당한다.
+새 API, 새 메소드, 새 화면 상태, DB/보안/요구사항 계약 변경이 필요하면 `qa-fix-loop`에서 구현하지 않고 CR 후보로 멈춘다.
+
 Gate 4 QA는 전체를 한 Run에 밀어 넣지 않는다. 구현 소스가 통합됐다는 사실은 QA 입력일 뿐이며, QA 시작 시 다시 실행 가능성을 확인해야 한다. 권장 QA Run 순서는 다음과 같다.
 
 | QA Run | 목적 | 최소 산출물 |
@@ -285,6 +293,10 @@ Gate 4 QA는 전체를 한 Run에 밀어 넣지 않는다. 구현 소스가 통�
 | `QA-003` 결과 정리/판정 후보 | QA Finding/Test Result 정리, 추적표 반영 후보, Gate4 완료 판단 필요 항목 작성 | `DOC-QA-G4-001`, `DOC-QA-G4-002`, FIND/CR/ISSUE, 승인 질문 후보 |
 
 QA workspace는 `QA-000`에서 한 번 정한다. `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 detached QA worktree 경로를 Run 결과에 기록해야 한다. `QA-001`, `QA-002`, `QA-003`은 그 경로를 기준으로 실행하며, 임의로 다른 workspace를 만들거나 기준선/통합 브랜치 작업공간을 섞어 실행하지 않는다. `QA-000` workspace가 없거나 차단되면 후속 QA Run은 `environment_blocked` 또는 Orchestrator 결정 필요 항목으로 반환한다.
+
+Gate 4의 실제 테스트 실행 상태는 `DOC-QA-G4-002_Test-Result_v0.1.md`의 `결과` 컬럼을 원본으로 한다.
+Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이며, QA-003에서 Gate 3 문서의 `Planned` 상태를 `Pass`로 덮어써서 실행 결과를 표현하지 않는다.
+`check-trace`는 Gate 4에서 QA 테스트 결과서를 우선 읽고, 결과서에 실행 상태가 없을 때만 Gate 3 테스트케이스를 fallback으로 참조한다.
 
 `QA-000`의 최소 체크리스트는 다음이다.
 

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.4.3 - 2026-05-31
+
+`0.4.3`은 `0.4.2`의 worker watchdog 흐름을 유지하면서 Run 입력 품질, Gate 4 QA 결과 판정, 요구사항추적표 최종 상태 정리를 보강한 패치 릴리즈다.
+
+Release notes: [docs/releases/v0.4.3.md](docs/releases/v0.4.3.md)
+
+- `run-new`와 `wave-start`에 `--trace-seed`, `--trace-depth` 옵션을 추가했다. 추적성 그래프에서 `related_ids`, `target_contracts`, `source_documents.reference_on_demand` 초안을 보강해 worker Run 입력 품질을 높인다.
+- fixture smoke가 `run-new --trace-seed`와 `wave-start --trace-seed` 생성 결과를 검증하도록 확장했다.
+- `simple-hello-audit` fixture Run 문서를 최신 `run-check` 기준에 맞게 정규화했다.
+- Gate 4 `check-trace`가 Gate 3 테스트케이스의 계획 상태보다 QA 테스트 결과서(`DOC-QA-G4-002_Test-Result_v0.1.md`)의 실제 실행 결과를 우선 읽도록 변경했다.
+- QA 결과서 파서는 `UT-001`, `IT-001`, `PT-001`, `UI-001-01` 같은 실행 단위만 집계하고 `UI-001` 화면 그룹 ID, `EV-*` 증적 ID, `UICMP-*` 비교 ID를 실행 결과에서 제외한다.
+- Gate 3 테스트케이스는 계획/기대 기준, Gate 4 테스트 결과서는 실제 실행 원본, 요구사항추적표는 최종 검증 상태 원장이라는 문서 역할을 README, Getting Started, Concepts, Traceability Rules, 템플릿에 반영했다.
+- Gate 4 `qa-fix-loop` Run 계약을 `run_type: QAFix`, worker 실행, FIND 기반 범위 제한, Orchestrator 재검증 기준으로 보강했다.
+- Dashboard Agent 패널의 watchdog 문구를 `Worker active`, `Worker quiet`, `Worker stalled`, `Hard timeout` 기준으로 정리하고, 오래된 activity 파일에서도 timeout/watchdog fallback을 표시하도록 보강했다.
+- Delivery Profile 문서를 Core + Profile Overlay 방향으로 보강해 audit, solution, poc, lite profile의 운영 강도 차이를 정리했다.
+
 ## 0.4.2 - 2026-05-30
 
 `0.4.2`는 `0.4.1`의 worker timeout 안정화 흐름을 한 단계 더 다듬어, 장시간 worker를 즉시 kill하거나 soft extension에만 의존하지 않고 주기적 progress watchdog으로 관제하는 패치 릴리즈다.

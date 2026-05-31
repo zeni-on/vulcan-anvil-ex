@@ -24,7 +24,7 @@ Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다.
 
 ## 절차
 
-1. Orchestrator는 `vulcan.py wave-start <BW-ID>`로 현재 Wave를 active 상태로 열고, 이미 다른 active Wave가 있으면 시작하지 않는다. 작업자 runner는 `wave-start`를 직접 실행하지 않고 Orchestrator가 연 Wave와 Run 지시를 따른다.
+1. Orchestrator는 `vulcan.py wave-start <BW-ID>`로 현재 Wave를 active 상태로 열고, 이미 다른 active Wave가 있으면 시작하지 않는다. 대표 상세 ID가 있으면 `vulcan.py wave-start <BW-ID> --trace-seed <ID>`를 우선 사용해 `related_ids`, `target_contracts`, `source_documents.reference_on_demand` 초안을 추적성 그래프에서 보강한다. 작업자 runner는 `wave-start`를 직접 실행하지 않고 Orchestrator가 연 Wave와 Run 지시를 따른다.
 2. Implementation Plan에서 현재 `BW-ID`의 목표, `target_contracts`, 관련 ID, 수정 범위, 테스트를 확인한다.
 3. 프로그램 설계서의 관련 `PGM`, Interface Contract, Abstract Base Contract, Public Method Contract를 확인한다.
 4. 개발표준정의서에서 이번 Wave에 적용되는 패키지 구조, 계층 책임, 로깅, 주석, 예외/메시지, 테스트 명령을 확인하고 Run에 준수 체크리스트를 남긴다.
@@ -60,6 +60,7 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 ## Orchestrator와 subagent 책임
 
 - Orchestrator는 Build Wave Run 작업지시서 작성, subagent/worker 위임, 결과 검토, 통합, worker 테스트케이스 재실행, 상태 갱신을 담당한다.
+- Orchestrator는 Build Wave Run을 worker에게 넘기기 전에 `--trace-seed` 추천값을 확인하고, `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 실제 구현 범위에 맞게 확정한다.
 - 기능 구현의 주 작성자는 `build` persona, subagent, 또는 `agent-run --mode work` worker다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 바로 구현 완료 처리하지 않는다. 단일 worker Run으로 위임하거나 직접 수정 예외를 기록한다.
 - Orchestrator가 직접 수정할 수 있는 범위는 작은 연결 수정, 충돌 해결, 문서/추적표/session 갱신, 검증 보정으로 제한한다.

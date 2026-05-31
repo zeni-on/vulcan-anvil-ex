@@ -110,6 +110,8 @@ my-project/
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
+| `run-new --trace-seed <ID>` | 추적성 그래프 기반으로 Run 초안의 관련 ID와 참조 문서 후보 보강 |
+| `wave-start <BW-ID> --trace-seed <ID>` | Build Wave Run 초안의 `related_ids`, `target_contracts`, 참조 문서 후보 보강 |
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
 | `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
@@ -194,6 +196,8 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 
 `QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행합니다. QA worker는 실패를 발견해도 소스코드를 바로 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남깁니다. 수정이 필요하면 Orchestrator가 사용자와 결정한 뒤 별도 `qa-fix-loop` Run으로 처리합니다.
 
+테스트 문서의 역할은 분리합니다. Gate 3 테스트케이스 문서는 “무엇을 어떻게 검증할지”를 담는 계획 문서이므로 `Planned`를 `Pass`로 덮어쓰지 않습니다. Gate 4에서 실제 실행한 결과는 `DOC-QA-G4-002_Test-Result_v0.1.md`에 `Pass / Fail / Not Run / Skipped / environment_blocked`로 기록하고, QA-003에서 이 결과와 증적을 근거로 요구사항추적표의 `상태`, `증적`, `요구사항별 검증 요약`을 갱신합니다.
+
 ### Run 생성 예시
 
 ```powershell
@@ -204,6 +208,17 @@ python vulcan.py run-new ^
   --title "로그인 게시판 추적성 검토" ^
   --related-ids REQ-001,REQ-002
 ```
+
+추적성 그래프에서 Run 입력 후보를 보강하려면 `--trace-seed`를 사용합니다.
+
+```powershell
+python vulcan.py wave-start BW-001 ^
+  --title "회원가입 API 구현" ^
+  --trace-seed REQ-001-01
+```
+
+이 옵션은 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추천값으로 보강합니다.
+`interface_contract`와 `scope.writable`은 Program Design과 실제 작업 범위를 확인한 뒤 Orchestrator가 확정해야 합니다.
 
 ### 추적성 검사 예시
 

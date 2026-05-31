@@ -174,9 +174,10 @@ traceability_updates:
   - "FUNC-001, PGM-001, API-001, SEC-001 implementation evidence points to backend/app/services/hello_service.py and backend/app/api/hello.py."
 findings: []
 change_requests: []
-open_issues:
-  - "Default python.exe/py.exe resolve to WindowsApps launchers and failed in this sandbox with ResourceUnavailable; verification used an existing local Python 3.14 venv interpreter instead."
+operational_notes:
+  - "Default python.exe/py.exe resolved to WindowsApps launchers and failed in this sandbox with ResourceUnavailable; verification used an existing local Python 3.14 venv interpreter instead."
   - "pytest emitted a cache warning because backend/.pytest_cache was not writable/creatable in this environment; tests still exited 0."
+open_issues: []
 orchestrator_decision_needed:
   - "Re-run verification in the Orchestrator environment if the canonical python launcher differs from the worker fallback interpreter."
   - "After Orchestrator revalidation, run wave-complete BW-001, sync-session, and check-trace if accepted."
@@ -313,8 +314,9 @@ changed_files:
   - path: docs/runs/RUN-012_build-wave-BW-001_python-hello-api-feature-implementation_v0.1.md
     change_type: modified
     related_ids: [REQ-001-01, UT-001, IT-001, IT-002]
-open_issues:
+operational_notes:
   - "Canonical python.exe is unavailable in this sandbox; Orchestrator may rerun with its own interpreter."
+open_issues: []
 orchestrator_decision_needed:
   - "Run wave-complete/sync-session/check-trace after Orchestrator revalidation."
 findings: []

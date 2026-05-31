@@ -88,13 +88,15 @@ Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
 | Gate 4 | QA 검수 | 테스트 결과, 화면 증적, FIND/CR/ISSUE 분류 |
 | Gate 5 | 최종 승인 | 릴리즈 후보, 인수인계 항목, 잔여 리스크 |
 
+Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 실제 Pass/Fail/Not Run 결과는 Gate 4 테스트 결과서에 기록하고, 요구사항 관점의 최종 검증 상태는 요구사항추적표에 반영합니다.
+
 개념 설명은 [Concepts](docs/CONCEPTS.md)를 참고합니다.
 
 ## 현재 상태
 
-**Experimental - v0.4.2**
+**Experimental - v0.4.3**
 
-`0.4.2`는 `0.4.1`의 trace-context, staged QA, release-pr 흐름을 유지하면서 worker 실행 관제를 progress watchdog 기본 흐름으로 정리한 안정화 패치입니다. 현재 worker 실행은 주기적 progress probe, no-progress timeout, hard timeout cap을 함께 사용합니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
+`0.4.3`은 `0.4.2`의 worker watchdog 흐름을 유지하면서 Run 생성 trace-seed 보강, Gate 4 QA 결과서 우선 판정, 요구사항추적표 최종 검증 상태 정리를 보강한 안정화 패치입니다. 현재 worker 실행은 주기적 progress probe, no-progress timeout, hard timeout cap을 함께 사용합니다. 구현은 `workflow.integration_branch` 통합 브랜치(기본값 `dev`)에서 진행하고, Gate 4는 `QA-000`이 준비한 QA workspace를 `QA-001`~`QA-003`이 재사용하는 흐름을 기준으로 합니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 

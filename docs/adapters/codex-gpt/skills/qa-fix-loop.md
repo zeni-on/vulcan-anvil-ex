@@ -16,12 +16,31 @@ QA, 테스트, 리뷰, 증적 확인 중 발견한 결함이 승인된 설계 �
 1. 이슈가 승인된 설계 범위 안에 있는지 확인한다.
 2. 범위 안의 결함이면 `FIND`를 생성하거나 갱신한다.
 3. 관련 `REQ`, `AC`, `PGM`, `SEC`, `UT`, `IT`, `UI` ID를 식별한다.
-4. 발견사항을 해결하는 최소 구현 또는 문서 수정을 수행한다.
-5. 관련 검증을 다시 실행한다.
-6. 검증 결과에는 실행 위치(cwd), 명령, 성공 기준, exit code, 결과, 로그/증적 경로를 기록한다.
-7. 필수 검증을 실행하지 못했으면 `Pass`가 아니라 `Not Run`으로 남기고 사유, 영향 범위, 후속 조치를 기록한다.
-8. 증적과 추적성 문서를 갱신한다.
-9. 수정에 요구사항, 인수기준, 설계, 보안 기준선, 릴리즈 범위 변경이 필요하면 중단하고 `CR`로 승격한다.
+4. Orchestrator는 `qa-fix-loop` Run을 먼저 만들고 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한다.
+5. 수정 구현은 worker/subagent/agent-run이 수행한다. Orchestrator는 직접 구현하지 않고 worker 결과 통합과 재검증을 담당한다.
+6. 발견사항을 해결하는 최소 구현 또는 문서 수정을 수행한다.
+7. 관련 검증을 다시 실행한다.
+8. 검증 결과에는 실행 위치(cwd), 명령, 성공 기준, exit code, 결과, 로그/증적 경로를 기록한다.
+9. 필수 검증을 실행하지 못했으면 `Pass`가 아니라 `Not Run`으로 남기고 사유, 영향 범위, 후속 조치를 기록한다.
+10. 증적과 추적성 갱신 필요 항목을 남긴다. 추적표와 session 상태 확정은 Orchestrator가 재검증 후 수행한다.
+11. 수정에 요구사항, 인수기준, 설계, 보안 기준선, 릴리즈 범위 변경이 필요하면 중단하고 `CR`로 승격한다.
+
+## Run 작성 기준
+
+- 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함한다.
+  - 예: `RUN-018_qa-fix-loop-FIND-017-01-todorepository-contract-fix_v0.1.md`
+- 메타데이터는 다음 성격을 가진다.
+
+```yaml
+gate: gate4
+persona: build
+skill: qa-fix-loop
+run_type: QAFix
+related_ids: [FIND-017-01, IF-003, PGM-003, UT-001, IT-001]
+```
+
+- `qa-fix-loop`는 QA 실행 Run이 아니다. QA 실행은 `qa-execution`, 승인된 설계 범위 안의 결함 수정은 `qa-fix-loop`, 계약 변경이 필요한 경우는 `change-impact-analysis` 또는 CR로 분리한다.
+- 새 요구사항, 새 API, 새 화면 상태, DB 계약 변경이 필요하면 구현하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
 
 ## 출력
 

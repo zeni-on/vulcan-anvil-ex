@@ -169,6 +169,37 @@ def release_pr_body_path_from_output(output: str) -> Path:
     return Path(match.group(1).strip())
 
 
+def run_doc_path_from_output(project_dir: Path, output: str) -> Path:
+    match = re.search(r"(?m)^\s*Run 문서:\s+(.+?)\s*$", output)
+    if not match:
+        match = re.search(r"(?m)^\s*Run 초안 생성 완료:\s+(.+?)\s*$", output)
+    if not match:
+        raise FixtureSmokeFailure(f"run generation output did not include Run path\n{output}")
+    raw_path = match.group(1).strip()
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = project_dir / path
+    return path
+
+
+def assert_trace_seed_generated_run(project_dir: Path, result: StepResult) -> None:
+    run_path = run_doc_path_from_output(project_dir, result.combined_output)
+    if not run_path.exists():
+        raise FixtureSmokeFailure(f"trace-seed generated Run file was not found: {run_path}")
+    content = run_path.read_text(encoding="utf-8")
+    required = [
+        "trace_context:",
+        "seeds: [REQ-001-01]",
+        "API-001",
+        "PGM-001",
+        "SEC-001",
+        "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+    ]
+    missing = [text for text in required if text not in content]
+    if missing:
+        raise FixtureSmokeFailure(f"trace-seed generated Run missing required text: {missing}\n{content[:2000]}")
+
+
 def assert_release_pr_body(result: StepResult) -> None:
     body_path = release_pr_body_path_from_output(result.combined_output)
     normalized = body_path.as_posix()
@@ -377,6 +408,57 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         steps.append(run_step("export-snapshot", [py, "vulcan.py", "export"], cwd=project_dir))
         if not (project_dir / "snapshot.json").exists():
             raise FixtureSmokeFailure("export did not create snapshot.json")
+
+        trace_seed_run_new = run_step(
+            "run-new-trace-seed",
+            [
+                py,
+                "vulcan.py",
+                "run-new",
+                "--gate",
+                "impl",
+                "--skill",
+                "build-wave",
+                "--title",
+                "Trace Seed Run New Smoke",
+                "--trace-seed",
+                "REQ-001-01",
+            ],
+            cwd=project_dir,
+            required_text=["trace-context 보강", "related_ids"],
+        )
+        assert_trace_seed_generated_run(project_dir, trace_seed_run_new)
+        steps.append(trace_seed_run_new)
+
+        session_path = project_dir / "session.json"
+        session_before_trace_seed_wave = json.loads(session_path.read_text(encoding="utf-8"))
+        session_for_trace_seed_wave = json.loads(json.dumps(session_before_trace_seed_wave))
+        session_for_trace_seed_wave["current_gate"] = "impl"
+        impl = session_for_trace_seed_wave.setdefault("implementation", {})
+        waves = impl.setdefault("waves", {})
+        waves["current"] = ""
+        waves.setdefault("items", [])
+        session_path.write_text(
+            json.dumps(session_for_trace_seed_wave, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        trace_seed_wave = run_step(
+            "wave-start-trace-seed",
+            [
+                py,
+                "vulcan.py",
+                "wave-start",
+                "BW-099",
+                "--title",
+                "Trace Seed Run Generation Smoke",
+                "--trace-seed",
+                "REQ-001-01",
+            ],
+            cwd=project_dir,
+            required_text=["trace-context 보강", "related_ids"],
+        )
+        assert_trace_seed_generated_run(project_dir, trace_seed_wave)
+        steps.append(trace_seed_wave)
 
         print("Vulcan fixture smoke regression: PASS")
         print(f"  fixture: {args.fixture}")

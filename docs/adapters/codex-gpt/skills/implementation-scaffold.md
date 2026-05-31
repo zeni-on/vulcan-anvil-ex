@@ -27,8 +27,9 @@ Impl 진입 직후 feature 구현 전에 빌드 가능한 계약 skeleton을 만
 8. Node/Playwright 의존성 설치가 필요하면 worker cache(`npm_config_cache`, `PLAYWRIGHT_BROWSERS_PATH`)를 사용해 가능한 범위에서 실행한다.
 9. npm registry, 권한, 인증, 네트워크, cache 문제로 설치/검증을 실행하지 못하면 `environment_blocked` 또는 `not_run`으로 기록하고, 실패 명령/cwd/exit code/log path/Orchestrator 재실행 명령을 남긴다.
 10. scaffold worker의 Node/Playwright 실행은 skeleton smoke 보조 검증이다. 최종 화면 실행, Playwright 증적, QA Pass는 `workflow.integration_branch` 기준 `QA-000` QA workspace의 Gate 4 QA에서 판정한다.
-11. contract skeleton smoke 명령 또는 Run의 `verification.commands`를 가능한 범위에서 실행한다.
-12. 다음 Build Wave가 채워야 할 method, 테스트, 남은 ISSUE/CR 후보를 Run 결과에 남긴다.
+11. `scaffold_reference_contracts`에 SCR/UI ID가 있으면 화면 구조 참고용으로만 사용한다. UI-001-* Pass, 상태별 캡처, Playwright 증적을 이번 scaffold Run의 직접 완료 조건으로 쓰지 않는다.
+12. contract skeleton smoke 명령 또는 Run의 `verification.commands`를 가능한 범위에서 실행한다.
+13. 다음 Build Wave가 채워야 할 method, 테스트, 남은 ISSUE/CR 후보를 Run 결과에 남긴다.
 
 ## 금지
 

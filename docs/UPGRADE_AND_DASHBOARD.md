@@ -76,6 +76,8 @@ python vulcan.py branch-start impl
 
 Gate 4에서는 `QA-000`이 만든 QA workspace를 `QA-001`, `QA-002`, `QA-003`이 재사용합니다. 후속 QA Run이 새 worktree를 임의로 만들거나 다른 checkout에서 실행된다면 최신 규칙과 맞지 않습니다.
 
+Gate 4의 실제 실행 상태는 QA 테스트 결과서(`DOC-QA-G4-002_Test-Result_v0.1.md`)가 원본입니다. 업그레이드 전 프로젝트에서 Gate 3 테스트케이스의 마지막 상태 컬럼을 Pass/Fail처럼 사용했다면, 최신 규칙에서는 그 값을 계획 상태로 남기고 QA-003에서 테스트 결과서와 요구사항추적표를 갱신하는 방식으로 정리합니다.
+
 ## Dashboard 실행
 
 Dashboard는 Gate 진행 상태, 산출문서, Run, 구현 진행률, 테스트/백로그 통계, 최근 커밋을 한 화면에서 확인하기 위한 보조 UI입니다.
@@ -139,4 +141,4 @@ Dashboard는 프로젝트 폴더의 현재 Git checkout을 읽어 현재 브랜�
 
 대시보드는 브랜치를 제한하지 않습니다. `dev-happy` 같은 브랜치도 현재 checkout이라면 그대로 표시합니다. 규칙상 올바른 통합 브랜치인지 여부는 `workflow.integration_branch`와 현재 브랜치 비교로 판단합니다.
 
-QA 문서와 증적은 산출물 목록과 문서 drawer에서 확인합니다. Gate 4 Test Result에 연결된 screenshot, log, JSON report 경로는 링크로 표시되며, 긴 QA 문서는 요약 카드가 아니라 Markdown 본문 중심으로 읽습니다.
+QA 문서와 증적은 산출물 목록과 문서 drawer에서 확인합니다. Gate 4 Test Result에 연결된 screenshot, log, JSON report 경로는 링크로 표시되며, 긴 QA 문서는 요약 카드가 아니라 Markdown 본문 중심으로 읽습니다. 추적표의 최종 `Verified`, `Fail`, `Not Run`, `environment_blocked` 판단은 Gate 4 Test Result와 증적 링크를 근거로 확인합니다.

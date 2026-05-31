@@ -34,6 +34,8 @@ worker별 다른 구현 구조
 worker에게는 가능한 한 `3. Worker 입력 계약`과 해당 Run에 필요한 보조 블록만 전달한다.
 
 worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로 현재 Run 입력 계약을 사전 검사한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 preflight를 자동 실행하고 차단 항목이 있으면 worker 실행을 시작하지 않는다. `run-preflight`는 완성된 구현 결과를 판단하지 않고, worker가 scope 밖으로 나가거나 Gate/session/추적표 확정을 직접 수행할 위험이 있는지 확인한다.
+
+Build Wave Run이나 구현 worker Run을 생성할 때 대표 상세 ID가 있으면 Orchestrator는 `run-new --trace-seed <ID>` 또는 `wave-start --trace-seed <ID>`를 우선 사용한다. 이 옵션은 추적성 그래프에서 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추천하지만, `interface_contract`, `contract_skeleton`, `scope.writable`, 검증 명령은 Orchestrator가 Program Design과 실제 작업 범위에 맞게 확정해야 한다.
 `6. 작성/검증 규칙` 이후의 내용은 Orchestrator와 도구가 보는 작성 기준이다.
 
 ## 3. Worker 입력 계약
@@ -45,7 +47,7 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 | `run_id` | 예 | 실행 단위 ID. 예: `RUN-001` |
 | `persona` | 예 | 표준 작업 persona. 예: `requirements`, `design`, `build`, `review` |
 | `skill` | 권장 | worker가 사용할 작업 절차 카드. 예: `build-wave`, `traceability-review` |
-| `run_type` | 예 | `Discovery`, `Design`, `Implementation`, `Test`, `Evidence`, `Review` |
+| `run_type` | 예 | `Discovery`, `Design`, `Implementation`, `ImplementationScaffold`, `QAFix`, `Test`, `Evidence`, `Review` |
 | `gate` | 예 | 현재 Gate. 예: `gate2`, `impl`, `gate4` |
 | `goal` | 예 | 이번 Run에서 달성할 구체 목표 |
 | `related_ids` | 예 | 요구사항, 설계, 보안, 테스트 ID |
@@ -64,6 +66,7 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 | --- | --- |
 | `target_contracts.interface_contract` | 구현 Run과 scaffold Run에서는 필수. worker가 구현할 public interface, method signature, schema를 고정한다. |
 | `target_contracts.contract_skeleton` | Impl 첫 scaffold Run 또는 기존 코드 정렬 Run에서 필수. 생성/확인할 뼈대 파일과 public signature를 고정한다. |
+| `trace_context` | `--trace-seed`로 Run 초안을 만들었을 때. seed, depth, direction, source를 남겨 관련 ID 추천 근거를 추적한다. |
 | `verification.test_cases_stub` | 구현 Run과 scaffold Run에서 권장. worker가 작성하거나 통과시켜야 할 테스트 함수/파일/검증 의도를 고정한다. |
 | `dependency_install_policy` | Node/Playwright 같은 외부 의존성 설치가 worker self-check에 필요할 때. cache env와 설치 차단 시 보고 기준을 명시한다. |
 | `ui_evidence_policy` | UI 테스트, 화면 캡처, Playwright 증적이 이번 Run의 직접 결과일 때 |
@@ -83,7 +86,7 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 run_id: RUN-000
 persona: <persona>
 skill: <skill>
-run_type: <Discovery|Design|Implementation|Test|Evidence|Review>
+run_type: <Discovery|Design|Implementation|ImplementationScaffold|QAFix|Test|Evidence|Review>
 gate: <phase0|gate1|gate2|gate3|impl|gate4|gate5>
 goal: "<이번 Run의 한 문장 목표>"
 
@@ -634,6 +637,10 @@ Gate 4 QA 실행은 다음 QA Run 순서로 쪼갠다.
 | `QA-002` | UI/E2E 증적 | UI-ID 목록, viewport, 서버 기동 절차, Playwright screenshot/log/trace 경로, 상태/시나리오별 1:1 증적 기준 |
 | `QA-003` | 결과 정리/판정 후보 | QA Finding/Test Result 갱신 범위, 추적표 반영 후보, FIND/CR/ISSUE 후보, Orchestrator 결정 필요 항목 |
 
+QA-003의 실행 상태 원본은 `DOC-QA-G4-002_Test-Result_v0.1.md`다.
+Gate 3 테스트케이스 문서는 계획/기준 문서이므로 QA-003에서 `Planned` 값을 `Pass`로 덮어쓰지 않는다.
+Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽고, 결과서에 실제 실행 상태가 없을 때만 Gate 3 테스트케이스를 fallback으로 참조한다.
+
 `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하는 Run이다.
 `QA-000` Run 결과에는 `qa_workspace_path`, 기준 브랜치/커밋, 의존성 설치 상태, 서버/포트/DB 준비 상태를 남긴다.
 `QA-001`, `QA-002`, `QA-003` Run 입력 계약에는 `QA-000`이 기록한 같은 `qa_workspace_path`를 포함해야 한다.
@@ -664,6 +671,37 @@ QA 실행 worker는 다음을 수행하지 않는다.
 실패가 나오면 worker는 즉시 수정하지 않고 `failure_reports`에 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다.
 Orchestrator는 사용자와 처리 방향을 정한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 보낸다.
 요구사항/API/DB/보안/화면 계약 변경이 필요하면 `CR` 후보로 분류한다.
+
+## 9.3 Gate 4 QA 수정 worker 경계
+
+`skill: qa-fix-loop`인 Run은 QA 실행 중 발견된 `FIND`를 승인된 설계 범위 안에서 수정하는 worker Run이다.
+QA 실행과 결함 수정은 같은 Run에서 이어서 수행하지 않는다.
+
+`qa-fix-loop` Run 작성 기준:
+
+- 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함한다.
+- `run_type`은 `QAFix`를 사용한다.
+- `related_ids`에는 대상 `FIND-ID`와 수정할 `REQ/AC/PGM/API/IF/DB/SEC/UT/IT/UI`를 넣는다.
+- `target_contracts`에는 수정할 설계 계약과 테스트 계약을 좁게 넣는다.
+- `scope.writable`은 수정 대상 코드/테스트/자기 Run/필요한 증적 로그로 제한한다.
+- `session.json`, Gate 전환, 추적표 최종 상태 확정은 worker writable scope에 넣지 않는다.
+- worker는 수정 후 지정된 self-check를 실행하거나 `Not Run` 사유를 남긴다.
+- Orchestrator는 worker 결과를 받은 뒤 `check-contract`, 관련 테스트, `run-check`를 재실행하고 FIND 닫힘 또는 CR 승격 후보를 판단한다.
+
+예:
+
+```yaml
+run_id: RUN-018
+gate: gate4
+persona: build
+skill: qa-fix-loop
+run_type: QAFix
+related_ids: [FIND-017-01, IF-003, PGM-003, UT-001, IT-001]
+target_contracts:
+  if: [IF-003]
+  pgm: [PGM-003]
+  test: [UT-001, IT-001]
+```
 
 QA 실행 worker의 Run 입력 계약에는 실패 보고 기준을 포함한다.
 
