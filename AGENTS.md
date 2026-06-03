@@ -80,13 +80,32 @@
 
 ## 5. Skill 카드
 
-Codex/GPT skill은 다음 위치에 있는 가벼운 작업 절차 카드다.
+Codex/GPT에서 사용하는 skill은 두 층으로 나뉜다.
+
+첫째, Codex 런타임이 발견할 수 있는 repo-local skill은 다음 위치에 둔다.
+
+```text
+.agents/skills/
+```
+
+이 skill은 항상 로드되는 지침이 아니다. 작업이 description과 맞거나 사용자가 명시적으로 호출할 때 Codex가 읽는 절차 카드다.
+Vulcan Gate, Run, 구현, QA, 릴리즈 작업에서는 관련 repo-local skill을 먼저 확인한다.
+
+| 작업 | Repo-local Skill |
+| --- | --- |
+| Gate/Run/worker/승인 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
+| Gate 2 설계 | `.agents/skills/vulcan-design/SKILL.md` |
+| 구현 Build Wave | `.agents/skills/vulcan-impl-wave/SKILL.md` |
+| Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
+| Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
+
+둘째, Run 문서와 adapter가 참조하는 내부 작업 카드는 다음 위치에 있다.
 
 ```text
 docs/adapters/codex-gpt/skills/
 ```
 
-이 문서들은 Claude `.claude/skills` 플러그인이 아니다. 작업 성격이 맞을 때 명시적으로 읽고 사용한다.
+이 문서들은 Claude `.claude/skills` 플러그인이 아니며, Codex repo-local skill과도 목적이 다르다. Run 입력 계약의 `skill` 값과 adapter 문서가 참조하는 내부 절차 카드로 사용한다.
 
 | 작업 | Skill |
 | --- | --- |

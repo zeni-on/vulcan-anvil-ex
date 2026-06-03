@@ -18,7 +18,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 
 ## 2. 현재 적용 범위
 
-`0.4.0` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
+`0.4.5` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `.agents/skills/`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
 
 - 새 프로젝트 컨시어지 응답
 - Phase 0부터 Gate 5까지의 단계 판단
@@ -34,6 +34,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 Codex/GPT Adapter는 다음 특징을 고려한다.
 
 - Codex/GPT 런타임의 기본 진입 문서는 루트 `AGENTS.md`다.
+- Codex repo-local skill은 `.agents/skills/*/SKILL.md`에 두며, 작업이 skill description과 맞을 때 Codex가 읽는 절차 카드다.
 - `AGENTS.md`는 세부 규칙을 중복하지 않고 `docs/core/`와 `docs/adapters/codex-gpt/`를 참조한다.
 - Claude 전용 `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/`는 같은 저장소에 공존할 수 있으나 Codex/GPT의 기본 실행 계약은 아니다.
 - 파일 읽기와 수정, 테스트 실행을 한 흐름에서 처리할 수 있다.
@@ -69,15 +70,27 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 | `PERSONA_DELEGATION.md` | Codex/GPT subagent 위임과 persona 적용 규칙 |
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 |
 | `LIMITATIONS.md` | Codex/GPT Adapter 한계와 승인 필요 상황 |
-| `skills/` | Codex/GPT가 상황별로 명시적으로 읽는 작업 절차 카드 |
+| `.agents/skills/` | Codex 런타임이 발견할 수 있는 repo-local skill |
+| `skills/` | Run 문서와 adapter가 참조하는 내부 작업 절차 카드 |
 
 Run 입력/출력 형식은 adapter별로 정의하지 않는다.
 Codex, Claude, Gemini worker는 모두 `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md`를 동일하게 사용한다.
 
 ## 7. Skill 카드
 
-Codex/GPT Adapter의 skill은 Claude `.claude/skills`와 다르다.
-런타임 플러그인이 아니라 `AGENTS.md`가 상황별로 참조하는 절차 카드다.
+Codex/GPT Adapter에는 두 종류의 skill 카드가 있다.
+
+Repo-local Codex skill:
+
+| 상황 | Repo-local Skill |
+| --- | --- |
+| Gate/Run/worker/승인 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
+| Gate 2 설계 | `.agents/skills/vulcan-design/SKILL.md` |
+| Impl Build Wave | `.agents/skills/vulcan-impl-wave/SKILL.md` |
+| Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
+| Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
+
+Adapter 내부 작업 카드:
 
 | 상황 | Skill |
 | --- | --- |

@@ -147,6 +147,7 @@ from vulcan_core.runners import (
 
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
 PROJECT_DOC_SETS = [
+    ".agents",
     "docs/core",
     "docs/templates",
     "docs/adapters",

@@ -98,6 +98,7 @@ Orchestrator는 `AGENTS.md`, `docs/core/`, adapter 규칙을 읽고 필요한 �
 my-project/
 ├── README.md
 ├── AGENTS.md
+├── .agents/
 ├── .claude/
 ├── session.json
 ├── vulcan.py
