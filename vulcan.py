@@ -149,6 +149,7 @@ TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
 PROJECT_DOC_SETS = [
     ".agents",
     ".codex/agents",
+    ".gemini/agents",
     "docs/core",
     "docs/templates",
     "docs/adapters",
@@ -209,6 +210,7 @@ PROJECT_ARTIFACT_TEMPLATES = [
 ]
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
+    "GEMINI.md",
 ]
 RUN_SKILLS = {
     "orchestrator-plan": "docs/core/ORCHESTRATOR_PROTOCOL.md",
