@@ -1598,6 +1598,18 @@ def load_primary_runner(project_dir="."):
     return None
 
 
+def is_gemini_long_context_mode(project_dir="."):
+    config_path = os.path.join(project_dir, "vulcan.config.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config = json.load(f)
+                return bool(config.get("runtime", {}).get("gemini_long_context_mode", False))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return False
+
+
 def effective_trace_depth(project_dir=".", trace_depth=None):
     if trace_depth is not None:
         return trace_depth
@@ -7037,12 +7049,25 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         ids = trace_info.get("related_ids", split_csv(related_ids))
         skill_path = RUN_SKILLS[skill]
         preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
-        if preset and trace_info.get("reference_on_demand"):
+        if preset:
             source_docs = preset.setdefault("source_documents", {})
-            source_docs["reference_on_demand"] = compact_reference_documents_for_profile(
-                profile,
-                merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
-            )
+            if is_gemini_long_context_mode(project_dir):
+                long_context_docs = []
+                for root_dir in ["docs/core", "docs/artifacts"]:
+                    abs_root = os.path.join(project_dir, root_dir)
+                    if os.path.isdir(abs_root):
+                        for dirpath, _, filenames in os.walk(abs_root):
+                            for filename in filenames:
+                                if filename.endswith(".md") or filename.endswith(".dbml"):
+                                    full_p = os.path.join(dirpath, filename)
+                                    rel_p = os.path.relpath(full_p, project_dir).replace("\\", "/")
+                                    long_context_docs.append(rel_p)
+                source_docs["reference_on_demand"] = merge_unique(long_context_docs, source_docs.get("reference_on_demand", []))
+            elif trace_info.get("reference_on_demand"):
+                source_docs["reference_on_demand"] = compact_reference_documents_for_profile(
+                    profile,
+                    merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
+                )
         run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
         completion_section_number = "6" if preset else "5"
         first_read_docs = preset["source_documents"]["read_first"] if preset else [
@@ -11150,6 +11175,47 @@ def check_run_file(path):
             if has_ui_pass_evidence and not has_playwright_evidence:
                 issues.append("UI Pass 증적이 있지만 Playwright 실행 결과 또는 capture_tool: Playwright 기록이 없습니다.")
 
+    # JSON Schema 기반 구조화 출력(Run metadata & Output) 정합성 검증
+    yaml_meta = parse_simple_yaml_block(content)
+    if yaml_meta:
+        # 1. 필수 문자열/필드 정밀 타입 검사
+        string_fields = ["run_id", "gate", "persona", "skill", "status"]
+        for sf in string_fields:
+            val = yaml_meta.get(sf)
+            if val is not None and not isinstance(val, str):
+                issues.append(f"JSON Schema 위반: '{sf}' 필드는 문자열 타입이어야 합니다. (현재: {type(val).__name__})")
+
+        # 2. 리스트(Array) 타입 검사
+        array_fields = ["related_ids", "verification_results", "evidence", "traceability_updates", "findings", "change_requests", "open_issues"]
+        for af in array_fields:
+            val = yaml_meta.get(af)
+            if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
+                inner = val[1:-1].strip()
+                val = [item.strip().strip('"').strip("'") for item in inner.split(",") if item.strip()] if inner else []
+            if val is not None and not isinstance(val, list):
+                issues.append(f"JSON Schema 위반: '{af}' 필드는 배열(List) 타입이어야 합니다. (현재: {type(val).__name__})")
+
+        # 3. status가 Completed/Verified일 때, 구조화된 list item 스키마 검증
+        if status in {"Completed", "Verified"}:
+            v_results = yaml_meta.get("verification_results")
+            if isinstance(v_results, str) and v_results.startswith("[") and v_results.endswith("]"):
+                inner = v_results[1:-1].strip()
+                v_results = [item.strip().strip('"').strip("'") for item in inner.split(",") if item.strip()] if inner else []
+            if isinstance(v_results, list):
+                for idx, item in enumerate(v_results):
+                    if isinstance(item, str) and item.startswith("{") and item.endswith("}"):
+                        try:
+                            import json
+                            item = json.loads(item.replace("'", '"'))
+                        except Exception:
+                            pass
+                    if isinstance(item, dict):
+                        for k, t in [("command", str), ("exit_code", int), ("result", str)]:
+                            if k in item and not isinstance(item[k], t):
+                                issues.append(f"JSON Schema 위반: verification_results[{idx}].{k} 필드는 {t.__name__} 타입이어야 합니다.")
+                    elif not isinstance(item, str):
+                        issues.append(f"JSON Schema 위반: verification_results[{idx}] 항목은 Object 또는 String 타입이어야 합니다.")
+
     return issues, warnings
 
 
@@ -11589,6 +11655,7 @@ def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFI
         "profile_rules": delivery_profile_rules(normalized_profile),
         "runtime": {
             "primary": primary,
+            "gemini_long_context_mode": True,
             "available_runners": available_runners or [],
             "model_policy": {
                 "codex-cli": CODEX_MODEL_POLICY_DEFAULTS
