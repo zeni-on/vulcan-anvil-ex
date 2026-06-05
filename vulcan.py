@@ -1584,6 +1584,18 @@ def load_delivery_profile(project_dir="."):
     return normalize_delivery_profile(profile)
 
 
+def load_primary_runner(project_dir="."):
+    config_path = os.path.join(project_dir, "vulcan.config.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config = json.load(f)
+                return config.get("runtime", {}).get("primary")
+        except (OSError, json.JSONDecodeError):
+            pass
+    return None
+
+
 def effective_trace_depth(project_dir=".", trace_depth=None):
     if trace_depth is not None:
         return trace_depth
@@ -7130,6 +7142,10 @@ def cmd_orchestrator_plan(goal, gate, related_ids, persona=None, adapter="codex-
         print(f"오류: 알 수 없는 persona입니다: {persona}")
         sys.exit(1)
 
+    primary_runner = load_primary_runner(project_dir)
+    agent_guide = "GEMINI.md" if primary_runner == "antigravity-cli" else "AGENTS.md"
+    persona_delegation = "docs/adapters/gemini/PERSONA_MAPPING_GEMINI.md" if primary_runner == "antigravity-cli" else "docs/adapters/codex-gpt/PERSONA_DELEGATION.md"
+
     run_id = next_run_id(project_dir)
     title = f"Orchestrator Plan - {goal}"
     rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(title)}_v0.1.md")
@@ -7162,13 +7178,13 @@ open_issues: []
 
 ## 2. 먼저 읽을 문서
 
-- `AGENTS.md`
+- `{agent_guide}`
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/CHANGE_CONTROL_PROCESS.md`
-- `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`
+- `{persona_delegation}`
 - `docs/core/RUN_INPUT_CONTRACT.md`
 - `docs/core/RUN_OUTPUT_CONTRACT.md`
 - 런타임 memory나 과거 샘플 프로젝트 기억은 현재 프로젝트의 근거로 사용하지 않는다.
@@ -11562,7 +11578,7 @@ def resolve_codex_model_effort(config, role, explicit_model=None, explicit_effor
     }
 
 
-def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFILE):
+def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFILE, primary=None):
     has_runner = bool(available_runners) if available_runners is not None else True
     normalized_profile = normalize_delivery_profile(profile)
     config = {
@@ -11570,7 +11586,7 @@ def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFI
         "delivery_profile": normalized_profile,
         "profile_rules": delivery_profile_rules(normalized_profile),
         "runtime": {
-            "primary": None,
+            "primary": primary,
             "available_runners": available_runners or [],
             "model_policy": {
                 "codex-cli": CODEX_MODEL_POLICY_DEFAULTS
@@ -11610,13 +11626,13 @@ def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFI
     return config
 
 
-def create_vulcan_config(target_dir, profile=DEFAULT_DELIVERY_PROFILE):
+def create_vulcan_config(target_dir, profile=DEFAULT_DELIVERY_PROFILE, primary=None):
     rel_path = "vulcan.config.json"
     path = os.path.join(target_dir, rel_path)
     if os.path.exists(path):
         return
     available_runners = detect_runtime_runners()
-    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners, profile=profile), ensure_ascii=False, indent=2))
+    write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners, profile=profile, primary=primary), ensure_ascii=False, indent=2))
 
 
 def replace_unsupported_codex_models(value):
@@ -12127,12 +12143,35 @@ def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, pro
     gh_open_release_pr(project_abs, base_branch, head_branch, pr_title, body_path, dry_run=False)
 
 
-def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE):
+def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=DEFAULT_DELIVERY_PROFILE, primary=None):
     import shutil
+    import sys
     print(f"\nVulcan-Anvil 초기화")
     print(f"  프로젝트: {project_name}")
     print(f"  대상 폴더: {target_dir}")
-    print(f"  Delivery Profile: {profile}\n")
+    print(f"  Delivery Profile: {profile}")
+
+    if not primary:
+        available_runners = detect_runtime_runners()
+        if available_runners and sys.stdin.isatty():
+            print("프로젝트에서 사용할 주 러너(Primary Runner)를 선택해 주세요:")
+            for idx, r in enumerate(available_runners, 1):
+                name = r.get("name", "unknown")
+                model = r.get("model", "")
+                model_str = f" ({model})" if model else ""
+                print(f"  {idx}) {name}{model_str}")
+            print(f"  {len(available_runners) + 1}) 선택하지 않음 (기본값 설정)")
+            try:
+                ans = input(f"선택 (1-{len(available_runners) + 1}, 기본값: 1): ").strip()
+                if ans:
+                    sel = int(ans)
+                    if 1 <= sel <= len(available_runners):
+                        primary = available_runners[sel - 1].get("name")
+                        print(f"  선택된 주 러너: {primary}\n")
+            except (ValueError, IndexError, KeyboardInterrupt, EOFError):
+                pass
+    else:
+        print(f"  지정된 주 러너: {primary}\n")
 
     if require_remote and not remote_url:
         print("오류: --require-remote가 지정되었지만 --remote가 없습니다.")
@@ -12194,7 +12233,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     # session.json
     profile = normalize_delivery_profile(profile)
     create_session_json(target_dir, project_name, profile)
-    create_vulcan_config(target_dir, profile=profile)
+    create_vulcan_config(target_dir, profile=profile, primary=primary)
 
     # vulcan.py 자신을 프로젝트에 복사
     shutil.copy2(__file__, os.path.join(target_dir, "vulcan.py"))
@@ -12250,7 +12289,12 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     print(f"\n완료! {project_name} 프로젝트가 초기화되었습니다.")
     print(f"\n다음 단계:")
     print(f"  1. cd {target_dir}")
-    print(f"  2. Codex 또는 Claude 런타임 실행")
+    if primary == "antigravity-cli":
+        print(f"  2. Antigravity 런타임 실행 (agy.exe)")
+    elif primary == "claude-cli":
+        print(f"  2. Claude Code 런타임 실행 (claude)")
+    else:
+        print(f"  2. Codex 또는 Claude 런타임 실행")
     print(f"  3. Orchestrator에게 '무엇을 만들지' 설명하고 Phase 0부터 시작")
     if not remote_url:
         print(f"  4. 협업/GitHub 대시보드를 쓰려면 git remote를 설정하세요.")
@@ -12315,6 +12359,7 @@ def main():
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
     p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=list(SUPPORTED_DELIVERY_PROFILES), help="Delivery Profile")
+    p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
     subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
@@ -12512,6 +12557,7 @@ def main():
             remote_url=args.remote or None,
             require_remote=args.require_remote,
             profile=args.profile,
+            primary=args.primary,
         )
     elif args.command == "check-trace":
         check_trace()

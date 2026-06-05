@@ -9,7 +9,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 
 ## Start
 
-1. Read `AGENTS.md`, `session.json`, and the user's latest request.
+1. Read `GEMINI.md` (or `AGENTS.md` depending on the primary runner), `session.json`, and the user's latest request.
 2. Confirm `session.json.current_gate` and do not create artifacts beyond the current approved Gate.
 3. Confirm the delivery profile from `session.json` or `python vulcan.py profile-status`.
 4. Apply profile-specific depth, evidence, review, and Run-weight rules from `docs/core/DELIVERY_PROFILES.md`.
@@ -27,7 +27,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
   - `vulcan-qa`
   - `vulcan-release`
 - Use existing Core and adapter docs for details. Do not copy full Core rules into prompts.
-- When the user has approved autonomous orchestration or custom-agent assistance, use `.codex/agents/` helper agents selectively:
+- When the user has approved autonomous orchestration or custom-agent assistance, use helper agents from `.gemini/agents/` or `.codex/agents/` selectively:
   - `trace-scout`: related IDs/source documents are broad or unclear.
   - `run-drafter`: a Run needs worker handoff quality review.
   - `contract-reviewer`: design, implementation, API, DB, UI, or release contract consistency is risky.
