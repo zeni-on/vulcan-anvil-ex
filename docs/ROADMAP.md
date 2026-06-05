@@ -158,6 +158,7 @@ Dashboard 성능 차트는 먼저 CLI 산출이 안정된 뒤 붙인다.
 현재는 `init --profile audit|solution|poc`와 `profile-status`로 선택 Profile과 `profile_rules`를 기록/확인하는 MVP가 들어갔다.
 PoC Profile은 `run-new`/`gate-start`에서 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심의 얇은 Run 입력 계약을 생성한다.
 `0.4.4`부터 PoC Profile은 `run-new`/`wave-start`에서 명시 `--trace-depth`가 없으면 depth 1을 기본값으로 사용하고, `source_documents.reference_on_demand`를 직접 관련 문서 중심으로 제한한다.
+`0.4.5`부터 PoC Profile은 사유와 후속 판단 시점이 있는 `TBD`/`확정필요`, 일부 상세 추적 누락, 미실행, `environment_blocked`를 차단보다 경고/판단 항목으로 우선 분류한다.
 상세 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
 다음 단계는 `solution`용 Run preset과 `run-check`, `run-preflight`, `check-trace`, Dashboard 표시를 Profile별 엄격도와 연결하는 것이다.
 

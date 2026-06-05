@@ -60,6 +60,20 @@ python vulcan.py init ../my-project "My Project" --remote https://github.com/<ow
 
 자세한 시작 방법은 [Getting Started](docs/GETTING_STARTED.md)를 참고합니다.
 
+## Codex에서 사용할 때
+
+Codex를 메인 Orchestrator로 사용할 때는 프로젝트 루트의 `AGENTS.md`가 진입 문서입니다.
+`init`으로 생성된 프로젝트에는 Codex용 보조 지침도 함께 들어갑니다.
+
+| 경로 | 용도 |
+| --- | --- |
+| `AGENTS.md` | Codex/GPT Orchestrator가 먼저 읽는 프로젝트 운영 지침 |
+| `.agents/skills/` | Gate, 설계, 구현 Wave, QA, 릴리즈 작업에서 Codex가 필요할 때 읽는 repo-local skill 카드 |
+| `.codex/agents/` | `trace-scout`, `run-drafter`, `contract-reviewer`, `qa-reader` 같은 읽기 중심 Codex custom agent 정의 |
+| `docs/adapters/codex-gpt/` | Codex runner와 Run 계약을 연결하는 adapter 문서 |
+
+Custom agent는 자동 승인자가 아닙니다. 메인 Orchestrator가 관련 ID 탐색, Run 초안 검토, 계약 정합성 검토, QA 로그 해석 같은 보조 작업을 맡길 때 사용하고, 최종 Gate 전환과 승인 판단은 다시 Orchestrator가 검증합니다.
+
 ## Dashboard
 
 ```powershell
@@ -94,9 +108,9 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.4**
+**Experimental - v0.4.5**
 
-`0.4.4`는 `0.4.3`의 trace-seed와 Gate 4 QA 안정화 흐름을 유지하면서 PoC Profile Run 입력 계약을 경량화한 패치입니다. PoC는 기본 trace depth 1, compact `source_documents`, AGY transcript 회수 보강을 사용해 빠른 검증 비용을 줄이고, audit profile은 기존 강한 기준을 유지합니다.
+`0.4.5`는 `0.4.4`의 PoC compact Run 흐름을 유지하면서 Codex custom agent 정의, PoC profile 검사 완충, Gate 4 QA integration workspace 기본값을 보강한 패치입니다. audit profile은 기존 강한 기준을 유지하고, PoC profile은 사유 있는 TBD와 환경 차단을 경고/판단 항목으로 다룹니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
@@ -110,6 +124,8 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
+| [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |
+| [Codex Custom Agent Strategy](docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md) | `.codex/agents` 기반 보조 에이전트 정의와 native/fallback 보고 기준 |
 | [Tech Stack Baselines](docs/core/TECH_STACK_BASELINES.md) | Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기본 개발 규칙 |
 | [Contributing](CONTRIBUTING.md) | 공개 기여 시 권리, 회사/고객 정보 제외, PR 기준 |
 

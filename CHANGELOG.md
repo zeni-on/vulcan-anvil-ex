@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.4.5 - 2026-06-06
+
+`0.4.5`는 `0.4.4`의 PoC compact Run 흐름 위에 Codex custom agent 정의, PoC profile 검사 완충, Gate 4 QA workspace 기본값 정리를 더한 패치 릴리즈다.
+
+Release notes: [docs/releases/v0.4.5.md](docs/releases/v0.4.5.md)
+
+- `.codex/agents/`에 `trace-scout`, `run-drafter`, `contract-reviewer`, `qa-reader` 정의를 추가했다.
+- README와 Codex adapter 문서에 Codex repo-local skill과 custom agent 사용 섹션을 추가했다.
+- PoC profile에서 사유와 후속 판단 시점이 있는 `TBD`/`확정필요`, 상세 추적 누락, 미실행, `environment_blocked`를 차단 이슈보다 경고/판단 항목으로 우선 분류하도록 했다.
+- Gate 4 QA 기본 workspace를 별도 QA worktree가 아니라 `workflow.integration_branch`의 현재 작업공간으로 정리했다. QA worktree는 명시적으로 활성화한 경우에만 사용한다.
+- Codex runner model policy에서 지원되지 않는 이전 기본 모델을 `gpt-5.5`로 보정하고, upgrade 시 config migration을 수행한다.
+- `AGENTS.md`, `GETTING_STARTED`, `DELIVERY_PROFILES`, `TRACEABILITY_RULES`, `POC-RUN-COMPACT-STRATEGY`를 PoC 경량화와 custom agent 운영 기준에 맞게 현행화했다.
+
 ## 0.4.4 - 2026-05-31
 
 `0.4.4`는 `0.4.3`의 trace-seed와 Gate 4 QA 안정화 흐름을 유지하면서 PoC Profile의 Run 입력 문서와 Antigravity 결과 회수를 경량화한 패치 릴리즈다.

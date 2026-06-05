@@ -166,6 +166,28 @@ Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude
 독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
 `init`은 현재 PC의 `codex`와 `claude` CLI 설치 여부를 감지해 `vulcan.config.json.runtime.available_runners`에 기록한다. Codex만 있으면 같은 runner 기반 독립검수/동시 worktree 작업으로 운영하고, Codex와 Claude가 모두 있으면 Gate/PR/QA 교차검증과 cross-runner 작업을 기본 후보로 둔다.
 
+### 4.1 Codex repo-local skill과 custom agent
+
+Codex를 메인 Orchestrator로 사용할 때는 다음 세 계층을 구분합니다.
+
+| 계층 | 위치 | 역할 |
+| --- | --- | --- |
+| 진입 지침 | `AGENTS.md` | Codex/GPT가 현재 프로젝트에서 가장 먼저 따르는 Orchestrator 지침 |
+| repo-local skill | `.agents/skills/` | Gate/설계/구현/QA/릴리즈 작업에서 필요할 때 읽는 절차 카드 |
+| custom agent | `.codex/agents/` | Orchestrator가 명시적으로 호출하는 읽기 중심 보조 에이전트 정의 |
+
+기본 custom agent는 다음과 같습니다.
+
+| Agent | 용도 |
+| --- | --- |
+| `trace-scout` | 특정 REQ/API/PGM 주변 관련 ID와 source document 후보 탐색 |
+| `run-drafter` | worker에게 넘길 Run 입력 계약이 충분한지 검토 |
+| `contract-reviewer` | Program/API/DB/UI 계약과 구현 정합성 검토 |
+| `qa-reader` | QA 로그, 스크린샷, transcript, stale evidence 해석 |
+
+custom agent 결과는 후보 의견입니다. Gate 전환, session 갱신, QA Pass, release/merge 가능 판단은 메인 Orchestrator가 다시 검증합니다.
+현재 Codex surface가 native custom agent 선택을 직접 노출하지 않는 경우도 있으므로, Orchestrator는 실제 실행 방식을 `native_custom_agent`, `prompt_contract_fallback`, `unknown` 중 하나로 보고해야 합니다.
+
 ## 5. 0.4 구현/QA 흐름
 
 `0.4.x` audit workflow에서는 구현과 QA를 `main`에 바로 누적하지 않습니다. `impl`에 진입하면 Orchestrator는 먼저 통합 브랜치를 시작합니다.
