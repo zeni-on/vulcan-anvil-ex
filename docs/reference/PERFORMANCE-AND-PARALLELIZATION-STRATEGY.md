@@ -151,7 +151,7 @@ QA Test Result의 `결과`, `증적`, `관련 테스트`를 읽어 요구사항�
 - `scope.writable`이 넓은지
 - `interface_contract`가 비어 있는지
 - worker가 읽을 문서가 과한지
-- QA Run이 `QA-000` workspace를 참조하는지
+- QA Run이 `QA-000`이 기록한 integration workspace를 참조하는지
 - 결과서/추적표/session을 worker가 직접 확정하려는지
 
 PoC profile의 성능 개선은 먼저 Run 입력 계약의 밀도를 줄이는 방식으로 진행한다.
@@ -163,7 +163,7 @@ PoC profile의 성능 개선은 먼저 Run 입력 계약의 밀도를 줄이는 
 Codex 기준 초기 정책은 `docs/core/CODEX_MODEL_POLICY.md`를 따른다.
 
 - 중요한 판단, 설계 검수, FIND/CR 분류는 `gpt-5.5` + `high`를 유지한다.
-- 일반 구현과 QA fix는 `gpt-5.3-codex` + `high`를 우선 사용한다.
+- 일반 구현과 QA fix는 `gpt-5.5` + `high`를 우선 사용한다.
 - QA 실행/로그 수집은 `gpt-5.4` + `medium`으로 시작한다.
 - Run 초안, trace 후보, evidence summary는 `gpt-5.4-mini` + `medium/low`를 후보로 둔다.
 

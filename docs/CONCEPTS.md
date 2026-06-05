@@ -65,7 +65,7 @@ Audit profile은 문서 기준선과 구현 통합선을 분리합니다. 브랜
 | 기준 브랜치 | `main` | `init`, Phase 0, Gate 1, Gate 2, Gate 3 산출물과 사용자 승인 기준선 |
 | 통합 브랜치 | `workflow.integration_branch`, 기본 `dev` | `impl`에서 worker 결과를 통합하고 Gate 4 QA 후보를 모으는 브랜치 |
 | worker worktree | `codex/run-*`, `claude/run-*` 등 | 개별 Run을 격리해 수행하는 임시 작업공간 |
-| QA workspace | `QA-000`이 기록한 workspace/worktree | Gate 4의 `QA-001`~`QA-003`이 재사용하는 검증 공간 |
+| QA workspace | `QA-000`이 기록한 integration branch 작업공간 | Gate 4의 `QA-001`~`QA-003`이 재사용하는 검증 공간. QA worktree는 명시적으로 활성화한 경우만 사용 |
 
 `dev`는 기본값일 뿐입니다. 프로젝트/팀이 원하면 `vulcan.config.json`에서 `workflow.integration_branch`를 `develop`, `dev-happy`, `integration/*` 같은 이름으로 바꿀 수 있습니다.
 

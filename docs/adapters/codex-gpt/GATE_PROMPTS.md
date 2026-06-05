@@ -80,8 +80,8 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 
 - 테스트 실행과 증적 수집은 가능하면 `qa-execution` worker Run으로 분리한다.
 - Gate 4 QA는 `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나눈다.
-- `QA-000`에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다.
-- `QA-001`, `QA-002`, `QA-003`은 `QA-000`이 기록한 같은 QA workspace/worktree에서 실행한다.
+- `QA-000`에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace 경로를 기록한다. 기본 workspace는 `workflow.integration_branch`의 현재 작업공간이다.
+- `QA-001`, `QA-002`, `QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행한다.
 - Orchestrator는 실패를 발견해도 즉시 코드를 수정하지 않고 원인, 재현 명령, 로그, 영향 ID를 기록한 뒤 사용자와 처리 방향을 협의한다.
 - 수정이 승인된 설계 범위 안이면 별도 `qa-fix-loop` Run으로 처리한다.
 - 화면 증적 Pass는 Playwright 결과를 기준으로 한다.

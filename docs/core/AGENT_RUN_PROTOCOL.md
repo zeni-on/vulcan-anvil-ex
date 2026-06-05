@@ -292,7 +292,7 @@ Gate 4 QA는 전체를 한 Run에 밀어 넣지 않는다. 구현 소스가 통�
 | `QA-002` UI/E2E 증적 | `QA-000`이 기록한 QA workspace에서 서버 기동 후 UI-ID별 Playwright screenshot/log/trace 생성 | `UI-*` screenshot, Playwright report/trace, UI-ID 매핑 |
 | `QA-003` 결과 정리/판정 후보 | QA Finding/Test Result 정리, 추적표 반영 후보, Gate4 완료 판단 필요 항목 작성 | `DOC-QA-G4-001`, `DOC-QA-G4-002`, FIND/CR/ISSUE, 승인 질문 후보 |
 
-QA workspace는 `QA-000`에서 한 번 정한다. `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 detached QA worktree 경로를 Run 결과에 기록해야 한다. `QA-001`, `QA-002`, `QA-003`은 그 경로를 기준으로 실행하며, 임의로 다른 workspace를 만들거나 기준선/통합 브랜치 작업공간을 섞어 실행하지 않는다. `QA-000` workspace가 없거나 차단되면 후속 QA Run은 `environment_blocked` 또는 Orchestrator 결정 필요 항목으로 반환한다.
+QA workspace는 `QA-000`에서 한 번 정한다. 기본값은 `workflow.integration_branch`의 현재 작업공간이며, `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 경로를 Run 결과에 기록해야 한다. Detached QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다. `QA-001`, `QA-002`, `QA-003`은 그 경로를 기준으로 실행하며, 임의로 다른 workspace를 만들거나 기준선/통합 브랜치 작업공간을 섞어 실행하지 않는다. `QA-000` workspace가 없거나 차단되면 후속 QA Run은 `environment_blocked` 또는 Orchestrator 결정 필요 항목으로 반환한다.
 
 Gate 4의 실제 테스트 실행 상태는 `DOC-QA-G4-002_Test-Result_v0.1.md`의 `결과` 컬럼을 원본으로 한다.
 Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이며, QA-003에서 Gate 3 문서의 `Planned` 상태를 `Pass`로 덮어써서 실행 결과를 표현하지 않는다.

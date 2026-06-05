@@ -241,7 +241,7 @@ Context attach 기본값:
             "effort": "high"
           },
           "build": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high"
           },
           "qa-execution": {
@@ -249,7 +249,7 @@ Context attach 기본값:
             "effort": "medium"
           },
           "qa-fix-loop": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high"
           },
           "evidence-summary": {

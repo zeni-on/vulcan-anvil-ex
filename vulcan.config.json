@@ -54,17 +54,17 @@
             "description": "Gate 승인 후보, FIND/CR 분류, 릴리즈 판단 후보"
           },
           "build": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "일반 구현 worker"
           },
           "build-backend": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "Backend/API/DB 구현 worker"
           },
           "build-frontend": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "Frontend/UI 구현 worker"
           },
@@ -74,7 +74,7 @@
             "description": "QA 명령 실행, 로그 수집, 결과 정리"
           },
           "qa-fix-loop": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "승인된 FIND 범위 안의 QA 수정 worker"
           },
@@ -97,7 +97,7 @@
     "main_branch": "main",
     "integration_branch": "dev",
     "impl_uses_integration_branch": true,
-    "qa_worktree_enabled": true,
+    "qa_worktree_enabled": false,
     "qa_stage_mode": "staged",
     "release_merge_to": "main",
     "enforce_branch_guard": true

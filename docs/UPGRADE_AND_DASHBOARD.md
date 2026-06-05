@@ -59,7 +59,7 @@ python vulcan.py branch-status
     "main_branch": "main",
     "integration_branch": "dev",
     "impl_uses_integration_branch": true,
-    "qa_worktree_enabled": true,
+    "qa_worktree_enabled": false,
     "qa_stage_mode": "staged",
     "release_merge_to": "main"
   }
@@ -74,7 +74,7 @@ python vulcan.py branch-status
 python vulcan.py branch-start impl
 ```
 
-Gate 4에서는 `QA-000`이 만든 QA workspace를 `QA-001`, `QA-002`, `QA-003`이 재사용합니다. 후속 QA Run이 새 worktree를 임의로 만들거나 다른 checkout에서 실행된다면 최신 규칙과 맞지 않습니다.
+Gate 4에서는 `QA-000`이 기록한 QA workspace를 `QA-001`, `QA-002`, `QA-003`이 재사용합니다. 기본 QA workspace는 `workflow.integration_branch`의 현재 작업공간이며, QA worktree는 `workflow.qa_worktree_enabled=true`로 명시한 경우에만 사용합니다. 후속 QA Run이 새 worktree를 임의로 만들거나 다른 checkout에서 실행된다면 최신 규칙과 맞지 않습니다.
 
 Gate 4의 실제 실행 상태는 QA 테스트 결과서(`DOC-QA-G4-002_Test-Result_v0.1.md`)가 원본입니다. 업그레이드 전 프로젝트에서 Gate 3 테스트케이스의 마지막 상태 컬럼을 Pass/Fail처럼 사용했다면, 최신 규칙에서는 그 값을 계획 상태로 남기고 QA-003에서 테스트 결과서와 요구사항추적표를 갱신하는 방식으로 정리합니다.
 
@@ -134,7 +134,7 @@ Dashboard는 프로젝트 폴더의 현재 Git checkout을 읽어 현재 브랜�
 | `branch` | Dashboard가 읽고 있는 물리 폴더의 현재 Git 브랜치 |
 | `integration` | `workflow.integration_branch` 설정값. 구현/QA 기준 브랜치 역할 |
 | `workflow` | `audit`, `single` 등 브랜치 운영 모드 |
-| `QA worktree` | Gate 4에서 QA workspace/worktree 사용 여부 |
+| `QA workspace` | Gate 4에서 재사용하는 QA 실행 경로. 기본은 integration branch 현재 작업공간 |
 | `Runner` | 현재 PC에서 감지되거나 설정된 Codex/Claude/Gemini runner |
 | `진행 작업` | 실행 중이거나 확인이 필요한 worker/review activity |
 | `Worktree` | `.vulcan/worktrees/` 아래 남아 있는 worker/QA 작업공간 |

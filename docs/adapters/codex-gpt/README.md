@@ -18,7 +18,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 
 ## 2. 현재 적용 범위
 
-`0.4.5` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `.agents/skills/`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
+`0.4.5` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `.agents/skills/`, `.codex/agents/`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
 
 - 새 프로젝트 컨시어지 응답
 - Phase 0부터 Gate 5까지의 단계 판단
@@ -35,6 +35,9 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 
 - Codex/GPT 런타임의 기본 진입 문서는 루트 `AGENTS.md`다.
 - Codex repo-local skill은 `.agents/skills/*/SKILL.md`에 두며, 작업이 skill description과 맞을 때 Codex가 읽는 절차 카드다.
+- Codex custom agent는 `.codex/agents/*.toml`에 두며, 메인 Orchestrator가 명시적으로 호출하는 읽기 중심 보조 에이전트 정의다.
+- Codex custom agent는 `.codex/agents/*.toml`의 `name`으로 식별된다. Orchestrator는 프롬프트에서 custom agent 이름을 명시해 사용을 요청한다.
+- 현재 surface의 내부 tool schema가 `agent_type` 같은 필드를 노출한다고 가정하지 않는다. Codex가 custom agent를 선택하지 못하면, Orchestrator는 built-in/default subagent에 custom agent TOML 내용을 prompt 계약으로 주입할 수 있다. 이때 model/effort는 자동 적용으로 보고하지 않는다.
 - `AGENTS.md`는 세부 규칙을 중복하지 않고 `docs/core/`와 `docs/adapters/codex-gpt/`를 참조한다.
 - Claude 전용 `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/`는 같은 저장소에 공존할 수 있으나 Codex/GPT의 기본 실행 계약은 아니다.
 - 파일 읽기와 수정, 테스트 실행을 한 흐름에서 처리할 수 있다.
@@ -71,6 +74,7 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 | `GATE_PROMPTS.md` | Gate별 기본 프롬프트 |
 | `LIMITATIONS.md` | Codex/GPT Adapter 한계와 승인 필요 상황 |
 | `.agents/skills/` | Codex 런타임이 발견할 수 있는 repo-local skill |
+| `.codex/agents/` | 메인 Orchestrator가 호출할 수 있는 Codex custom agent 정의 |
 | `skills/` | Run 문서와 adapter가 참조하는 내부 작업 절차 카드 |
 
 Run 입력/출력 형식은 adapter별로 정의하지 않는다.
@@ -89,6 +93,15 @@ Repo-local Codex skill:
 | Impl Build Wave | `.agents/skills/vulcan-impl-wave/SKILL.md` |
 | Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
 | Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
+
+Codex custom agent:
+
+| 상황 | Agent |
+| --- | --- |
+| 관련 ID/source document 후보 탐색 | `.codex/agents/trace-scout.toml` |
+| Run 입력 계약 검토 | `.codex/agents/run-drafter.toml` |
+| Program/API/DB/UI 계약 정합성 검토 | `.codex/agents/contract-reviewer.toml` |
+| QA 로그/증적 해석 | `.codex/agents/qa-reader.toml` |
 
 Adapter 내부 작업 카드:
 

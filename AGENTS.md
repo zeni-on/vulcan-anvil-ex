@@ -99,7 +99,28 @@ Vulcan Gate, Run, 구현, QA, 릴리즈 작업에서는 관련 repo-local skill�
 | Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
 | Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
 
-둘째, Run 문서와 adapter가 참조하는 내부 작업 카드는 다음 위치에 있다.
+둘째, Codex custom agent 정의는 다음 위치에 둔다.
+
+```text
+.codex/agents/
+```
+
+이 파일들은 메인 Orchestrator가 명시적으로 호출할 수 있는 보조 에이전트 정의다.
+기본 용도는 추적성 탐색, Run 초안 검토, 계약 검토, QA 증적 해석 같은 읽기 중심 보조 작업이다.
+custom agent 결과는 후보 의견이며, Gate 전환, session 갱신, 최종 승인, 공식 구현/QA 실행 판단은 메인 Orchestrator가 다시 검증한다.
+Codex custom agent는 `.codex/agents/*.toml`의 `name`으로 식별된다. 메인 Orchestrator는 프롬프트에서 custom agent 이름을 명시해 Codex가 해당 agent를 선택하게 한다.
+현재 surface의 내부 tool schema가 `agent_type` 같은 필드를 노출한다고 가정하지 않는다.
+Codex가 custom agent name을 직접 선택하지 못하면, built-in/default subagent에 해당 TOML 내용을 운영 계약으로 주입할 수 있다.
+이 fallback에서는 TOML의 model/effort가 자동 적용되었다고 보고하지 않고, 실제 적용 여부를 `explicit-tool-override`, `inherited-parent`, `unknown` 중 하나로 구분한다.
+
+| 작업 | Codex Custom Agent |
+| --- | --- |
+| 관련 ID와 source document 후보 탐색 | `.codex/agents/trace-scout.toml` |
+| Run 입력 계약/작업지시서 검토 | `.codex/agents/run-drafter.toml` |
+| Program/API/DB/UI 계약 정합성 검토 | `.codex/agents/contract-reviewer.toml` |
+| QA 로그/증적/전사 해석 | `.codex/agents/qa-reader.toml` |
+
+셋째, Run 문서와 adapter가 참조하는 내부 작업 카드는 다음 위치에 있다.
 
 ```text
 docs/adapters/codex-gpt/skills/
@@ -127,6 +148,9 @@ docs/adapters/codex-gpt/skills/
 ## 6. Run 규칙
 
 - 작고 명확한 Run 단위로 작업한다.
+- PoC profile에서는 Run 문서를 기본 필수 산출물로 보지 않는다. 외부 CLI worker, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
+- PoC profile에서 subagent만으로 처리한 짧은 실험은 Gate 산출물 또는 결과 요약에 남기고 별도 Run을 생략할 수 있다.
+- PoC profile의 `TBD`, `미정`, `확정필요`는 사유와 후속 판단 시점이 있으면 경고/판단 항목으로 남길 수 있다. 단, 목표, 성공 기준, 실제 실행 결과, 실행하지 않은 테스트의 Pass는 `TBD` 또는 추정으로 대체하지 않는다.
 - Run에는 가능한 한 `persona`를 명시한다. 표준 persona는 `docs/core/AGENT_PERSONAS.md`를 따른다.
 - Codex subagent를 사용할 수 있으면 persona 단위로 위임하되, 최종 결과는 메인 에이전트가 Run 출력 계약으로 정규화한다.
 - 의미 있는 모든 변경은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `UI`, `FIND`, `CR` 같은 관련 ID와 연결한다.
@@ -151,7 +175,7 @@ docs/adapters/codex-gpt/skills/
 - 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.
 - Gate 4에서 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 테스트 실행, 로그, Playwright 증적, 후보 FIND/CR/ISSUE를 수집하고, 실패가 나오면 즉시 수정하지 않고 사용자와 처리 방향을 협의한다.
 - Gate 4 QA는 한 번에 전부 수행하지 않는다. `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나누며, `QA-000`이 차단되면 후속 QA를 진행하지 않고 사유를 보고한다.
-- `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하고 경로를 남긴다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
+- `QA-000`은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다. QA worktree는 명시적으로 활성화한 경우에만 사용한다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
 - QA에서 승인된 설계 범위 안의 결함을 고치기로 결정한 뒤에만 별도 `qa-fix-loop` Run을 만든다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
 - `qa-fix-loop` Run 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고 `run_type: QAFix`로 작성한다. Orchestrator는 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한 뒤 worker/subagent/agent-run에게 구현 수정을 맡기며, 직접 구현하지 않는다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.

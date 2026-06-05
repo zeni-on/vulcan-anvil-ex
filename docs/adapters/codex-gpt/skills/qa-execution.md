@@ -20,12 +20,13 @@ Gate 4 QA 실행은 한 번에 모두 수행하지 않고 다음 순서의 작�
 
 | 단계 | 목적 | 최소 확인 |
 | --- | --- | --- |
-| `QA-000` | 환경 준비/스모크 | 통합된 소스 존재, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시 |
+| `QA-000` | 환경 준비/스모크 | 통합 브랜치 작업공간에서 통합된 소스 존재, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시 |
 | `QA-001` | 명령 기반 검증 | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check`, 로그 증적 |
 | `QA-002` | UI/E2E 증적 | `QA-000`이 준비한 QA workspace에서 서버 기동, UI-ID별 Playwright screenshot/log/trace |
 | `QA-003` | 결과 정리/판정 후보 | `DOC-QA-G4-001`, `DOC-QA-G4-002`, 추적표 반영 후보, FIND/CR/ISSUE, Orchestrator 결정 필요 항목 |
 
-`QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하는 단계다.
+`QA-000`은 Gate 4 전체에서 재사용할 QA workspace를 준비하는 단계다.
+기본 QA workspace는 `workflow.integration_branch`의 현재 작업공간이다. QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다.
 후속 `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 결과에 기록한 같은 `qa_workspace_path`에서 실행한다.
 `QA-000`이 `qa_workspace_path`를 남기지 못했거나 환경 차단 상태라면 후속 QA Run은 진행하지 않는다.
 
@@ -42,7 +43,7 @@ Gate 4 QA 실행은 한 번에 모두 수행하지 않고 다음 순서의 작�
 | 환경변수/출력 경로 | test profile, 필수 환경변수, 임시 디렉터리, 로그/증적 출력 디렉터리가 준비되어 있는가 |
 
 1. 현재 Run이 `QA-000`, `QA-001`, `QA-002`, `QA-003` 중 어느 단계인지 먼저 확인한다.
-2. `QA-000`이면 후속 QA Run이 재사용할 `qa_workspace_path`와 기준 브랜치/커밋을 기록한다.
+2. `QA-000`이면 후속 QA Run이 재사용할 `qa_workspace_path`와 기준 브랜치/커밋을 기록한다. 기본값은 현재 integration branch 작업공간이다.
 3. `QA-001`, `QA-002`, `QA-003`이면 `QA-000`이 기록한 같은 `qa_workspace_path`에서 실행한다.
 4. `QA-000`이 통과하지 않으면 `QA-001`/`QA-002`를 진행하지 않고 `environment_blocked` 또는 `Not Run`으로 사유를 기록한다.
 5. Gate 3 테스트케이스와 개발표준정의서의 필수 검증 명령을 확인한다.
@@ -65,6 +66,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준이며, QA-003에서 
 - 검증 중 임의로 새 API, 새 메소드, 새 화면 상태를 만들지 않는다.
 - `QA-000` 환경 확인 없이 UI/E2E 증적부터 진행하지 않는다.
 - `QA-001`, `QA-002`, `QA-003`에서 `QA-000`이 남긴 workspace가 아닌 다른 작업공간을 임의로 사용하지 않는다.
+- QA worktree가 활성화되어 있지 않은 프로젝트에서 Gate 4 QA용 worktree를 임의로 만들지 않는다.
 - 하나의 QA Run에서 환경 확인, 전체 빌드, Playwright, 결과서 판정을 모두 끝내려고 하지 않는다.
 - QA 실행 worker가 `qa-fix-loop`까지 이어서 수행하지 않는다.
 - Playwright 없이 CDP/수동 캡처만으로 UI Pass를 선언하지 않는다.

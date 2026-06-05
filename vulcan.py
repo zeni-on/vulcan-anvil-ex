@@ -70,17 +70,17 @@ CODEX_MODEL_POLICY_DEFAULTS = {
             "description": "Gate 승인 후보, FIND/CR 분류, 릴리즈 판단 후보",
         },
         "build": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "일반 구현 worker",
         },
         "build-backend": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "Backend/API/DB 구현 worker",
         },
         "build-frontend": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "Frontend/UI 구현 worker",
         },
@@ -90,7 +90,7 @@ CODEX_MODEL_POLICY_DEFAULTS = {
             "description": "QA 명령 실행, 로그 수집, 결과 정리",
         },
         "qa-fix-loop": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high",
             "description": "승인된 FIND 범위 안의 QA 수정 worker",
         },
@@ -148,6 +148,7 @@ from vulcan_core.runners import (
 TEMPLATES_DIR = os.path.join(VULCAN_DIR, "templates")
 PROJECT_DOC_SETS = [
     ".agents",
+    ".codex/agents",
     "docs/core",
     "docs/templates",
     "docs/adapters",
@@ -590,10 +591,11 @@ AUDIT_QA_EXECUTION_POLICY = {
     "worker_can_modify_source": False,
     "result_statuses": ["Pass", "Fail", "Not Run", "Skipped", "environment_blocked"],
     "qa_workspace_policy": [
-        "QA-000은 Gate 4 전체에서 재사용할 QA workspace/worktree를 준비하고 경로를 Run 결과에 기록한다.",
-        "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace/worktree에서 실행한다.",
+        "QA-000은 workflow.integration_branch의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다.",
+        "QA worktree는 선택 옵션이며, 명시적으로 활성화한 경우에만 사용한다.",
+        "QA-001, QA-002, QA-003은 QA-000이 기록한 동일 QA workspace에서 실행한다.",
         "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다.",
-        "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 workflow.integration_branch 통합 브랜치의 qa-fix-loop로 분리한다.",
+        "QA 중 결함 수정은 테스트 실행 중 즉시 수행하지 않고 workflow.integration_branch 통합 브랜치의 qa-fix-loop로 분리한다.",
     ],
     "qa000_required_checks": [
         "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다.",
@@ -605,7 +607,7 @@ AUDIT_QA_EXECUTION_POLICY = {
         "필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리를 확인한다.",
     ],
     "stages": [
-        "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다.",
+        "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace 경로를 기록한다.",
         "QA-001 명령 기반 검증: QA-000 workspace에서 backend/frontend test, lint, build, check-contract, check-trace, run-check를 실행하고 로그 증적을 남긴다.",
         "QA-002 UI/E2E 증적: QA-000 workspace에서 서버를 띄우고 UI-ID별 Playwright screenshot/log/trace를 수집한다.",
         "QA-003 결과 정리/판정 후보: QA Finding, Test Result, traceability 반영 후보, FIND/CR/ISSUE, Gate4 완료 판단 필요 항목을 정리한다.",
@@ -2045,8 +2047,8 @@ qa_failure_report_contract:
 - QA 실행 worker이면 테스트 실패 또는 이상 동작을 발견해도 소스코드를 수정하지 않는다.
 - QA 실패는 `qa_failure_report_contract` 필드에 맞춰 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE 또는 environment_blocked를 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
 - Gate 4 전체 QA를 한 Run에서 모두 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run의 범위를 명시한다.
-- QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace/worktree 경로를 남긴다.
-- QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace/worktree에서 실행한다.
+- QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace 경로를 남긴다. 기본값은 workflow.integration_branch의 현재 작업공간이다.
+- QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace에서 실행한다.
 - QA-000 환경 준비가 통과하지 않으면 QA-001/QA-002를 진행하지 않고 environment_blocked 또는 Not Run으로 반환한다."""
     if preset.get("include_ui_policies", True):
         ui_evidence_block = f"""
@@ -3835,6 +3837,58 @@ def is_probable_text_file(path):
     return path.lower().endswith(text_exts)
 
 
+HARD_TEMPLATE_PLACEHOLDER_RE = re.compile(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}")
+SOFT_TBD_PLACEHOLDER_RE = re.compile(r"\bTBD\b|확정필요", re.IGNORECASE)
+POC_TBD_REASON_RE = re.compile(r"사유|이유|근거|reason|why", re.IGNORECASE)
+POC_TBD_DECISION_RE = re.compile(r"후속|판단|결정|전환|시점|decide_when|next|when", re.IGNORECASE)
+
+
+def unresolved_template_placeholder_issue(rel_path, content, project_dir="."):
+    if HARD_TEMPLATE_PLACEHOLDER_RE.search(content):
+        return f"{rel_path}에 템플릿 플레이스홀더가 남아 있음"
+
+    if not SOFT_TBD_PLACEHOLDER_RE.search(content):
+        return None
+
+    if load_delivery_profile(project_dir) == "poc":
+        return None
+
+    return f"{rel_path}에 템플릿 플레이스홀더가 남아 있음"
+
+
+def poc_tbd_decision_context_present(content):
+    return bool(POC_TBD_REASON_RE.search(content) and POC_TBD_DECISION_RE.search(content))
+
+
+def collect_poc_tbd_warnings(project_dir="."):
+    if load_delivery_profile(project_dir) != "poc":
+        return []
+
+    warnings = []
+    artifact_dir = os.path.join(project_dir, "docs", "artifacts")
+    if not os.path.isdir(artifact_dir):
+        return warnings
+
+    for root, _dirs, files in os.walk(artifact_dir):
+        for file_name in files:
+            if not file_name.lower().endswith(".md"):
+                continue
+            path = os.path.join(root, file_name)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            if not SOFT_TBD_PLACEHOLDER_RE.search(content):
+                continue
+            rel_path = os.path.relpath(path, project_dir)
+            if poc_tbd_decision_context_present(content):
+                warnings.append(f"{rel_path}에 PoC TBD/확정필요가 남아 있음 - 사유와 후속 판단 시점 확인 필요")
+            else:
+                warnings.append(f"{rel_path}에 PoC TBD/확정필요가 있으나 사유 또는 후속 판단 시점이 부족함")
+    return warnings
+
+
 def validate_development_standard(project_dir="."):
     issues = []
     path = find_development_standard_file(project_dir)
@@ -3847,8 +3901,9 @@ def validate_development_standard(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     required_terms = [
         ("언어/런타임", r"Language|Runtime|적용 언어|적용 프레임워크|Java|TypeScript|Python|Node|Vue|React|Spring Boot"),
@@ -3911,8 +3966,9 @@ def validate_project_glossary(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     required_terms = [
         ("참조 표준", r"PUBLIC-DATA-STD|공공데이터 공통표준|reference-standards"),
@@ -3943,8 +3999,9 @@ def validate_program_spec(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     required_terms = [
         ("PGM-ID", r"PGM-\d{3}"),
@@ -4475,8 +4532,9 @@ def validate_api_spec(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     required_terms = [
         ("API-ID", r"API-\d{3}"),
@@ -4511,8 +4569,9 @@ def validate_architecture_spec(project_dir=".", level="baseline"):
 
     if normalized_level == "baseline" and re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     draft_required_terms = [
         ("아키텍처 성숙도", r"성숙도|Draft|Baseline Candidate|Baseline|Pending"),
@@ -4634,8 +4693,9 @@ def validate_security_guide(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     required_terms = [
         ("SEC-ID", r"SEC-\d{3}|SEC-[A-Z]+"),
@@ -4663,8 +4723,9 @@ def validate_screen_spec(project_dir="."):
     rel_path = os.path.relpath(path, project_dir)
     if re.search(r"(?m)^status:\s*Draft\s*$", content):
         issues.append(f"{rel_path} 상태가 Draft")
-    if re.search(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}|TBD|확정필요", content):
-        issues.append(f"{rel_path}에 템플릿 플레이스홀더가 남아 있음")
+    placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+    if placeholder_issue:
+        issues.append(placeholder_issue)
 
     has_screen = bool(re.search(r"SCR-\d{3}", content))
     has_uiref = bool(re.search(r"UIREF-\d{3}", content))
@@ -5079,9 +5140,14 @@ def validate_traceability_completion_status(project_dir=".", session=None, curre
 def check_trace(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
+    profile = load_delivery_profile(project_dir)
     issues = []
+    warnings = []
 
     print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
+    if profile == "poc":
+        print("  Profile: poc (누락/TBD 일부는 가설 검증 경고로 처리)")
+        warnings.extend(collect_poc_tbd_warnings(project_dir))
 
     progression_issues = validate_gate_progression(project_dir, current_gate)
     if progression_issues:
@@ -5290,7 +5356,11 @@ def check_trace(project_dir="."):
             if req in covered:
                 print(f"  O {req} - TST 매핑 확인")
             else:
-                issues.append(f"  X {req} - 테스트케이스 문서에 상세 REQ-ID 테스트 매핑 없음")
+                message = f"  X {req} - 테스트케이스 문서에 상세 REQ-ID 테스트 매핑 없음"
+                if profile == "poc":
+                    warnings.append(message.replace("  X ", "  ! ", 1))
+                else:
+                    issues.append(message)
 
         print("\n  Gate 3 검사 (2): TRACEABILITY.md tst_ids 컬럼 등록 여부")
         for req in sorted(detail_reqs):
@@ -5303,16 +5373,24 @@ def check_trace(project_dir="."):
                 if is_unresolved_trace_value(value)
             ]
             if unresolved_columns:
-                issues.append(
+                message = (
                     f"  X {req} - TRACEABILITY.md 테스트 컬럼 미정: {', '.join(unresolved_columns)} "
                     "(테스트가 불필요하면 '해당없음', 통합/UI 테스트로 대체하면 해당 IT/UI ID를 명시)"
                 )
+                if profile == "poc":
+                    warnings.append(message.replace("  X ", "  ! ", 1))
+                else:
+                    issues.append(message)
                 continue
             tst_ids = info.get("tst_ids", [])
             if tst_ids:
                 print(f"  O {req} - TST-ID {', '.join(tst_ids)} 등록 확인")
             else:
-                issues.append(f"  X {req} - TRACEABILITY.md에 tst_ids 미등록")
+                message = f"  X {req} - TRACEABILITY.md에 tst_ids 미등록"
+                if profile == "poc":
+                    warnings.append(message.replace("  X ", "  ! ", 1))
+                else:
+                    issues.append(message)
 
     # ── Impl: 개발표준 확정 + 구현 파일/테스트 연결 확인
     if current_gate == "impl":
@@ -5453,9 +5531,17 @@ def check_trace(project_dir="."):
         else:
             tst_results = parse_test_plan_status(project_dir)
             source_label = "Gate 3 테스트케이스 fallback"
-            issues.append("  X QA 결과서(DOC-QA-G4-002)에 실제 테스트 실행 결과가 없습니다.")
+            message = "  X QA 결과서(DOC-QA-G4-002)에 실제 테스트 실행 결과가 없습니다."
+            if profile == "poc":
+                warnings.append(message.replace("  X ", "  ! ", 1))
+            else:
+                issues.append(message)
         if not tst_results:
-            issues.append("Test-Plan.md 또는 QA 결과서에 TST/UT/IT/PT/UI 실행 상태가 없습니다.")
+            message = "Test-Plan.md 또는 QA 결과서에 TST/UT/IT/PT/UI 실행 상태가 없습니다."
+            if profile == "poc":
+                warnings.append(f"  ! {message}")
+            else:
+                issues.append(message)
         else:
             not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
             environment_blocked = [(tid, s) for tid, s in tst_results if s == 'environment_blocked']
@@ -5477,16 +5563,25 @@ def check_trace(project_dir="."):
                 issues.append(f"  X {tid} - Fail")
                 print(f"  X {tid} - Fail")
             for tid, _ in not_executed:
-                issues.append(f"  X {tid} - 미실행")
+                if profile == "poc":
+                    warnings.append(f"  ! {tid} - 미실행")
+                else:
+                    issues.append(f"  X {tid} - 미실행")
                 print(f"  X {tid} - 미실행")
             for tid, _ in environment_blocked:
-                issues.append(f"  X {tid} - environment_blocked")
+                if profile == "poc":
+                    warnings.append(f"  ! {tid} - environment_blocked")
+                else:
+                    issues.append(f"  X {tid} - environment_blocked")
                 print(f"  X {tid} - environment_blocked")
 
     completion_status_issues = validate_traceability_completion_status(project_dir, session, current_gate)
     if completion_status_issues:
         print("\n  추적표 완료 상태 검사: 위반 감지")
-        issues.extend(completion_status_issues)
+        if profile == "poc":
+            warnings.extend(issue.replace("  X ", "  ! ", 1) for issue in completion_status_issues)
+        else:
+            issues.extend(completion_status_issues)
     elif traceability_completion_required(session, current_gate):
         print("\n  추적표 완료 상태 검사: OK")
 
@@ -5499,6 +5594,11 @@ def check_trace(project_dir="."):
         print(f"  [경고] stats 계산 실패: {e}")
 
     print()
+    if warnings:
+        print(f"경고 {len(warnings)}건:\n")
+        for warning in warnings:
+            print(f"  {warning}")
+        print()
     if issues:
         print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
         for issue in issues:
@@ -6862,6 +6962,10 @@ def cmd_upgrade(project_dir="."):
     install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
     create_vulcan_config(project_dir)
+    if migrate_vulcan_config_models(project_dir):
+        print(f"  마이그레이션: vulcan.config.json unsupported Codex model → gpt-5.5")
+    if migrate_vulcan_config_qa_workspace_policy(project_dir):
+        print(f"  마이그레이션: vulcan.config.json Gate 4 QA 기본 workspace → integration branch")
 
     session["vulcan_version"] = new_ver
     session["vulcan_src"] = vulcan_src
@@ -7792,8 +7896,11 @@ def save_qa_workspace_state(project_dir, *, stage, run_id, worktree_path, branch
     existing = qa_workspace_state(session)
     now = datetime.now().isoformat(timespec="seconds")
     base_commit = git_text(["rev-parse", "HEAD"], worktree_path) or git_text(["rev-parse", "HEAD"], project_dir)
+    workspace_abs = os.path.abspath(worktree_path)
+    mode = "integration-workspace" if os.path.normcase(workspace_abs) == os.path.normcase(os.path.abspath(project_dir)) else "qa-worktree"
     qa_execution["gate4_workspace"] = {
-        "path": os.path.abspath(worktree_path),
+        "path": workspace_abs,
+        "mode": mode,
         "branch": branch or existing.get("branch") or git_current_branch(worktree_path),
         "base_commit": existing.get("base_commit") or base_commit,
         "created_by_run": existing.get("created_by_run") or run_id,
@@ -7814,11 +7921,6 @@ def resolve_gate4_qa_workspace(project_dir, *, run_id, run_meta, run_content, cr
     stage = qa_stage_from_run(run_content, run_meta)
     if not stage:
         return "", "", ""
-    if not create_worktree:
-        print(f"오류: {stage} qa-execution Run은 QA workspace/worktree에서 실행해야 합니다.")
-        print("  --no-worktree를 제거하거나 --worktree를 사용하세요.")
-        sys.exit(1)
-
     if stage == "QA-000":
         return stage, "", ""
 
@@ -7828,7 +7930,7 @@ def resolve_gate4_qa_workspace(project_dir, *, run_id, run_meta, run_content, cr
     qa_status = state.get("status") or ""
     if not qa_path or not os.path.isdir(qa_path):
         print(f"오류: {stage}는 QA-000에서 만든 QA workspace를 재사용해야 합니다.")
-        print("  먼저 QA-000 qa-execution Run을 --worktree로 실행해 qa_execution.gate4_workspace.path를 기록하세요.")
+        print("  먼저 QA-000 qa-execution Run을 실행해 qa_execution.gate4_workspace.path를 기록하세요.")
         sys.exit(1)
     if qa_status in ("blocked", "missing"):
         print(f"오류: QA-000 workspace 상태가 {qa_status}입니다. 후속 QA Run을 진행할 수 없습니다.")
@@ -9728,8 +9830,13 @@ def cmd_run_exec(
     no_progress_timeout_seconds = int(execution_config.get("no_progress_timeout_seconds") or 0)
     min_runtime_seconds = int(execution_config.get("min_runtime_seconds") or 120)
 
+    explicit_worktree_arg = create_worktree is not None
     if create_worktree is None:
         create_worktree = bool(execution_config.get("default_worktree", True))
+
+    qa_stage_hint = qa_stage_from_run(run_content, run_meta) if is_gate4_qa_execution_run(run_meta, run_content) else ""
+    if qa_stage_hint and not explicit_worktree_arg and not bool(workflow_policy(project_abs).get("qa_worktree_enabled", False)):
+        create_worktree = False
 
     qa_stage, qa_reuse_worktree_path, qa_reuse_branch = resolve_gate4_qa_workspace(
         project_abs,
@@ -9813,7 +9920,7 @@ Rules:
 - Status JSON shape: {{"target_id":"{run_id}","target_type":"run","runner":"{runner_normalized}","status":"running","phase":"editing","current_task":"Backend tests running","last_update":"<ISO time>"}}.
 - In your final response, summarize changed files, verification commands/results, and any Orchestrator decision needed.
 {f"- Gate 4 QA stage: {qa_stage}. Use the current working directory as the single QA workspace for this stage." if qa_stage else ""}
-{f"- QA workspace continuity is required: QA-001, QA-002, and QA-003 must use the QA-000 workspace path recorded by the Orchestrator. Do not create or switch to a different QA workspace." if qa_stage else ""}
+{f"- QA workspace continuity is required: QA-001, QA-002, and QA-003 must use the QA-000 workspace path recorded by the Orchestrator. The default QA workspace is the current integration branch working directory. Do not create or switch to a different QA workspace." if qa_stage else ""}
 
 Worker dependency cache:
 - npm_config_cache={dependency_cache["npm_config_cache"]}
@@ -9922,6 +10029,10 @@ Worker dependency cache:
         print(f"  npm_config_cache: {dependency_cache['npm_config_cache']}")
         print(f"  PLAYWRIGHT_BROWSERS_PATH: {dependency_cache['PLAYWRIGHT_BROWSERS_PATH']}")
         print(f"  worktree: {str(create_worktree).lower()}")
+        if qa_stage and not create_worktree:
+            print(f"  qa_stage: {qa_stage}")
+            print("  qa_workspace_mode: integration-workspace")
+            print(f"  qa_workspace_path: {qa_reuse_worktree_path or exec_dir}")
         if create_worktree:
             print(f"  worktree_path: {worktree_path}")
             print(f"  branch: {execution_branch}")
@@ -10886,6 +10997,8 @@ def direct_edit_scope_contract_changed(scope_text):
 def check_run_file(path):
     issues = []
     warnings = []
+    project_dir = project_dir_for_run_file(path) or "."
+    profile = load_delivery_profile(project_dir)
     try:
         with open(path, encoding="utf-8") as f:
             content = f.read()
@@ -10948,7 +11061,13 @@ def check_run_file(path):
     if status in {"Completed", "Verified", "CompletedWithIssues"}:
         body_without_yaml = run_body_without_yaml(content)
         if re.search(r"(?im)(^|\|)\s*(TBD|확정필요|작성필요)\s*(\||$)", body_without_yaml):
-            issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
+            if profile == "poc":
+                if poc_tbd_decision_context_present(content):
+                    warnings.append("PoC Completed Run 본문에 TBD/확정필요/작성필요가 남아 있습니다. 사유와 후속 판단 시점 기준으로 확인하세요.")
+                else:
+                    warnings.append("PoC Completed Run 본문에 TBD/확정필요/작성필요가 있으나 사유 또는 후속 판단 시점이 부족합니다.")
+            else:
+                issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
 
         is_impl_run = (
             gate == "impl"
@@ -11264,8 +11383,8 @@ def run_preflight_file(path):
             warnings.append("qa-execution Run에는 실패/차단 시 worker가 남길 qa_failure_report_contract가 필요합니다.")
         if not re.search(r"\bQA-00[0-3]\b", content):
             warnings.append("qa-execution Run은 QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 단계가 드러나야 합니다.")
-        if re.search(r"\bQA-000\b", content) and not re.search(r"qa_workspace|qa_workspace_path|worktree", content, re.IGNORECASE):
-            warnings.append("QA-000 Run은 후속 QA Run이 재사용할 qa_workspace_path 또는 QA worktree 경로를 기록해야 합니다.")
+        if re.search(r"\bQA-000\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
+            warnings.append("QA-000 Run은 후속 QA Run이 재사용할 qa_workspace_path를 기록해야 합니다.")
         if re.search(r"\bQA-00[1-3]\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
             warnings.append("QA-001~QA-003 Run은 QA-000이 기록한 같은 qa_workspace_path를 입력으로 받아야 합니다.")
         blockers.extend(qa_workspace_preflight_blockers(path, qa_stage))
@@ -11462,7 +11581,7 @@ def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFI
             "main_branch": "main",
             "integration_branch": "dev",
             "impl_uses_integration_branch": True,
-            "qa_worktree_enabled": True,
+            "qa_worktree_enabled": False,
             "qa_stage_mode": "staged",
             "release_merge_to": "main",
             "enforce_branch_guard": True
@@ -11500,19 +11619,68 @@ def create_vulcan_config(target_dir, profile=DEFAULT_DELIVERY_PROFILE):
     write_file(target_dir, rel_path, json.dumps(default_vulcan_config(available_runners, profile=profile), ensure_ascii=False, indent=2))
 
 
+def replace_unsupported_codex_models(value):
+    if isinstance(value, dict):
+        return {k: replace_unsupported_codex_models(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [replace_unsupported_codex_models(v) for v in value]
+    if value == "gpt-5.3-codex":
+        return "gpt-5.5"
+    return value
+
+
+def migrate_vulcan_config_models(project_dir="."):
+    path = os.path.join(project_dir, "vulcan.config.json")
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, encoding="utf-8") as f:
+            config = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return False
+    migrated = replace_unsupported_codex_models(config)
+    if migrated == config:
+        return False
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(migrated, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return True
+
+
+def migrate_vulcan_config_qa_workspace_policy(project_dir="."):
+    path = os.path.join(project_dir, "vulcan.config.json")
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, encoding="utf-8") as f:
+            config = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return False
+    workflow = config.setdefault("workflow", {})
+    if not isinstance(workflow, dict):
+        return False
+    if workflow.get("qa_worktree_enabled") is False:
+        return False
+    workflow["qa_worktree_enabled"] = False
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return True
+
+
 def load_vulcan_config(project_dir="."):
     path = os.path.join(project_dir, "vulcan.config.json")
     config = default_vulcan_config()
     if not os.path.exists(path):
-        return config
+        return replace_unsupported_codex_models(config)
     try:
         with open(path, encoding="utf-8") as f:
             user_config = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return config
+        return replace_unsupported_codex_models(config)
     if isinstance(user_config, dict):
         deep_merge_dict(config, user_config)
-    return config
+    return replace_unsupported_codex_models(config)
 
 
 def workflow_policy(project_dir="."):
@@ -11625,6 +11793,7 @@ def cmd_branch_status(project_dir="."):
     qa_state = qa_workspace_state(session)
     if qa_state:
         print(f"  qa_workspace_path: {qa_state.get('path') or '-'}")
+        print(f"  qa_workspace_mode: {qa_state.get('mode') or '-'}")
         print(f"  qa_workspace_status: {qa_state.get('status') or '-'}")
         print(f"  qa_workspace_last_stage: {qa_state.get('last_stage') or '-'}")
     print(f"  integration_exists: {git_branch_exists(integration_branch, project_abs)}")

@@ -70,8 +70,8 @@ Core 규칙 요약
 - `.claude/CLAUDE.md`는 Claude 실행 진입 파일일 수 있지만, Ex 공통 규칙의 원천은 `docs/core/`다.
 - Gate 4 테스트 실행과 증적 수집은 가능하면 `qa-execution` worker Run으로 분리하고, 실패 발견 시 즉시 수정하지 않는다.
 - Gate 4 QA는 `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나눈다.
-- `QA-000`에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다.
-- `QA-001`, `QA-002`, `QA-003`은 `QA-000`이 기록한 같은 QA workspace/worktree에서 실행한다.
+- `QA-000`에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace 경로를 기록한다. 기본 workspace는 `workflow.integration_branch`의 현재 작업공간이다.
+- `QA-001`, `QA-002`, `QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행한다.
 - 화면 증적 Pass는 Playwright 결과를 기준으로 하며, Claude Chrome 또는 수동 캡처만으로 확정하지 않는다.
 
 ## 5. Gate 종료 응답

@@ -17,16 +17,18 @@ Use this for Gate 4 QA and QA iterations.
 
 ## Staged QA
 
-1. `QA-000`: prepare or confirm the QA workspace/worktree, dependencies, ports, DB, and smoke readiness.
+1. `QA-000`: prepare or confirm the QA workspace on the integration branch, dependencies, ports, DB, and smoke readiness.
 2. `QA-001`: run command-based checks such as syntax, unit/integration tests, lint, build, and contract checks.
 3. `QA-002`: collect UI/E2E evidence, screenshots, logs, and browser artifacts.
 4. `QA-003`: synthesize Test Result, QA Finding, traceability status candidates, and approval/blocking issues.
 
-`QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`.
+`QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`. A separate QA worktree is optional and should be used only when explicitly enabled by project policy.
 
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.
+- If logs, screenshots, transcripts, or previous failures are mixed, use `qa-reader` to classify evidence before deciding a fix path.
+- If QA failure appears related to Program/API/DB/UI contract drift, use `contract-reviewer` before creating a `qa-fix-loop`.
 - Classify failures as `FIND`, `CR`, `ISSUE`, or `environment_blocked`.
 - Start `qa-fix-loop` only after Orchestrator/user decision.
 - A `qa-fix-loop` Run must name the target `FIND-ID`, scope writable paths, and verification commands.

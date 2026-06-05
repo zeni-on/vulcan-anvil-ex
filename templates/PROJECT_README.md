@@ -13,6 +13,7 @@ Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트, 증적, 승인 기�
   docs/                    # Vulcan-Anvil Ex 산출물, 템플릿, Run 기록
   AGENTS.md                # Codex/GPT 에이전트 진입 지침
   .agents/                 # Codex repo-local skill 카드
+  .codex/agents/           # Codex custom agent 정의
   .claude/                 # Claude 런타임용 adapter 파일
   session.json             # 현재 Gate, 진행 상태, 대시보드용 상태 캐시
   vulcan.config.json       # 독립 검수 등 프로젝트별 운영 설정
@@ -42,12 +43,13 @@ Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트, 증적, 승인 기�
 
 - `AGENTS.md`는 Codex/GPT가 프로젝트 규칙을 읽는 진입점입니다.
 - `.agents/skills/`는 Codex가 Gate/Run/Impl/QA/Release 작업에서 필요할 때 읽는 repo-local skill 카드입니다.
+- `.codex/agents/`는 메인 Orchestrator가 명시적으로 호출할 수 있는 Codex custom agent 정의입니다.
 - `.claude/`는 Claude 사용 시 같은 Core 규칙을 적용하기 위한 adapter입니다.
 - `session.json`은 현재 Gate와 대시보드 상태를 기록합니다.
 - `vulcan.py`는 Run 생성, Gate 상태 갱신, 추적성 검증을 수행하는 보조 도구입니다.
 - `docs/`는 감리 대응 산출물과 에이전트 작업 기록의 원본입니다.
 
-처음 보는 사람은 `backend/`와 `frontend/`를 애플리케이션 코드로 보고, `docs/`, `AGENTS.md`, `.agents/`, `.claude/`, `session.json`, `vulcan.py`를 Vulcan-Anvil Ex 운영 파일로 보면 됩니다.
+처음 보는 사람은 `backend/`와 `frontend/`를 애플리케이션 코드로 보고, `docs/`, `AGENTS.md`, `.agents/`, `.codex/agents/`, `.claude/`, `session.json`, `vulcan.py`를 Vulcan-Anvil Ex 운영 파일로 보면 됩니다.
 
 ## 기본 명령
 

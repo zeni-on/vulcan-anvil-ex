@@ -614,7 +614,7 @@ worker는 다음 원칙을 따른다.
 - Node/Playwright 명령이 필요하면 `npm_config_cache`와 `PLAYWRIGHT_BROWSERS_PATH`를 사용한다.
 - 권한, 인증, 네트워크, registry, cache 문제로 설치 또는 실행이 막히면 `environment_blocked` 또는 `not_run`으로 기록한다.
 - 실패한 명령, cwd, exit code, log path, Orchestrator 재실행 명령을 남긴다.
-- 화면 서버 실행과 Playwright 최종 증적은 `workflow.integration_branch` 기준의 `QA-000` QA workspace에서 Gate 4 QA 입력으로 판정한다.
+- 화면 서버 실행과 Playwright 최종 증적은 `workflow.integration_branch` 기준의 `QA-000` QA workspace에서 Gate 4 QA 입력으로 판정한다. 별도 QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다.
 
 ## 9.2 Gate 4 QA 실행 worker 경계
 
@@ -641,7 +641,8 @@ QA-003의 실행 상태 원본은 `DOC-QA-G4-002_Test-Result_v0.1.md`다.
 Gate 3 테스트케이스 문서는 계획/기준 문서이므로 QA-003에서 `Planned` 값을 `Pass`로 덮어쓰지 않는다.
 Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽고, 결과서에 실제 실행 상태가 없을 때만 Gate 3 테스트케이스를 fallback으로 참조한다.
 
-`QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하는 Run이다.
+`QA-000`은 Gate 4 전체에서 재사용할 QA workspace를 준비하는 Run이다. 기본값은 `workflow.integration_branch`의 현재 작업공간이다.
+별도 QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다.
 `QA-000` Run 결과에는 `qa_workspace_path`, 기준 브랜치/커밋, 의존성 설치 상태, 서버/포트/DB 준비 상태를 남긴다.
 `QA-001`, `QA-002`, `QA-003` Run 입력 계약에는 `QA-000`이 기록한 같은 `qa_workspace_path`를 포함해야 한다.
 후속 QA Run은 새 workspace를 임의로 만들지 않고 같은 workspace에서 실행한다.
@@ -821,7 +822,7 @@ related_ids: [REQ-005]
 
 - Phase 0~Gate 3 산출물 Run은 `main` 기준으로 작성한다.
 - `impl`의 `implementation-plan`, `implementation-scaffold`, `build-wave` Run은 `workflow.integration_branch` 통합 브랜치 기준으로 작성한다. 기본값은 `dev`지만 프로젝트 설정에 따라 다른 브랜치명을 사용할 수 있다.
-- Gate 4의 `qa-execution` Run은 `workflow.integration_branch` 또는 그 기준 `QA-000` QA workspace에서 실행하는 것으로 작성한다.
+- Gate 4의 `qa-execution` Run은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 `QA-000` QA workspace로 기록하고, `QA-001`~`QA-003`이 이를 재사용하는 것으로 작성한다. QA worktree는 명시적으로 활성화한 프로젝트에서만 사용한다.
 - Run 입력 계약에는 브랜치 전환 명령을 worker 작업으로 넣지 않는다. Orchestrator가 `python vulcan.py branch-start impl`과 `python vulcan.py branch-status`로 준비한다.
 - worker는 feature 브랜치/worktree에서 작업할 수 있지만, 최종 통합 판단과 `main` 반영 판단은 Orchestrator와 Gate 5 승인 절차가 담당한다.
 

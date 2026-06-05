@@ -76,9 +76,11 @@ PoC Profile로 시작했다면 다음처럼 목표와 운영 강도를 함께 �
 이 프로젝트는 PoC profile이야.
 감리 제출 수준 문서가 아니라 목표, 가설, 성공 기준, smoke/demo 검증 결과를 중심으로 진행해줘.
 실패하거나 미실행한 항목은 Pass로 기록하지 말고 PoC 결과나 다음 판단 항목으로 남겨줘.
+짧은 실험은 subagent와 결과 요약 중심으로 진행하고, 외부 worker나 긴 위임이 필요한 경우에만 compact Run을 만들어줘.
+TBD가 필요한 항목은 사유와 후속 판단 시점을 같이 남겨줘.
 ```
 
-PoC Run 초안은 다음처럼 생성할 수 있습니다.
+PoC Run은 기본 필수가 아닙니다. 외부 CLI worker, 독립 검수, 긴 위임, 재현 가능한 실험 기록이 필요하면 다음처럼 compact Run 초안을 생성할 수 있습니다.
 
 ```powershell
 python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
@@ -99,6 +101,7 @@ my-project/
 ├── README.md
 ├── AGENTS.md
 ├── .agents/
+├── .codex/
 ├── .claude/
 ├── session.json
 ├── vulcan.py
@@ -219,12 +222,12 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 
 | QA Run | 목적 |
 | --- | --- |
-| `QA-000` | QA workspace 준비, 의존성/포트/DB/Playwright 가능성 확인 |
+| `QA-000` | integration branch QA workspace 기록, 의존성/포트/DB/Playwright 가능성 확인 |
 | `QA-001` | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check` 같은 명령 검증 |
 | `QA-002` | Playwright UI/E2E screenshot/log/trace 증적 수집 |
 | `QA-003` | QA Finding, Test Result, FIND/CR/ISSUE, Gate 4 판단 후보 정리 |
 
-`QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행합니다. QA worker는 실패를 발견해도 소스코드를 바로 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남깁니다. 수정이 필요하면 Orchestrator가 사용자와 결정한 뒤 별도 `qa-fix-loop` Run으로 처리합니다.
+`QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행합니다. 기본 workspace는 `workflow.integration_branch`의 현재 작업공간입니다. QA worktree는 명시적으로 활성화한 경우에만 사용합니다. QA worker는 실패를 발견해도 소스코드를 바로 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남깁니다. 수정이 필요하면 Orchestrator가 사용자와 결정한 뒤 별도 `qa-fix-loop` Run으로 처리합니다.
 
 테스트 문서의 역할은 분리합니다. Gate 3 테스트케이스 문서는 “무엇을 어떻게 검증할지”를 담는 계획 문서이므로 `Planned`를 `Pass`로 덮어쓰지 않습니다. Gate 4에서 실제 실행한 결과는 `DOC-QA-G4-002_Test-Result_v0.1.md`에 `Pass / Fail / Not Run / Skipped / environment_blocked`로 기록하고, QA-003에서 이 결과와 증적을 근거로 요구사항추적표의 `상태`, `증적`, `요구사항별 검증 요약`을 갱신합니다.
 

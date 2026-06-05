@@ -31,16 +31,31 @@ Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니
 | --- | --- | --- | --- |
 | `review` | `gpt-5.5` | `high` | 독립 검수, 설계/QA 정합성 검토 |
 | `critical_judgment` | `gpt-5.5` | `high` | Gate 승인 후보, FIND/CR 분류, 릴리즈 판단 후보 |
-| `build` | `gpt-5.3-codex` | `high` | 일반 구현 worker |
-| `build-backend` | `gpt-5.3-codex` | `high` | Backend/API/DB 구현 worker |
-| `build-frontend` | `gpt-5.3-codex` | `high` | Frontend/UI 구현 worker |
+| `build` | `gpt-5.5` | `high` | 일반 구현 worker |
+| `build-backend` | `gpt-5.5` | `high` | Backend/API/DB 구현 worker |
+| `build-frontend` | `gpt-5.5` | `high` | Frontend/UI 구현 worker |
 | `qa-execution` | `gpt-5.4` | `medium` | QA 명령 실행, 로그 수집, 결과 정리 |
-| `qa-fix-loop` | `gpt-5.3-codex` | `high` | 승인된 FIND 범위 안의 QA 수정 worker |
+| `qa-fix-loop` | `gpt-5.5` | `high` | 승인된 FIND 범위 안의 QA 수정 worker |
 | `run-draft` | `gpt-5.4-mini` | `medium` | Run 초안, trace-context 후보, 문서 정리 |
 | `evidence-summary` | `gpt-5.4-mini` | `low` | 로그/증적 index, 단순 요약 |
 
 이 표는 성능 개선을 위한 시작점이다.
 정답으로 고정하지 않고 실제 sample Run에서 duration, 실패율, Orchestrator 보정량을 보고 조정한다.
+
+## 3.1 Codex Custom Agent 권장값
+
+`.codex/agents/*.toml`에 정의하는 custom agent는 역할별로 model/effort를 직접 명시한다.
+이 값은 `agent-run/run-exec`의 runner 정책이 아니라 Codex subagent 정의에 적용되는 값이다.
+
+| Custom Agent | Model | Effort | 이유 |
+| --- | --- | --- | --- |
+| `trace-scout` | `gpt-5.5` | `medium` | 빠른 관련 ID/source document 탐색 |
+| `run-drafter` | `gpt-5.5` | `medium` | Run 작업지시서 누락/과다 범위 검토 |
+| `contract-reviewer` | `gpt-5.5` | `high` | 설계/구현 계약 누락과 CR 후보 판단 |
+| `qa-reader` | `gpt-5.5` | `medium` | QA 로그 원인 분류와 FIND/CR/ISSUE 후보 판단 |
+
+custom agent도 정답으로 고정하지 않는다.
+실제 샘플 프로젝트에서 소요 시간, 유효 지적 수, 잘못 짚은 지적 수, Orchestrator 보정량을 보고 조정한다.
 
 ## 4. 설정 예시
 
@@ -60,7 +75,7 @@ Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니
             "effort": "high"
           },
           "build": {
-            "model": "gpt-5.3-codex",
+            "model": "gpt-5.5",
             "effort": "high"
           },
           "qa-execution": {
@@ -83,7 +98,7 @@ Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니
 `agent-run --mode work`, `run-exec`, `review-run`은 Codex runner 실행 기록에 다음 값을 남긴다.
 
 ```yaml
-model: gpt-5.3-codex
+model: gpt-5.5
 reasoning_effort: high
 model_source: codex-model-policy:build-backend
 effort_source: codex-model-policy:build-backend

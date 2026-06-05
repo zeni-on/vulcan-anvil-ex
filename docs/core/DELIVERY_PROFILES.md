@@ -105,10 +105,15 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 추적성은 최소한 `가설/요구사항 -> 구현 -> 검증 결과`를 연결하는 수준으로 유지한다.
 - 보안/데이터/운영 기준은 실제 배포가 아니라 위험 식별과 향후 전환 조건 중심으로 작성한다.
 - PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Solution Profile로 승격한다.
-- Run은 가설 검증 단위로 작게 만들고, 실패한 실험은 구현 결함이 아니라 검증 결과로 기록할 수 있다.
-- worker 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
+- Run 문서는 기본 필수 산출물이 아니다. 외부 worker 실행, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
+- PoC 구현은 메인 Orchestrator가 직접 독주하지 않고 subagent 또는 worker를 우선 사용한다. 다만 외부 CLI worker와 worktree를 반드시 요구하지는 않는다.
+- 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과, 환경 차단, 다음 판단 항목으로 기록할 수 있다.
+- worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
 - `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.
+- `TBD`, `확정필요`, `미정`은 PoC에서 허용한다. 단, 목표, 성공 기준, 실제 실행 결과는 `TBD`로 둘 수 없다.
+- `TBD`가 남는 항목은 반드시 사유와 후속 판단 시점을 함께 남긴다. 예: `TBD: 배포 방식은 PoC 범위 밖. 제품화 전환 판단 시 결정`.
+- `check-trace`와 `run-check`는 PoC에서 상세 추적 누락, 미실행, 환경 차단, 사유 있는 TBD를 차단 이슈보다 경고/판단 항목으로 우선 분류한다. 제품 실패(`Fail`)와 실제 실행 결과 허위 보고는 계속 차단한다.
 
 ## 5. Profile 선택 기준
 
@@ -142,7 +147,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 | `solution` | `init --profile solution`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
 | `poc` | `init --profile poc`으로 선택할 수 있고, `run-new`/`gate-start`가 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
 | `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
-| `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. 초기 단계에서는 관찰/문서화 기준이며, 일부 검사 엄격도 조정은 후속 작업이다. |
+| `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. PoC는 일부 추적성/placeholder 검사를 경고 중심으로 조정한다. |
 
 예상 설정 예:
 
@@ -166,8 +171,8 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 2. `vulcan.config.json` 또는 `session.json`에 선택된 Profile과 `profile_rules` 기본값을 기록한다. (완료)
 3. `profile-status`로 현재 Profile과 Overlay를 확인한다. (완료)
 4. PoC Profile의 Run 입력 계약은 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심으로 얇게 생성한다. (완료)
-5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다.
-6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다.
+5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다. (PoC TBD 경고화 1차 완료)
+6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 상세 매핑/환경 차단 경고화 1차 완료)
 7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
 8. `solution`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
 

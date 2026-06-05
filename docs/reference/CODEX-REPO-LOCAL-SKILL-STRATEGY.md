@@ -15,6 +15,7 @@ Codex는 `AGENTS.md`를 작업 시작 시 instruction chain에 넣는다.
 | --- | --- |
 | `AGENTS.md` | 항상 적용되는 프로젝트 기본 지침 |
 | `.agents/skills/*/SKILL.md` | Codex가 필요할 때 읽는 repo-local 절차 카드 |
+| `.codex/agents/*.toml` | 메인 Orchestrator가 명시적으로 호출할 수 있는 Codex custom agent 정의 |
 | `docs/core/` | Ex의 원본 규칙 |
 | `vulcan.py` | 실제 검증과 차단을 수행하는 도구 |
 | `docs/adapters/codex-gpt/skills/*.md` | Run 문서와 adapter가 참조하는 내부 작업 카드 |
@@ -22,7 +23,7 @@ Codex는 `AGENTS.md`를 작업 시작 시 instruction chain에 넣는다.
 ## 2. 원칙
 
 1. Ex는 사용자 전역 skill을 기본으로 수정하지 않는다.
-2. `init`과 `upgrade`는 프로젝트 내부 `.agents/skills`만 생성/갱신한다.
+2. `init`과 `upgrade`는 프로젝트 내부 `.agents/skills`와 `.codex/agents`만 생성/갱신한다.
 3. repo-local skill은 Core 규칙을 복제하지 않고 필요한 문서와 명령으로 안내한다.
 4. skill은 행동을 유도하고, 강제력은 `vulcan.py`의 check 명령이 담당한다.
 5. 같은 이름의 전역 skill이 있어도 repo-local skill이 자동 override된다고 가정하지 않는다.
@@ -62,7 +63,7 @@ skill은 "profile을 확인하고 Core 정책을 적용하라"는 짧은 절차�
 
 ## 4. Init/Upgrade 정책
 
-`vulcan.py init`과 `vulcan.py upgrade`는 원본 repo의 `.agents/` 디렉터리를 프로젝트에 복사한다.
+`vulcan.py init`과 `vulcan.py upgrade`는 원본 repo의 `.agents/` 디렉터리와 `.codex/agents/` 디렉터리를 프로젝트에 복사한다.
 
 ```text
 project/
@@ -73,9 +74,16 @@ project/
       vulcan-impl-wave/SKILL.md
       vulcan-qa/SKILL.md
       vulcan-release/SKILL.md
+  .codex/
+    agents/
+      trace-scout.toml
+      run-drafter.toml
+      contract-reviewer.toml
+      qa-reader.toml
 ```
 
 전역 위치인 사용자 홈의 skill 저장소는 기본 명령으로 수정하지 않는다.
+마찬가지로 `.codex/config.toml`은 사용자 또는 프로젝트별 Codex 설정일 수 있으므로 기본 복사 대상에 포함하지 않는다.
 나중에 필요하면 별도 명령으로 선택 설치를 검토한다.
 
 ```text

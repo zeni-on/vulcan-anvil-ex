@@ -99,7 +99,7 @@ Orchestrator 직접 구현 예외는 다음 조건을 모두 만족할 때만 �
 
 Gate 4에서도 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 실제 검증 명령, Playwright 증적, 로그, 후보 FIND/CR/ISSUE를 수집한다. 실패가 나오면 즉시 코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 사용자에게 보고한 뒤 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다. 수정하기로 결정한 항목만 별도 `qa-fix-loop` Run으로 넘긴다.
 
-Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator는 먼저 통합된 소스가 실제로 실행 가능한지 `QA-000` 환경 준비/스모크 Run으로 확인한다. `QA-000`은 Gate 4 전체에서 재사용할 QA workspace 또는 QA worktree를 준비하고 경로를 Run 결과에 남긴다. 그 다음 `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적 수집, `QA-003` 결과 정리/판정 후보 Run을 순차로 진행하되 모두 `QA-000`이 기록한 같은 workspace에서 실행한다. `QA-000`이 차단되면 후속 QA Run을 진행하지 말고 사용자에게 환경 차단 사유와 재현 명령을 보고한다.
+Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator는 먼저 통합된 소스가 실제로 실행 가능한지 `QA-000` 환경 준비/스모크 Run으로 확인한다. `QA-000`은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다. QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다. 그 다음 `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적 수집, `QA-003` 결과 정리/판정 후보 Run을 순차로 진행하되 모두 `QA-000`이 기록한 같은 workspace에서 실행한다. `QA-000`이 차단되면 후속 QA Run을 진행하지 말고 사용자에게 환경 차단 사유와 재현 명령을 보고한다.
 
 ## 5.0 Branch Workflow
 
@@ -107,7 +107,7 @@ Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator�
 
 - `main`: `init`, Phase 0, Gate 1, Gate 2, Gate 3 산출물과 사용자 승인 기준선.
 - `workflow.integration_branch`(기본 `dev`): `impl` 진입 후 생성/전환하는 통합 브랜치. Build Wave worker 결과, 통합 검증, Gate 4 QA 후보를 모은다.
-- `qa worktree`: Gate 4에서 필요하면 `workflow.integration_branch` 기준으로 생성하는 테스트 전용 작업공간. 의존성 설치, 서버 기동, Playwright 증적 수집은 이 공간에서 수행할 수 있다.
+- `QA workspace`: Gate 4에서 `QA-000`이 기록하고 `QA-001`~`QA-003`이 재사용하는 테스트 실행 경로. 기본값은 `workflow.integration_branch`의 현재 작업공간이며, QA worktree는 명시적으로 활성화한 경우에만 쓴다.
 
 `impl`로 넘어간 직후 Orchestrator는 `python vulcan.py branch-start impl`을 실행해 `workflow.integration_branch` 브랜치를 시작한다. 현재 브랜치가 의심되면 `python vulcan.py branch-status`로 확인한다. `wave-start`, `run-exec`, `agent-run --mode work`는 audit workflow에서 설정된 통합 브랜치가 아니면 실행하지 않는다.
 
