@@ -71,6 +71,8 @@
 - 사용자가 제안을 수락하면 `python vulcan.py handoff ...`로 handoff Run을 만들고, 수락하지 않으면 현재 작업 환경에서 가능한 검증을 계속한다.
 - subagent 또는 다른 실행 환경의 결과는 최종 사실로 바로 확정하지 않고 Orchestrator가 다시 검증한다.
 - 구현자가 자기 구현을 최종 승인하지 않도록 review persona 또는 별도 환경 검수를 둔다.
+- **동적 서브에이전트 위임**: `agy` 오케스트레이터는 플랫폼 기능(`define_subagent`, `invoke_subagent`)을 사용하여 실시간으로 서브에이전트를 스폰하고, `Workspace: branch` 모드를 활용해 복제 없이 즉각 가상 격리 폴더를 할당하여 비동기로 작업을 병렬 위임합니다.
+- **비동기 메시징 협업**: 스폰된 에이전트 간의 소통은 `send_message` 도구를 활용한 이벤트 메시징 기반으로 이루어지며, 서브에이전트의 완료 보고 알림(Reactive Wakeup) 수신 시 동기식 검증을 수행합니다.
 
 ## 5. Build Wave 오케스트레이션 규칙 (Gemini 최적화)
 
