@@ -377,6 +377,8 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         apply_fixture(fixture_dir, project_dir)
         validate_fixture_inputs(project_dir)
+        steps.append(run_step("configure-git-user-email", ["git", "config", "user.email", "vulcan-regression@example.invalid"], cwd=project_dir))
+        steps.append(run_step("configure-git-user-name", ["git", "config", "user.name", "Vulcan Regression"], cwd=project_dir))
         steps.append(run_step("commit-fixture-state:add", ["git", "add", "-A"], cwd=project_dir))
         steps.append(run_step("commit-fixture-state:commit", ["git", "commit", "-m", "test: apply completed fixture"], cwd=project_dir))
         steps.append(run_step("checkout-integration-branch", ["git", "checkout", "-B", "dev"], cwd=project_dir))
