@@ -126,6 +126,44 @@ Gemini 에이전트는 환경에서 제공되는 API 도구들을 아래 규칙�
 
 ---
 
+## 8-2. Vulcan CLI 워크플로우 퀵 레퍼런스 (CLI 실행 전 즉시 참고)
+
+> [!IMPORTANT]
+> 에이전트는 명령어를 찾기 위해 `python vulcan.py --help`를 매번 실행하는 탐색 비효율을 줄여야 합니다. 아래의 정해진 표준 명령어 퀵 맵을 즉시 활용하십시오.
+
+### ① Gate 라이프사이클 제어
+| 목적 | 실행할 명령어 |
+| --- | --- |
+| **Gate 시작** | `python vulcan.py gate-start <gate>` (e.g. `phase0`, `gate1`, `gate2`, `gate3`, `impl`, `gate4`, `gate5`) |
+| **Gate 완료** | `python vulcan.py session --gate <gate> --status done` (필요 시 `--feature <이름>` 추가) |
+| **상태 동기화** | `python vulcan.py sync-session` (Gate 전환 또는 변경 발생 시 원격 push 및 로컬 동기화) |
+
+### ② 에이전트 Run 생성 및 검증
+| 목적 | 실행할 명령어 |
+| --- | --- |
+| **Orchestrator Plan 생성** | `python vulcan.py orchestrator-plan --goal "<목표>" --gate <gate>` |
+| **새 작업 Run 생성** | `python vulcan.py run-new --skill <skill> --title "<제목>" --related-ids "<ID들>"` <br>※ *주요 skill: `traceability-review`, `screen-design`, `security-review`, `development-standard-review`, `implementation-plan`, `build-wave`, `qa-execution`, `qa-fix-loop`* |
+| **Run 사전검사 (preflight)** | `python vulcan.py run-preflight <run_file_path>` |
+| **Run 완료검사 (check)** | `python vulcan.py run-check <run_file_path>` |
+| **전체 추적성/정합성 정적 검사** | `python vulcan.py check-trace` |
+
+### ③ 구현 Build Wave 및 QA
+| 목적 | 실행할 명령어 |
+| --- | --- |
+| **통합/작업 브랜치 상태 확인** | `python vulcan.py branch-status` |
+| **통합 브랜치 기동 (impl 진입 시)** | `python vulcan.py branch-start impl` |
+| **Build Wave 시작** | `python vulcan.py wave-start <BW-ID> --trace-seed <대표ID>` |
+| **Build Wave 완료** | `python vulcan.py wave-complete <BW-ID> --status Verified` |
+| **결과 통합 및 병합 (Review 후)** | `python vulcan.py run-integrate <run_file_path>` |
+
+### ④ 릴리즈 및 프레임워크 최신화
+| 목적 | 실행할 명령어 |
+| --- | --- |
+| **Release PR 생성 테스트** | `python vulcan.py release-pr --dry-run` |
+| **프레임워크 최신화 (도구/템플릿)** | `python vulcan.py upgrade` |
+
+---
+
 ## 9. Antigravity 동적 런타임 위임 프로토콜 (Dynamic Delegation)
 
 오케스트레이터(`agy`)가 작업을 분할하고 검증할 때, 파일 시스템에 정적 환경을 구축하는 대신 아래의 Antigravity 플랫폼의 동적 조율 메커니즘을 적용합니다.

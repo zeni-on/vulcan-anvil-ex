@@ -43,6 +43,28 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Worker, subagent, and external runner outputs are candidates until the Orchestrator verifies them.
 - Do not treat global memory or other sample projects as project facts.
 
+## CLI Quick Commands Map (Do not run --help, use this immediately)
+
+- **Gate Control**:
+  - Start Gate: `python vulcan.py gate-start <gate>` (e.g. `phase0`, `gate1`, `gate2`, `gate3`, `impl`, `gate4`, `gate5`)
+  - Complete Gate: `python vulcan.py session --gate <gate> --status done` (Optional: `--feature <name>`)
+  - Sync Remote/Local: `python vulcan.py sync-session`
+- **Run Lifecyle**:
+  - Create Orchestrator Plan: `python vulcan.py orchestrator-plan --goal "<goal>" --gate <gate>`
+  - Create New Run: `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"`
+  - Preflight Check: `python vulcan.py run-preflight <run_file>`
+  - Complete Check: `python vulcan.py run-check <run_file>`
+  - Static Trace Check: `python vulcan.py check-trace`
+- **Build Wave & QA**:
+  - Integration Branch Status: `python vulcan.py branch-status`
+  - Start Integration Branch: `python vulcan.py branch-start impl`
+  - Start Build Wave: `python vulcan.py wave-start <BW-ID> --trace-seed <seed_id>`
+  - Complete Build Wave: `python vulcan.py wave-complete <BW-ID> --status Verified`
+  - Integrate Run: `python vulcan.py run-integrate <run_file>`
+- **Release & Upgrade**:
+  - Dry-run Release PR: `python vulcan.py release-pr --dry-run`
+  - Upgrade framework: `python vulcan.py upgrade`
+
 ## Report
 
 End with the current Gate, changed files, verification commands, remaining issues, and the next approval point.
