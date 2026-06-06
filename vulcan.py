@@ -2908,15 +2908,16 @@ def parse_requirements(project_dir="."):
         os.path.join("docs", "01-requirements", "REQUIREMENTS.md"),
     ])
     if not path:
-        return set(), set(), set(), {}
+        return {}, {}, {}, {}
 
     with open(path, encoding="utf-8") as f:
         content = f.read()
 
-    group_reqs = set()
-    detail_reqs = set()
+    group_reqs = {}
+    detail_reqs = {}
 
-    for line in content.splitlines():
+    for idx, line in enumerate(content.splitlines()):
+        line_num = idx + 1
         stripped = line.strip()
         if stripped.startswith("|"):
             cols = [c.strip() for c in stripped.strip("|").split("|")]
@@ -2926,29 +2927,44 @@ def parse_requirements(project_dir="."):
                 name = cols[1] if len(cols) > 1 else ""
                 description = cols[2] if len(cols) > 2 else ""
                 if name or description:
-                    group_reqs.add(cols[0])
+                    if cols[0] not in group_reqs:
+                        group_reqs[cols[0]] = line_num
             elif re.fullmatch(r"REQ-\d{3}-\d{2}", cols[0]):
                 name = cols[1] if len(cols) > 1 else ""
                 description = cols[2] if len(cols) > 2 else ""
                 if name or description:
-                    detail_reqs.add(cols[0])
+                    if cols[0] not in detail_reqs:
+                        detail_reqs[cols[0]] = line_num
             continue
 
         detail_match = re.match(r"^#{3,6}\s+(REQ-\d{3}-\d{2})\s+(.+)$", stripped)
         if detail_match and detail_match.group(2).strip():
-            detail_reqs.add(detail_match.group(1))
+            req_id = detail_match.group(1)
+            if req_id not in detail_reqs:
+                detail_reqs[req_id] = line_num
 
-    defined_acs = set(re.findall(r'###\s+AC-(\d{3}-\d{2})', content))
-    for line in content.splitlines():
+    defined_acs = {}
+    for idx, line in enumerate(content.splitlines()):
+        line_num = idx + 1
         stripped = line.strip()
-        if not stripped.startswith("|"):
-            continue
-        cols = [c.strip() for c in stripped.strip("|").split("|")]
-        if not cols or set(cols[0]) <= {"-"}:
-            continue
-        ac_match = re.fullmatch(r"AC-(\d{3}-\d{2})", cols[0])
-        if ac_match:
-            defined_acs.add(ac_match.group(1))
+
+        # Check header pattern ### AC-XXX-XX
+        ac_header_match = re.search(r'###\s+AC-(\d{3}-\d{2})', stripped)
+        if ac_header_match:
+            ac_id = ac_header_match.group(1)
+            if ac_id not in defined_acs:
+                defined_acs[ac_id] = line_num
+
+        # Check table pattern | AC-XXX-XX | ...
+        if stripped.startswith("|"):
+            cols = [c.strip() for c in stripped.strip("|").split("|")]
+            if not cols or set(cols[0]) <= {"-"}:
+                continue
+            ac_match = re.fullmatch(r"AC-(\d{3}-\d{2})", cols[0])
+            if ac_match:
+                ac_id = ac_match.group(1)
+                if ac_id not in defined_acs:
+                    defined_acs[ac_id] = line_num
 
     # AC 위임 관계 파싱: REQ-XXX-XX 행에 자기 AC는 없지만 다른 AC-ID가 참조되면 위임
     ac_delegates = {}
@@ -3599,6 +3615,14 @@ def cmd_trace_context(seed_id, depth=2, direction="downstream", emit="yaml", edg
         print(trace_context_yaml(context))
 
 
+class TestResultTuple(tuple):
+    def __new__(cls, tst_id, status, line_num=None):
+        return super(TestResultTuple, cls).__new__(cls, (tst_id, status))
+
+    def __init__(self, tst_id, status, line_num=None):
+        self.line_num = line_num
+
+
 def parse_test_plan(project_dir="."):
     """Gate 3 테스트케이스 문서에서 상세 REQ-ID 매핑을 파싱합니다."""
     path = find_artifact_file(
@@ -3609,19 +3633,26 @@ def parse_test_plan(project_dir="."):
         os.path.join("docs", "03-test-plan", "Test-Plan.md"),
     ])
     if not path:
-        return set()
+        return {}
 
     with open(path, encoding="utf-8") as f:
         content = f.read()
 
-    return set(re.findall(r'\bREQ-\d{3}-\d{2}\b', content))
+    req_to_line = {}
+    for idx, line in enumerate(content.splitlines()):
+        line_num = idx + 1
+        for match in re.finditer(r'\b(REQ-\d{3}-\d{2})\b', line):
+            req_id = match.group(1)
+            if req_id not in req_to_line:
+                req_to_line[req_id] = line_num
+    return req_to_line
 
 
 def parse_test_plan_status(project_dir="."):
     """Test-Plan.md에서 TST-ID별 실행 상태를 파싱합니다.
     테스트 케이스 목록 형식의 마크다운 테이블 행만 파싱합니다.
     보안 기준표처럼 테스트 ID를 참조만 하는 표는 집계하지 않습니다.
-    Returns: list of (tst_id, status) tuples
+    Returns: list of TestResultTuple
     """
     path = find_artifact_file(
         project_dir,
@@ -3637,7 +3668,9 @@ def parse_test_plan_status(project_dir="."):
         content = f.read()
 
     results = {}
-    for line in content.splitlines():
+    line_nums = {}
+    for idx, line in enumerate(content.splitlines()):
+        line_num = idx + 1
         # 마크다운 테이블 행만 대상 (|로 시작)
         if not line.strip().startswith('|'):
             continue
@@ -3665,8 +3698,9 @@ def parse_test_plan_status(project_dir="."):
             status = 'not_executed'
 
         results[tst_id] = status
+        line_nums[tst_id] = line_num
 
-    return list(results.items())
+    return [TestResultTuple(tst_id, status, line_nums.get(tst_id)) for tst_id, status in results.items()]
 
 
 def normalize_test_execution_status(value):
@@ -3724,6 +3758,7 @@ def parse_qa_test_result_status(project_dir="."):
         content = f.read()
 
     results = {}
+    line_nums = {}
     for headers, rows in parse_markdown_tables(content):
         header_text = " ".join(headers).lower()
         if re.search(r"비교|comparison|uicmp|contract", header_text):
@@ -3744,10 +3779,12 @@ def parse_qa_test_result_status(project_dir="."):
             if status is None:
                 continue
 
+            line_num = row.get("__line_num__")
             for test_id in test_ids:
                 results[test_id] = status
+                line_nums[test_id] = line_num
 
-    return list(results.items())
+    return [TestResultTuple(tst_id, status, line_nums.get(tst_id)) for tst_id, status in results.items()]
 
 
 def parse_effective_test_status(project_dir="."):
@@ -5278,7 +5315,21 @@ def check_trace(project_dir="."):
             elif ac_id in ac_delegates and ac_delegates[ac_id] in defined_acs:
                 print(f"  O {req} - AC-{ac_delegates[ac_id]} 위임 확인")
             else:
-                issues.append(f"  X {req} - AC 미정의")
+                req_line = detail_reqs.get(req)
+                line_suffix = f":{req_line}" if req_line is not None else ""
+                req_path = find_artifact_file(
+                    project_dir,
+                    os.path.join("docs", "artifacts", "01-requirements"),
+                    r"requirements.*\.md$",
+                ) or find_first_existing(project_dir, [
+                    os.path.join("docs", "01-requirements", "REQUIREMENTS.md"),
+                ])
+                req_file = os.path.relpath(req_path, project_dir) if req_path else "REQUIREMENTS.md"
+                issues.append(
+                    f"  X {req} - AC 미정의\n"
+                    f"    Path: {req_file}{line_suffix}\n"
+                    f"    Suggested: {req_file} 파일에 '### AC-{ac_id}' 등의 인수 기준(AC) 섹션 또는 테이블 항목을 추가하십시오."
+                )
 
         print("\n  Gate 1 검사 (2): TRACEABILITY.md 행 등록 여부")
         traceability = parse_traceability(project_dir)
@@ -5289,7 +5340,31 @@ def check_trace(project_dir="."):
                 if req in traceability:
                     print(f"  O {req} - TRACEABILITY.md 행 확인")
                 else:
-                    issues.append(f"  X TRACEABILITY.md에 {req} 행 미등록\n    Suggested: TRACEABILITY.md 파일의 요구사항 추적 테이블에 '{req}' 행을 추가하십시오.")
+                    req_line = detail_reqs.get(req)
+                    line_suffix = f":{req_line}" if req_line is not None else ""
+                    req_path = find_artifact_file(
+                        project_dir,
+                        os.path.join("docs", "artifacts", "01-requirements"),
+                        r"requirements.*\.md$",
+                    ) or find_first_existing(project_dir, [
+                        os.path.join("docs", "01-requirements", "REQUIREMENTS.md"),
+                    ])
+                    req_file = os.path.relpath(req_path, project_dir) if req_path else "REQUIREMENTS.md"
+
+                    trace_path = find_artifact_file(
+                        project_dir,
+                        os.path.join("docs", "artifacts", "02-traceability"),
+                        r"traceability.*\.md$",
+                    ) or find_first_existing(project_dir, [
+                        os.path.join("docs", "TRACEABILITY.md"),
+                    ])
+                    trace_file = os.path.relpath(trace_path, project_dir) if trace_path else "TRACEABILITY.md"
+
+                    issues.append(
+                        f"  X TRACEABILITY.md에 {req} 행 미등록\n"
+                        f"    Path: {req_file}{line_suffix}\n"
+                        f"    Suggested: {trace_file} 파일의 요구사항 추적 테이블에 '{req}' 행을 추가하십시오."
+                    )
 
     # ── Gate 2: 설계 파일 내 REQ-ID 포함 여부 (TRACEABILITY.md 우선, 없으면 그룹 파일 fallback)
     if current_gate == "gate2":
@@ -5434,7 +5509,23 @@ def check_trace(project_dir="."):
             if req in covered:
                 print(f"  O {req} - TST 매핑 확인")
             else:
-                message = f"  X {req} - 테스트케이스 문서에 상세 REQ-ID 테스트 매핑 없음"
+                trace_info = traceability.get(req, {})
+                trace_line = trace_info.get("__line_num__")
+                trace_path = find_artifact_file(
+                    project_dir,
+                    os.path.join("docs", "artifacts", "02-traceability"),
+                    r"traceability.*\.md$",
+                ) or find_first_existing(project_dir, [
+                    os.path.join("docs", "TRACEABILITY.md"),
+                ])
+                trace_file = os.path.relpath(trace_path, project_dir) if trace_path else "TRACEABILITY.md"
+                line_suffix = f":{trace_line}" if trace_line is not None else ""
+
+                message = (
+                    f"  X {req} - 테스트케이스 문서에 상세 REQ-ID 테스트 매핑 없음\n"
+                    f"    Path: {trace_file}{line_suffix}\n"
+                    f"    Suggested: Test-Plan.md 등의 테스트케이스 계획서 문서에 '{req}'에 대응하는 테스트케이스(TST-ID 등)를 작성하고, 해당 REQ-ID가 기재된 테스트 테이블 행을 추가하십시오."
+                )
                 if profile == "poc":
                     warnings.append(message.replace("  X ", "  ! ", 1))
                 else:
@@ -5451,9 +5542,21 @@ def check_trace(project_dir="."):
                 if is_unresolved_trace_value(value)
             ]
             if unresolved_columns:
+                trace_line = info.get("__line_num__")
+                trace_path = find_artifact_file(
+                    project_dir,
+                    os.path.join("docs", "artifacts", "02-traceability"),
+                    r"traceability.*\.md$",
+                ) or find_first_existing(project_dir, [
+                    os.path.join("docs", "TRACEABILITY.md"),
+                ])
+                trace_file = os.path.relpath(trace_path, project_dir) if trace_path else "TRACEABILITY.md"
+                line_suffix = f":{trace_line}" if trace_line is not None else ""
+
                 message = (
-                    f"  X {req} - TRACEABILITY.md 테스트 컬럼 미정: {', '.join(unresolved_columns)} "
-                    "(테스트가 불필요하면 '해당없음', 통합/UI 테스트로 대체하면 해당 IT/UI ID를 명시)"
+                    f"  X {req} - TRACEABILITY.md 테스트 컬럼 미정: {', '.join(unresolved_columns)}\n"
+                    f"    Path: {trace_file}{line_suffix}\n"
+                    f"    Suggested: {trace_file} 파일의 '{req}' 행에서 {', '.join(unresolved_columns)} 컬럼에 구체적인 테스트 ID(예: UT-001, IT-001, UI-001) 또는 '해당없음'을 기재하십시오."
                 )
                 if profile == "poc":
                     warnings.append(message.replace("  X ", "  ! ", 1))
@@ -5464,7 +5567,22 @@ def check_trace(project_dir="."):
             if tst_ids:
                 print(f"  O {req} - TST-ID {', '.join(tst_ids)} 등록 확인")
             else:
-                message = f"  X {req} - TRACEABILITY.md에 tst_ids 미등록"
+                trace_line = info.get("__line_num__")
+                trace_path = find_artifact_file(
+                    project_dir,
+                    os.path.join("docs", "artifacts", "02-traceability"),
+                    r"traceability.*\.md$",
+                ) or find_first_existing(project_dir, [
+                    os.path.join("docs", "TRACEABILITY.md"),
+                ])
+                trace_file = os.path.relpath(trace_path, project_dir) if trace_path else "TRACEABILITY.md"
+                line_suffix = f":{trace_line}" if trace_line is not None else ""
+
+                message = (
+                    f"  X {req} - TRACEABILITY.md에 tst_ids 미등록\n"
+                    f"    Path: {trace_file}{line_suffix}\n"
+                    f"    Suggested: {trace_file} 파일의 '{req}' 행에 테스트 ID(TST-ID 또는 UT/IT/UI-ID)를 올바르게 명시하십시오."
+                )
                 if profile == "poc":
                     warnings.append(message.replace("  X ", "  ! ", 1))
                 else:
@@ -5606,9 +5724,19 @@ def check_trace(project_dir="."):
         if qa_results:
             tst_results = qa_results
             source_label = "QA 결과서"
+            qa_path = find_qa_test_result_file(project_dir)
+            tst_file = os.path.relpath(qa_path, project_dir) if qa_path else "QA-Test-Result.md"
         else:
             tst_results = parse_test_plan_status(project_dir)
             source_label = "Gate 3 테스트케이스 fallback"
+            test_plan_path = find_artifact_file(
+                project_dir,
+                os.path.join("docs", "artifacts", "03-test"),
+                r"(test.*case|test.*plan|test.*cases).*\.md$",
+            ) or find_first_existing(project_dir, [
+                os.path.join("docs", "03-test-plan", "Test-Plan.md"),
+            ])
+            tst_file = os.path.relpath(test_plan_path, project_dir) if test_plan_path else "Test-Plan.md"
             message = "  X QA 결과서(DOC-QA-G4-002)에 실제 테스트 실행 결과가 없습니다."
             if profile == "poc":
                 warnings.append(message.replace("  X ", "  ! ", 1))
@@ -5621,6 +5749,7 @@ def check_trace(project_dir="."):
             else:
                 issues.append(message)
         else:
+            tst_lines = {item[0]: getattr(item, "line_num", None) for item in tst_results}
             not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
             environment_blocked = [(tid, s) for tid, s in tst_results if s == 'environment_blocked']
             failed = [(tid, s) for tid, s in tst_results if s == 'fail']
@@ -5638,19 +5767,39 @@ def check_trace(project_dir="."):
             for tid, _ in skipped:
                 print(f"  - {tid} - Skip")
             for tid, _ in failed:
-                issues.append(f"  X {tid} - Fail")
+                line_num = tst_lines.get(tid)
+                line_suffix = f":{line_num}" if line_num is not None else ""
+                issues.append(
+                    f"  X {tid} - Fail\n"
+                    f"    Path: {tst_file}{line_suffix}\n"
+                    f"    Suggested: 테스트 실행 결과가 실패(Fail) 상태입니다. 구현을 수정하거나 해당 테스트를 통과시킨 후 결과를 '{tst_file}'에 'Pass'로 업데이트하십시오."
+                )
                 print(f"  X {tid} - Fail")
             for tid, _ in not_executed:
+                line_num = tst_lines.get(tid)
+                line_suffix = f":{line_num}" if line_num is not None else ""
+                msg = (
+                    f"  X {tid} - 미실행\n"
+                    f"    Path: {tst_file}{line_suffix}\n"
+                    f"    Suggested: 테스트가 아직 실행되지 않았습니다. 테스트를 수행하고 결과를 '{tst_file}'에 'Pass'로 업데이트하십시오."
+                )
                 if profile == "poc":
-                    warnings.append(f"  ! {tid} - 미실행")
+                    warnings.append(msg.replace("  X ", "  ! ", 1))
                 else:
-                    issues.append(f"  X {tid} - 미실행")
+                    issues.append(msg)
                 print(f"  X {tid} - 미실행")
             for tid, _ in environment_blocked:
+                line_num = tst_lines.get(tid)
+                line_suffix = f":{line_num}" if line_num is not None else ""
+                msg = (
+                    f"  X {tid} - environment_blocked\n"
+                    f"    Path: {tst_file}{line_suffix}\n"
+                    f"    Suggested: 테스트 실행 환경이 차단(Blocked)되었습니다. 차단 원인을 해결하고 테스트를 완료하여 '{tst_file}'에 결과를 업데이트하십시오."
+                )
                 if profile == "poc":
-                    warnings.append(f"  ! {tid} - environment_blocked")
+                    warnings.append(msg.replace("  X ", "  ! ", 1))
                 else:
-                    issues.append(f"  X {tid} - environment_blocked")
+                    issues.append(msg)
                 print(f"  X {tid} - environment_blocked")
 
     completion_status_issues = validate_traceability_completion_status(project_dir, session, current_gate)
