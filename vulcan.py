@@ -1466,6 +1466,11 @@ def compact_reference_documents_for_profile(profile, paths, limit=None):
     unique_paths = merge_unique(paths)
     if normalized_profile != "poc":
         return unique_paths
+    unique_paths = [
+        path
+        for path in unique_paths
+        if normalize_repo_path(path).lower() not in POC_REFERENCE_EXCLUDED_DOCS
+    ]
     limit = POC_REFERENCE_DOC_LIMIT if limit is None else max(0, int(limit))
     if not unique_paths or limit == 0:
         return []
@@ -1627,6 +1632,14 @@ POC_COMMON_READ_FIRST_DOCS = [
 
 POC_TRACE_DEPTH_DEFAULT = 1
 POC_REFERENCE_DOC_LIMIT = 5
+POC_REFERENCE_EXCLUDED_DOCS = {
+    "docs/core/agent_run_protocol.md",
+    "docs/core/agent_run_protocol_gemini.md",
+    "docs/core/run_input_contract.md",
+    "docs/core/run_input_contract_gemini.md",
+    "docs/core/run_output_contract.md",
+    "docs/core/run_output_contract_gemini.md",
+}
 
 POC_COMMON_READONLY_DOCS = [
     "docs/core/",
@@ -2659,14 +2672,27 @@ def parse_simple_yaml_block(content):
     if not match:
         return {}
     result = {}
+    current_list_key = None
     for raw_line in match.group(1).splitlines():
         if raw_line.startswith((" ", "\t", "-")):
+            if current_list_key and re.match(r"^\s*-\s+", raw_line):
+                item = re.sub(r"^\s*-\s+", "", raw_line).strip().strip('"').strip("'")
+                if item:
+                    result.setdefault(current_list_key, []).append(item)
             continue
         line = raw_line.strip()
         if not line or line.startswith("#") or ":" not in line:
+            current_list_key = None
             continue
         key, value = line.split(":", 1)
-        result[key.strip()] = value.strip().strip('"').strip("'")
+        key = key.strip()
+        value = value.strip()
+        if value:
+            result[key] = value.strip('"').strip("'")
+            current_list_key = None
+        else:
+            result[key] = []
+            current_list_key = key
     return result
 
 
@@ -4144,7 +4170,7 @@ def parse_markdown_tables(section_content, start_line_offset=0):
             cells += [""] * (len(headers) - len(cells))
 
         row_dict = {headers[c_idx]: cells[c_idx] for c_idx in range(min(len(headers), len(cells)))}
-        row_dict["__line_num__"] = current_line_num
+        row_dict["__line_num__"] = str(current_line_num)
         rows.append(row_dict)
 
     flush()
@@ -7077,7 +7103,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
         if preset:
             source_docs = preset.setdefault("source_documents", {})
-            if is_gemini_long_context_mode(project_dir):
+            if is_gemini_long_context_mode(project_dir) and profile != "poc":
                 long_context_docs = []
                 for root_dir in ["docs/core", "docs/artifacts"]:
                     abs_root = os.path.join(project_dir, root_dir)
