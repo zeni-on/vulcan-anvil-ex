@@ -2957,7 +2957,7 @@ def parse_traceability(project_dir="."):
     result = {}
     headers = []
     with open(path, encoding="utf-8") as f:
-        for line in f:
+        for line_idx, line in enumerate(f):
             if not line.strip().startswith('|'):
                 continue
             cols = [c.strip() for c in line.strip().strip('|').split('|')]
@@ -3023,6 +3023,7 @@ def parse_traceability(project_dir="."):
                 "review": review,
                 "status": status,
                 "test_columns": test_columns,
+                "__line_num__": line_idx + 1,
             }
     return result
 
@@ -4080,14 +4081,19 @@ def clean_contract_cell(value):
 
 
 def extract_markdown_section(content, section_title_pattern):
+    extracted_content, _ = extract_markdown_section_with_start_line(content, section_title_pattern)
+    return extracted_content
+
+def extract_markdown_section_with_start_line(content, section_title_pattern):
     lines = content.splitlines()
     section_lines = []
     in_section = False
     start_level = None
+    start_line_idx = 0
     title_re = re.compile(section_title_pattern, re.IGNORECASE)
     heading_re = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 
-    for line in lines:
+    for i, line in enumerate(lines):
         heading = heading_re.match(line)
         if heading:
             level = len(heading.group(1))
@@ -4097,13 +4103,14 @@ def extract_markdown_section(content, section_title_pattern):
             if not in_section and title_re.search(title):
                 in_section = True
                 start_level = level
+                start_line_idx = i + 1
                 continue
         if in_section:
             section_lines.append(line)
-    return "\n".join(section_lines)
+    return "\n".join(section_lines), start_line_idx
 
 
-def parse_markdown_tables(section_content):
+def parse_markdown_tables(section_content, start_line_offset=0):
     tables = []
     headers = None
     rows = []
@@ -4116,7 +4123,8 @@ def parse_markdown_tables(section_content):
         headers = None
         rows = []
 
-    for raw_line in section_content.splitlines():
+    for idx, raw_line in enumerate(section_content.splitlines()):
+        current_line_num = start_line_offset + idx + 1
         line = raw_line.strip()
         if line.startswith("```"):
             in_fence = not in_fence
@@ -4134,7 +4142,10 @@ def parse_markdown_tables(section_content):
             continue
         if len(cells) < len(headers):
             cells += [""] * (len(headers) - len(cells))
-        rows.append({headers[idx]: cells[idx] for idx in range(min(len(headers), len(cells)))})
+
+        row_dict = {headers[c_idx]: cells[c_idx] for c_idx in range(min(len(headers), len(cells)))}
+        row_dict["__line_num__"] = current_line_num
+        rows.append(row_dict)
 
     flush()
     return tables
@@ -5144,21 +5155,33 @@ def validate_traceability_completion_status(project_dir=".", session=None, curre
         content = f.read()
 
     issues = []
-    summary_section = extract_markdown_section(content, r"요구사항별\s*검증\s*요약")
-    for _headers, rows in parse_markdown_tables(summary_section):
+    summary_section, summary_start_line = extract_markdown_section_with_start_line(content, r"요구사항별\s*검증\s*요약")
+    for _headers, rows in parse_markdown_tables(summary_section, start_line_offset=summary_start_line):
         for row in rows:
             req_id = table_cell(row, ["REQ-ID"])
             status = table_cell(row, ["검증 상태", "상태"])
             if re.match(r"^(REQ|NREQ)-", req_id) and is_incomplete_trace_status(status):
-                issues.append(f"  X 추적표 요구사항별 검증 요약에 Gate 4 이후 미완료 상태가 남아 있습니다: {req_id}={status}")
+                line_num = row.get("__line_num__", "?")
+                filename = os.path.basename(path)
+                issues.append(
+                    f"  X {filename}:{line_num}\n"
+                    f"    요구사항별 검증 요약에 Gate 4 이후 미완료 상태가 남아 있습니다: {req_id} 상태가 '{status}'입니다.\n"
+                    f"    Suggested: 모든 테스트 및 확인이 완료되었다면 해당 상태를 'Verified' 또는 '완료'로 갱신하십시오."
+                )
 
-    security_section = extract_markdown_section(content, r"보안항목\s*추적")
-    for _headers, rows in parse_markdown_tables(security_section):
+    security_section, sec_start_line = extract_markdown_section_with_start_line(content, r"보안항목\s*추적")
+    for _headers, rows in parse_markdown_tables(security_section, start_line_offset=sec_start_line):
         for row in rows:
             sec_id = table_cell(row, ["SEC-ID"])
             status = table_cell(row, ["상태"])
             if sec_id.startswith("SEC-") and is_incomplete_trace_status(status):
-                issues.append(f"  X 추적표 보안항목 추적에 Gate 4 이후 미완료 상태가 남아 있습니다: {sec_id}={status}")
+                line_num = row.get("__line_num__", "?")
+                filename = os.path.basename(path)
+                issues.append(
+                    f"  X {filename}:{line_num}\n"
+                    f"    보안항목 추적에 Gate 4 이후 미완료 상태가 남아 있습니다: {sec_id} 상태가 '{status}'입니다.\n"
+                    f"    Suggested: 보안 점검이 완료되었다면 상태를 'Verified' 또는 '완료'로 갱신하십시오."
+                )
 
     return issues
 
@@ -5240,7 +5263,7 @@ def check_trace(project_dir="."):
                 if req in traceability:
                     print(f"  O {req} - TRACEABILITY.md 행 확인")
                 else:
-                    issues.append(f"  X {req} - TRACEABILITY.md에 행 미등록")
+                    issues.append(f"  X TRACEABILITY.md에 {req} 행 미등록\n    Suggested: TRACEABILITY.md 파일의 요구사항 추적 테이블에 '{req}' 행을 추가하십시오.")
 
     # ── Gate 2: 설계 파일 내 REQ-ID 포함 여부 (TRACEABILITY.md 우선, 없으면 그룹 파일 fallback)
     if current_gate == "gate2":
@@ -5264,7 +5287,8 @@ def check_trace(project_dir="."):
                     print(f"  - {req} - {info['status']} (검사 제외)")
                     continue
                 if not info or not info["design"]:
-                    issues.append(f"  X {req} - TRACEABILITY.md에 설계 문서 미등록")
+                    line_num = info.get("__line_num__", "?") if info else "?"
+                    issues.append(f"  X TRACEABILITY.md:{line_num} (참조 행)\n    {req} 설계 문서 미등록\n    Suggested: TRACEABILITY.md 해당 행의 설계 문서(예: docs/02-design/api-design.md) 항목을 기입하십시오.")
                     continue
                 # 쉼표 구분된 복수 설계 파일 지원
                 design_files = [f.strip() for f in info["design"].split(',') if f.strip()]
@@ -5290,11 +5314,13 @@ def check_trace(project_dir="."):
                             found_in_any = True
                             break
                 if missing_files and not found_in_any:
-                    issues.append(f"  X {req} - {', '.join(missing_files)} 파일 없음")
+                    line_num = info.get("__line_num__", "?")
+                    issues.append(f"  X TRACEABILITY.md:{line_num} (참조 행)\n    {req} - {', '.join(missing_files)} 파일 없음\n    Suggested: 해당 설계 파일을 생성하거나, TRACEABILITY.md의 '설계 문서' 항목을 올바른 파일명으로 수정하십시오.")
                 elif found_in_any:
                     print(f"  O {req} - 설계 산출물 내 ID 확인")
                 else:
-                    issues.append(f"  X {req} - 설계 산출물 안에 {req} 없음")
+                    line_num = info.get("__line_num__", "?")
+                    issues.append(f"  X TRACEABILITY.md:{line_num} (참조 행)\n    설계 산출물 안에 {req} 텍스트 없음\n    Suggested: 지정된 설계 문서 안에 '{req}' 문자열을 명시적으로 기입하여 추적성을 연결하십시오.")
         else:
             print("  Gate 2 검사: REQ 그룹별 설계 파일 존재 여부 (TRACEABILITY.md 없음 — fallback)")
             for group in sorted(group_reqs):
