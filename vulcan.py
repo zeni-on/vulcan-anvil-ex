@@ -6047,7 +6047,8 @@ class SQLiteInspector(DatabaseInspector):
         conn = sqlite3.connect(self.db_path)
         try:
             cursor = conn.cursor()
-            cursor.execute(f"PRAGMA table_info({table_name});")
+            safe_table_name = '"' + table_name.replace('"', '""') + '"'
+            cursor.execute(f"PRAGMA table_info({safe_table_name});")
             cols = []
             for row in cursor.fetchall():
                 cols.append({
@@ -6062,21 +6063,60 @@ class SQLiteInspector(DatabaseInspector):
             conn.close()
 
 
-def create_database_inspector(project_dir: str) -> DatabaseInspector:
-    db_url = os.getenv("DATABASE_URL", "")
-    db_path = os.path.join(project_dir, "todo.db")
+def find_sqlite_database_file(project_dir: str) -> str:
+    common_candidates = [
+        "todo.db",
+        "app.db",
+        "application.db",
+        "database.db",
+        os.path.join("backend", "todo.db"),
+        os.path.join("backend", "app.db"),
+        os.path.join("backend", "application.db"),
+        os.path.join("backend", "database.db"),
+        os.path.join("data", "todo.db"),
+        os.path.join("data", "app.db"),
+        os.path.join("data", "database.db"),
+    ]
+    for rel_path in common_candidates:
+        candidate = os.path.join(project_dir, rel_path)
+        if os.path.exists(candidate):
+            return candidate
+
+    matches = []
+    for root, dirs, files in os.walk(project_dir):
+        dirs[:] = [
+            d for d in dirs
+            if d not in {".git", ".vulcan", "node_modules", ".venv", "__pycache__", ".pytest_cache"}
+            and not d.startswith(".")
+        ]
+        for filename in files:
+            if filename.lower().endswith((".db", ".sqlite", ".sqlite3")):
+                matches.append(os.path.join(root, filename))
+    return sorted(matches)[0] if matches else os.path.join(project_dir, "todo.db")
+
+
+def create_database_inspector(project_dir: str, db_path: str = "", database_url: str = "") -> DatabaseInspector:
+    db_url = database_url or os.getenv("DATABASE_URL", "")
+    resolved_db_path = db_path or ""
+    if resolved_db_path:
+        if not os.path.isabs(resolved_db_path):
+            resolved_db_path = os.path.join(project_dir, resolved_db_path)
+        return SQLiteInspector(resolved_db_path)
+
     if db_url:
         if db_url.startswith("sqlite:///"):
-            db_path = db_url.replace("sqlite:///", "")
-            if not os.path.isabs(db_path):
-                db_path = os.path.join(project_dir, db_path)
+            resolved_db_path = db_url.replace("sqlite:///", "")
+            if not os.path.isabs(resolved_db_path):
+                resolved_db_path = os.path.join(project_dir, resolved_db_path)
         elif "://" in db_url:
             pass
         else:
-            db_path = db_url
-            if not os.path.isabs(db_path):
-                db_path = os.path.join(project_dir, db_path)
-    return SQLiteInspector(db_path)
+            resolved_db_path = db_url
+            if not os.path.isabs(resolved_db_path):
+                resolved_db_path = os.path.join(project_dir, resolved_db_path)
+    if not resolved_db_path:
+        resolved_db_path = find_sqlite_database_file(project_dir)
+    return SQLiteInspector(resolved_db_path)
 
 
 def find_api_spec_file(project_dir="."):
@@ -6176,7 +6216,7 @@ def parse_db_design(db_spec_path: str) -> dict:
                 if in_col_table and trimmed_line != "":
                     in_col_table = False
                 continue
-            
+
             parts = [p.strip() for p in trimmed_line.split("|")]
             if len(parts) >= 8:
                 if "물리명" in parts and "데이터 타입" in parts:
@@ -6270,6 +6310,20 @@ def scan_codebase_for_traces(project_dir="."):
     return trace_map
 
 
+def join_route_paths(prefix: str, path: str) -> str:
+    prefix = (prefix or "").strip()
+    path = (path or "").strip()
+    if not prefix:
+        joined = path
+    elif not path or path == "/":
+        joined = prefix
+    else:
+        joined = prefix.rstrip("/") + "/" + path.lstrip("/")
+    if not joined.startswith("/"):
+        joined = "/" + joined
+    return joined.rstrip("/") or "/"
+
+
 def scan_codebase_for_routes(project_dir="."):
     routes = []
     exclude_dirs = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv"}
@@ -6287,11 +6341,34 @@ def scan_codebase_for_routes(project_dir="."):
                     lines = f.readlines()
             except Exception:
                 continue
+            router_prefixes = {}
+            include_router_prefixes = {}
+            for line in lines:
+                router_match = re.search(
+                    r"(\w+)\s*=\s*APIRouter\([^)]*prefix\s*=\s*['\"]([^'\"]*)['\"]",
+                    line,
+                )
+                if router_match:
+                    router_prefixes[router_match.group(1)] = router_match.group(2)
+
+                include_match = re.search(
+                    r"\.include_router\(\s*([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)?)[^)]*prefix\s*=\s*['\"]([^'\"]*)['\"]",
+                    line,
+                )
+                if include_match:
+                    router_name = include_match.group(1).split(".")[-1]
+                    include_router_prefixes[router_name] = include_match.group(2)
+
+            for router_name, prefix in include_router_prefixes.items():
+                existing = router_prefixes.get(router_name, "")
+                router_prefixes[router_name] = join_route_paths(prefix, existing) if existing else prefix
+
             for idx, line in enumerate(lines):
-                route_match = re.search(r"@(?:[A-Za-z0-9_]+)\.(get|post|put|delete|patch|options)\(\s*['\"]([^'\"]+)['\"]", line)
+                route_match = re.search(r"@([A-Za-z0-9_]+)\.(get|post|put|delete|patch|options)\(\s*['\"]([^'\"]*)['\"]", line)
                 if route_match:
-                    method = route_match.group(1).upper()
-                    path = route_match.group(2)
+                    router_name = route_match.group(1)
+                    method = route_match.group(2).upper()
+                    path = join_route_paths(router_prefixes.get(router_name, ""), route_match.group(3))
                     routes.append({
                         "method": method,
                         "path": path,
@@ -6318,7 +6395,7 @@ def normalize_sql_type(sql_type: str) -> str:
     return sql_type
 
 
-def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
+def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md", db_path="", database_url=""):
     print("==================================================")
     print(" [drift-report] 설계-코드 불일치 검사 (Drift Analyzer)")
     print("==================================================")
@@ -6331,7 +6408,7 @@ def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
     report_sections.append(f"발생 일시: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     report_sections.append("본 보고서는 설계 산출물(Traceability Matrix, API 정의서, DB 명세서)과 실제 구현 소스코드/테스트/데이터베이스 물리 스키마 간의 불일치(Drift) 현상을 감지한 리포트입니다.\n")
     report_sections.append("---")
-    
+
     print("[1] Traceability 매핑 및 코드 내 주석 일치 검사")
     trace_matrix_path = find_artifact_file(
         project_dir,
@@ -6384,7 +6461,7 @@ def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
         report_sections.append("\n✨ **일치**: 추적표와 코드 내 어노테이션/주석 정보가 100% 일치합니다.\n")
         print("  -> 결과: ✨ 0건의 불일치 감지")
     print()
-    
+
     print("[2] API 정의서와 코드 라우트 일치 검사")
     api_spec_path = find_api_spec_file(project_dir)
     api_drift_issues = []
@@ -6440,13 +6517,13 @@ def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
         report_sections.append("\n✨ **일치**: API 정의서의 설계 목록과 소스코드에 구현된 API 라우트가 100% 일치합니다.\n")
         print("  -> 결과: ✨ 0건의 불일치 감지")
     print()
-    
+
     print("[3] DB 명세서와 물리 데이터베이스 스키마 일치 검사")
     db_spec_path = find_db_spec_file(project_dir)
     db_drift_issues = []
     if db_spec_path and os.path.exists(db_spec_path):
         designed_tables = parse_db_design(db_spec_path)
-        inspector = create_database_inspector(project_dir)
+        inspector = create_database_inspector(project_dir, db_path=db_path, database_url=database_url)
         actual_tables = inspector.get_tables()
         for t_name, info in designed_tables.items():
             if t_name not in actual_tables:
@@ -6512,7 +6589,7 @@ def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
         report_sections.append("\n✨ **일치**: DB 명세서의 상세 스펙과 실제 물리 DB 파일의 스키마가 100% 일치합니다.\n")
         print("  -> 결과: ✨ 0건의 불일치 감지")
     print()
-    
+
     report_content = "\n".join(report_sections) + "\n"
     report_path = os.path.join(project_dir, output_file)
     try:
@@ -13286,6 +13363,8 @@ def main():
     p_drift_report = subparsers.add_parser("drift-report", help="설계 산출물과 실제 코드/DB 스키마 간의 불일치(Drift) 보고서 생성")
     p_drift_report.add_argument("--project-dir", default=".", help="검증할 프로젝트 루트 경로")
     p_drift_report.add_argument("--output", default="contract-drift-report.md", help="분석 결과를 작성할 마크다운 보고서 경로")
+    p_drift_report.add_argument("--db-path", default="", help="비교할 SQLite DB 파일 경로")
+    p_drift_report.add_argument("--database-url", default="", help="비교할 DB URL 또는 SQLite 파일 경로")
 
     p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
     p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
@@ -13492,7 +13571,12 @@ def main():
             project_dir=args.project_dir,
         ))
     elif args.command == "drift-report":
-        cmd_drift_report(project_dir=args.project_dir, output_file=args.output)
+        cmd_drift_report(
+            project_dir=args.project_dir,
+            output_file=args.output,
+            db_path=args.db_path,
+            database_url=args.database_url,
+        )
     elif args.command == "check-architecture":
         cmd_check_architecture(level=args.level)
     elif args.command == "trace-context":
