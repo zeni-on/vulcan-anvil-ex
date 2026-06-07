@@ -60,12 +60,31 @@ verification_results:
     result: "passed" # passed, failed, not_run 중 택일
     summary: "테스트 통과 로그 요약 또는 파일 경로 명시"
 
-# 5. 오케스트레이터가 후속 결정해야 하는 액션 아이템
+# 5. 위임 작업 기록 (위임이 있었을 경우 필수)
+delegation_records:
+  - mode: "agy-branch-agent" # agy-branch-agent, external-runner, manual 등
+    delegate: "build" # build, qa-execution 등
+    native_agent: true
+    task: "Todo backend API 구현"
+    scope:
+      writable:
+        - "backend/app/"
+    started_at: "2026-06-07T10:00:00+09:00"
+    completed_at: "2026-06-07T10:08:00+09:00"
+    status: "completed"
+    changed_files:
+      - "backend/app/todos/service.py"
+    result_summary: "Todo service를 구현했다."
+    orchestrator_verification:
+      - command: "pytest backend/tests"
+        result: "passed"
+
+# 6. 오케스트레이터가 후속 결정해야 하는 액션 아이템
 orchestrator_decision_needed:
   - item: "요청 유형" # e.g., Traceability Matrix Sync, Gate 전환, PR Merge
     reason: "판단의 이유 및 상세 설명"
 
-# 6. 작업 중 발견된 예외 사항
+# 7. 작업 중 발견된 예외 사항
 open_issues: [] # 설계 누락 또는 진행 불가 리스크
 findings: []    # 작업 도중 발견된 작은 설계 불일치나 QA 결함
 change_requests: [] # 요구사항을 벗어나 설계 변경이 강제되는 건

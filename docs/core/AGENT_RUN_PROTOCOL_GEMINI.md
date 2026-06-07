@@ -45,7 +45,7 @@
 
 ### 4단계: 워커 수행 완료 및 출력 계약 검증 (Worker -> Orchestrator)
 * 워커는 작업을 완료하고 [RUN_OUTPUT_CONTRACT.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_OUTPUT_CONTRACT.md) 포맷에 맞춰 완료보고서를 작성 및 반환합니다.
-* 오케스트레이터는 구조적 Schema 정합성 및 준수 보고서(`standard_compliance_report`) 누락 여부를 검증합니다.
+* 오케스트레이터는 구조적 Schema 정합성, 준수 보고서(`standard_compliance_report`), 그리고 위임(subagent, branch agent 등) 발생 시의 `delegation_records` 누락 여부를 검증합니다.
 
 ### 5단계: 변경 사항 통합 및 세션 동기화 (Orchestrator)
 * 오케스트레이터는 `python vulcan.py run-integrate` 명령을 실행해 워커가 수정한 파일이 `scope.writable`에 부합하는지 최종 git diff를 검증한 후 메인 브랜치에 병합합니다.

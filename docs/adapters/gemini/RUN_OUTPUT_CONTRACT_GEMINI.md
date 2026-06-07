@@ -66,6 +66,42 @@
         "required": ["command", "result"]
       }
     },
+    "delegation_records": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "mode": { "type": "STRING" },
+          "delegate": { "type": "STRING" },
+          "native_agent": { "type": "BOOLEAN" },
+          "task": { "type": "STRING" },
+          "scope": {
+            "type": "OBJECT",
+            "properties": {
+              "writable": { "type": "ARRAY", "items": { "type": "STRING" } }
+            },
+            "required": ["writable"]
+          },
+          "started_at": { "type": "STRING" },
+          "completed_at": { "type": "STRING" },
+          "status": { "type": "STRING" },
+          "changed_files": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "result_summary": { "type": "STRING" },
+          "orchestrator_verification": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "command": { "type": "STRING" },
+                "result": { "type": "STRING" }
+              },
+              "required": ["command", "result"]
+            }
+          }
+        },
+        "required": ["mode", "delegate", "task", "status", "changed_files", "result_summary"]
+      }
+    },
     "orchestrator_decision_needed": {
       "type": "ARRAY",
       "items": {
