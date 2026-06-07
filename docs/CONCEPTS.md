@@ -130,7 +130,7 @@ Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 
 
 위임 기록은 실행 방식에 따라 두께가 다릅니다. 외부 CLI worker는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남깁니다. Codex subagent/thread, Claude subagent, Agy workspace branch agent 같은 native 위임은 같은 프로세스 메타가 없을 수 있으므로 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다.
 
-Agy의 `Workspace: branch`는 Antigravity runtime이 제공하는 native branch agent 경로로 다룹니다. 일반 Git worktree와 달리 Copy-on-Write/가상 오버레이로 의존성 폴더를 재사용할 수 있다는 장점이 있지만, 이는 Agy runtime 특화 기능이므로 Core의 범용 실행 전제로 삼지 않습니다. Agy native branch 결과는 `delegation_records.mode: agy-branch-agent`로 기록하고, 외부 `agy.exe` runner의 transcript/watchdog 기록이 필요할 때만 `agent-run`/`run-exec` 경로를 선택합니다. 검토 기록은 [Agy Workspace Branch Delegation Review](reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)에 남겨둡니다.
+Agy의 `Workspace: branch`는 Antigravity runtime이 제공하는 native branch agent 경로로 다룹니다. 일반 Git worktree와 달리 Copy-on-Write/가상 오버레이로 의존성 폴더를 재사용할 수 있다는 장점이 있지만, 이는 Agy runtime 특화 기능이므로 Core의 범용 실행 전제로 삼지 않습니다. Agy native branch 결과는 `delegation_records.mode: agy-branch-agent`로 기록하고, 외부 `agy.exe` runner의 transcript/watchdog 기록이 필요할 때만 `agent-run`/`run-exec` 경로를 선택합니다. Agy native 위임은 `run-exec` 자동 preflight 경로를 타지 않으므로 Orchestrator가 worker 호출 전에 `python vulcan.py run-preflight <run-file>`를 직접 실행해야 합니다. 검토 기록은 [Agy Workspace Branch Delegation Review](reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)에 남겨둡니다.
 
 구현에 들어가면 먼저 `python vulcan.py branch-start impl`로 `workflow.integration_branch`를 만들거나 전환합니다. 신규 개발처럼 빌드 가능한 골격이 없으면 feature 구현 Wave 전에 `BW-000 implementation-scaffold`를 두어 package/build/test skeleton과 public class/interface/method signature를 먼저 고정합니다.
 
@@ -173,9 +173,11 @@ python vulcan.py sync-session
 
 - `codex-gpt/`: Codex/GPT용 AGENTS, Run 계약, skill 카드, persona 위임 규칙
 - `claude/`: Claude 런타임의 agent/skill 구조와 Core persona 매핑
-- `gemini/`: Gemini/Antigravity 런타임의 구조화 Gate prompt, 한계, persona 매핑
+- `gemini/`: Gemini/Antigravity 런타임의 구조화 Gate prompt, 한계, persona 매핑, Agy native subagent/Workspace branch 위임 기준
 
 Codex는 `AGENTS.md`를 진입 문서로 사용하고, Claude는 `CLAUDE.md` 계열 문서를 읽는 구조를 전제로 합니다. Core 규칙은 모든 runner가 공유합니다. 다만 Run 입력의 `source_documents.read_first`에는 runner별 prompt를 섞지 않습니다. Codex Run은 Codex adapter prompt, Claude Run은 Claude adapter prompt, Gemini/Antigravity Run은 Gemini adapter prompt를 추가로 받습니다.
+
+Antigravity/Agy를 메인 Orchestrator로 사용할 때는 `GEMINI.md`와 `docs/adapters/gemini/`가 진입 기준이 됩니다. Agy 플랫폼 도구가 native subagent와 `Workspace: branch`를 제공하면 Ex는 이를 외부 CLI runner가 아니라 native delegation으로 취급합니다. 따라서 `_exec` 로그보다 `delegation_records`와 Orchestrator 재검증 명령이 핵심 추적 기록입니다.
 
 ## Run
 

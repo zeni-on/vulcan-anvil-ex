@@ -1,13 +1,15 @@
-# Gemini Adapter (GEMINI Standard)
+# Gemini / Antigravity Adapter (GEMINI Standard)
 
-> 상태: v0.1 (Gemini Runner 전용 어댑터 명세)
-> 목적: Gemini 및 Antigravity 환경에서 Vulcan-Anvil Ex 프레임워크의 규칙과 제약을 이행하기 위한 바인딩 가이드라인을 정의한다.
+> 상태: v0.2 (Gemini/Agy Orchestrator 및 Runner 어댑터 명세)
+> 목적: Gemini 및 Antigravity/Agy 환경에서 Vulcan-Anvil Ex 프레임워크의 규칙과 제약을 이행하기 위한 바인딩 가이드라인을 정의한다.
 
 ---
 
 ## 1. 연동 개념
 
-Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델의 API 특성에 맞게 중재하고, 출력을 정규화하는 얇은 레이어입니다.
+Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델과 Antigravity/Agy 플랫폼 특성에 맞게 중재하고, 출력을 정규화하는 얇은 레이어입니다.
+
+Antigravity/Agy는 단순 worker runner뿐 아니라 메인 Orchestrator가 될 수 있다. Agy가 메인 Orchestrator인 경우 `GEMINI.md`, `docs/core/`, `docs/adapters/gemini/`를 기준으로 Gate 진행, Run 생성, native worker 위임, 결과 검증을 조율한다.
 
 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다. Gemini/Antigravity Run 입력은 이 공통 체크리스트와 `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md`를 읽으며, Codex 전용 `docs/adapters/codex-gpt/GATE_PROMPTS.md`를 실행 계약으로 사용하지 않는다.
 
@@ -19,6 +21,16 @@ Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델의 API �
 ```
 
 ## 2. Gemini 특화 연동 전략
+
+### ⓪ Agy main Orchestrator mode
+
+Agy를 메인 Orchestrator로 사용할 때는 다음 기준을 적용한다.
+
+* Core Gate 규칙은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다.
+* Agy/Gemini 전용 prompt와 persona mapping은 `docs/adapters/gemini/` 문서를 따른다.
+* Agy native subagent와 `Workspace: branch`는 외부 CLI runner가 아니라 native delegation 경로로 취급한다.
+* worker 호출 전 Orchestrator가 직접 `python vulcan.py run-preflight <run-file>`를 실행한다.
+* worker 결과는 `delegation_records.mode: agy-branch-agent`로 남기고, 최종 Gate/Wave/QA 판단은 Orchestrator가 부모 workspace에서 다시 검증한다.
 
 ### ① Structured Outputs (JSON Schema 강제) 활용
 * Gemini API가 지원하는 `responseSchema`를 활용하여 워커의 출력이 `RUN_OUTPUT_CONTRACT_GEMINI.md` 규격에 선언된 정형 JSON/YAML 스키마를 100% 무결하게 준수하도록 강제합니다.

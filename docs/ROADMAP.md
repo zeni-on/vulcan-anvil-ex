@@ -42,6 +42,7 @@
 - Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
 - 요구사항추적표 기반 `trace-context` CLI와 Dashboard Trace Explorer
 - adapter별 Run 입력 문서 분리와 `docs/core/GATE_EXECUTION_CHECKLIST.md` 공통화
+- Antigravity/Agy를 메인 Orchestrator로 사용할 때의 `GEMINI.md`, Gemini adapter, native subagent, `Workspace: branch` 활용 기준
 - Gate 5 `release-pr` dry-run/body/branch guard
 - fixture 기반 회귀 smoke harness
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
@@ -168,6 +169,7 @@ Dashboard 성능 차트는 먼저 CLI 산출이 안정된 뒤 붙인다.
 PoC Profile은 `run-new`/`gate-start`에서 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심의 얇은 Run 입력 계약을 생성한다.
 `0.4.4`부터 PoC Profile은 `run-new`/`wave-start`에서 명시 `--trace-depth`가 없으면 depth 1을 기본값으로 사용하고, `source_documents.reference_on_demand`를 직접 관련 문서 중심으로 제한한다.
 `0.4.5`부터 PoC Profile은 사유와 후속 판단 시점이 있는 `TBD`/`확정필요`, 일부 상세 추적 누락, 미실행, `environment_blocked`를 차단보다 경고/판단 항목으로 우선 분류한다.
+`0.4.6`부터 Agy native subagent/Workspace branch를 메인 Orchestrator 경로에서 사용할 수 있도록 사용자 문서와 Gemini adapter 문서를 보강하고, native 위임 전 `run-preflight` 직접 실행과 `delegation_records` 기록을 강화한다.
 상세 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
 다음 단계는 `solution`용 Run preset과 `run-check`, `run-preflight`, `check-trace`, Dashboard 표시를 Profile별 엄격도와 연결하는 것이다.
 

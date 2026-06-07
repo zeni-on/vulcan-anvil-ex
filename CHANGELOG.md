@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.6 - 2026-06-07
+
+`0.4.6`은 GitHub release 기준 `0.4.4` 이후 누적된 Codex custom agent, PoC profile 완충, Agy native main Orchestrator, Workspace branch delegation, Run preflight guard, Gate 전환 완성도 검사를 묶은 패치 릴리즈다. `0.4.5`는 문서상 버전으로 정리되었지만 별도 GitHub tag/release는 만들지 않았으므로, 공개 릴리즈 기준으로는 `0.4.6`이 다음 패치 릴리즈다.
+
+Release notes: [docs/releases/v0.4.6.md](docs/releases/v0.4.6.md)
+
 - `check-trace`의 진단 출력을 더 구체화했다. 단순 실패 요약이 아니라 문제가 된 산출물/ID/상태를 더 잘 추적할 수 있게 하여 Orchestrator가 잘못된 문서를 추측으로 고치지 않도록 했다.
 - `prepare-transition` 명령을 추가했다. Gate 전환 전에 Run 완료 여부, 추적성 정합성, 전환 차단 사유를 한 번에 확인하는 사전 진단 명령이다.
 - `drift-report` 명령을 추가했다. 설계 산출물과 실제 코드/API/DB surface의 불일치를 공식 문서에 바로 덮어쓰지 않고 drift 후보 보고서로 생성한다.

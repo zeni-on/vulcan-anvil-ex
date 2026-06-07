@@ -15,10 +15,10 @@ Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 �
 - **문서**: 요구사항, 기능, 화면, 프로그램, DB, 보안, 테스트, 증적을 ID로 연결한다.
 - **코드**: 승인된 문서와 추적 규칙을 기준으로 에이전트가 작성한다.
 - **검증**: 테스트, 화면 증적, Run 기록, 추적성 검사를 통해 다음 Gate로 넘어갈 수 있는지 확인한다.
-- **Adapter**: Codex, Claude 같은 런타임 차이를 흡수한다.
+- **Adapter**: Codex, Claude, Gemini/Antigravity 같은 런타임 차이를 흡수한다.
 - **Dashboard**: Gate, 문서, Run, 통계, 최근 커밋을 한 화면에서 확인한다.
 
-최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, 더 구체적인 `check-trace` 진단을 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
+최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, native subagent/Agy Workspace branch 위임 기록, 더 구체적인 `check-trace` 진단을 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
 
 ## 왜 필요한가
 
@@ -54,7 +54,7 @@ cd ../my-project
 python vulcan.py init ../my-project "My Project" --remote https://github.com/<owner>/my-project.git
 ```
 
-이후 프로젝트 폴더를 Codex 또는 Claude에서 열고 목표를 말합니다.
+이후 프로젝트 폴더를 Codex, Claude, Antigravity/Agy 같은 에이전트 환경에서 열고 목표를 말합니다.
 
 ```text
 로그인과 게시글 작성 기능이 있는 게시판 샘플을 만들고 싶어.
@@ -75,6 +75,21 @@ Codex를 메인 Orchestrator로 사용할 때는 프로젝트 루트의 `AGENTS.
 | `docs/adapters/codex-gpt/` | Codex runner와 Run 계약을 연결하는 adapter 문서 |
 
 Custom agent는 자동 승인자가 아닙니다. 메인 Orchestrator가 관련 ID 탐색, Run 초안 검토, 계약 정합성 검토, QA 로그 해석 같은 보조 작업을 맡길 때 사용하고, 최종 Gate 전환과 승인 판단은 다시 Orchestrator가 검증합니다.
+
+## Antigravity/Agy에서 사용할 때
+
+Antigravity/Agy도 메인 Orchestrator가 될 수 있습니다. 이 경우 Gemini/Antigravity adapter 문서를 기준으로 Core Gate 규칙을 읽고, Agy 플랫폼의 native subagent와 `Workspace: branch` 기능을 활용해 worker를 격리 실행합니다.
+
+| 경로 | 용도 |
+| --- | --- |
+| `GEMINI.md` | Gemini/Antigravity Orchestrator가 읽는 프로젝트 운영 지침 |
+| `docs/adapters/gemini/` | Agy/Gemini prompt, persona mapping, structured output, native branch delegation 기준 |
+| `docs/core/AGENT_RUN_PROTOCOL_GEMINI.md` | Agy native subagent/branch 실행 프로토콜 |
+| `docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md` | Agy Workspace branch 방식과 Ex 위임 기록 정합성 검토 |
+
+Agy `Workspace: branch`는 일반 Git worktree와 다르게 플랫폼이 가상 격리 작업공간을 제공하는 경로로 취급합니다. 외부 CLI runner처럼 `_exec` 로그를 두껍게 남기기보다, Run 문서의 `delegation_records.mode: agy-branch-agent`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다.
+
+주의할 점도 있습니다. Agy native branch 위임은 `run-exec` 경로가 아니므로 자동 preflight가 걸리지 않습니다. Orchestrator는 worker를 부르기 전에 직접 `python vulcan.py run-preflight <run-file>`를 실행해 `TBD`, scope, Run metadata 불일치를 먼저 막아야 합니다.
 
 ## Dashboard
 
@@ -110,11 +125,11 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.5**
+**Experimental - v0.4.6**
 
-`0.4.5`는 `0.4.4`의 PoC compact Run 흐름을 유지하면서 Codex custom agent 정의, PoC profile 검사 완충, Gate 4 QA integration workspace 기본값을 보강한 패치입니다. audit profile은 기존 강한 기준을 유지하고, PoC profile은 사유 있는 TBD와 환경 차단을 경고/판단 항목으로 다룹니다.
+`0.4.6`은 `0.4.4` 이후 누적된 Codex custom agent, PoC profile 완충, Agy native main orchestration, `Workspace: branch` 위임 기록, Run preflight guard, `prepare-transition` 완성도 검사를 묶은 패치입니다. audit profile은 기존 강한 기준을 유지하고, PoC profile은 사유 있는 TBD와 환경 차단을 경고/판단 항목으로 다룹니다.
 
-`main` 브랜치의 다음 릴리즈 후보에는 `prepare-transition`, `drift-report`, adapter별 Run 입력 문서 분리, `check-trace` 진단 개선이 포함되어 있습니다. 확정 릴리즈 내역은 `CHANGELOG.md`의 `Unreleased`와 태그별 release note를 함께 확인합니다.
+`v0.4.5`는 문서상 버전으로 정리되었지만 GitHub release/tag는 만들지 않았습니다. 공개 릴리즈 기준으로는 `v0.4.6`이 `v0.4.4` 이후 변경을 포함하는 다음 패치 릴리즈입니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
@@ -129,6 +144,7 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |
+| [Gemini/Antigravity Adapter](docs/adapters/gemini/README_GEMINI.md) | Agy/Gemini Orchestrator, Workspace branch, structured output, native delegation 기준 |
 | [Gate Execution Checklist](docs/core/GATE_EXECUTION_CHECKLIST.md) | 모든 runner가 공통으로 따르는 Gate 실행/승인/위임 경계 |
 | [Codex Custom Agent Strategy](docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md) | `.codex/agents` 기반 보조 에이전트 정의와 native/fallback 보고 기준 |
 | [Tech Stack Baselines](docs/core/TECH_STACK_BASELINES.md) | Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기본 개발 규칙 |
