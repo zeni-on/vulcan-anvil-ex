@@ -18,6 +18,8 @@ Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 �
 - **Adapter**: Codex, Claude 같은 런타임 차이를 흡수한다.
 - **Dashboard**: Gate, 문서, Run, 통계, 최근 커밋을 한 화면에서 확인한다.
 
+최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, 더 구체적인 `check-trace` 진단을 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
+
 ## 왜 필요한가
 
 AI 에이전트는 코드를 빠르게 만들 수 있지만, 긴 프로젝트에서는 다음 문제가 반복됩니다.
@@ -112,6 +114,8 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 `0.4.5`는 `0.4.4`의 PoC compact Run 흐름을 유지하면서 Codex custom agent 정의, PoC profile 검사 완충, Gate 4 QA integration workspace 기본값을 보강한 패치입니다. audit profile은 기존 강한 기준을 유지하고, PoC profile은 사유 있는 TBD와 환경 차단을 경고/판단 항목으로 다룹니다.
 
+`main` 브랜치의 다음 릴리즈 후보에는 `prepare-transition`, `drift-report`, adapter별 Run 입력 문서 분리, `check-trace` 진단 개선이 포함되어 있습니다. 확정 릴리즈 내역은 `CHANGELOG.md`의 `Unreleased`와 태그별 release note를 함께 확인합니다.
+
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
 릴리즈별 변경사항은 [CHANGELOG.md](CHANGELOG.md)를 기준으로 확인합니다.
@@ -125,6 +129,7 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |
+| [Gate Execution Checklist](docs/core/GATE_EXECUTION_CHECKLIST.md) | 모든 runner가 공통으로 따르는 Gate 실행/승인/위임 경계 |
 | [Codex Custom Agent Strategy](docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md) | `.codex/agents` 기반 보조 에이전트 정의와 native/fallback 보고 기준 |
 | [Tech Stack Baselines](docs/core/TECH_STACK_BASELINES.md) | Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기본 개발 규칙 |
 | [Contributing](CONTRIBUTING.md) | 공개 기여 시 권리, 회사/고객 정보 제외, PR 기준 |

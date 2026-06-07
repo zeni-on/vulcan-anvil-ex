@@ -88,6 +88,26 @@ Release PR은 릴리즈 후보를 검토하기 위한 단위이며, runner 결�
 `release-pr --dry-run`도 동일한 PR body를 `.vulcan/release/release-pr-body.md`에 만들며, 현재 브랜치가 통합 브랜치인지, base/head 브랜치가 존재하는지, 미커밋 변경이 없는지 먼저 확인합니다.
 merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤에 수행합니다.
 
+## Gate Transition Readiness
+
+Gate 산출물이 작성되었다고 해서 다음 Gate로 자동 진행하지 않습니다. `prepare-transition`은 다음 Gate로 넘어가기 전에 Run 완료 상태, 추적성 정합성, 차단 이슈를 한 번에 확인하는 사전 진단입니다.
+
+```powershell
+python vulcan.py prepare-transition
+```
+
+이 명령은 승인 판단을 대신하지 않습니다. Orchestrator가 결과를 해석하고, 실패한 산출물/ID/Run을 정리한 뒤 사용자에게 다음 Gate 진행 여부를 묻기 위한 준비 단계입니다.
+
+## Drift Report
+
+구현 결과가 설계와 다를 때 곧바로 설계 문서를 코드 기준으로 덮어쓰면 "구현이 설계를 지배하는" 문제가 생깁니다. Ex는 이 상황을 먼저 drift 후보로 분리합니다.
+
+```powershell
+python vulcan.py drift-report --output docs/artifacts/04-review/evidence/contract/contract-drift-report.md
+```
+
+`drift-report`는 설계 산출물과 실제 코드/API/DB surface 사이의 불일치를 보고합니다. 결과는 FIND, CR, ISSUE 후보이며, 승인된 경우에만 설계 문서 또는 코드를 별도 Run으로 수정합니다.
+
 ## Backlog
 
 Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 나온 아이디어, QA에서 발견한 FIND, 요구/설계 변경이 필요한 CR, 판단이 필요한 ISSUE를 다음 Run 또는 필요한 Gate 진행으로 연결하는 대기열입니다.
@@ -134,6 +154,7 @@ python vulcan.py sync-session
 - `ID_SYSTEM.md`: 요구사항, 설계, 테스트, 증적 ID 체계
 - `TRACEABILITY_RULES.md`: 요구사항에서 증적까지의 연결 규칙
 - `ORCHESTRATOR_PROTOCOL.md`: 메인 에이전트의 계획, 위임, 검증 규칙
+- `GATE_EXECUTION_CHECKLIST.md`: 모든 runner가 공통으로 따르는 Gate 실행/승인/위임 경계
 - `AGENT_PERSONAS.md`: 단계별 persona와 subagent 위임 기준
 - `AGENT_RUN_PROTOCOL.md`: 에이전트 실행 단위인 Run 규칙
 - `CHANGE_CONTROL_PROCESS.md`: FIND, CR, ISSUE, 백로그, 승인된 CR의 Gate 진행 기준
@@ -146,8 +167,9 @@ python vulcan.py sync-session
 
 - `codex-gpt/`: Codex/GPT용 AGENTS, Run 계약, skill 카드, persona 위임 규칙
 - `claude/`: Claude 런타임의 agent/skill 구조와 Core persona 매핑
+- `gemini/`: Gemini/Antigravity 런타임의 구조화 Gate prompt, 한계, persona 매핑
 
-Codex는 `AGENTS.md`를 진입 문서로 사용하고, Claude는 `CLAUDE.md` 계열 문서를 읽는 구조를 전제로 합니다. Core 규칙은 양쪽 모두에서 공유합니다.
+Codex는 `AGENTS.md`를 진입 문서로 사용하고, Claude는 `CLAUDE.md` 계열 문서를 읽는 구조를 전제로 합니다. Core 규칙은 모든 runner가 공유합니다. 다만 Run 입력의 `source_documents.read_first`에는 runner별 prompt를 섞지 않습니다. Codex Run은 Codex adapter prompt, Claude Run은 Claude adapter prompt, Gemini/Antigravity Run은 Gemini adapter prompt를 추가로 받습니다.
 
 ## Run
 

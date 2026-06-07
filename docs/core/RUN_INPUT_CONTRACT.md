@@ -38,6 +38,8 @@ worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로
 Build Wave Run이나 구현 worker Run을 생성할 때 대표 상세 ID가 있으면 Orchestrator는 `run-new --trace-seed <ID>` 또는 `wave-start --trace-seed <ID>`를 우선 사용한다. 이 옵션은 추적성 그래프에서 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추천하지만, `interface_contract`, `contract_skeleton`, `scope.writable`, 검증 명령은 Orchestrator가 Program Design과 실제 작업 범위에 맞게 확정해야 한다.
 `6. 작성/검증 규칙` 이후의 내용은 Orchestrator와 도구가 보는 작성 기준이다.
 
+Run 입력 계약 형식은 runner별로 나누지 않는다. 대신 `source_documents.read_first`만 adapter에 맞게 달라진다. 모든 runner는 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 공통으로 읽고, Codex는 `docs/adapters/codex-gpt/GATE_PROMPTS.md`, Claude는 `docs/adapters/claude/GATE_PROMPTS.md`, Gemini/Antigravity는 `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md`를 추가로 읽는다. 한 runner의 전용 prompt를 다른 runner의 Run 입력에 섞지 않는다.
+
 ## 3. Worker 입력 계약
 
 ### 3.1 필수 필드

@@ -14,7 +14,7 @@ source_documents:
     - AGENTS.md
     - session.json
     - docs/core/TRACEABILITY_RULES.md
-    - docs/adapters/codex-gpt/GATE_PROMPTS.md
+    - docs/core/GATE_EXECUTION_CHECKLIST.md
     - docs/adapters/codex-gpt/skills/traceability-review.md
   working_documents:
     - docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md

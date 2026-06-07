@@ -10,6 +10,7 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 필수 Core:
 
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
+- `docs/core/GATE_EXECUTION_CHECKLIST.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/core/AGENT_PERSONAS.md`

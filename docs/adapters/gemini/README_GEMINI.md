@@ -9,6 +9,8 @@
 
 Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델의 API 특성에 맞게 중재하고, 출력을 정규화하는 얇은 레이어입니다.
 
+공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다. Gemini/Antigravity Run 입력은 이 공통 체크리스트와 `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md`를 읽으며, Codex 전용 `docs/adapters/codex-gpt/GATE_PROMPTS.md`를 실행 계약으로 사용하지 않는다.
+
 ```text
 +-------------------+      +-------------------------+      +---------------------+
 |    Core Rule      | ---> |     Gemini Adapter      | ---> |    Gemini Runner    |

@@ -21,7 +21,7 @@ source_documents:
     - AGENTS.md
     - session.json
     - docs/core/TRACEABILITY_RULES.md
-    - docs/adapters/codex-gpt/GATE_PROMPTS.md
+    - docs/core/GATE_EXECUTION_CHECKLIST.md
     - docs/adapters/codex-gpt/skills/qa-execution.md
   working_documents:
     - docs/artifacts/04-review/

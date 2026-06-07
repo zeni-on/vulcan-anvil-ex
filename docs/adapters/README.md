@@ -10,6 +10,7 @@ Core는 두껍게 유지하고 Adapter는 얇게 유지한다.
 - Adapter는 특정 runner가 Core 입력 계약을 읽고 실행할 수 있도록 프롬프트, 명령 옵션, 로그, 상태파일, 출력 정규화만 변환한다.
 - Adapter는 Core 규칙을 길게 복사하지 않는다.
 - Core와 Adapter의 내용이 충돌하면 Core가 우선이다.
+- 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 둔다. Adapter별 `GATE_PROMPTS`는 이 기준을 runner에 맞게 얇게 환기하는 문서다.
 
 ## 2. Adapter가 해야 하는 일
 
@@ -54,10 +55,19 @@ Adapter에 이런 내용이 필요하면 요약만 두고 Core 문서를 링크�
 | `PERSONA_MAPPING.md` 또는 `PERSONA_DELEGATION.md` | Core persona와 runner별 agent/subagent 이름의 매핑 |
 | `LIMITATIONS.md` | runner 한계, 보안 주의사항, 보조 도구 기준 |
 
+Run 입력의 `source_documents.read_first`는 공통 체크리스트와 해당 runner adapter 문서만 포함한다.
+
+| Runner | 추가 adapter prompt |
+| --- | --- |
+| Codex/GPT | `docs/adapters/codex-gpt/GATE_PROMPTS.md` |
+| Claude | `docs/adapters/claude/GATE_PROMPTS.md` |
+| Gemini/Antigravity | `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md` |
+
 ## 6. 관련 Core 문서
 
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/GATE_EXECUTION_CHECKLIST.md`
 - `docs/core/AGENT_PERSONAS.md`
 - `docs/core/RUN_INPUT_CONTRACT.md`
 - `docs/core/RUN_OUTPUT_CONTRACT.md`

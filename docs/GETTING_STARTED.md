@@ -138,6 +138,7 @@ my-project/
 | `orchestrator-plan` | Orchestrator 실행 계획 Run 생성 |
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
+| `prepare-transition` | 다음 Gate로 넘어가기 전 Run 완료, 추적성, 차단 사유를 한 번에 진단 |
 | `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
 | `run-new --trace-seed <ID>` | 추적성 그래프 기반으로 Run 초안의 관련 ID와 참조 문서 후보 보강 |
 | `wave-start <BW-ID> --trace-seed <ID>` | Build Wave Run 초안의 `related_ids`, `target_contracts`, 참조 문서 후보 보강 |
@@ -151,6 +152,7 @@ my-project/
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
 | `review-run` | 생성된 독립 검수 요청을 codex-cli 또는 claude-cli로 실행 |
 | `check-trace` | Gate별 추적성 검사 |
+| `drift-report` | 설계 산출물과 실제 코드/API/DB surface의 불일치 후보 보고서 생성 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |
 | `upgrade` | 기존 프로젝트에 최신 framework 문서 반영 |
@@ -187,6 +189,38 @@ Codex를 메인 Orchestrator로 사용할 때는 다음 세 계층을 구분합�
 
 custom agent 결과는 후보 의견입니다. Gate 전환, session 갱신, QA Pass, release/merge 가능 판단은 메인 Orchestrator가 다시 검증합니다.
 현재 Codex surface가 native custom agent 선택을 직접 노출하지 않는 경우도 있으므로, Orchestrator는 실제 실행 방식을 `native_custom_agent`, `prompt_contract_fallback`, `unknown` 중 하나로 보고해야 합니다.
+
+### 4.2 Gate 전환 전 사전 진단
+
+Gate 산출물 작성이 끝났다고 바로 다음 Gate로 넘어가지 않습니다. Orchestrator는 먼저 현재 Gate 상태와 Run 완료 여부, 추적성 이슈를 한 번에 확인합니다.
+
+```powershell
+python vulcan.py prepare-transition
+```
+
+`prepare-transition`은 `check-trace`를 대체하는 명령이 아니라, Gate 전환 전에 봐야 할 내용을 묶어서 보여주는 진단 명령입니다. 실패하면 다음 Gate로 넘어가지 말고, 출력된 산출물/ID/Run 기준으로 원인을 정리한 뒤 사용자에게 승인 또는 보완 방향을 묻습니다.
+
+### 4.3 설계-구현 Drift 확인
+
+구현이나 QA 수정 후에는 설계 문서를 바로 코드 기준으로 덮어쓰지 않습니다. 먼저 drift 후보 보고서를 만들어, 설계가 바뀌어야 하는지 구현이 계약을 어긴 것인지 구분합니다.
+
+```powershell
+python vulcan.py drift-report --output docs/artifacts/04-review/evidence/contract/contract-drift-report.md
+```
+
+`drift-report`는 후보 보고서입니다. Orchestrator는 결과를 FIND, CR, ISSUE 후보로 분류하고, 승인된 경우에만 설계 문서 또는 코드 수정을 별도 Run으로 진행합니다.
+
+### 4.4 Adapter별 Run 입력 문서
+
+Run 입력 계약의 형식은 모든 runner가 `docs/core/RUN_INPUT_CONTRACT.md`를 공유합니다. 다만 `source_documents.read_first`에는 runner별 prompt를 섞지 않습니다.
+
+| Runner | 공통으로 먼저 읽는 문서 | 추가 adapter 문서 |
+| --- | --- | --- |
+| Codex/GPT | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/codex-gpt/GATE_PROMPTS.md` |
+| Claude | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/claude/GATE_PROMPTS.md` |
+| Gemini/Antigravity | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md` |
+
+따라서 Gemini나 Claude Run 문서에 Codex 전용 `docs/adapters/codex-gpt/GATE_PROMPTS.md`가 들어가 있다면 최신 규칙 기준으로는 정리 대상입니다.
 
 ## 5. 0.4 구현/QA 흐름
 

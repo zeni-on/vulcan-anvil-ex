@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `check-trace`의 진단 출력을 더 구체화했다. 단순 실패 요약이 아니라 문제가 된 산출물/ID/상태를 더 잘 추적할 수 있게 하여 Orchestrator가 잘못된 문서를 추측으로 고치지 않도록 했다.
+- `prepare-transition` 명령을 추가했다. Gate 전환 전에 Run 완료 여부, 추적성 정합성, 전환 차단 사유를 한 번에 확인하는 사전 진단 명령이다.
+- `drift-report` 명령을 추가했다. 설계 산출물과 실제 코드/API/DB surface의 불일치를 공식 문서에 바로 덮어쓰지 않고 drift 후보 보고서로 생성한다.
+- Run 생성 시 `source_documents.read_first`에 Codex 전용 `GATE_PROMPTS.md`를 모든 runner에게 주입하지 않도록 정리했다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`로 분리하고, Codex/Claude/Gemini는 각 adapter 전용 Gate prompt만 추가로 받는다.
+- Core Run 입력 샘플에서 Codex adapter 전용 prompt 참조를 제거하고 공통 Gate 실행 체크리스트를 사용하도록 정리했다.
+
 ## 0.4.5 - 2026-06-06
 
 `0.4.5`는 `0.4.4`의 PoC compact Run 흐름 위에 Codex custom agent 정의, PoC profile 검사 완충, Gate 4 QA workspace 기본값 정리를 더한 패치 릴리즈다.

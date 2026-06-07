@@ -39,6 +39,8 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 - Codex custom agent는 `.codex/agents/*.toml`의 `name`으로 식별된다. Orchestrator는 프롬프트에서 custom agent 이름을 명시해 사용을 요청한다.
 - 현재 surface의 내부 tool schema가 `agent_type` 같은 필드를 노출한다고 가정하지 않는다. Codex가 custom agent를 선택하지 못하면, Orchestrator는 built-in/default subagent에 custom agent TOML 내용을 prompt 계약으로 주입할 수 있다. 이때 model/effort는 자동 적용으로 보고하지 않는다.
 - `AGENTS.md`는 세부 규칙을 중복하지 않고 `docs/core/`와 `docs/adapters/codex-gpt/`를 참조한다.
+- 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다. Codex/GPT runner만 추가로 `docs/adapters/codex-gpt/GATE_PROMPTS.md`를 읽는다.
+- Claude, Gemini, Antigravity Run 입력에는 Codex 전용 `GATE_PROMPTS.md`를 주입하지 않는다.
 - Claude 전용 `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/`는 같은 저장소에 공존할 수 있으나 Codex/GPT의 기본 실행 계약은 아니다.
 - 파일 읽기와 수정, 테스트 실행을 한 흐름에서 처리할 수 있다.
 - 산출물과 코드가 같은 워크스페이스에 있을 때 추적표 갱신까지 이어가기 좋다.
@@ -79,6 +81,13 @@ Codex/GPT Adapter는 다음 특징을 고려한다.
 
 Run 입력/출력 형식은 adapter별로 정의하지 않는다.
 Codex, Claude, Gemini worker는 모두 `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md`를 동일하게 사용한다.
+단, Run 입력의 `source_documents.read_first`는 adapter별로 다르다.
+
+| Runner | 공통 문서 | 추가 adapter 문서 |
+| --- | --- | --- |
+| Codex/GPT | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/codex-gpt/GATE_PROMPTS.md` |
+| Claude | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/claude/GATE_PROMPTS.md` |
+| Gemini/Antigravity | `docs/core/GATE_EXECUTION_CHECKLIST.md` | `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md` |
 
 ## 7. Skill 카드
 

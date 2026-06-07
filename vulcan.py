@@ -351,9 +351,21 @@ RUN_TYPES_BY_GATE = {
 AUDIT_COMMON_READ_FIRST_DOCS = [
     "AGENTS.md",
     "session.json",
+    "docs/core/GATE_EXECUTION_CHECKLIST.md",
     "docs/core/TRACEABILITY_RULES.md",
-    "docs/adapters/codex-gpt/GATE_PROMPTS.md",
 ]
+
+ADAPTER_READ_FIRST_DOCS = {
+    "codex": ["docs/adapters/codex-gpt/GATE_PROMPTS.md"],
+    "codex-cli": ["docs/adapters/codex-gpt/GATE_PROMPTS.md"],
+    "codex-gpt": ["docs/adapters/codex-gpt/GATE_PROMPTS.md"],
+    "gemini": ["docs/adapters/gemini/GATE_PROMPTS_GEMINI.md"],
+    "antigravity": ["docs/adapters/gemini/GATE_PROMPTS_GEMINI.md"],
+    "antigravity-cli": ["docs/adapters/gemini/GATE_PROMPTS_GEMINI.md"],
+    "agy": ["docs/adapters/gemini/GATE_PROMPTS_GEMINI.md"],
+    "claude": ["docs/adapters/claude/GATE_PROMPTS.md"],
+    "claude-cli": ["docs/adapters/claude/GATE_PROMPTS.md"],
+}
 
 AUDIT_GATE_READ_FIRST_DOCS = {
     "gate2": [
@@ -1603,6 +1615,57 @@ def load_primary_runner(project_dir="."):
     return None
 
 
+def normalize_adapter_name(adapter=""):
+    normalized = str(adapter or "").strip().lower()
+    aliases = {
+        "codex_cli": "codex-cli",
+        "claude_cli": "claude-cli",
+        "antigravity_cli": "antigravity-cli",
+        "codex-gpt": "codex-gpt",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def adapter_read_first_docs(adapter=""):
+    normalized = normalize_adapter_name(adapter)
+    return ADAPTER_READ_FIRST_DOCS.get(normalized, [])
+
+
+def adapter_family(adapter=""):
+    normalized = normalize_adapter_name(adapter)
+    if normalized in ("codex", "codex-cli", "codex-gpt"):
+        return "codex"
+    if normalized in ("gemini", "antigravity", "antigravity-cli", "agy"):
+        return "gemini"
+    if normalized in ("claude", "claude-cli"):
+        return "claude"
+    return ""
+
+
+def adapter_doc_family(path):
+    normalized = str(path or "").replace("\\", "/").lower()
+    if normalized.startswith("docs/adapters/codex-gpt/"):
+        return "codex"
+    if normalized.startswith("docs/adapters/gemini/"):
+        return "gemini"
+    if normalized.startswith("docs/adapters/claude/"):
+        return "claude"
+    if normalized.startswith("docs/core/") and normalized.endswith("_gemini.md"):
+        return "gemini"
+    return ""
+
+
+def filter_adapter_specific_docs(paths, adapter=""):
+    family = adapter_family(adapter)
+    filtered = []
+    for path in paths or []:
+        doc_family = adapter_doc_family(path)
+        if doc_family and family and doc_family != family:
+            continue
+        filtered.append(path)
+    return filtered
+
+
 def is_gemini_long_context_mode(project_dir="."):
     config_path = os.path.join(project_dir, "vulcan.config.json")
     if os.path.exists(config_path):
@@ -1627,6 +1690,7 @@ def effective_trace_depth(project_dir=".", trace_depth=None):
 POC_COMMON_READ_FIRST_DOCS = [
     "AGENTS.md",
     "session.json",
+    "docs/core/GATE_EXECUTION_CHECKLIST.md",
     "docs/core/DELIVERY_PROFILES.md",
 ]
 
@@ -1776,13 +1840,16 @@ POC_WORKER_EXECUTION_POLICY = {
 }
 
 
-def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path):
+def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""):
     gate_working = POC_GATE_WORKING_DOCUMENTS.get(gate, ["docs/runs/"])
     gate_reference = compact_reference_documents_for_profile("poc", POC_GATE_REFERENCES.get(gate, []))
     run_rel_path = run_rel_path.replace("\\", "/")
     worker_run = skill in ("implementation-scaffold", "build-wave", "qa-execution", "qa-fix-loop")
     working_documents = merge_unique([run_rel_path], gate_working)
-    source_read_first = merge_unique(POC_COMMON_READ_FIRST_DOCS, [skill_path] if skill_path else [])
+    source_read_first = filter_adapter_specific_docs(
+        merge_unique(POC_COMMON_READ_FIRST_DOCS, adapter_read_first_docs(adapter), [skill_path] if skill_path else []),
+        adapter,
+    )
     verification_commands = [
         f"python vulcan.py run-check {run_rel_path}",
         "python vulcan.py profile-status",
@@ -1801,6 +1868,7 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path):
         output_include.extend(["findings", "change_requests"])
     return {
         "profile": "poc",
+        "adapter": adapter or "codex-gpt",
         "skill": skill,
         "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
         "worker_run": worker_run,
@@ -1808,7 +1876,7 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path):
         "source_documents": {
             "read_first": source_read_first,
             "working_documents": working_documents,
-            "reference_on_demand": merge_unique(gate_reference),
+            "reference_on_demand": filter_adapter_specific_docs(merge_unique(gate_reference), adapter),
             "optional": [],
         },
         "scope": {
@@ -1856,9 +1924,9 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path):
     }
 
 
-def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
+def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path, adapter=""):
     if profile == "poc":
-        return build_poc_run_input_preset(gate, skill, skill_path, run_rel_path)
+        return build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=adapter)
 
     if profile != "audit":
         return None
@@ -1906,9 +1974,11 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         working_documents, reference_documents = split_working_and_reference(source_candidates)
     source_read_first = merge_unique(
         AUDIT_COMMON_READ_FIRST_DOCS,
+        adapter_read_first_docs(adapter),
         AUDIT_GATE_READ_FIRST_DOCS.get(gate, []),
         [skill_path],
     )
+    source_read_first = filter_adapter_specific_docs(source_read_first, adapter)
     source_reference = merge_unique(
         AUDIT_COMMON_REFERENCE_DOCS,
         [gate_sample] if gate_sample else [],
@@ -1916,6 +1986,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
         reference_documents,
     )
     source_reference = [path for path in source_reference if path not in source_read_first]
+    source_reference = filter_adapter_specific_docs(source_reference, adapter)
     base_verification_commands = [f"python vulcan.py run-check {run_rel_path}"]
     if not worker_run:
         base_verification_commands.append("python vulcan.py check-trace")
@@ -1950,6 +2021,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path):
     )
     return {
         "profile": profile,
+        "adapter": adapter or "codex-gpt",
         "skill": skill,
         "run_type": skill_preset.get("run_type", RUN_TYPES_BY_GATE.get(gate, "Review")),
         "worker_run": worker_run,
@@ -2231,7 +2303,7 @@ development_standard_checklist:
 
 ```yaml
 profile: {format_yaml_scalar(preset["profile"])}
-adapter: "codex-gpt"
+adapter: {format_yaml_scalar(preset.get("adapter", "codex-gpt"))}
 run_type: {format_yaml_scalar(preset["run_type"])}
 gate: {format_yaml_scalar(gate)}
 related_ids: {format_yaml_list(ids)}
@@ -7795,6 +7867,7 @@ FRAMEWORK_FILES = [
     ".claude/skills/git-workflow-and-versioning/skill.md",
     # docs & guides
     "GATE_GUIDE.md",
+    "docs/core/GATE_EXECUTION_CHECKLIST.md",
     # backlog (v1.1+): PROCESS.md는 upgrade 시 덮어쓰기, BACKLOG.md는 보존
     "docs/backlog/PROCESS.md",
 ]
@@ -7967,7 +8040,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         )
         ids = trace_info.get("related_ids", split_csv(related_ids))
         skill_path = RUN_SKILLS[skill]
-        preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path)
+        preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path, adapter=adapter)
         if preset:
             source_docs = preset.setdefault("source_documents", {})
             if is_gemini_long_context_mode(project_dir) and profile != "poc":
@@ -7987,6 +8060,8 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
                     profile,
                     merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
                 )
+            for source_key in ("read_first", "reference_on_demand", "optional"):
+                source_docs[source_key] = filter_adapter_specific_docs(source_docs.get(source_key, []), adapter)
         run_type = preset["run_type"] if preset else RUN_TYPES_BY_GATE.get(gate, "Review")
         completion_section_number = "6" if preset else "5"
         first_read_docs = preset["source_documents"]["read_first"] if preset else [

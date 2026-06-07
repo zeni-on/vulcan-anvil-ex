@@ -37,6 +37,7 @@
 
 - `docs/core/ORCHESTRATOR_PROTOCOL.md`
 - `docs/core/AGENT_RUN_PROTOCOL.md`
+- `docs/core/GATE_EXECUTION_CHECKLIST.md`
 - `docs/core/TRACEABILITY_RULES.md`
 - `docs/adapters/codex-gpt/GATE_PROMPTS.md`
 

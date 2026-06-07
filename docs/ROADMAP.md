@@ -34,8 +34,12 @@
 - Worker dependency cache와 worktree 실행 경계
 - Gate 4 `QA-000`~`QA-003` staged QA 실행과 QA workspace 재사용 기준
 - Gate 4 테스트 결과서를 실제 실행 상태 원본으로 사용하고, 요구사항추적표에 최종 검증 상태를 반영하는 기준
+- Gate 전환 전 `prepare-transition` 통합 진단
+- `check-trace` semantic diagnostics 보강
+- 설계-코드 불일치 후보를 문서 자동 수정이 아니라 보고서로 남기는 `drift-report`
 - Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
 - 요구사항추적표 기반 `trace-context` CLI와 Dashboard Trace Explorer
+- adapter별 Run 입력 문서 분리와 `docs/core/GATE_EXECUTION_CHECKLIST.md` 공통화
 - Gate 5 `release-pr` dry-run/body/branch guard
 - fixture 기반 회귀 smoke harness
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
@@ -55,10 +59,11 @@
 
 1. **샘플 프로젝트 기준 0.4.x 회귀 재검증**
    - 새 `v0.4.x` 기준으로 sample 프로젝트를 다시 진행해 Run 품질, trace-context, Gate 4 QA, release-pr, worker watchdog 흐름을 실제 사용감으로 확인한다.
-   - 발견한 회귀는 fixture smoke 또는 문서 규칙으로 흡수한다.
+   - 발견한 회귀는 fixture smoke, `prepare-transition`, `drift-report`, 문서 규칙 중 하나로 흡수한다.
 2. **Run 생성 품질 자동화**
    - `run-new --trace-seed`와 `wave-start --trace-seed`의 최소 연동은 들어갔다.
    - 다음 단계는 샘플 프로젝트에서 생성된 Run 초안의 `scope.writable`, `interface_contract`, `source_documents` 품질을 확인하고 보강한다.
+   - adapter별 `source_documents.read_first`가 공통 Core 체크리스트와 runner 전용 prompt만 포함하는지 fixture smoke로 고정한다.
 3. **Performance & Parallelization 기준 수립**
    - `sample-ex-0530-1`의 Run, worker summary, git log를 기준으로 병목을 1차 분석했다.
    - 샘플 기준 worker 실행 합계는 약 96.8분이며, 그중 Gate 4 QA와 QA-Fix가 약 73분을 차지했다.
@@ -114,6 +119,7 @@ Run 입력 ID는 agent가 여러 문서를 뒤져 수동으로 긁어넣기보�
 - `run-new`/`wave-start --trace-seed`가 만든 초안에서 `scope.writable`과 `interface_contract`를 더 잘 좁히는 보조 규칙을 추가한다.
 - edge type과 status 필터를 Run 작성 규칙에 더 직접적으로 연결한다.
 - fixture smoke에 샘플 프로젝트에서 발견한 실제 trace-context 회귀 케이스를 추가한다.
+- adapter별 Run 입력 문서 분리 기준을 smoke fixture로 검증한다.
 - 샘플 프로젝트에서 `--trace-seed` UX를 확인한 뒤 기본 추천 여부를 판단한다.
 - PoC profile의 Run 입력 문서는 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`에 따라 compact preset을 우선 적용한다.
 

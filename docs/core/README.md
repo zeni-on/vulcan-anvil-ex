@@ -6,6 +6,7 @@
 
 - `ID_SYSTEM.md`: ID Prefix, 문서 ID, 파일명, 버전 규칙
 - `TRACEABILITY_RULES.md`: 요구사항, 설계, 보안, 테스트, 증적 간 필수 연결 규칙
+- `GATE_EXECUTION_CHECKLIST.md`: runner 공통 Gate 실행 체크리스트와 승인/위임 경계
 - `ORCHESTRATOR_PROTOCOL.md`: 메인 에이전트의 계획, 위임, 검증, handoff 판단 규칙
 - `DOCUMENT_METADATA.md`: 공식 문서에 공통으로 들어갈 메타데이터 필드
 - `REFERENCE_STANDARDS.md`: 보안 가이드와 공공데이터 표준 참조 및 준용 규칙

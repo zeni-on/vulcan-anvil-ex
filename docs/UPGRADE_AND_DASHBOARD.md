@@ -78,6 +78,21 @@ Gate 4에서는 `QA-000`이 기록한 QA workspace를 `QA-001`, `QA-002`, `QA-00
 
 Gate 4의 실제 실행 상태는 QA 테스트 결과서(`DOC-QA-G4-002_Test-Result_v0.1.md`)가 원본입니다. 업그레이드 전 프로젝트에서 Gate 3 테스트케이스의 마지막 상태 컬럼을 Pass/Fail처럼 사용했다면, 최신 규칙에서는 그 값을 계획 상태로 남기고 QA-003에서 테스트 결과서와 요구사항추적표를 갱신하는 방식으로 정리합니다.
 
+최근 `0.4.x` mainline에는 Gate 전환과 adapter 입력 문서 기준이 추가로 정리되었습니다. 업그레이드 후 다음 항목도 확인합니다.
+
+```powershell
+python vulcan.py prepare-transition
+python vulcan.py drift-report --output docs/artifacts/04-review/evidence/contract/contract-drift-report.md
+```
+
+확인 기준:
+
+- Run 문서의 `source_documents.read_first`에 `docs/core/GATE_EXECUTION_CHECKLIST.md`가 들어간다.
+- Codex Run에만 `docs/adapters/codex-gpt/GATE_PROMPTS.md`가 들어간다.
+- Claude Run은 `docs/adapters/claude/GATE_PROMPTS.md`, Gemini/Antigravity Run은 `docs/adapters/gemini/GATE_PROMPTS_GEMINI.md`를 사용한다.
+- `prepare-transition`이 실패하면 다음 Gate로 넘어가지 않고 실패한 산출물/ID/Run을 먼저 정리한다.
+- `drift-report` 결과는 설계 문서 자동 수정이 아니라 FIND/CR/ISSUE 후보 보고서로 해석한다.
+
 ## Dashboard 실행
 
 Dashboard는 Gate 진행 상태, 산출문서, Run, 구현 진행률, 테스트/백로그 통계, 최근 커밋을 한 화면에서 확인하기 위한 보조 UI입니다.
