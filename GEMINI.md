@@ -85,6 +85,8 @@ Gemini/Antigravity Run 입력에는 Codex 전용 `docs/adapters/codex-gpt/GATE_P
 - Orchestrator가 직접 수행할 수 있는 구현 관련 작업은 작업지시서 작성, worker 결과 통합, 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 실행으로 제한한다.
 - subagent/thread/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run에 `orchestrator_direct_edit_reason`, 수정 범위, 실행 검증, 후속 검수 필요 여부를 남긴다.
 - 구현 범위가 중간 이상이거나 여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다.
+- Agy Workspace: branch worker를 포함한 native worker에게 위임하기 전에는 Orchestrator가 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. `run-exec`/`agent-run --mode work`의 자동 preflight는 외부 CLI runner 경로에만 적용된다.
+- `BW-000` scaffold Run은 업무 요구사항/테스트/UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않고 skeleton/build smoke만 보고한다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 

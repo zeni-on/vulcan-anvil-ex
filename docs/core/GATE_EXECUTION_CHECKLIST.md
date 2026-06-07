@@ -27,6 +27,8 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 - worker, subagent, 외부 runner 결과는 후보 산출물이다. Orchestrator가 다시 검증하기 전에는 최종 사실로 확정하지 않는다.
 - worker는 Gate 전환, `session.json` 직접 편집, 사용자 승인, QA Pass, 릴리즈 승인, merge 가능 판단을 직접 하지 않는다.
 - worker가 범위 밖 변경이 필요하다고 판단하면 직접 수정하지 말고 Orchestrator 결정 필요 항목으로 반환한다.
+- native subagent/thread/Agy Workspace: branch worker를 실행하기 전에는 Orchestrator가 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 외부 `run-exec`/`agent-run --mode work`는 자동 실행하지만 native 위임은 자동 차단되지 않는다.
+- `prepare-transition`의 worker Run preflight 점검은 사후 안전망이다. worker 위임 전 preflight 실행을 생략해도 된다는 뜻이 아니다.
 - subagent/thread를 사용한 경우에는 외부 CLI 수준의 `Run Execution Record`가 없을 수 있다. 대신 현재 Run 또는 결과 요약에 `delegation_records`를 남겨 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 추적한다.
 
 ## 4. Gate별 최소 확인

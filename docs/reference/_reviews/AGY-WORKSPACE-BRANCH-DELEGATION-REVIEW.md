@@ -77,6 +77,8 @@ Agy Workspace: branch worker 실행
 ## 운영 기준
 
 - Agy native branch worker를 사용할 때는 `delegation_records.mode: agy-branch-agent`를 사용한다.
+- Agy native branch worker에게 위임하기 전에는 Orchestrator가 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. Agy native branch는 외부 `run-exec` 실행 경로가 아니므로 자동 preflight가 적용되지 않는다.
+- `prepare-transition`의 preflight 사후 점검은 누락을 잡는 안전망이며, 위임 전 preflight 실행을 대체하지 않는다.
 - `agent-run`/`run-exec`는 Agy native branch가 아니라 외부 CLI process 실행, transcript/watchdog/evidence가 필요한 경우의 선택 경로로 둔다.
 - Agy Workspace: branch의 Copy-on-Write 이점은 Gemini/Agy adapter 문서에만 runtime-specific capability로 적는다.
 - Run 결과가 얇아져도 Orchestrator 재검증 명령과 변경 파일 목록은 반드시 남긴다.

@@ -24,7 +24,7 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.
 6. If related IDs/source documents are unclear, use `trace-scout` before finalizing the Run.
 7. If the Run is important, newly generated, or previously problematic, use `run-drafter` before worker handoff.
-8. Run `python vulcan.py run-preflight <run-file>` before native worker or external runner execution.
+8. Run `python vulcan.py run-preflight <run-file>` before native worker delegation. `run-exec` and `agent-run --mode work` auto-run preflight, but native subagent/thread/Agy Workspace branch delegation does not.
 9. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
 10. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
 11. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.

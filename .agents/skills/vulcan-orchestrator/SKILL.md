@@ -41,6 +41,8 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Gate status is changed through `vulcan.py` commands, not by editing `session.json` directly.
 - Use `prepare-transition` for Gate transition readiness. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
 - Use `run-check`, `run-preflight`, and `check-contract` as applicable.
+- Before native subagent/thread/native branch worker delegation, run `python vulcan.py run-preflight <run-file>` explicitly. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
+- Treat `prepare-transition` preflight findings as a safety net for completed current-Gate worker Runs, not as a substitute for pre-worker handoff preflight.
 - Worker, subagent, and external runner outputs are candidates until the Orchestrator verifies them.
 - Native subagent/thread outputs should be normalized into `delegation_records`; external CLI runner outputs keep the full Run Execution Record and `_exec` logs.
 - Do not treat global memory or other sample projects as project facts.

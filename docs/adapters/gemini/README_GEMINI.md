@@ -36,6 +36,8 @@ Antigravity/Agy가 제공하는 `Workspace: branch` 방식은 Gemini adapter의 
 
 Orchestrator는 Agy worker 결과를 그대로 확정하지 않고 부모 workspace에서 변경 파일과 `scope.writable`을 확인하고 필요한 검증 명령을 재실행한다.
 
+Orchestrator는 Agy native branch worker에게 위임하기 전에 반드시 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 이 경로는 `run-exec`/`agent-run --mode work`의 자동 preflight를 통과하지 않으므로, `prepare-transition`의 사후 점검은 누락을 발견하는 안전망으로만 취급한다.
+
 `agent-run`/`run-exec`로 `agy.exe`를 호출하는 경로는 transcript, watchdog, 프로세스 로그 같은 외부 CLI 증적이 필요한 경우의 선택 옵션이다.
 
 검토 기록: [Agy Workspace Branch Delegation Review](../../reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)

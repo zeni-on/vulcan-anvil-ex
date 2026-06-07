@@ -339,7 +339,9 @@ RUN-014_build-wave-BW-004_...md
 
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. backend와 frontend처럼 실제 지시서가 달라져야 하는 범위는 하나의 Wave 안에서 병렬 subagent로 나누지 말고 별도 Build Wave Run으로 분리한다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
 
-native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. 단, 이 두 명령은 필수 실행 경로가 아니라 외부 CLI runner를 선택했을 때 쓰는 실행 옵션이다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
+native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. 단, native subagent/thread/Agy Workspace: branch 위임은 `run-exec` 경로를 타지 않으므로 Orchestrator가 직접 preflight를 실행해야 한다. 이 두 명령은 필수 실행 경로가 아니라 외부 CLI runner를 선택했을 때 쓰는 실행 옵션이다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
+
+`prepare-transition`은 현재 Gate에서 완료된 worker Run에 대해 preflight를 다시 돌려 차단 항목을 사후 점검한다. 이는 native 위임 전 preflight 누락을 발견하기 위한 안전망이며, worker 실행 전 검사 절차를 대체하지 않는다.
 
 `Implementation Scaffold Run`은 업무 기능을 완성하는 Run이 아니다. 이 Run의 책임은 다음으로 제한한다.
 
@@ -350,6 +352,8 @@ native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실�
 - 다음 Build Wave가 채울 TODO/stub와 관련 ID 표시
 
 Scaffold worker는 업무 로직, 전체 E2E, Gate 4 QA Pass, 릴리즈 판단을 완료 처리하지 않는다. 메소드 내부는 `TODO`, `NotImplemented`, 최소 wiring, 빈 adapter처럼 빌드가 깨지지 않는 수준으로만 둔다. 기능 구현은 이후 Build Wave worker가 담당한다.
+
+`BW-000` scaffold Run은 요구사항, 테스트, UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다. skeleton 생성, build/import/compile smoke, 다음 Wave가 채울 TODO/stub 확인만 보고하고, 기능 구현 상태 반영은 `BW-001` 이후 또는 Orchestrator 재검증 뒤에 수행한다.
 
 Scaffold Run의 권장 상태:
 
@@ -398,6 +402,9 @@ worker는 정확한 시간 간격을 맞추는 대신 시작, 컨텍스트 로�
 Orchestrator와 대시보드는 이 파일의 수정시각과 한 줄 `current_task`를 보고 worker가 실제로 움직이는지 판단한다.
 Codex/Claude처럼 resume 가능한 runner는 `thread_id` 또는 `session_id`가 남아 있으면 무결과/준비응답 실패를 1회 재지시로 회수할 수 있다.
 resume도 대시보드에 보이게 하려면 원시 CLI 명령을 직접 실행하지 않고 `python vulcan.py agent-resume --target-id RV-NNN|RUN-NNN --runner codex-cli|claude-cli`로 실행한다.
+
+Gate 4 QA Finding 문서는 결함이 없어도 Draft 빈 문서로 남기지 않는다. 신규 FIND가 없으면 `No Findings`로 명시하고, 근거 Run/Test Result/증적을 연결한다.
+Playwright dialog는 무조건 accept해서 숨기지 않는다. 예상된 dialog는 메시지와 증적을 남기고 처리할 수 있지만, 예상하지 않은 dialog는 Fail 또는 FIND 후보로 기록한다.
 
 Build Wave 분할을 생략하는 경우에도 구현 Run은 worker 실행 단위여야 하며 다음을 남긴다.
 

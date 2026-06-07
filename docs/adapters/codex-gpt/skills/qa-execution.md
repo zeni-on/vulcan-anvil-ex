@@ -52,9 +52,10 @@ Gate 4 QA 실행은 한 번에 모두 수행하지 않고 다음 순서의 작�
 8. 실행 결과를 `Pass`, `Fail`, `Not Run`, `Skipped`, `environment_blocked` 중 하나로 기록한다.
 9. 실패하면 코드를 바로 수정하지 않는다. 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 `failure_reports`에 기록한다.
 10. Playwright 화면 증적은 상태/시나리오별 UI-ID와 screenshot/log/trace를 1:1로 연결한다.
-11. npm, Playwright, registry, cache, 권한, 네트워크 문제로 검증이 막히면 코드 실패로 단정하지 않고 `environment_blocked`로 기록한다.
-12. 새 API, 새 메소드, 요구사항, 설계, 보안 기준 변경이 필요해 보이면 직접 만들지 않고 CR 후보로 반환한다.
-13. QA Pass, Gate 완료, 릴리즈 가능 여부는 확정하지 않는다. Orchestrator 결정 필요 항목으로 반환한다.
+11. Playwright `dialog`는 무조건 숨기지 않는다. 예상된 dialog는 메시지/발생 시점/스크린샷을 기록한 뒤 처리할 수 있지만, 예상하지 않은 dialog는 Fail 또는 FIND 후보로 남긴다.
+12. npm, Playwright, registry, cache, 권한, 네트워크 문제로 검증이 막히면 코드 실패로 단정하지 않고 `environment_blocked`로 기록한다.
+13. 새 API, 새 메소드, 요구사항, 설계, 보안 기준 변경이 필요해 보이면 직접 만들지 않고 CR 후보로 반환한다.
+14. QA Pass, Gate 완료, 릴리즈 가능 여부는 확정하지 않는다. Orchestrator 결정 필요 항목으로 반환한다.
 
 QA-003에서 실제 실행 상태를 정리할 때는 `DOC-QA-G4-002_Test-Result_v0.1.md`를 원본으로 삼는다.
 Gate 3 테스트케이스 문서는 계획과 기대 기준이며, QA-003에서 `Planned`를 `Pass`로 덮어쓰는 방식으로 실행 결과를 표현하지 않는다.
@@ -70,6 +71,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준이며, QA-003에서 
 - 하나의 QA Run에서 환경 확인, 전체 빌드, Playwright, 결과서 판정을 모두 끝내려고 하지 않는다.
 - QA 실행 worker가 `qa-fix-loop`까지 이어서 수행하지 않는다.
 - Playwright 없이 CDP/수동 캡처만으로 UI Pass를 선언하지 않는다.
+- 예상하지 않은 Playwright dialog를 자동 accept만 하고 Pass로 숨기지 않는다.
 - 실행하지 않은 테스트를 Pass로 기록하지 않는다.
 
 ## 출력
@@ -80,6 +82,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준이며, QA-003에서 
 - 로그와 증적 파일 경로
 - 현재 QA 단계와 다음 QA 단계 진행 가능 여부
 - 상태별 UI 증적 매핑
+- Playwright dialog 발생 여부, 예상/비예상 판정, 처리 결과
 - 실패 원인 가설과 재현 명령
 - 후보 `FIND`, `CR`, `ISSUE`
 - `environment_blocked` 또는 `Not Run` 사유

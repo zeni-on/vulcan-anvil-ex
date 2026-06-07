@@ -2742,13 +2742,10 @@ def find_run_file(project_dir, run_id):
     return None
 
 
-def parse_simple_yaml_block(content):
-    match = re.search(r"```yaml\s*(.*?)```", content, re.DOTALL | re.IGNORECASE)
-    if not match:
-        return {}
+def parse_simple_yaml_text(yaml_text):
     result = {}
     current_list_key = None
-    for raw_line in match.group(1).splitlines():
+    for raw_line in yaml_text.splitlines():
         if raw_line.startswith((" ", "\t", "-")):
             if current_list_key and re.match(r"^\s*-\s+", raw_line):
                 item = re.sub(r"^\s*-\s+", "", raw_line).strip().strip('"').strip("'")
@@ -2769,6 +2766,23 @@ def parse_simple_yaml_block(content):
             result[key] = []
             current_list_key = key
     return result
+
+
+def parse_simple_yaml_block(content):
+    match = re.search(r"```yaml\s*(.*?)```", content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return {}
+    return parse_simple_yaml_text(match.group(1))
+
+
+def parse_run_input_contract_yaml(content):
+    match = re.search(
+        r"(?is)##\s*3\.\s*(?:Run|Worker)\s+입력\s+계약.*?```yaml\s*(.*?)```",
+        content,
+    )
+    if not match:
+        return {}
+    return parse_simple_yaml_text(match.group(1))
 
 
 def collect_build_wave_records(project_dir="."):
@@ -4052,6 +4066,66 @@ def collect_poc_tbd_warnings(project_dir="."):
             else:
                 warnings.append(f"{rel_path}에 PoC TBD/확정필요가 있으나 사유 또는 후속 판단 시점이 부족함")
     return warnings
+
+
+def is_markdown_separator_row(line):
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell or "") for cell in cells)
+
+
+def collect_artifact_completion_findings(project_dir="."):
+    profile = load_delivery_profile(project_dir)
+    issues = []
+    warnings = []
+    artifact_dir = os.path.join(project_dir, "docs", "artifacts")
+    if not os.path.isdir(artifact_dir):
+        return issues, warnings
+
+    final_statuses = {"designed", "verified", "completed", "approved", "done", "awaitingapproval"}
+    id_like_re = re.compile(r"\b(?:REQ|NREQ|AC|FUNC|SCR|UIREF|UICON|PGM|API|DB|IF|SEC|UT|IT|PT|UI|FIND|CR|ISSUE|TERM|DOMAIN)-\d{3}(?:-\d{2})?\b")
+
+    for root, _dirs, files in os.walk(artifact_dir):
+        for file_name in files:
+            if not file_name.lower().endswith(".md"):
+                continue
+            path = os.path.join(root, file_name)
+            rel_path = os.path.relpath(path, project_dir)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+
+            status_match = re.search(r"(?m)^\s*status\s*:\s*([A-Za-z0-9_-]+)\s*$", content)
+            if not status_match:
+                continue
+            if status_match.group(1).strip().lower() not in final_statuses:
+                continue
+
+            placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
+            if placeholder_issue:
+                if profile == "poc":
+                    warnings.append(placeholder_issue)
+                else:
+                    issues.append(placeholder_issue)
+
+            if re.search(r"작성자\s*또는\s*에이전트|\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}", content):
+                issues.append(f"{rel_path}에 템플릿 기본 문구 또는 치환되지 않은 값이 남아 있음")
+
+            body = run_body_without_yaml(content)
+            for line_no, line in enumerate(body.splitlines(), start=1):
+                if "|" not in line or is_markdown_separator_row(line):
+                    continue
+                cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+                if len(cells) < 3:
+                    continue
+                meaningful = [cell for cell in cells if cell]
+                non_id_meaningful = [cell for cell in cells[1:] if cell and cell not in {"-", "N/A", "n/a"}]
+                if not meaningful:
+                    issues.append(f"{rel_path}:{line_no}에 빈 Markdown 표 행이 남아 있음")
+                elif id_like_re.search(cells[0] or "") and not non_id_meaningful:
+                    issues.append(f"{rel_path}:{line_no}에 ID만 있고 내용이 비어 있는 Markdown 표 행이 남아 있음")
+    return issues, warnings
 
 
 def validate_development_standard(project_dir="."):
@@ -6025,8 +6099,74 @@ def cmd_prepare_transition(project_dir="."):
         print("  -> 결과: ✨ 0건의 미완료 Run 발견 (통과)")
     print()
 
-    # [3] Gate 전환 필수 요구사항 검사
-    print("[3] Gate 전환 필수 요구사항 검사")
+    # [3] 현재 Gate worker Run preflight 사후 점검
+    print("[3] 현재 Gate worker Run preflight 사후 점검")
+    preflight_records = []
+    preflight_skills = {"build-wave", "implementation-scaffold", "qa-execution", "qa-fix-loop"}
+    preflight_statuses = {"completed", "verified", "completedwithissues"}
+    for record in collect_run_gate_records(project_dir):
+        if record["gate"] != current_gate:
+            continue
+        if record["status"].strip().lower() not in preflight_statuses:
+            continue
+        run_abs = os.path.join(project_dir, record["path"])
+        try:
+            with open(run_abs, encoding="utf-8") as f:
+                run_content = f.read()
+        except OSError:
+            continue
+        run_metadata = parse_simple_yaml_block(run_content)
+        if run_metadata.get("skill") not in preflight_skills:
+            continue
+        blockers, warnings = run_preflight_file(run_abs)
+        if blockers or warnings:
+            preflight_records.append((record["path"], blockers, warnings))
+
+    preflight_blocker_count = sum(len(blockers) for _, blockers, _ in preflight_records)
+    preflight_warning_count = sum(len(warnings) for _, _, warnings in preflight_records)
+    if preflight_blocker_count:
+        overall_pass = False
+        print(f"  -> 결과: ❌ preflight 차단 {preflight_blocker_count}건 발견 (완료 불가)")
+        for path, blockers, warnings in preflight_records:
+            if blockers:
+                print(f"     - {path}")
+                for blocker in blockers:
+                    print(f"       X {blocker}")
+            elif warnings:
+                print(f"     - {path}: 경고 {len(warnings)}건")
+    elif preflight_warning_count:
+        print(f"  -> 결과: ! preflight 경고 {preflight_warning_count}건 발견 (전환 가능, 확인 권장)")
+        for path, _blockers, warnings in preflight_records:
+            if warnings:
+                print(f"     - {path}")
+                for warning in warnings:
+                    print(f"       ! {warning}")
+    else:
+        print("  -> 결과: ✨ preflight 차단/경고 없음 (통과)")
+    print()
+
+    # [4] 산출물 내용 완성도 검사
+    print("[4] 산출물 내용 완성도 검사")
+    artifact_issues, artifact_warnings = collect_artifact_completion_findings(project_dir)
+    if artifact_issues:
+        overall_pass = False
+        print(f"  -> 결과: ❌ 산출물 완성도 이슈 {len(artifact_issues)}건 발견 (완료 불가)")
+        for issue in artifact_issues[:20]:
+            print(f"     - {issue}")
+        if len(artifact_issues) > 20:
+            print(f"     ... 외 {len(artifact_issues) - 20}건")
+    elif artifact_warnings:
+        print(f"  -> 결과: ! 산출물 완성도 경고 {len(artifact_warnings)}건 발견 (전환 가능, 확인 권장)")
+        for warning in artifact_warnings[:20]:
+            print(f"     - {warning}")
+        if len(artifact_warnings) > 20:
+            print(f"     ... 외 {len(artifact_warnings) - 20}건")
+    else:
+        print("  -> 결과: ✨ 산출물 완성도 차단/경고 없음 (통과)")
+    print()
+
+    # [5] Gate 전환 필수 요구사항 검사
+    print("[5] Gate 전환 필수 요구사항 검사")
     transition_issues = []
 
     if current_gate == "phase0":
@@ -11999,6 +12139,31 @@ def impl_code_result_claim(body):
     return False
 
 
+def trace_final_state_claim(body):
+    return any(
+        (
+            re.search(r"추적표|traceability", line, re.IGNORECASE)
+            and re.search(r"\bImplemented\b|\bVerified\b|상태를\s*Pass|Pass\s*반영|확정|최종\s*반영", line, re.IGNORECASE)
+            and not re.search(r"필요|후보|하지 않았다|needs?|candidate|권장|should", line, re.IGNORECASE)
+        )
+        or re.search(r"Pass\s*반영|상태를\s*Pass", line, re.IGNORECASE)
+        for line in body.splitlines()
+    )
+
+
+def infer_bw_id(metadata, path="", content=""):
+    bw_id = str(metadata.get("bw_id", "")).strip()
+    if bw_id:
+        return bw_id
+    candidates = " ".join([
+        os.path.basename(path or ""),
+        str(metadata.get("run_id", "")),
+        content[:4000],
+    ])
+    match = re.search(r"\b(BW-\d{3})\b", candidates, re.IGNORECASE)
+    return match.group(1).upper() if match else ""
+
+
 def direct_edit_reason_present(content):
     return bool(
         re.search(
@@ -12059,6 +12224,20 @@ def check_run_file(path):
 
     if not re.search(r"\b(REQ|NREQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|IF|SEC|UT|IT|PT|UI|FIND|CR|ISSUE|RUN)-\d+\b", content):
         issues.append("관련 추적 ID가 없습니다.")
+
+    top_metadata = parse_simple_yaml_block(content)
+    input_contract = parse_run_input_contract_yaml(content)
+    if input_contract:
+        compare_fields = ["profile", "adapter", "run_type", "gate", "persona", "skill"]
+        for field in compare_fields:
+            top_value = str(top_metadata.get(field, "")).strip()
+            input_value = str(input_contract.get(field, "")).strip()
+            if top_value and input_value and top_value != input_value:
+                message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
+                if profile == "poc":
+                    warnings.append(message)
+                else:
+                    issues.append(message)
 
     status = ""
     status_match = re.search(r"^\s*status\s*:\s*(.+)$", content, re.MULTILINE)
@@ -12123,8 +12302,23 @@ def check_run_file(path):
             or skill == "qa-fix-loop"
         )
         has_impl_code_result = impl_code_result_claim(body_without_yaml)
+        has_trace_final_claim = trace_final_state_claim(body_without_yaml)
         if is_impl_run and skill in {"implementation-plan", "orchestrator-plan"} and has_impl_code_result:
             issues.append("구현 계획/Orchestrator Plan Run이 실제 구현 완료 보고서처럼 쓰였습니다. 구현 결과는 Build Wave Run 또는 worker Run으로 분리하세요.")
+
+        bw_id = infer_bw_id(top_metadata, path, content)
+        if bw_id == "BW-000" and has_trace_final_claim:
+            issues.append("BW-000 scaffold Run이 요구사항/테스트 상태를 Implemented/Verified/Pass로 확정하는 표현을 포함합니다. BW-000은 skeleton/build smoke만 보고하고 기능 구현 상태 확정은 이후 Wave 또는 Orchestrator 재검증으로 분리하세요.")
+
+        worker_skills = {"build-wave", "implementation-scaffold", "qa-execution", "qa-fix-loop"}
+        is_worker_result_run = skill in worker_skills and status in {"Completed", "Verified", "CompletedWithIssues"}
+        has_delegation_records = yaml_field_has_nonempty_items(content, "delegation_records")
+        has_run_execution_record = bool(re.search(r"(?im)^#{2,4}\s*Run Execution Record\b", content))
+        has_native_delegation_hint = bool(re.search(r"agy-branch-agent|Workspace:\s*branch|native branch agent", content, re.IGNORECASE))
+        if is_worker_result_run and has_native_delegation_hint and not has_delegation_records:
+            issues.append("native/Agy worker 사용 흔적이 있지만 delegation_records가 비어 있습니다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 기록하세요.")
+        elif is_worker_result_run and not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
+            warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 어떤 실행 경로였는지 추적 기록을 남기세요.")
 
         has_direct_reason = direct_edit_reason_present(content)
         if is_impl_run and has_impl_code_result and has_direct_reason:
@@ -12332,6 +12526,8 @@ def qa_workspace_preflight_blockers(run_file, stage):
 def run_preflight_file(path):
     blockers = []
     warnings = []
+    project_dir = project_dir_for_run_file(path) or "."
+    profile = load_delivery_profile(project_dir)
     try:
         with open(path, encoding="utf-8") as f:
             content = f.read()
@@ -12346,21 +12542,25 @@ def run_preflight_file(path):
     lower_content = content.lower()
     body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
 
+    input_contract = parse_run_input_contract_yaml(content)
+    if input_contract:
+        for field in ("profile", "adapter", "run_type", "gate", "persona", "skill"):
+            top_value = str(metadata.get(field, "")).strip()
+            input_value = str(input_contract.get(field, "")).strip()
+            if top_value and input_value and top_value != input_value:
+                message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
+                if profile == "poc":
+                    warnings.append(message)
+                else:
+                    blockers.append(message)
+
     is_impl = (
         gate == "impl"
         or metadata.get("run_type", "").lower() in {"implementation", "qafix"}
         or skill == "qa-fix-loop"
     )
     has_code_result_claim = impl_code_result_claim(body_without_yaml)
-    has_trace_final_claim = any(
-        (
-            re.search(r"추적표|traceability", line, re.IGNORECASE)
-            and re.search(r"\bImplemented\b|\bVerified\b|상태를\s*Pass|Pass\s*반영|확정|최종\s*반영", line, re.IGNORECASE)
-            and not re.search(r"필요|후보|하지 않았다|needs?|candidate", line, re.IGNORECASE)
-        )
-        or re.search(r"Pass\s*반영|상태를\s*Pass", line, re.IGNORECASE)
-        for line in body_without_yaml.splitlines()
-    )
+    has_trace_final_claim = trace_final_state_claim(body_without_yaml)
 
     if is_impl and skill == "orchestrator-plan" and has_code_result_claim:
         warnings.append("orchestrator-plan Run이 구현 결과/검증 결과를 포함합니다. 계획 Run과 실행 결과 Run을 분리하세요.")
@@ -12460,8 +12660,19 @@ def run_preflight_file(path):
         if "verification:" not in content and "verification_results:" not in content:
             warnings.append("검증 명령 또는 결과가 없습니다. worker self-check와 Orchestrator 재실행 명령을 명시하세요.")
 
-        if status in {"Completed", "Verified", "CompletedWithIssues"} and has_trace_final_claim:
+        bw_id = infer_bw_id(metadata, path, content)
+        if bw_id == "BW-000" and status in {"Completed", "Verified", "CompletedWithIssues"} and has_trace_final_claim:
+            blockers.append("BW-000 scaffold Run은 요구사항/테스트 상태를 Implemented/Verified/Pass로 확정할 수 없습니다. skeleton/build smoke 결과와 기능 구현 상태를 분리하세요.")
+        elif status in {"Completed", "Verified", "CompletedWithIssues"} and has_trace_final_claim:
             warnings.append("Build Wave 결과가 추적표 Implemented/Verified/Pass 확정처럼 보입니다. worker 결과와 Orchestrator 재검증 반영을 구분하세요.")
+
+        has_delegation_records = yaml_field_has_nonempty_items(content, "delegation_records")
+        has_run_execution_record = bool(re.search(r"(?im)^#{2,4}\s*Run Execution Record\b", content))
+        has_native_delegation_hint = bool(re.search(r"agy-branch-agent|Workspace:\s*branch|native branch agent", content, re.IGNORECASE))
+        if status in {"Completed", "Verified", "CompletedWithIssues"} and has_native_delegation_hint and not has_delegation_records:
+            blockers.append("native/Agy worker 사용 흔적이 있지만 delegation_records가 비어 있습니다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 기록하세요.")
+        elif status in {"Completed", "Verified", "CompletedWithIssues"} and not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
+            warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 실행 경로를 기록하세요.")
 
     if skill == "qa-execution":
         qa_stage = qa_stage_from_run(content, metadata)
@@ -12484,6 +12695,13 @@ def run_preflight_file(path):
         if re.search(r"새\s*(API|메소드|method)|소스.*수정|코드.*수정|fix.*code", content, re.IGNORECASE):
             warnings.append("qa-execution Run이 수정 지시처럼 보입니다. 실패는 FIND/CR 후보로 보고하고 수정은 qa-fix-loop로 분리하세요.")
         if status in {"Completed", "Verified", "CompletedWithIssues", "Failed", "Blocked"}:
+            has_delegation_records = yaml_field_has_nonempty_items(content, "delegation_records")
+            has_run_execution_record = bool(re.search(r"(?im)^#{2,4}\s*Run Execution Record\b", content))
+            has_native_delegation_hint = bool(re.search(r"agy-branch-agent|Workspace:\s*branch|native branch agent", content, re.IGNORECASE))
+            if has_native_delegation_hint and not has_delegation_records:
+                blockers.append("native/Agy QA worker 사용 흔적이 있지만 delegation_records가 비어 있습니다. QA 위임 대상, 범위, 증적 파일, 결과 요약, Orchestrator 재검증을 기록하세요.")
+            elif not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
+                warnings.append("완료된 QA worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. QA 실행 경로를 추적할 수 있게 기록하세요.")
             has_failure_like_result = re.search(
                 r"\b(Fail|Failed|failed|Not Run|not_run|environment_blocked)\b",
                 body_without_yaml,

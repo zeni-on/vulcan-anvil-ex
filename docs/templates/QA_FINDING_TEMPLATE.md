@@ -23,6 +23,21 @@ change_reason: 최초 초안 작성
 
 ## 1. 발견사항 개요
 
+결함이 없으면 문서를 Draft로 비워두지 않고 아래 형식으로 명시한다.
+
+```text
+No Findings
+```
+
+| 항목 | 내용 |
+| --- | --- |
+| QA 결과 | No Findings |
+| 판단 근거 | 실행한 QA 명령, 화면 증적, Test Result 문서 기준으로 신규 FIND 없음 |
+| 관련 Run | RUN- |
+| 후속 조치 | 없음 / Backlog / 관찰 필요 |
+
+결함이 있으면 아래 FIND 단위 표를 사용한다.
+
 | 항목 | 내용 |
 | --- | --- |
 | FIND-ID | FIND-001 |

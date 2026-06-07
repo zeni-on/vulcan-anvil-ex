@@ -171,15 +171,19 @@ docs/adapters/codex-gpt/skills/
 - Orchestrator 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - 구현 범위가 중간 이상이거나 subagent/thread/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 구현은 Implementation Plan Wave 분할을 생략할 수 있지만, 구현 자체는 native worker에게 위임하고 생략 이유와 검증 범위를 남긴다. 외부 CLI runner가 필요할 때만 `agent-run`/`run-exec`를 선택한다.
 - 신규 개발이거나 빌드 가능한 프로젝트 골격/class/interface/method/DTO skeleton이 없으면 feature 구현 Build Wave 전에 `BW-000 implementation-scaffold` Run을 먼저 만든다. 이미 골격이 충분하면 `contract_skeleton.mode: not-required`와 생략 근거를 Implementation Plan 또는 Run에 남긴다.
+- `BW-000` scaffold Run은 업무 요구사항/테스트/UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다. skeleton/build smoke만 보고하고 기능 구현 상태는 이후 Build Wave 또는 Orchestrator 재검증 후 반영한다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent/worker에게 전달할 최소 입력 계약이 된다.
 - Build Wave Run을 만들 때는 관련 ID를 수동으로 넓게 나열하는 대신 가능한 한 상세 `REQ-NNN-NN`, `AC-NNN-NN`, `FUNC`, `PGM`, `API`, `SCR`, `DB`, `SEC`, `UT/IT/UI` 중 대표 seed를 정하고 `python vulcan.py wave-start <BW-ID> --trace-seed <ID>` 또는 `python vulcan.py run-new ... --trace-seed <ID>`를 우선 사용한다.
 - `--trace-seed`는 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추적성 그래프에서 추천하는 기능이다. 추천값은 자동 확정이 아니므로 Orchestrator가 `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 Program Design과 실제 작업 범위 기준으로 확정한 뒤 worker에게 넘긴다.
+- native worker(subagent/thread/native branch agent)에게 넘기기 전에는 Orchestrator가 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. `run-exec`와 `agent-run --mode work`는 실행 전에 preflight를 자동 호출하지만, native 위임은 도구가 자동으로 막아주지 않는다.
+- `prepare-transition`은 완료된 현재 Gate worker Run에 대해 preflight 사후 점검을 수행하는 안전망이다. 이는 worker 위임 전 preflight 실행을 대체하지 않는다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
 - Wave 완료 검증은 해당 Wave의 `target_contracts`와 Gate 3 테스트 설계에 매핑된 테스트까지만 완료 판정한다.
 - 전체 사용자 시나리오 E2E, 상태별 화면 증적, QA Pass 판정은 Gate 4에서 수행한다. Wave 완료 보고를 전체 통합 테스트 완료처럼 표현하지 않는다.
 - Gate 4에서 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 테스트 실행, 로그, Playwright 증적, 후보 FIND/CR/ISSUE를 수집하고, 실패가 나오면 즉시 수정하지 않고 사용자와 처리 방향을 협의한다.
 - Gate 4 QA는 한 번에 전부 수행하지 않는다. `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나누며, `QA-000`이 차단되면 후속 QA를 진행하지 않고 사유를 보고한다.
+- Gate 4에서 결함이 없으면 QA Finding 문서를 비워두지 말고 `No Findings`와 근거 Run/Test Result/증적을 남긴다. Playwright dialog는 예상 여부와 메시지를 기록하고, 예상하지 않은 dialog는 Fail 또는 FIND 후보로 분류한다.
 - `QA-000`은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다. QA worktree는 명시적으로 활성화한 경우에만 사용한다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
 - QA에서 승인된 설계 범위 안의 결함을 고치기로 결정한 뒤에만 별도 `qa-fix-loop` Run을 만든다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
 - `qa-fix-loop` Run 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고 `run_type: QAFix`로 작성한다. Orchestrator는 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한 뒤 native worker(subagent/thread/native branch agent)에게 구현 수정을 맡기며, 직접 구현하지 않는다. 외부 CLI 실행 증적이 필요할 때만 `agent-run`/`run-exec`를 선택한다.

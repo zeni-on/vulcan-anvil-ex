@@ -9,6 +9,11 @@
 - Core Run 입력 샘플에서 Codex adapter 전용 prompt 참조를 제거하고 공통 Gate 실행 체크리스트를 사용하도록 정리했다.
 - Codex subagent/thread, Claude subagent, Agy workspace branch agent 같은 native 위임 결과를 `delegation_records`로 남기는 Core 기준을 추가했다. 외부 CLI runner는 기존 `Run Execution Record`와 `_exec` 로그를 유지하고, native 위임은 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령 중심으로 얇게 추적한다.
 - Antigravity/Agy `Workspace: branch`와 `delegation_records.mode: agy-branch-agent` 정합성 검토 기록을 `docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md`에 추가하고, Getting Started, Concepts, Roadmap, Gemini adapter README에서 연결했다.
+- `run-check`와 `run-preflight`가 Run 상단 metadata와 `3. Run 입력 계약` YAML의 핵심 필드(`profile`, `adapter`, `run_type`, `gate`, `persona`, `skill`) 불일치를 잡도록 보강했다.
+- `prepare-transition`이 현재 Gate에서 완료된 worker Run의 preflight 차단 항목을 사후 안전망으로 점검한다. native subagent/thread/Agy branch 위임 전 preflight 실행은 여전히 Orchestrator의 필수 절차다.
+- `prepare-transition`에 산출물 내용 완성도 검사를 추가했다. 완료/승인 상태 문서의 템플릿 placeholder와 빈 Markdown 표 행을 Gate 전환 전에 드러낸다.
+- `BW-000` scaffold Run이 요구사항/테스트/UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 못하도록 `run-check`/`run-preflight` 기준을 보강했다.
+- QA Finding 템플릿에 `No Findings` 표준 양식을 추가하고, Playwright dialog는 예상 여부를 기록한 뒤 처리하도록 QA 실행 기준을 정리했다.
 
 ## 0.4.5 - 2026-06-06
 
