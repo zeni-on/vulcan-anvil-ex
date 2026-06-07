@@ -197,7 +197,7 @@ open_issues: []
 
 에이전트는 현재 Gate의 완료 조건을 만족하지 못하면 다음 Gate로 넘어갔다고 선언하지 않는다.
 
-에이전트는 `session.json.current_gate`보다 앞선 Gate의 작업을 임의로 수행하지 않는다. Run 문서의 `gate:` 값은 실제 진행 상태를 바꾸지 않는다. Gate 진행 상태는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py check-trace`를 통해 확인하고 갱신한다.
+에이전트는 `session.json.current_gate`보다 앞선 Gate의 작업을 임의로 수행하지 않는다. Run 문서의 `gate:` 값은 실제 진행 상태를 바꾸지 않는다. Gate 진행 상태는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py prepare-transition`을 통해 확인하고 갱신한다. `check-trace`는 추적성 오류를 상세 분석하거나 trace-only 회귀 검증이 필요할 때 직접 실행한다.
 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py wave-start`, `vulcan.py wave-complete` 같은 상태 변경 명령은 대시보드용 stats 캐시를 함께 갱신해야 한다. `vulcan.py sync-session`은 수동 복구 또는 재계산이 필요할 때 사용하는 보조 명령이다.
 
 현재 Gate별 금지 예시는 다음과 같다.
@@ -305,7 +305,7 @@ Gate 4 QA는 전체를 한 Run에 밀어 넣지 않는다. 구현 소스가 통�
 | QA Run | 목적 | 최소 산출물 |
 | --- | --- | --- |
 | `QA-000` 환경 준비/스모크 | 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시 확인 | 환경 체크 로그, 차단 여부, 다음 QA Run 진행 가능 여부 |
-| `QA-001` 명령 기반 검증 | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check` 실행 | `QA-CMD-*` 로그, exit code, Pass/Fail/Not Run |
+| `QA-001` 명령 기반 검증 | backend/frontend test, lint, build, `check-contract`, `run-check` 실행. 필요 시 `check-trace` 상세 진단도 실행 | `QA-CMD-*` 로그, exit code, Pass/Fail/Not Run |
 | `QA-002` UI/E2E 증적 | `QA-000`이 기록한 QA workspace에서 서버 기동 후 UI-ID별 Playwright screenshot/log/trace 생성 | `UI-*` screenshot, Playwright report/trace, UI-ID 매핑 |
 | `QA-003` 결과 정리/판정 후보 | QA Finding/Test Result 정리, 추적표 반영 후보, Gate4 완료 판단 필요 항목 작성 | `DOC-QA-G4-001`, `DOC-QA-G4-002`, FIND/CR/ISSUE, 승인 질문 후보 |
 
@@ -363,7 +363,7 @@ Scaffold Run의 권장 상태:
 작업자 Run의 `working_documents`에는 현재 Run 문서, 담당 구현에 직접 필요한 개발표준/테스트케이스/UI 기준선만 두고, 요구사항정의서와 전체 설계 산출물은 `reference_on_demand`에 둔다.
 작업자 Run의 `scope.writable`에는 담당 코드 경로, 담당 테스트 경로, 자기 Run 문서만 포함한다.
 화면 증적처럼 worker가 직접 만들어야 하는 파일이 있을 때만 담당 증적 경로를 추가한다.
-`session.json`, Gate 상태, 전체 추적표 갱신, 테스트 결과서 확정, `wave-complete`, `sync-session`, `check-trace`는 Orchestrator가 통합 단계에서 수행한다.
+`session.json`, Gate 상태, 전체 추적표 갱신, 테스트 결과서 확정, `wave-complete`, `sync-session`, `prepare-transition`은 Orchestrator가 통합 단계에서 수행한다. `check-trace`는 추적성 상세 진단이 필요할 때 Orchestrator가 별도로 수행한다.
 
 Build Wave Run의 `target_contracts.interface_contract`는 구현 worker에게 전달되는 핵심 계약이다. `skill: build-wave`인 Run에 `interface_contract`가 없으면 Orchestrator는 누락 사유를 명시해야 하며, class/method/schema 이름이 이미 Program Design에 있는데도 빠졌다면 Run을 보완한 뒤 실행한다.
 Scaffold Run의 `target_contracts.contract_skeleton`은 필수다. 신규 개발인데 skeleton 대상 파일과 smoke 검증이 없으면 feature 구현으로 넘어가지 않는다.
@@ -431,7 +431,7 @@ Orchestrator는 각 Gate 2 Run에 현재 순서 위치와 다음 Gate 2 Run 후�
 | --- | --- | --- |
 | Gate 2 시작 | Architecture Draft를 만들고 C1/C2, 주요 CNT, 주요 ADR 후보, Pending 항목을 드러낸다 | `python vulcan.py check-architecture --level draft` |
 | 상세 설계 작성 후 | 기능/프로그램/API/DB/화면/보안가이드 내용을 아키텍처의 CMP/FLOW/품질속성/상세 설계 연결로 되돌려 반영한다 | `python vulcan.py check-architecture --level baseline` |
-| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py check-trace` |
+| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py prepare-transition` |
 
 SW 아키텍처의 물리/운영 상세가 필요한 경우 `DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md`를 함께 작성한다.
 이 문서는 인프라 담당자의 상세 장비/네트워크 설정서를 대체하지 않고, SW 운영자가 알아야 할 배포 토폴로지, L2/L3/L4/WAF/FW/WAS/DB/Storage/Monitoring 연결, 이중화, 포트/프로토콜, TLS 종료 위치, health check, 세션, DB failover, 파일 저장소, 로그/백업/모니터링 영향을 기록한다.

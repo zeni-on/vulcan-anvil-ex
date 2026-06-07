@@ -548,7 +548,8 @@ Gate 전환
 session.json current_gate/gate_status/completed 변경
 wave-start/wave-complete
 sync-session
-check-trace를 통한 최종 Gate 완료 판단
+prepare-transition을 통한 Gate 전환 가능 판단
+check-trace를 통한 추적성 상세 진단
 전체 추적표 통합 확정
 테스트 결과서 최종 확정
 QA Pass 최종 선언
@@ -807,7 +808,7 @@ Run 시작 전 Orchestrator 또는 `vulcan.py`는 다음을 확인한다.
 | 참고문서 분리 | Core/Template/Sample/상류 산출물이 `reference_on_demand`로 분리되어 있다 |
 | 운영문서 분리 | 추적표와 Run 입출력/절차 문서는 worker 입력이 아니라 `orchestrator_reference`에 있다 |
 | 수정 범위 명확 | `scope.writable`이 비어 있지 않다 |
-| 작업자 범위 제한 | worker Run에는 `session.json`, Gate 전환, 전체 추적표 통합, `sync-session`/`check-trace`가 포함되지 않는다 |
+| 작업자 범위 제한 | worker Run에는 `session.json`, Gate 전환, 전체 추적표 통합, `sync-session`/`prepare-transition`/`check-trace`가 포함되지 않는다 |
 | 제외 경로 포함 | `docs/ref-docs/`가 제외되어 있다 |
 | 완료 조건 명확 | 테스트 또는 증적 기준이 하나 이상 있다 |
 | 출력 형식 지정 | `RUN_OUTPUT_CONTRACT.md`를 참조한다 |

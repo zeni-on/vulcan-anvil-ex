@@ -275,7 +275,7 @@ dependency_install_policy:
 worker_execution_policy:
   forbidden_actions:
     - "업무 기능 로직을 완성하지 않는다."
-    - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
+    - "Gate 전환, session 변경, wave-complete, sync-session, prepare-transition, check-trace를 직접 실행하지 않는다."
     - "scope.writable 밖 파일을 수정하지 않는다."
 ```
 
@@ -400,7 +400,7 @@ dependency_install_policy:
   worker_node_playwright_scope: "worker self-check는 보조 검증이다. 화면 서버 실행과 Playwright 최종 증적은 workflow.integration_branch 기준 QA-000 workspace의 Gate 4에서 판정한다."
 worker_execution_policy:
   forbidden_actions:
-    - "Gate 전환, session 변경, wave-complete, check-trace, sync-session을 직접 실행하지 않는다."
+    - "Gate 전환, session 변경, wave-complete, sync-session, prepare-transition, check-trace를 직접 실행하지 않는다."
     - "사용자 승인, QA Pass, merge 가능 여부를 최종 판단하지 않는다."
     - "scope.writable 밖 파일을 수정하지 않는다."
   completion_rules:

@@ -152,7 +152,7 @@ my-project/
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
 | `review-run` | 생성된 독립 검수 요청을 codex-cli 또는 claude-cli로 실행 |
-| `check-trace` | Gate별 추적성 검사 |
+| `check-trace` | 추적성 오류 상세 진단 또는 trace-only 회귀 검사 |
 | `drift-report` | 설계 산출물과 실제 코드/API/DB surface의 불일치 후보 보고서 생성 |
 | `backlog` | 백로그 추가, 조회, 완료, 반려 |
 | `export` | Dashboard용 snapshot 생성 |
@@ -199,7 +199,7 @@ Gate 산출물 작성이 끝났다고 바로 다음 Gate로 넘어가지 않습�
 python vulcan.py prepare-transition
 ```
 
-`prepare-transition`은 `check-trace`를 대체하는 명령이 아니라, Gate 전환 전에 봐야 할 내용을 묶어서 보여주는 진단 명령입니다. 실패하면 다음 Gate로 넘어가지 말고, 출력된 산출물/ID/Run 기준으로 원인을 정리한 뒤 사용자에게 승인 또는 보완 방향을 묻습니다.
+`prepare-transition`은 `check-trace`를 없애는 명령이 아니라, Gate 전환 전에 봐야 할 내용을 묶어서 보여주는 진단 명령입니다. 실패하면 다음 Gate로 넘어가지 말고, 출력된 산출물/ID/Run 기준으로 원인을 정리한 뒤 사용자에게 승인 또는 보완 방향을 묻습니다. 추적성 문제만 더 깊게 봐야 할 때만 `check-trace`를 별도로 실행합니다.
 
 ### 4.3 설계-구현 Drift 확인
 
@@ -285,7 +285,7 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 | QA Run | 목적 |
 | --- | --- |
 | `QA-000` | integration branch QA workspace 기록, 의존성/포트/DB/Playwright 가능성 확인 |
-| `QA-001` | backend/frontend test, lint, build, `check-contract`, `check-trace`, `run-check` 같은 명령 검증 |
+| `QA-001` | backend/frontend test, lint, build, `check-contract`, `run-check` 같은 명령 검증. 추적성 오류가 있으면 `check-trace` 상세 진단 |
 | `QA-002` | Playwright UI/E2E screenshot/log/trace 증적 수집 |
 | `QA-003` | QA Finding, Test Result, FIND/CR/ISSUE, Gate 4 판단 후보 정리 |
 

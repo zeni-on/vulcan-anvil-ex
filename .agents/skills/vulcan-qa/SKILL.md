@@ -38,5 +38,6 @@ Use this for Gate 4 QA and QA iterations.
 ## Verification
 
 - Run `python vulcan.py run-check <run-file>` for QA and fix Runs.
-- Run `python vulcan.py check-trace` after QA result synthesis.
+- Run `python vulcan.py prepare-transition` after QA result synthesis to check Gate readiness.
+- Run `python vulcan.py check-trace` only if the readiness output points to traceability errors that need detailed debugging.
 - Run `python vulcan.py check-contract` when Program Design contracts are relevant.

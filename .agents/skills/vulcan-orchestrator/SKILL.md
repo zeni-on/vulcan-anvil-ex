@@ -39,7 +39,8 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 
 - Gate transitions require explicit user approval or an explicit proceed instruction.
 - Gate status is changed through `vulcan.py` commands, not by editing `session.json` directly.
-- Use `run-check`, `run-preflight`, `check-trace`, and `check-contract` as applicable.
+- Use `prepare-transition` for Gate transition readiness. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
+- Use `run-check`, `run-preflight`, and `check-contract` as applicable.
 - Worker, subagent, and external runner outputs are candidates until the Orchestrator verifies them.
 - Native subagent/thread outputs should be normalized into `delegation_records`; external CLI runner outputs keep the full Run Execution Record and `_exec` logs.
 - Do not treat global memory or other sample projects as project facts.
@@ -55,7 +56,8 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
   - Create New Run: `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"`
   - Preflight Check: `python vulcan.py run-preflight <run_file>`
   - Complete Check: `python vulcan.py run-check <run_file>`
-  - Static Trace Check: `python vulcan.py check-trace`
+  - Gate Transition Readiness: `python vulcan.py prepare-transition`
+  - Trace Detail Check: `python vulcan.py check-trace`
 - **Build Wave & QA**:
   - Integration Branch Status: `python vulcan.py branch-status`
   - Start Integration Branch: `python vulcan.py branch-start impl`

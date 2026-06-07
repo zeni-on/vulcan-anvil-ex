@@ -9,7 +9,8 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 
 - 항상 `session.json.current_gate`, 사용자 최신 지시, 현재 Run 문서를 먼저 확인한다.
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.
-- Gate 전환은 문서의 `gate:` 값으로 완료되지 않는다. `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py check-trace`, `vulcan.py prepare-transition` 결과로 확인한다.
+- Gate 전환은 문서의 `gate:` 값으로 완료되지 않는다. `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py prepare-transition` 결과로 확인한다.
+- `check-trace`는 `prepare-transition`의 하위/상세 검사다. 추적성 오류를 디버깅하거나 회귀 검증에서 추적성만 확인할 때 직접 실행하고, Gate 전환 전마다 `prepare-transition`과 기계적으로 연속 실행하지 않는다.
 - 의미 있는 변경은 관련 `REQ`, `NREQ`, `AC`, `FUNC`, `SCR`, `PGM`, `API`, `DB`, `SEC`, `UT`, `IT`, `UI`, `FIND`, `CR`, `RUN`과 연결한다.
 - 실행하지 않은 테스트, 빌드, QA, 화면 증적을 `Pass`로 기록하지 않는다.
 - 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기록은 현재 프로젝트의 사실 근거로 사용하지 않는다.
@@ -19,7 +20,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 
 - Gate 산출물을 완료하면 요약, 미해결 항목, 다음 Gate 제안, 사용자 승인 질문을 남기고 멈춘다.
 - 사용자가 승인하기 전에는 다음 Gate 산출물 작성, 구현 착수, Gate 4 QA Pass, Gate 5 릴리즈 승인 선언을 하지 않는다.
-- `prepare-transition` 또는 `check-trace`가 실패하면 실패 위치, 영향 ID, 해결 후보를 남기고 다음 Gate로 넘어가지 않는다.
+- `prepare-transition`이 실패하면 실패 위치, 영향 ID, 해결 후보를 남기고 다음 Gate로 넘어가지 않는다. 필요한 경우에만 `check-trace`를 추가 실행해 추적성 실패를 상세 분석한다.
 
 ## 3. Worker와 Subagent 경계
 

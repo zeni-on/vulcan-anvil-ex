@@ -18,14 +18,15 @@ Use this for Gate 5 release and release preparation.
 ## Workflow
 
 1. Separate blocking defects from accepted backlog/non-blocking issues.
-2. Verify QA results and traceability before release approval.
+2. Verify QA results and Gate transition readiness before release approval.
 3. Use `python vulcan.py release-pr --dry-run` before creating PR or final release material.
 4. Keep release notes tied to actual commits, Run IDs, FIND/CR/ISSUE, and known residual risks.
 5. Do not claim final approval without explicit user approval.
 
 ## Verification
 
-- `python vulcan.py check-trace`
+- `python vulcan.py prepare-transition`
+- `python vulcan.py check-trace` only when traceability needs detailed debugging
 - Relevant `run-check` commands for release Runs
 - `python vulcan.py release-pr --dry-run`
 - Project tests required by the release profile

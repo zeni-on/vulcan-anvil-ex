@@ -64,7 +64,8 @@
 - 컨시어지 응답은 길게 설명하지 않는다. 예: "저는 이 프로젝트의 Orchestrator로 요구사항부터 설계, 구현, 테스트, 증적까지 Gate별로 조율합니다. 지금은 Phase 0이므로 만들고 싶은 기능, 사용자, 제약, 참고자료를 알려주시면 먼저 범위와 질문을 정리하겠습니다."
 - 작업 범위가 작지 않으면 먼저 `docs/core/ORCHESTRATOR_PROTOCOL.md`를 확인한다.
 - 항상 `session.json.current_gate`를 먼저 확인하고, 현재 Gate보다 앞선 산출물, Run, 코드, 테스트를 만들지 않는다.
-- Gate 전환은 문서에 `gate:` 값을 적는 것으로 완료되지 않는다. `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py check-trace`로 상태를 확인하고 갱신해야 한다.
+- Gate 전환은 문서에 `gate:` 값을 적는 것으로 완료되지 않는다. `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py prepare-transition`으로 전환 가능 여부를 확인하고 갱신해야 한다.
+- `check-trace`는 Gate 전환 기본 명령이 아니라 추적성 오류를 상세 분석하거나 회귀 검증에서 추적성만 확인할 때 직접 실행한다. `prepare-transition` 뒤에 기계적으로 연속 실행하지 않는다.
 - `vulcan.py gate-start`는 해당 Gate의 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 Draft/InProgress Run이 있으면 중복 생성하지 않는다.
 - Gate 산출물 작성, 구현, 테스트, QA, 릴리즈 판단은 현재 Gate의 Run 문서가 먼저 생성된 뒤 진행한다.
 - 사용자가 "앱을 만들어줘", "기능을 구현해줘"처럼 end-to-end 목표를 말해도, 현재 Gate가 `phase0` 또는 `gate1`이면 요구사항/질문/승인 지점까지만 정리하고 구현으로 넘어가기 전에 사용자 승인을 받는다.
@@ -227,7 +228,8 @@ docs/core/RUN_OUTPUT_CONTRACT.md
 | **새 작업 Run 생성** | `python vulcan.py run-new --skill <skill> --title "<제목>" --related-ids "<ID들>"` <br>※ *주요 skill: `traceability-review`, `screen-design`, `security-review`, `development-standard-review`, `implementation-plan`, `build-wave`, `qa-execution`, `qa-fix-loop`* |
 | **Run 사전검사 (preflight)** | `python vulcan.py run-preflight <run_file_path>` |
 | **Run 완료검사 (check)** | `python vulcan.py run-check <run_file_path>` |
-| **전체 추적성/정합성 정적 검사** | `python vulcan.py check-trace` |
+| **Gate 전환 사전 진단** | `python vulcan.py prepare-transition` |
+| **추적성 상세 진단** | `python vulcan.py check-trace` |
 
 ### ③ 구현 Build Wave 및 QA
 | 목적 | 실행할 명령어 |

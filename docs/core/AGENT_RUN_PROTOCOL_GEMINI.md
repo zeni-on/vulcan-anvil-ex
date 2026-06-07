@@ -49,4 +49,4 @@
 
 ### 5단계: 변경 사항 통합 및 세션 동기화 (Orchestrator)
 * 오케스트레이터는 `python vulcan.py run-integrate` 명령을 실행해 워커가 수정한 파일이 `scope.writable`에 부합하는지 최종 git diff를 검증한 후 메인 브랜치에 병합합니다.
-* 성공 시 `vulcan.py wave-complete` 및 `sync-session`을 통해 session 상태를 갱신하고 `check-trace`를 기동하여 요구사항 추적 매트릭스를 최종 Pass로 동기화합니다.
+* 성공 시 `vulcan.py wave-complete` 및 `sync-session`을 통해 session 상태를 갱신하고, Gate 전환 전에는 `prepare-transition`으로 Run 완료와 추적성 정합성을 함께 확인합니다. 추적성 오류가 남으면 `check-trace`를 별도 상세 진단으로 실행합니다.

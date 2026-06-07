@@ -135,7 +135,7 @@ Dashboard 통계는 다음 정보를 읽어서 표시합니다.
 
 ```powershell
 python vulcan.py sync-session
-python vulcan.py check-trace
+python vulcan.py prepare-transition
 ```
 
 Build Wave를 사용하는 구현 단계라면 `wave-start`, `wave-complete`, `sync-session` 흐름도 확인합니다.
