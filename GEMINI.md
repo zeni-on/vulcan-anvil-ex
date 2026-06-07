@@ -79,9 +79,10 @@ Gemini/Antigravity Run 입력에는 Codex 전용 `docs/adapters/codex-gpt/GATE_P
 
 ## 5. Build Wave 오케스트레이션 규칙 (Gemini 최적화)
 
-구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 실제 코드/테스트/UI/API 구현은 `build` persona, subagent, 또는 `agent-run --mode work` worker에게 위임하는 것을 기본값으로 한다.
+구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)에게 위임하는 것을 기본값으로 한다.
+- `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
 - Orchestrator가 직접 수행할 수 있는 구현 관련 작업은 작업지시서 작성, worker 결과 통합, 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 실행으로 제한한다.
-- subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run에 `orchestrator_direct_edit_reason`, 수정 범위, 실행 검증, 후속 검수 필요 여부를 남긴다.
+- subagent/thread/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run에 `orchestrator_direct_edit_reason`, 수정 범위, 실행 검증, 후속 검수 필요 여부를 남긴다.
 - 구현 범위가 중간 이상이거나 여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 하나의 Wave 안에서는 수정 범위가 겹치지 않는 subagent 병렬 실행을 허용할 수 있지만, 다른 Wave의 코드 수정은 현재 Wave 완료 후 시작한다.
 - Wave 시작과 완료는 `session.json`을 직접 편집하지 않고 `python vulcan.py wave-start <BW-ID>`, `python vulcan.py wave-complete <BW-ID>`, `python vulcan.py sync-session`으로 갱신한다.
@@ -91,6 +92,8 @@ Gemini/Antigravity Run 입력에는 Codex 전용 `docs/adapters/codex-gpt/GATE_P
 - 작고 명확한 Run 단위로 작업한다.
 - Run에는 가능한 한 `persona`를 명시한다. 표준 persona는 `docs/core/AGENT_PERSONAS.md`를 따른다.
 - Gemini의 API 특성에 최적화된 [RUN_OUTPUT_CONTRACT_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_OUTPUT_CONTRACT_GEMINI.md)에 의거하여 결과를 YAML/JSON 구조화 스키마 형식에 맞춰 출력하며, `standard_compliance_report`를 포함해야 합니다.
+- subagent나 Workspace: branch agent를 사용했으면 외부 CLI runner 수준의 `Run Execution Record`가 없더라도 현재 Run 또는 결과 요약에 `delegation_records`를 남긴다. 최소 항목은 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이다.
+- 외부 CLI runner를 사용한 경우에는 기존처럼 `Run Execution Record`, 실행 로그, timeout/watchdog, workspace 정보를 함께 남긴다.
 - 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다.
 - 의미 있는 모든 변경은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `UI`, `FIND`, `CR` 같은 관련 ID와 연결한다.
 

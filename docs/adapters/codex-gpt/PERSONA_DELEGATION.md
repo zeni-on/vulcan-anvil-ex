@@ -18,6 +18,7 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 3. `docs/adapters/codex-gpt/skills/`에서 필요한 skill 카드를 추가로 확인한다.
 4. 수정 범위가 겹치지 않는 경우에만 subagent 병렬 실행을 고려한다.
 5. subagent 결과는 반드시 Run 출력 계약으로 정규화한다.
+6. Codex thread/subagent를 사용했으면 외부 CLI runner의 `Run Execution Record`가 없더라도 현재 Run에 `delegation_records`를 남긴다.
 
 ## 3. 권장 위임 패턴
 
@@ -51,7 +52,7 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 - scope.writable 안의 파일만 수정한다.
 - related_ids와 무관한 변경은 하지 않는다.
 - 검증하지 않은 결과를 통과로 보고하지 않는다.
-- 완료 시 변경 파일, 검증 결과, 증적, 미해결 이슈를 반환한다.
+- 완료 시 변경 파일, 검증 결과, 증적, 미해결 이슈, Orchestrator가 `delegation_records`에 기록할 위임 결과 요약을 반환한다.
 ```
 
 ## 5. 병렬 위임 제한
@@ -75,4 +76,7 @@ Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AG
 3. 증적 경로가 실제로 존재하는지 확인한다.
 4. 필요한 경우 `vulcan.py run-check`로 Run 문서를 검사한다.
 5. 미해결 이슈가 있으면 `FIND`, `CR`, `ISSUE` 중 하나로 분류한다.
+6. subagent/thread의 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 현재 Run의 `delegation_records`로 기록한다.
+
+외부 CLI runner를 사용한 경우에는 `docs/runs/_exec/` 로그, stdout/stderr, timeout/watchdog, worktree/branch 같은 상세 실행 기록을 함께 남길 수 있다. Codex native subagent나 thread 위임은 같은 프로세스 수준 메타가 없을 수 있으므로, `delegation_records`를 최소 책임 추적 단위로 사용한다.
 

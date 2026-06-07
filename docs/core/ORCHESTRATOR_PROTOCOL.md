@@ -74,7 +74,12 @@ Orchestrator는 `AGENT_PERSONAS.md`의 persona를 사용한다.
 
 Orchestrator가 직접 해도 되는 일은 작은 탐색, 작업지시서 작성, 짧은 문서 보정, worker가 만든 테스트케이스 재실행, 결과 통합이다. 범위가 커지거나 관점 분리가 필요하면 persona Run으로 나눈다.
 
-구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행하는 것을 기본값으로 한다. Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
+Codex thread/subagent, Claude subagent, Agy workspace branch agent처럼 런타임이 직접 제공하는 native worker가 있으면 우선 사용할 수 있다. `agent-run`/`run-exec`는 외부 CLI 프로세스 증적, cross-runner 검증, 긴 실행 watchdog, 독립 worktree 기록이 필요할 때 사용한다.
+native subagent/thread를 사용한 경우에도 위임 사실은 사라지지 않는다. Orchestrator는 현재 Run에 `delegation_records`를 남겨 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 기록한다.
+
+구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)가 수행하는 것을 기본값으로 한다.
+`agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
+Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
 
 Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로 제한한다.
 
@@ -95,7 +100,7 @@ Orchestrator 직접 구현 예외는 다음 조건을 모두 만족할 때만 �
 
 위 조건을 넘으면 Orchestrator가 직접 구현하지 않고 Build Wave Run 또는 worker Run으로 분리한다.
 
-사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 worker/subagent/`agent-run --mode work` 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 native worker(subagent/thread/native branch agent) 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 
 Gate 4에서도 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 실제 검증 명령, Playwright 증적, 로그, 후보 FIND/CR/ISSUE를 수집한다. 실패가 나오면 즉시 코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 사용자에게 보고한 뒤 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다. 수정하기로 결정한 항목만 별도 `qa-fix-loop` Run으로 넘긴다.
 
@@ -121,7 +126,7 @@ Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다
 - 3개 이상 파일, 대략 100 LOC 이상, 15분 이상 예상, 새 API/메소드/DTO/DB/SCR/PGM 계약 추가, backend/frontend 동시 변경, 테스트 본문 대량 추가가 예상되면 반드시 Build Wave Run으로 분리한다.
 - Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
 - 이미 빌드 가능한 골격과 public signature가 있으면 `contract_skeleton.mode: not-required`와 확인 근거를 Run에 남긴다.
-- 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 `agent-run --mode work`나 명시적 subagent 위임으로 진행한다.
+- 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 native worker(subagent/thread/native branch agent) 위임으로 진행한다. `agent-run --mode work`와 `run-exec`는 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
 - 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - 다른 Wave의 코드 변경은 현재 Wave가 완료되고 `vulcan.py wave-complete`가 실행된 뒤 시작한다.
 - 다음 Wave의 분석, 읽기 전용 검토, 질문 정리는 허용할 수 있지만 코드 수정은 금지한다.
@@ -135,16 +140,17 @@ Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다
 Implementation Plan Run
 → scaffold 필요 여부 판단
 → 필요 시 vulcan.py wave-start BW-000
-→ BW-000 implementation-scaffold Run을 worker 작업지시서로 전달
+→ BW-000 implementation-scaffold Run을 native worker 또는 선택한 external runner의 작업지시서로 전달
 → scaffold smoke 검증과 public signature 확인
 → vulcan.py wave-complete BW-000
 → vulcan.py wave-start BW-001
-→ BW-001 Backend Build Wave Run을 worker 작업지시서로 전달
+→ BW-001 Backend Build Wave Run을 native worker 또는 선택한 external runner의 작업지시서로 전달
 → subagent 결과 검토와 통합
+→ delegation_records에 subagent/thread 위임 범위와 결과 기록
 → Wave 범위 테스트 재실행, 추적표 갱신 필요 항목 정리, Run 기록 갱신
 → vulcan.py wave-complete BW-001
 → vulcan.py wave-start BW-002
-→ BW-002 Frontend Build Wave Run을 worker 작업지시서로 전달
+→ BW-002 Frontend Build Wave Run을 native worker 또는 선택한 external runner의 작업지시서로 전달
 ```
 
 ## 6. Orchestrator Plan 계약

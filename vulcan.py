@@ -794,9 +794,10 @@ AUDIT_GATE_PRESETS = {
             "승인된 Gate 2/3 범위 안에서만 구현 또는 구현 계획을 작성한다.",
             "Implementation Plan은 feature 구현 Wave 전에 scaffold 필요 여부를 판단하고, 필요하면 BW-000 implementation-scaffold를 첫 Wave로 둔다.",
             "scaffold가 불필요하면 contract_skeleton.mode: not-required와 확인한 파일/명령 근거를 남긴다.",
-            "작은 기능이라도 실제 코드/테스트/UI/API 구현은 Orchestrator 직접 구현이 아니라 worker Run 또는 agent-run --mode work로 수행한다.",
-            "사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니며, 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.",
-            "직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.",
+            "작은 기능이라도 실제 코드/테스트/UI/API 구현은 Orchestrator 직접 구현이 아니라 native worker(subagent/thread/native branch agent)에게 위임한다.",
+            "agent-run --mode work와 run-exec는 필수 실행 경로가 아니라 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.",
+            "사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니며, 구현 진행 승인이 있으면 별도 요청이 없어도 native worker 위임을 기본 절차로 둔다.",
+            "직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.",
             "Orchestrator 직접 수정 예외가 있으면 orchestrator_direct_edit_reason, direct_edit_scope.files, direct_edit_scope.estimated_loc, direct_edit_scope.contract_changed, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.",
             "직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.",
             "3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 계약 추가, 테스트 본문 대량 추가가 보이면 Build Wave로 분리한다.",
@@ -1061,7 +1062,7 @@ AUDIT_GATE_SKILL_PRESETS = {
             "승인된 설계 범위 안의 결함만 FIND로 수정한다.",
             "요구사항 또는 범위 변경이 필요한 항목은 CR로 승격한다.",
             "재검증 명령과 결과가 테스트 결과서에 반영되어 있다.",
-            "수정은 worker/subagent/agent-run으로 수행하고 Orchestrator는 결과 통합과 재검증을 담당한다.",
+            "수정은 native worker(subagent/thread/native branch agent)에게 위임하고 Orchestrator는 결과 통합과 재검증을 담당한다. 외부 CLI 실행 증적이 필요할 때만 agent-run/run-exec를 선택한다.",
         ],
     },
     ("gate4", "qa-execution"): {
@@ -1861,6 +1862,7 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""
         "related_ids",
         "verification_results",
         "evidence",
+        "delegation_records",
         "open_issues",
         "next_run_suggestion",
     ]
@@ -2066,6 +2068,7 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path, adapt
                 "related_ids",
                 "verification_results",
                 "evidence",
+                "delegation_records",
                 *(
                     [
                         "failure_reports",
@@ -5666,7 +5669,7 @@ def check_trace(project_dir=".", exit_on_error=True):
         if has_completed_run(project_dir, gate="impl", skill="implementation-plan"):
             print("  O Implementation Plan Run 완료 확인")
         else:
-            print("  ! Implementation Plan Run 없음 - 작은 구현은 Wave 분할 생략 가능하지만 worker Run/agent-run 위임 기록 필요")
+            print("  ! Implementation Plan Run 없음 - 작은 구현은 Wave 분할 생략 가능하지만 native worker 위임 기록 필요")
 
         print("\n  Impl 검사 (1): 개발표준정의서 확정 여부")
         dev_standard_files, dev_standard_issues = validate_development_standard(project_dir)
@@ -7394,6 +7397,7 @@ related_ids: {format_yaml_list(ids)}
 {format_trace_context_metadata(trace_info)}
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -7493,6 +7497,7 @@ wave_verification_boundary:
   reporting_rule: "완료 보고는 전체 통합 테스트 완료가 아니라 Wave 범위 계약 테스트와 가능한 회귀 검증 완료로 쓴다."
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -7527,7 +7532,7 @@ open_issues: []
 ## 4. Orchestrator 지시
 
 - 이 Run은 `{bw_id}` 하나만 수행한다.
-- 실제 코드/테스트/UI/API 구현은 작업자 runner 또는 subagent가 수행한다. Orchestrator는 작업지시, 통합, 검증, 상태 갱신을 담당한다.
+- 실제 코드/테스트/UI/API 구현은 native worker(subagent/thread/native branch agent)가 수행한다. `agent-run`/`run-exec`는 외부 CLI 실행 증적이 필요할 때 선택한다. Orchestrator는 작업지시, 통합, 검증, 상태 갱신을 담당한다.
 - 다른 Build Wave의 코드 수정은 하지 않는다.
 - 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 Build Wave Run으로 나눈다.
 - 구현 결과는 Orchestrator가 검토하고 통합한다.
@@ -7535,8 +7540,8 @@ open_issues: []
 - 작업자 runner는 Gate 전환, session 상태 변경, 최종 승인 판단을 하지 않는다.
 - `session.json`의 `current_gate`, `gate_status`, `completed`는 직접 변경하지 않는다.
 - 완료 시 테스트와 Run 기록을 갱신하고, 추적표 갱신 필요 항목 및 `wave-complete {bw_id}` 실행 필요 여부를 Orchestrator에게 보고한다.
-- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
-- 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 native worker 위임을 기본 절차로 둔다.
+- 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - Orchestrator가 직접 수정한 예외가 있으면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 남긴다.
 - 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 
@@ -8109,6 +8114,7 @@ related_ids: {format_yaml_list(ids)}
 {format_trace_context_metadata(trace_info)}
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -8187,6 +8193,7 @@ created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -8298,6 +8305,7 @@ from_run: {source_run}
 related_ids: {format_yaml_list(ids)}
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -10149,6 +10157,7 @@ result_verdict: Pending
 related_ids: {format_yaml_list(ids)}
 verification_results: []
 evidence: []
+delegation_records: []
 findings: []
 change_requests: []
 issues: []
@@ -10212,6 +10221,7 @@ worktree_path: {worktree_path}
 related_ids: {format_yaml_list(ids)}
 verification_results: []
 evidence: []
+delegation_records: []
 traceability_updates: []
 findings: []
 change_requests: []
@@ -12180,7 +12190,7 @@ def check_run_file(path):
                 issues.append(f"JSON Schema 위반: '{sf}' 필드는 문자열 타입이어야 합니다. (현재: {type(val).__name__})")
 
         # 2. 리스트(Array) 타입 검사
-        array_fields = ["related_ids", "verification_results", "evidence", "traceability_updates", "findings", "change_requests", "open_issues"]
+        array_fields = ["related_ids", "verification_results", "evidence", "delegation_records", "traceability_updates", "findings", "change_requests", "open_issues"]
         for af in array_fields:
             val = yaml_meta.get(af)
             if isinstance(val, str) and val.startswith("[") and val.endswith("]"):

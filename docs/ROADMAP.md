@@ -25,8 +25,9 @@
 - 변경관리/릴리즈 산출물
 - Build Wave 운영 규칙
 - `workflow.integration_branch` 기반 구현 통합 브랜치 운영
-- `branch-start impl`, `branch-status`, `run-exec`, `agent-run --mode work` 기반 worker 실행
+- `branch-start impl`, `branch-status` 기반 구현 브랜치 운영과, 필요 시 선택하는 `run-exec`/`agent-run --mode work` 외부 CLI worker 실행
 - worker progress watchdog과 hard timeout cap 기반 장시간 실행 관제
+- subagent/thread/native branch agent 위임 결과를 `delegation_records`로 남기는 얇은 책임 추적 기준
 - Codex runner 역할별 model/effort 정책과 실행 기록
 - `init --profile`과 `profile-status` 기반 Delivery Profile 선택/확인
 - `BW-000 implementation-scaffold`를 통한 구현 전 빌드 가능한 skeleton 생성 기준

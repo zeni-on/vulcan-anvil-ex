@@ -75,6 +75,7 @@ Persona는 사람의 직책이 아니라 에이전트가 수행하는 작업 모
 - 읽어야 할 문서와 수정 가능한 파일 범위가 분리되어 있다.
 - 산출물 또는 검증 결과를 Run 기록으로 되돌려 받을 수 있다.
 - 병렬 실행 시 서로 같은 파일을 동시에 수정하지 않는다.
+- subagent/thread처럼 외부 CLI 실행 로그가 없는 위임도 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 남긴다.
 
 메인 에이전트는 위임 전 다음을 전달해야 한다.
 
@@ -141,6 +142,7 @@ completion_criteria:
 - 변경 파일
 - 검증 결과
 - 증적
+- subagent/thread/worker 위임 기록
 - 미해결 이슈
 - 다음 persona 또는 다음 Run 제안
 

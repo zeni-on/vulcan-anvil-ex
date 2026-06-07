@@ -27,6 +27,8 @@ Use this for Gate 4 QA and QA iterations.
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.
+- If QA is delegated to a native subagent/thread, record the result in `delegation_records` with delegate, scope, evidence/log paths, result summary, and Orchestrator rerun commands.
+- If QA is delegated to an external CLI runner, keep the full Run Execution Record, `_exec` logs, watchdog/timeout status, and any recovered transcript.
 - If logs, screenshots, transcripts, or previous failures are mixed, use `qa-reader` to classify evidence before deciding a fix path.
 - If QA failure appears related to Program/API/DB/UI contract drift, use `contract-reviewer` before creating a `qa-fix-loop`.
 - Classify failures as `FIND`, `CR`, `ISSUE`, or `environment_blocked`.

@@ -19,6 +19,7 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 - 어떤 개발표준을 지켰는가?
 - 남은 이슈는 무엇인가?
 - Orchestrator 판단이 필요한 항목은 무엇인가?
+- worker, subagent, thread 중 누구에게 어떤 범위를 위임했는가?
 - 다음 Run은 무엇이 적절한가?
 
 ## 2. 필수 필드
@@ -32,6 +33,7 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 | `related_ids` | 예 | 변경과 연결된 ID |
 | `verification_results` | 예 | 테스트/린트/빌드/캡처 실행 결과 |
 | `evidence` | 예 | 결과서, 캡처, 로그, 커밋 등 |
+| `delegation_records` | 위임이 있으면 필수 | subagent/thread/외부 runner에게 맡긴 작업 범위와 결과 요약 |
 | `standard_compliance_report` | 구현 Run 권장 | 적용 개발표준 준수 여부 |
 | `traceability_updates` | 예 | 추적표 또는 산출물 갱신 내용. worker가 직접 확정하지 못하면 필요 항목으로 기록 |
 | `open_issues` | 예 | 남은 이슈. 없으면 빈 배열 |
@@ -41,7 +43,7 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 
 | 필드 | 넣는 경우 |
 | --- | --- |
-| `execution` | runner, model, effort, sandbox, worktree, branch 같은 실행 메타가 필요할 때 |
+| `execution` | 외부 CLI runner의 model, effort, sandbox, timeout, worktree, branch, log 경로 같은 실행 메타가 필요할 때 |
 | `gate_exit_summary` | Gate 종료 Run에서 산출물 요약과 다음 Gate 제안을 남길 때 |
 | `approval_request` | 다음 Gate 진행 전 사용자 승인 질문을 남길 때 |
 | `findings` | QA/리뷰 중 발견한 결함과 처리 결과를 남길 때 |
@@ -63,6 +65,23 @@ execution:
   effort: high
   worktree: .vulcan/worktrees/RUN-001-codex-cli
   branch: codex/run-run-001-codex-cli
+
+delegation_records:
+  - mode: external-runner
+    delegate: codex-cli
+    task: "PGM-005 구현"
+    scope:
+      writable:
+        - src/api/posts.py
+        - tests/test_posts.py
+    started_at: "2026-06-07T10:00:00+09:00"
+    completed_at: "2026-06-07T10:12:00+09:00"
+    status: completed
+    changed_files:
+      - src/api/posts.py
+      - tests/test_posts.py
+    result_summary: "게시글 작성 API와 테스트를 구현했다."
+    run_execution_record: "docs/runs/_exec/RUN-001_codex-summary.json"
 
 summary:
   ko: "PGM-005 게시글 작성 기능을 구현하고 관련 단위/통합 테스트를 통과시켰다."
@@ -140,6 +159,60 @@ next_run_suggestion:
   goal: "PGM-005 구현 결과를 독립 검수한다."
   related_ids: [PGM-005, UT-007, IT-004]
 ```
+
+## 4.1 Delegation Record
+
+`delegation_records`는 Orchestrator가 작업을 직접 수행하지 않고 다른 실행자에게 맡긴 사실을 남기는 얇은 책임 추적 기록이다.
+
+외부 CLI runner를 사용할 때는 `Run Execution Record`와 `execution`에 상세 메타를 남긴다. subagent 또는 같은 Codex thread 계열 위임은 프로세스 로그, stderr, timeout, cache 경로까지 남기지 않아도 된다. 대신 누가, 어떤 범위로, 어떤 결과를 반환했고, Orchestrator가 무엇을 재검증했는지는 남긴다.
+
+```yaml
+delegation_records:
+  - mode: codex-subagent
+    delegate: build
+    native_agent: false
+    task: "BW-001 backend API/DB 구현"
+    scope:
+      writable:
+        - backend/app/
+        - backend/tests/
+    started_at: "2026-06-07T10:00:00+09:00"
+    completed_at: "2026-06-07T10:08:00+09:00"
+    status: completed
+    changed_files:
+      - backend/app/todos/service.py
+      - backend/tests/unit/test_todo_service.py
+    result_summary: "Todo service/repository/API 구현과 단위 테스트를 작성했다."
+    orchestrator_verification:
+      - command: "python -m pytest backend/tests -q"
+        result: passed
+    notes:
+      - "Gate 전환과 session 갱신은 Orchestrator가 수행한다."
+```
+
+권장 `mode` 값:
+
+| 값 | 의미 |
+| --- | --- |
+| `codex-subagent` | Codex Desktop/CLI 세션 안의 subagent 위임 |
+| `codex-thread` | 별도 Codex thread/session 기반 위임 |
+| `claude-subagent` | Claude subagent 위임 |
+| `agy-branch-agent` | Antigravity/Agy workspace branch 또는 agent 위임 |
+| `external-runner` | `agent-run`/`run-exec` 같은 외부 CLI runner 실행 |
+| `manual` | 사람이 명시 수행한 보조 작업 |
+
+최소 필드:
+
+- `mode`
+- `delegate`
+- `task`
+- `scope.writable`
+- `status`
+- `changed_files`
+- `result_summary`
+- `orchestrator_verification`
+
+PoC profile의 짧은 실험은 Run 문서를 만들지 않을 수 있다. 이 경우에도 Gate 산출물 또는 결과 요약에 같은 항목을 간단히 남긴다.
 
 ## 5. 상태별 출력 규칙
 

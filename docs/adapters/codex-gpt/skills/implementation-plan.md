@@ -38,6 +38,7 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
    - Frontend Build Wave는 기본 후보 runner를 `claude-cli`로 둔다.
    - Backend Build Wave는 기본 후보 runner를 `codex-cli`로 둔다.
    - frontend/backend처럼 작업지시서가 달라지면 같은 Wave 안에서 병렬화하지 말고 Wave를 나눈다.
+   - Codex subagent/thread 같은 native worker를 우선 사용할 수 있으면 `delegation_records`로 결과를 기록하고, 외부 CLI runner가 필요한 경우에만 `Run Execution Record`와 `_exec` 로그를 요구한다.
 8. 작은 단일 구현이라도 담당 worker 또는 subagent, 수정 허용 범위, 검증 명령을 명시한다. Wave 분할 생략은 Orchestrator 직접 구현을 의미하지 않는다.
 9. Wave 간 순서, 병렬 가능성, 중단 조건을 기록한다.
 10. 구현 시작 전 필요한 사용자 승인 또는 미해결 질문을 남긴다.
@@ -83,8 +84,9 @@ Implementation Plan은 feature Build Wave를 만들기 전에 scaffold 필요 �
 - 컴파일/테스트가 깨지는 반쪽 구현은 완료 Run으로 만들지 않는다.
 - Orchestrator는 현재 Build Wave Run의 작업지시서를 만들고, subagent에게 해당 Wave 범위와 구현에 필요한 문서만 전달한다.
 - Orchestrator가 직접 수정할 수 있는 범위는 worker 결과 통합, 최소 연결 수정, 문서/추적표/session 갱신, worker 테스트케이스 재실행으로 제한한다.
-- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
-- 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 native worker(subagent/thread/native branch agent) 위임을 기본 절차로 둔다.
+- `agent-run`/`run-exec`는 필수 실행 경로가 아니라 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
+- 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - 직접 수정 예외가 필요하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
 - 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 - 3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 계약 추가, 테스트 본문 대량 추가가 보이면 Build Wave로 분리한다.
@@ -94,6 +96,7 @@ Implementation Plan은 feature Build Wave를 만들기 전에 scaffold 필요 �
 - Wave 상태와 구현 진행률은 `session.json`을 직접 수정하지 않고 `vulcan.py wave-start`, `vulcan.py wave-complete`, `vulcan.py sync-session`으로 갱신한다.
 - 작업자 runner는 Gate 전환, `session.json` Gate 상태 변경, 최종 승인 판단을 하지 않는다.
 - 작업자 runner가 `wave-complete`, Gate 전환, PR merge, QA Pass가 필요하다고 판단하면 직접 확정하지 않고 Orchestrator 결정 필요 항목으로 반환한다.
+- subagent/thread 위임을 계획한 Wave는 완료 시 현재 Run에 남길 `delegation_records` 항목도 계획한다. 최소 항목은 위임 대상, scope, 변경 파일, 결과 요약, Orchestrator 재검증 명령이다.
 
 ## 권장 Wave 예시
 
@@ -105,15 +108,15 @@ BW-003 Frontend UI 상태와 오류/빈 상태
 BW-004 Playwright 화면 증적, 테스트 결과, 추적표 정리
 ```
 
-권장 runner 예:
+권장 실행 방식 예:
 
-| BW-ID | 영역 | 권장 runner |
+| BW-ID | 영역 | 기본 실행 | 외부 CLI runner가 유용한 경우 |
 | --- | --- | --- |
-| BW-000 | Scaffold | codex-cli 또는 claude-cli |
-| BW-001 | Backend | codex-cli |
-| BW-002 | Backend | codex-cli |
-| BW-003 | Frontend | claude-cli |
-| BW-004 | Evidence/QA | codex-cli 또는 claude-cli |
+| BW-000 | Scaffold | Codex/Claude native subagent 또는 thread | scaffold 결과를 별도 worktree에서 격리 검증해야 할 때 |
+| BW-001 | Backend | Codex native subagent 또는 thread | codex-cli 실행 로그, timeout/watchdog, worktree 증적이 필요할 때 |
+| BW-002 | Backend | Codex native subagent 또는 thread | cross-runner 비교가 필요할 때 |
+| BW-003 | Frontend | Claude/Agy native subagent 또는 Codex thread | UI runner별 결과 비교가 필요할 때 |
+| BW-004 | Evidence/QA | QA native subagent 또는 thread | 독립 CLI 검수/증적 회수가 필요할 때 |
 
 ## 완료 조건
 

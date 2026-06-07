@@ -41,6 +41,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Gate status is changed through `vulcan.py` commands, not by editing `session.json` directly.
 - Use `run-check`, `run-preflight`, `check-trace`, and `check-contract` as applicable.
 - Worker, subagent, and external runner outputs are candidates until the Orchestrator verifies them.
+- Native subagent/thread outputs should be normalized into `delegation_records`; external CLI runner outputs keep the full Run Execution Record and `_exec` logs.
 - Do not treat global memory or other sample projects as project facts.
 
 ## CLI Quick Commands Map (Do not run --help, use this immediately)

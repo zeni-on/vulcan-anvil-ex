@@ -75,6 +75,7 @@ Run 입력 계약 형식은 runner별로 나누지 않는다. 대신 `source_doc
 | `ui_implementation_contract_policy` | UIREF/ui-baseline을 기준으로 구현 또는 검수할 때 |
 | `qa_execution_policy` | Gate 4에서 worker가 테스트 실행, 로그, 화면 증적, 후보 FIND/CR/ISSUE를 수집할 때 |
 | `qa_failure_report_contract` | Gate 4 QA worker가 실패/미실행/환경 차단을 구조화해 보고해야 할 때 |
+| `delegation_record_policy` | subagent/thread/native branch agent처럼 외부 CLI 실행 로그가 없는 위임을 추적해야 할 때 |
 | `gate_exit_policy` | Orchestrator Run이 Gate 종료와 사용자 승인 질문을 직접 다룰 때 |
 | `worker_execution_policy` | 기본 worker 금지사항을 Run 안에 명시적으로 재기입해야 할 때 |
 | `question_policy` / `security_policy` | 프로젝트별 질문/보안 예외가 기본 Core 규칙보다 더 좁거나 다를 때 |
@@ -172,10 +173,13 @@ output_requirements:
     - changed_files
     - related_ids
     - verification_results
+    - delegation_records
     - standard_compliance_report
     - open_issues
     - orchestrator_decision_needed
 ```
+
+`delegation_records`는 외부 CLI runner뿐 아니라 Codex subagent, Codex thread, Claude subagent, Agy workspace branch agent 같은 native 위임에도 사용한다. 외부 CLI runner는 별도의 `Run Execution Record`와 stderr/jsonl/summary 파일을 남길 수 있지만, subagent/thread는 그 수준의 프로세스 메타가 없을 수 있다. 이 경우에도 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령은 반드시 남긴다.
 
 ## 5. 구현 worker 예시
 

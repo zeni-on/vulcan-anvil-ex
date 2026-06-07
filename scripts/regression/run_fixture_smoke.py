@@ -211,6 +211,7 @@ def assert_poc_generated_run(project_dir: Path, result: StepResult) -> None:
         "python vulcan.py profile-status",
         "제품화/감리 전환",
         "docs/core/DELIVERY_PROFILES.md",
+        "delegation_records",
     ]
     missing = [text for text in required if text not in content]
     if missing:
@@ -238,6 +239,7 @@ def assert_poc_trace_seed_generated_run(project_dir: Path, result: StepResult) -
         "depth: 1",
         "API-001",
         "PGM-001",
+        "delegation_records",
     ]
     missing = [text for text in required if text not in content]
     if missing:

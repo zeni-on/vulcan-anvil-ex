@@ -124,7 +124,11 @@ Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 
 
 ## Build Wave
 
-구현 단계는 작업 규모에 따라 운영 강도를 조절합니다. 작은 샘플이나 단일 기능은 하나의 worker Run으로 진행할 수 있고, 중간 이상 작업이나 subagent/여러 커밋/여러 모듈이 필요한 작업은 `implementation-plan` Run을 만든 뒤 승인된 구현 범위를 여러 `Build Wave`로 나눕니다. 이때 Wave 분할 생략은 Orchestrator 직접 구현을 의미하지 않습니다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행합니다.
+구현 단계는 작업 규모에 따라 운영 강도를 조절합니다. 작은 샘플이나 단일 기능은 하나의 worker Run으로 진행할 수 있고, 중간 이상 작업이나 subagent/thread/여러 커밋/여러 모듈이 필요한 작업은 `implementation-plan` Run을 만든 뒤 승인된 구현 범위를 여러 `Build Wave`로 나눕니다. 이때 Wave 분할 생략은 Orchestrator 직접 구현을 의미하지 않습니다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona의 native worker(subagent/thread/native branch agent)가 수행합니다.
+
+`agent-run`/`run-exec`는 기본 구현 경로가 아니라 외부 CLI runner가 필요할 때 쓰는 선택 옵션입니다.
+
+위임 기록은 실행 방식에 따라 두께가 다릅니다. 외부 CLI worker는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남깁니다. Codex subagent/thread, Claude subagent, Agy workspace branch agent 같은 native 위임은 같은 프로세스 메타가 없을 수 있으므로 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다.
 
 구현에 들어가면 먼저 `python vulcan.py branch-start impl`로 `workflow.integration_branch`를 만들거나 전환합니다. 신규 개발처럼 빌드 가능한 골격이 없으면 feature 구현 Wave 전에 `BW-000 implementation-scaffold`를 두어 package/build/test skeleton과 public class/interface/method signature를 먼저 고정합니다.
 

@@ -200,6 +200,9 @@ def run_smoke(args: argparse.Namespace) -> int:
             )
         )
         run_file = find_single_run(project_dir)
+        run_content = run_file.read_text(encoding="utf-8")
+        if "delegation_records: []" not in run_content:
+            raise SmokeFailure(f"generated worker Run is missing delegation_records placeholder: {run_file}")
         run_file_arg = os.path.relpath(run_file, project_dir)
         steps.append(run_step("run-check-scaffold-draft", [py, "vulcan.py", "run-check", run_file_arg], cwd=project_dir))
         steps.append(

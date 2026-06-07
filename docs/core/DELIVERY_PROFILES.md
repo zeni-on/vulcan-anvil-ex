@@ -108,6 +108,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Run 문서는 기본 필수 산출물이 아니다. 외부 worker 실행, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
 - PoC 구현은 메인 Orchestrator가 직접 독주하지 않고 subagent 또는 worker를 우선 사용한다. 다만 외부 CLI worker와 worktree를 반드시 요구하지는 않는다.
 - 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과, 환경 차단, 다음 판단 항목으로 기록할 수 있다.
+- subagent/thread 실험이 의미 있는 코드/문서 변경을 만들었으면 Run을 만들지 않더라도 결과 요약에 `delegation_records`와 같은 최소 항목을 남긴다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이 기준이다.
 - worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
 - `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.

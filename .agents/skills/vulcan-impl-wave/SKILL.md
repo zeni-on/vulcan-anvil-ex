@@ -1,6 +1,6 @@
 ---
 name: vulcan-impl-wave
-description: Use for Vulcan implementation phase work, BW-000 scaffold, Build Wave planning, worker Run creation, run-preflight, agent-run/run-exec execution, run-integrate, wave-complete, and implementation traceability.
+description: Use for Vulcan implementation phase work, BW-000 scaffold, Build Wave planning, worker Run creation, run-preflight, native subagent/thread delegation, optional agent-run/run-exec execution, run-integrate, wave-complete, and implementation traceability.
 ---
 
 # Vulcan Impl Wave
@@ -24,11 +24,13 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.
 6. If related IDs/source documents are unclear, use `trace-scout` before finalizing the Run.
 7. If the Run is important, newly generated, or previously problematic, use `run-drafter` before worker handoff.
-8. Run `python vulcan.py run-preflight <run-file>` before worker/subagent/runner execution.
-9. Use worker/subagent/`agent-run --mode work` for code, test, UI, API, or DB implementation.
-10. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
-11. Integrate worker output only after diff/scope verification.
-12. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
+8. Run `python vulcan.py run-preflight <run-file>` before native worker or external runner execution.
+9. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
+10. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
+11. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
+12. Integrate worker output only after diff/scope verification.
+13. Record native subagent/thread output in `delegation_records`; external CLI workers also keep Run Execution Record and `_exec` logs.
+14. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
 
 ## Guardrails
 

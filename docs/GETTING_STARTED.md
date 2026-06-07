@@ -81,6 +81,7 @@ TBD가 필요한 항목은 사유와 후속 판단 시점을 같이 남겨줘.
 ```
 
 PoC Run은 기본 필수가 아닙니다. 외부 CLI worker, 독립 검수, 긴 위임, 재현 가능한 실험 기록이 필요하면 다음처럼 compact Run 초안을 생성할 수 있습니다.
+짧은 subagent/thread 실험은 별도 Run 없이 결과 요약에 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령만 남길 수 있습니다.
 
 ```powershell
 python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
@@ -146,8 +147,8 @@ my-project/
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
 | `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
-| `agent-run --mode work` | Run 문서를 worker runner로 실행 |
-| `run-exec` | 특정 Run을 codex-cli, claude-cli, antigravity-cli 같은 runner로 실행 |
+| `agent-run --mode work` | 선택 사항. Run 문서를 codex-cli, claude-cli, antigravity-cli 같은 외부 CLI worker runner로 실행 |
+| `run-exec` | 선택 사항. 특정 Run을 외부 CLI runner로 실행하고 `_exec` 로그, watchdog/timeout, worktree 증적을 남김 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
 | `review-request` | 별도 세션/worktree 기반 독립 검수 요청 생성 |
 | `review-run` | 생성된 독립 검수 요청을 codex-cli 또는 claude-cli로 실행 |
@@ -249,12 +250,15 @@ Gate 3 승인
 → implementation-plan Run
 → BW-000 implementation-scaffold 필요 여부 판단
 → build-wave Run 생성
-→ agent-run --mode work 또는 run-exec로 worker 실행
+→ native worker(subagent/thread/native branch agent)에게 위임
+→ 필요 시 agent-run --mode work 또는 run-exec로 외부 CLI runner 실행
 → Orchestrator가 worker 결과 검토/통합/재검증
 → wave-complete
 ```
 
 신규 개발이거나 빌드 가능한 코드 골격이 없으면 `BW-000 implementation-scaffold`를 먼저 둡니다. 이 단계는 업무 로직을 완성하는 것이 아니라, 빌드 설정, entrypoint, public class/interface/method signature, DTO/schema, 테스트 skeleton을 고정하는 단계입니다.
+
+Codex subagent, Codex thread, Claude subagent, Agy workspace branch agent처럼 native 위임을 사용한 경우에는 외부 CLI runner 수준의 stderr/jsonl/timeout 로그가 없을 수 있습니다. 이때는 현재 Run의 `delegation_records`에 위임 대상, scope, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다. `agent-run`/`run-exec` 같은 외부 CLI runner는 기존처럼 `Run Execution Record`, `_exec` 로그, watchdog/timeout 정보를 남깁니다.
 
 worker 실행은 즉시 kill 기준이 아니라 progress watchdog 기준입니다. `execution.progress_probe_seconds`마다 status 변화, worktree diff, 변경 파일 수, runner 로그 진척을 확인하고, `execution.no_progress_timeout_seconds` 동안 의미 있는 진척이 없으면 `stalled` timeout 후보로 종료합니다. `execution.hard_timeout_seconds`는 진척 여부와 무관한 절대 상한입니다.
 

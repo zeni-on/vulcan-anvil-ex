@@ -135,9 +135,10 @@ ui_implementation_contract_policy:
 - 중간 이상 구현은 `implementation-plan`으로 Wave를 먼저 나눈 뒤 `build-wave`로 실행한다.
 - 신규 개발 또는 골격이 없는 프로젝트는 실제 feature 구현 전에 `implementation-scaffold` Run으로 빌드 가능한 skeleton을 먼저 만든다.
 - 고도화 프로젝트는 `implementation-scaffold` Run에서 기존 코드와 Program Design 계약을 정렬하고, 바로 구현 가능한 public signature가 이미 존재하면 생략 사유를 남긴다.
-- 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. 단일 worker Run 또는 `agent-run --mode work`로 실행한다.
-- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 둔다.
-- 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+- 작은 단일 구현은 Wave 분할을 생략할 수 있지만, Orchestrator가 직접 기능 코드를 작성하는 기본 경로가 아니다. native worker(subagent/thread/native branch agent)에게 위임한다.
+- `agent-run --mode work`와 `run-exec`는 필수 실행 경로가 아니라 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
+- 사용자가 worker 사용을 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 구현 진행 승인이 있으면 별도 요청이 없어도 native worker 위임을 기본 절차로 둔다.
+- 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - Orchestrator가 직접 수정해야 하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 수정 파일, 실행 검증, 후속 검수 필요 여부를 Run에 기록한다.
 - 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 - 3개 이상 파일, 약 100 LOC 이상, 15분 이상 예상, backend/frontend 동시 변경, 새 계약 추가, 테스트 본문 대량 추가가 보이면 Build Wave로 분리한다.

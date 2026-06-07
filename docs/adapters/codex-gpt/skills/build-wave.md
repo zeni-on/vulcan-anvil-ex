@@ -39,7 +39,8 @@ Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다.
 13. npm registry, 권한, 인증, 네트워크, cache 문제로 `npm install`, `npm ci`, `npx playwright install`, lint/build/test를 실행하지 못했으면 `environment_blocked` 또는 `not_run`으로 기록하고 실패 명령/cwd/exit code/log path/Orchestrator 재실행 명령을 남긴다.
 14. 요구사항추적표, session 상태, Wave 완료 상태, 전체 테스트 결과서 통합은 Orchestrator가 처리한다. 작업자 runner는 갱신 필요 항목만 보고한다.
 15. 작업자 runner로 실행 중이면 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `vulcan.py check-trace`를 직접 실행하지 않고 Orchestrator에게 실행 필요 여부를 보고한다. Orchestrator는 worker 결과를 통합하고, worker가 만든 테스트케이스를 재실행한 뒤 `wave-complete`와 `sync-session`으로 session 상태를 갱신하고 `check-trace`를 실행한다.
-16. 커밋 후보 메시지를 보고한다. 사용자가 승인하거나 자동 커밋 정책이 있으면 Wave 단위로 커밋한다.
+16. Codex subagent/thread 같은 native worker를 사용했으면 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남긴다. 외부 CLI runner를 사용한 경우에는 `Run Execution Record`와 `docs/runs/_exec/` 로그도 함께 남긴다.
+17. 커밋 후보 메시지를 보고한다. 사용자가 승인하거나 자동 커밋 정책이 있으면 Wave 단위로 커밋한다.
 
 ## 검증 경계
 
@@ -59,13 +60,14 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 
 ## Orchestrator와 subagent 책임
 
-- Orchestrator는 Build Wave Run 작업지시서 작성, subagent/worker 위임, 결과 검토, 통합, worker 테스트케이스 재실행, 상태 갱신을 담당한다.
+- Orchestrator는 Build Wave Run 작업지시서 작성, native worker(subagent/thread/native branch agent) 위임, 결과 검토, 통합, worker 테스트케이스 재실행, 상태 갱신을 담당한다.
 - Orchestrator는 Build Wave Run을 worker에게 넘기기 전에 `--trace-seed` 추천값을 확인하고, `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 실제 구현 범위에 맞게 확정한다.
-- 기능 구현의 주 작성자는 `build` persona, subagent, 또는 `agent-run --mode work` worker다.
+- 기능 구현의 주 작성자는 `build` persona의 native worker다. `agent-run --mode work`와 `run-exec`는 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
+- subagent/thread 위임은 외부 프로세스 실행 기록이 없을 수 있으므로 `delegation_records`로 책임 추적을 남긴다. `delegation_records`가 있으면 Orchestrator는 해당 변경을 재검증한 뒤 Wave 상태를 갱신한다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 바로 구현 완료 처리하지 않는다. 단일 worker Run으로 위임하거나 직접 수정 예외를 기록한다.
 - Orchestrator가 직접 수정할 수 있는 범위는 작은 연결 수정, 충돌 해결, 문서/추적표/session 갱신, 검증 보정으로 제한한다.
-- 사용자가 worker 사용을 명시하지 않았다는 점은 직접 수정 예외 사유가 아니다. 구현 승인이 있으면 worker/subagent/agent-run 위임을 기본값으로 둔다.
-- 직접 수정 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+- 사용자가 worker 사용을 명시하지 않았다는 점은 직접 수정 예외 사유가 아니다. 구현 승인이 있으면 native worker 위임을 기본값으로 둔다.
+- 직접 수정 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 - 직접 수정 예외가 필요하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
 - 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 - 이 기준을 넘으면 직접 구현하지 않고 Build Wave Run 또는 worker Run으로 분리한다.

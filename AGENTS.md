@@ -154,18 +154,21 @@ docs/adapters/codex-gpt/skills/
 - PoC profile의 `TBD`, `미정`, `확정필요`는 사유와 후속 판단 시점이 있으면 경고/판단 항목으로 남길 수 있다. 단, 목표, 성공 기준, 실제 실행 결과, 실행하지 않은 테스트의 Pass는 `TBD` 또는 추정으로 대체하지 않는다.
 - Run에는 가능한 한 `persona`를 명시한다. 표준 persona는 `docs/core/AGENT_PERSONAS.md`를 따른다.
 - Codex subagent를 사용할 수 있으면 persona 단위로 위임하되, 최종 결과는 메인 에이전트가 Run 출력 계약으로 정규화한다.
+- subagent/thread/native branch agent를 사용했으면 외부 CLI runner 수준의 `Run Execution Record`가 없더라도 현재 Run 또는 결과 요약에 `delegation_records`를 남긴다. 최소 항목은 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이다.
+- 외부 CLI runner(`agent-run`, `run-exec`)를 사용한 경우에는 기존처럼 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남긴다.
 - 의미 있는 모든 변경은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `UI`, `FIND`, `CR` 같은 관련 ID와 연결한다.
 - QA 이슈가 승인된 설계 범위 안의 결함이면 `FIND`로 기록하고 G4 QA Fix Loop로 처리한다.
 - 이슈가 요구사항, 인수기준, 아키텍처, 보안 기준선, 데이터 설계, 릴리즈 범위를 바꾸면 `CR`로 승격한다.
 - 실제로 실행하지 않은 테스트를 통과했다고 보고하지 않는다.
 - 현재 Gate 안에서 허용된 구현, 테스트, 증적, 추적성 갱신을 분리하지 말고 연결해서 처리한다.
 - 구현 파일, 테스트 코드, 테스트 결과서, 화면 증적은 `impl` 또는 `gate4` 범위가 승인된 뒤 작성한다. 단, 사용자가 명시적으로 화면 퍼블리싱 산출물을 요청하면 산출물에 `ISSUE` 또는 `DEC`로 예외 범위를 기록한다.
-- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona, subagent, 또는 `agent-run --mode work` worker에게 위임하는 것을 기본값으로 한다.
+- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)에게 위임하는 것을 기본값으로 한다.
+- `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
 - Orchestrator가 직접 수행할 수 있는 구현 관련 작업은 작업지시서 작성, worker 결과 통합, 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 실행으로 제한한다.
 - subagent/worker를 사용할 수 없거나 긴급한 1~2줄 연결 수정처럼 직접 수정이 불가피하면 Run에 `orchestrator_direct_edit_reason`, 수정 범위, 실행 검증, 후속 검수 필요 여부를 남긴다.
-- 사용자가 "worker를 사용하라"고 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 사용자가 구현 진행을 승인하면 Orchestrator는 별도 요청이 없어도 worker/subagent/agent-run 위임을 기본 절차로 적용한다.
-- Orchestrator 직접 구현 예외는 worker/subagent/agent-run 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
-- 구현 범위가 중간 이상이거나 subagent/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 구현은 Implementation Plan Wave 분할을 생략할 수 있지만, 구현 자체는 worker Run 또는 `agent-run --mode work`로 실행하고 생략 이유와 검증 범위를 남긴다.
+- 사용자가 "worker를 사용하라"고 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다. 사용자가 구현 진행을 승인하면 Orchestrator는 별도 요청이 없어도 native worker 위임을 기본 절차로 적용한다.
+- Orchestrator 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
+- 구현 범위가 중간 이상이거나 subagent/thread/여러 커밋/여러 모듈이 필요하면 `implementation-plan` Run으로 Build Wave를 먼저 정의한다. 작은 단일 구현은 Implementation Plan Wave 분할을 생략할 수 있지만, 구현 자체는 native worker에게 위임하고 생략 이유와 검증 범위를 남긴다. 외부 CLI runner가 필요할 때만 `agent-run`/`run-exec`를 선택한다.
 - 신규 개발이거나 빌드 가능한 프로젝트 골격/class/interface/method/DTO skeleton이 없으면 feature 구현 Build Wave 전에 `BW-000 implementation-scaffold` Run을 먼저 만든다. 이미 골격이 충분하면 `contract_skeleton.mode: not-required`와 생략 근거를 Implementation Plan 또는 Run에 남긴다.
 - 동시에 active 상태인 Build Wave는 하나만 둔다. 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - Build Wave 수만큼 `build-wave` Run을 만든다. 각 Run은 해당 Wave의 작업지시서이자 결과보고서이며, subagent/worker에게 전달할 최소 입력 계약이 된다.
@@ -178,7 +181,7 @@ docs/adapters/codex-gpt/skills/
 - Gate 4 QA는 한 번에 전부 수행하지 않는다. `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나누며, `QA-000`이 차단되면 후속 QA를 진행하지 않고 사유를 보고한다.
 - `QA-000`은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다. QA worktree는 명시적으로 활성화한 경우에만 사용한다. `QA-001`, `QA-002`, `QA-003`은 새 작업공간을 임의로 만들지 않고 `QA-000`이 기록한 같은 공간에서 실행한다.
 - QA에서 승인된 설계 범위 안의 결함을 고치기로 결정한 뒤에만 별도 `qa-fix-loop` Run을 만든다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
-- `qa-fix-loop` Run 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고 `run_type: QAFix`로 작성한다. Orchestrator는 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한 뒤 worker/subagent/agent-run에게 구현 수정을 맡기며, 직접 구현하지 않는다.
+- `qa-fix-loop` Run 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고 `run_type: QAFix`로 작성한다. Orchestrator는 수정 범위, 금지 범위, `scope.writable`, 검증 명령을 확정한 뒤 native worker(subagent/thread/native branch agent)에게 구현 수정을 맡기며, 직접 구현하지 않는다. 외부 CLI 실행 증적이 필요할 때만 `agent-run`/`run-exec`를 선택한다.
 - `session.json.current_gate`, Run 상태, 에이전트 작업 제한 같은 운영 상태를 프로젝트 제약, 요구사항, 성공 기준, 비목표로 쓰지 않는다. 운영 상태는 `session.json`, `docs/runs/`, 완료 보고에만 남긴다.
 
 ## 7. 참고문서 경계

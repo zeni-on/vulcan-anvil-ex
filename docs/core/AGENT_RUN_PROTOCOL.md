@@ -145,6 +145,7 @@ memory 내용이 현재 프로젝트 문서와 충돌하거나 오래된 샘플 
 | 관련 ID | 필수 | 변경과 연결된 추적 ID |
 | 검증 결과 | 필수 | 실행한 테스트/명령/캡처 결과 |
 | 증적 | 해당 시 필수 | 테스트 결과서, 스크린샷, 로그, 커밋 |
+| 위임 기록 | 위임 시 필수 | subagent/thread/외부 runner에게 맡긴 작업 범위와 결과 요약 |
 | 미해결 이슈 | 필수 | 남은 질문, 위험, 후속 작업 |
 | 다음 Run 제안 | 선택 | 이어서 진행할 수 있는 구체 작업 |
 
@@ -166,6 +167,20 @@ verification:
     result: passed
 evidence:
   - DOC-QA-G4-002_Test-Result_v0.1.md
+delegation_records:
+  - mode: codex-subagent
+    delegate: build
+    task: PGM-005 구현
+    scope:
+      writable:
+        - app/api/work_items.py
+    status: completed
+    changed_files:
+      - app/api/work_items.py
+    result_summary: "API 구현 완료"
+    orchestrator_verification:
+      - command: python -m pytest tests
+        result: passed
 open_issues: []
 ```
 
@@ -235,7 +250,9 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 
 ## 5.3 Implementation Plan과 Build Wave
 
-구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 `Implementation Scaffold`와 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona, subagent, 또는 `agent-run --mode work` worker가 수행한다.
+구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 `Implementation Scaffold`와 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona의 native worker(subagent/thread/native branch agent)가 수행한다.
+
+`agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, cross-runner 검증, worktree/timeout/watchdog 증적이 필요할 때 선택하는 옵션이다.
 
 신규 개발 또는 빌드 가능한 골격이 없는 프로젝트는 feature 구현 전에 `BW-000 Implementation Scaffold`를 먼저 수행한다. 고도화 프로젝트도 기존 코드가 Program Design의 `PGM/IF/MTH/DTO` 계약과 맞는지 확인하는 scaffold/alignment Run을 둘 수 있다. Implementation Plan은 scaffold 필요 여부를 반드시 기록하며, 생략할 때는 `contract_skeleton.mode: not-required`와 확인 근거를 남긴다.
 
@@ -279,7 +296,7 @@ Gate 4 QA 검증은 가능하면 `qa-execution` worker Run으로 수행한다. Q
 
 `qa-fix-loop`는 코드/테스트 수정 Run이다.
 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고, `run_type: QAFix`로 작성한다.
-Orchestrator는 `qa-fix-loop` Run의 수정 범위와 검증 명령을 확정한 뒤 worker/subagent/agent-run에게 구현 수정을 맡긴다.
+Orchestrator는 `qa-fix-loop` Run의 수정 범위와 검증 명령을 확정한 뒤 native worker(subagent/thread/native branch agent)에게 구현 수정을 맡긴다. 외부 CLI 실행 증적이나 runner 격리가 필요하면 `agent-run`/`run-exec`를 선택할 수 있다.
 Orchestrator는 직접 구현하지 않고 worker 결과 통합, `check-contract`, 관련 테스트, `run-check` 재검증, FIND 닫힘/CR 승격 후보 판단을 담당한다.
 새 API, 새 메소드, 새 화면 상태, DB/보안/요구사항 계약 변경이 필요하면 `qa-fix-loop`에서 구현하지 않고 CR 후보로 멈춘다.
 
@@ -322,7 +339,7 @@ RUN-014_build-wave-BW-004_...md
 
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. backend와 frontend처럼 실제 지시서가 달라져야 하는 범위는 하나의 Wave 안에서 병렬 subagent로 나누지 말고 별도 Build Wave Run으로 분리한다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
 
-worker/subagent/`agent-run --mode work` 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
+native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. 단, 이 두 명령은 필수 실행 경로가 아니라 외부 CLI runner를 선택했을 때 쓰는 실행 옵션이다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
 
 `Implementation Scaffold Run`은 업무 기능을 완성하는 Run이 아니다. 이 Run의 책임은 다음으로 제한한다.
 
@@ -356,15 +373,19 @@ worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으
 위반 파일이나 충돌이 있으면 Orchestrator가 직접 수정하지 않고 재작업 Run, QA Fix Run, Traceability Run, FIND/CR/ISSUE 중 하나로 돌려보낸다.
 `run-integrate --apply`는 허용 diff를 반영하는 팬인 동작일 뿐이며, 테스트 작성, 코드 보정, 추적표 보정, Gate/session 갱신을 대신하지 않는다.
 
-Codex desktop의 `spawn_agent` 같은 같은 세션 계열 subagent는 보조 작업자로 쓸 수 있지만, 공식 Build Wave 자동화에서는 `run-exec`/worker Run 기록을 남기는 방식을 우선한다.
-subagent가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 정규화하고, 변경 파일을 확인한 뒤 worker가 만든 테스트케이스를 재실행한다.
+Codex desktop의 `spawn_agent`, Codex thread, Claude subagent, Agy workspace branch agent 같은 런타임 native worker는 같은 Gate/Run 계약 안에서 우선 사용할 수 있다.
+외부 CLI runner(`agent-run`/`run-exec`)는 장시간 독립 실행, cross-runner 검증, 별도 프로세스 로그/timeout/watchdog 증적이 필요한 경우에 사용한다.
+
+subagent/thread가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 `delegation_records`로 정규화한다.
+이 기록은 `Run Execution Record`보다 얇다. stderr, jsonl, cache, timeout policy 같은 외부 프로세스 메타는 필요 없지만, 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령은 남긴다.
+변경 파일은 `scope.writable` 안에 있는지 확인하고, worker/subagent가 만든 테스트케이스와 관련 회귀 검증을 Orchestrator가 재실행한다.
 
 Orchestrator 직접 수정 예외:
 
 - 사용자가 "worker를 사용하라"고 명시하지 않았다는 점은 Orchestrator 직접 구현 사유가 아니다.
-- 구현 승인이 떨어지면 Orchestrator는 별도 요청이 없어도 worker/subagent/`agent-run --mode work` 위임을 기본 절차로 적용한다.
+- 구현 승인이 떨어지면 Orchestrator는 별도 요청이 없어도 native worker(subagent/thread/native branch agent) 위임을 기본 절차로 적용한다. `agent-run`/`run-exec`는 외부 CLI runner가 필요할 때 선택한다.
 - 허용 예외: worker 결과 통합 중 충돌 해결에 필요한 최소 연결 수정, 문서/추적표/session 갱신, 검증 명령 보정, 명백한 오타나 경로 오류 수정.
-- 추가 허용 예외: worker/subagent/agent-run 실행 불가가 확인된 경우, 긴급한 1~2줄 연결 수정, 사용자가 Orchestrator 직접 구현을 명시 승인한 경우.
+- 추가 허용 예외: worker/subagent/thread 실행 불가가 확인된 경우, 긴급한 1~2줄 연결 수정, 사용자가 Orchestrator 직접 구현을 명시 승인한 경우.
 - 금지 기본값: 신규 기능 코드 작성, API/DB/UI 동작 구현, 테스트 케이스 본문 작성, 개발표준 위반 리팩터링을 Orchestrator가 혼자 완료 처리하는 것.
 - 예외 사용 시 Run에 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 worker 또는 QA 검수 필요 여부를 남긴다.
 - 직접 구현 예외는 순 변경량 약 30 LOC 이하, 수정 파일 2개 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능할 때만 허용한다.
