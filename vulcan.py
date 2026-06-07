@@ -5249,7 +5249,7 @@ def validate_traceability_completion_status(project_dir=".", session=None, curre
     return issues
 
 
-def check_trace(project_dir="."):
+def check_trace(project_dir=".", exit_on_error=True):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
     profile = load_delivery_profile(project_dir)
@@ -5830,9 +5830,11 @@ def check_trace(project_dir="."):
         print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
         for issue in issues:
             print(f"  {issue}")
-        sys.exit(1)
+        if exit_on_error:
+            sys.exit(1)
     else:
         print("이슈 0건 - Gate 완료 가능합니다.")
+    return issues, warnings
 
 
 # ── architecture check ─────────────────────────────────────────────────────
@@ -5889,6 +5891,126 @@ def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
         print(f"  {issue}")
     print("\n이슈를 정리한 뒤 다시 Gate 전환을 실행하세요.")
     sys.exit(1)
+
+
+def cmd_prepare_transition(project_dir="."):
+    session = load_session(project_dir)
+    current_gate = session.get("current_gate", "phase0")
+    profile = load_delivery_profile(project_dir)
+
+    if current_gate == "completed":
+        print("==================================================")
+        print(" [prepare-transition] Gate 전환 준비 진단")
+        print("==================================================")
+        print(" 현재 프로젝트는 모든 Gate를 마쳤습니다 (Completed).")
+        print(" 추가적인 Gate 전환이 필요하지 않습니다.")
+        print("==================================================")
+        return
+
+    if current_gate not in GATE_ORDER:
+        print(f"오류: session.json의 current_gate가 유효하지 않습니다: {current_gate}")
+        sys.exit(1)
+
+    current_idx = GATE_ORDER.index(current_gate)
+    next_gate = GATE_ORDER[current_idx + 1] if current_idx + 1 < len(GATE_ORDER) else "completed"
+
+    print("==================================================")
+    print(" [prepare-transition] Gate 전환 준비 진단")
+    print("==================================================")
+    print(f" 현재 Gate: {current_gate} ({GATE_LABELS.get(current_gate, current_gate)})")
+    print(f" 목표 Gate: {next_gate} ({GATE_LABELS.get(next_gate, next_gate)})")
+    print()
+
+    overall_pass = True
+
+    # [1] Traceability & 정합성 검사 (check-trace)
+    print("[1] Traceability & 정합성 검사 (check-trace)")
+    trace_issues, trace_warnings = check_trace(project_dir, exit_on_error=False)
+    if trace_issues:
+        overall_pass = False
+        print(f"  -> 결과: ❌ {len(trace_issues)}건의 이슈 발견 (완료 불가)")
+    else:
+        print("  -> 결과: ✨ 0건의 이슈 발견 (통과)")
+    print()
+
+    # [2] 현재 Gate 진행 중인 Run 검사
+    print("[2] 현재 Gate 진행 중인 Run 검사")
+    active_runs = []
+    open_statuses = {"draft", "inprogress", "in progress", "running"}
+    for record in collect_run_gate_records(project_dir):
+        if record["gate"] == current_gate and record["status"].strip().lower() in open_statuses:
+            active_runs.append(record)
+
+    if active_runs:
+        overall_pass = False
+        print(f"  -> 결과: ❌ {len(active_runs)}건의 미완료 Run 발견 (완료 불가)")
+        for run in active_runs:
+            print(f"     - {run['path']} ({run['status']})")
+    else:
+        print("  -> 결과: ✨ 0건의 미완료 Run 발견 (통과)")
+    print()
+
+    # [3] Gate 전환 필수 요구사항 검사
+    print("[3] Gate 전환 필수 요구사항 검사")
+    transition_issues = []
+
+    if current_gate == "phase0":
+        discovery_issues = validate_discovery_open_items(project_dir, current_gate="gate1")
+        if discovery_issues:
+            transition_issues.extend(discovery_issues)
+
+    elif current_gate == "gate2":
+        required_review_runs = [
+            ("security-review", "보안 검토"),
+            ("screen-review", "화면 검토"),
+            ("ui-review", "UI 품질 검토"),
+            ("development-standard-review", "개발표준 검토"),
+        ]
+        for skill_name, label in required_review_runs:
+            if not has_completed_run(project_dir, gate="gate2", skill=skill_name):
+                transition_issues.append(f"필수 검수 Run 미완료: Gate 3 진입 전 {label}({skill_name}) Run이 완료되어야 합니다.")
+
+    elif current_gate == "impl":
+        if not has_completed_run(project_dir, gate="impl", skill="implementation-plan"):
+            transition_issues.append("Implementation Plan Run 미완료: 구현 진행 전 구현 계획 Run(implementation-plan)이 완료되어야 합니다.")
+
+        wave_records = collect_build_wave_records(project_dir)
+        active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
+        for w in active_waves:
+            run_file_str = f" ({w['run']})" if w['run'] else ""
+            transition_issues.append(f"진행 중인 Build Wave 존재: 완료되지 않은 Build Wave {w['id']} ({w['status']}){run_file_str}가 있습니다.")
+
+    elif current_gate == "gate4":
+        tst_results, _source = parse_effective_test_status(project_dir)
+        failed_tests = [tid for tid, s in tst_results if s in ("fail", "not_executed", "environment_blocked")]
+        if failed_tests and profile != "poc":
+            transition_issues.append(f"테스트 미통과: 통과되지 않았거나 미실행된 테스트 {len(failed_tests)}건이 있습니다 (예: {', '.join(failed_tests[:5])}).")
+
+    if transition_issues:
+        overall_pass = False
+        print(f"  -> 결과: ❌ {len(transition_issues)}건의 위반 사항 발견 (완료 불가)")
+        for issue in transition_issues:
+            print(f"     - {issue}")
+    else:
+        print("  -> 결과: ✨ 필수 요구사항 충족 (통과)")
+    print()
+
+    print("--------------------------------------------------")
+    if overall_pass:
+        print("진단 결과: ✨ [전환 준비 완료]")
+        print("다음 단계로의 전환이 가능합니다! 아래 명령어를 실행하여 완료 처리를 하십시오:")
+        print()
+        if next_gate == "completed":
+            print(f"  python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<최종 승인 근거>\"")
+        else:
+            print(f"  python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
+    else:
+        print("진단 결과: ❌ [전환 불가]")
+        print("다음 단계로의 전환이 차단되었습니다. 위의 이슈들을 해결하고 다시 시도하십시오.")
+    print("==================================================")
+
+    if not overall_pass:
+        sys.exit(1)
 
 
 def require_gate_start_sequence(session, target_gate):
@@ -12586,6 +12708,7 @@ def main():
 명령어:
   init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
+  prepare-transition Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사
   check-contract Program Design 구현 계약과 코드 구조 대조
   trace-context 추적성 그래프에서 ID 주변 Run 입력 후보 출력
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
@@ -12632,6 +12755,7 @@ def main():
     p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
+    subparsers.add_parser("prepare-transition", help="Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사하고 결과를 요약")
     subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
 
     p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
@@ -12830,7 +12954,11 @@ def main():
             primary=args.primary,
         )
     elif args.command == "check-trace":
-        check_trace()
+        issues, _ = check_trace()
+        if issues:
+            sys.exit(1)
+    elif args.command == "prepare-transition":
+        cmd_prepare_transition()
     elif args.command == "profile-status":
         cmd_profile_status()
     elif args.command == "check-contract":
