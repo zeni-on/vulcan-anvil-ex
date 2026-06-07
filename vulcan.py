@@ -6013,6 +6013,525 @@ def cmd_prepare_transition(project_dir="."):
         sys.exit(1)
 
 
+class DatabaseInspector:
+    def get_tables(self) -> list:
+        raise NotImplementedError
+
+    def get_columns(self, table_name: str) -> list:
+        raise NotImplementedError
+
+
+class SQLiteInspector(DatabaseInspector):
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+
+    def get_tables(self) -> list:
+        import sqlite3
+        if not os.path.exists(self.db_path):
+            return []
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+            return [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"[경고] SQLite 테이블 목록 조회 중 오류: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def get_columns(self, table_name: str) -> list:
+        import sqlite3
+        if not os.path.exists(self.db_path):
+            return []
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            cols = []
+            for row in cursor.fetchall():
+                cols.append({
+                    "name": row[1],
+                    "type": row[2].upper()
+                })
+            return cols
+        except Exception as e:
+            print(f"[경고] SQLite 테이블 {table_name} 컬럼 조회 중 오류: {e}")
+            return []
+        finally:
+            conn.close()
+
+
+def create_database_inspector(project_dir: str) -> DatabaseInspector:
+    db_url = os.getenv("DATABASE_URL", "")
+    db_path = os.path.join(project_dir, "todo.db")
+    if db_url:
+        if db_url.startswith("sqlite:///"):
+            db_path = db_url.replace("sqlite:///", "")
+            if not os.path.isabs(db_path):
+                db_path = os.path.join(project_dir, db_path)
+        elif "://" in db_url:
+            pass
+        else:
+            db_path = db_url
+            if not os.path.isabs(db_path):
+                db_path = os.path.join(project_dir, db_path)
+    return SQLiteInspector(db_path)
+
+
+def find_api_spec_file(project_dir="."):
+    api_dir = os.path.join(project_dir, "docs", "artifacts", "02-design", "api")
+    if os.path.exists(api_dir):
+        for f in os.listdir(api_dir):
+            if f.endswith(".md") and ("api" in f.lower() or "spec" in f.lower()):
+                return os.path.join(api_dir, f)
+    fallback_path = os.path.join(project_dir, "docs", "02-design", "api-design.md")
+    if os.path.exists(fallback_path):
+        return fallback_path
+    return None
+
+
+def parse_api_design(api_spec_path: str) -> list:
+    if not os.path.exists(api_spec_path):
+        return []
+    apis = []
+    with open(api_spec_path, encoding="utf-8") as f:
+        lines = f.readlines()
+    in_api_list_table = False
+    for idx, line in enumerate(lines):
+        if "|" in line:
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 5:
+                if "API-ID" in parts and "Method" in parts and "Path" in parts:
+                    in_api_list_table = True
+                    continue
+                if in_api_list_table:
+                    if parts[1].startswith("---") or parts[1] == "":
+                        continue
+                    api_id = parts[1]
+                    if not re.match(r"^API-\d+$", api_id):
+                        in_api_list_table = False
+                        continue
+                    method = parts[3].upper()
+                    path = parts[4]
+                    apis.append({
+                        "api_id": api_id,
+                        "method": method,
+                        "path": path,
+                        "line_num": idx + 1
+                    })
+    return apis
+
+
+def find_db_spec_file(project_dir="."):
+    data_dir = os.path.join(project_dir, "docs", "artifacts", "02-design", "data")
+    if os.path.exists(data_dir):
+        for f in os.listdir(data_dir):
+            if f.endswith(".md") and ("db" in f.lower() or "database" in f.lower() or "spec" in f.lower()):
+                return os.path.join(data_dir, f)
+    fallback_path = os.path.join(project_dir, "docs", "02-design", "db-design.md")
+    if os.path.exists(fallback_path):
+        return fallback_path
+    return None
+
+
+def parse_db_design(db_spec_path: str) -> dict:
+    if not os.path.exists(db_spec_path):
+        return {}
+    tables = {}
+    with open(db_spec_path, encoding="utf-8") as f:
+        content = f.read()
+    sections = content.split("\n### DB-")
+    for sec in sections[1:]:
+        lines = sec.splitlines()
+        first_line = "DB-" + lines[0]
+        db_id_match = re.match(r"^(DB-\d+)", first_line)
+        if not db_id_match:
+            continue
+        db_id = db_id_match.group(1)
+        physical_name = ""
+        logical_name = ""
+        for line in lines:
+            if "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) >= 4:
+                    if "물리명" in parts[1]:
+                        physical_name = parts[2]
+                    elif "논리명" in parts[1]:
+                        logical_name = parts[2]
+        if not physical_name:
+            continue
+        columns = []
+        in_col_table = False
+        idx_phys = -1
+        idx_type = -1
+        idx_pk = -1
+        idx_nn = -1
+        for line in lines:
+            trimmed_line = line.strip()
+            if trimmed_line.startswith("#"):
+                in_col_table = False
+                continue
+            if not trimmed_line.startswith("|"):
+                if in_col_table and trimmed_line != "":
+                    in_col_table = False
+                continue
+            
+            parts = [p.strip() for p in trimmed_line.split("|")]
+            if len(parts) >= 8:
+                if "물리명" in parts and "데이터 타입" in parts:
+                    in_col_table = True
+                    idx_phys = parts.index("물리명")
+                    idx_type = parts.index("데이터 타입")
+                    idx_pk = parts.index("PK") if "PK" in parts else -1
+                    idx_nn = parts.index("NN") if "NN" in parts else -1
+                    continue
+                if in_col_table:
+                    if parts[1].startswith("---") or parts[1] == "":
+                        continue
+                    if len(parts) < max(idx_phys, idx_type) + 1:
+                        in_col_table = False
+                        continue
+                    col_phys = parts[idx_phys]
+                    if col_phys == "해당없음" or col_phys == "":
+                        continue
+                    col_type = parts[idx_type].upper()
+                    is_pk = False
+                    if idx_pk != -1 and idx_pk < len(parts):
+                        is_pk = parts[idx_pk] in ("Y", "y", "Yes", "yes", "true", "True")
+                    is_nn = False
+                    if idx_nn != -1 and idx_nn < len(parts):
+                        is_nn = parts[idx_nn] in ("Y", "y", "Yes", "yes", "true", "True")
+                    columns.append({
+                        "name": col_phys,
+                        "type": col_type,
+                        "pk": is_pk,
+                        "nn": is_nn
+                    })
+        tables[physical_name] = {
+            "db_id": db_id,
+            "logical_name": logical_name,
+            "columns": columns
+        }
+    return tables
+
+
+def scan_codebase_for_traces(project_dir="."):
+    trace_map = {}
+    exclude_dirs = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv", ".antigravitycli", ".tmp", "dist", "build"}
+    exclude_files = {"traceability.md", "task.md", "walkthrough.md", "implementation_plan.md", "vulcan.py"}
+    for root, dirs, files in os.walk(project_dir):
+        dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
+        for file in files:
+            if file.lower() in exclude_files or file.startswith("vulcan_"):
+                continue
+            if not file.endswith((".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go")):
+                continue
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, project_dir)
+            try:
+                with open(filepath, encoding="utf-8") as f:
+                    lines = f.readlines()
+            except Exception:
+                continue
+            for idx, line in enumerate(lines):
+                vulcan_matches = re.findall(r"@vulcan\.(trace|test_for)\s+([A-Za-z0-9_\-\s]+)", line)
+                for tag_type, ids_str in vulcan_matches:
+                    ids = [i.strip() for i in re.split(r"[\s,]+", ids_str) if i.strip()]
+                    for trace_id in ids:
+                        trace_map.setdefault(trace_id, []).append({
+                            "file": rel_path,
+                            "line_num": idx + 1,
+                            "context": line.strip()
+                        })
+                decorator_matches = re.findall(r"@(trace|test_for)\(([^)]+)\)", line)
+                for dec_type, args_str in decorator_matches:
+                    ids = [i.strip().replace('"', '').replace("'", "") for i in args_str.split(",") if i.strip()]
+                    for trace_id in ids:
+                        trace_map.setdefault(trace_id, []).append({
+                            "file": rel_path,
+                            "line_num": idx + 1,
+                            "context": line.strip()
+                        })
+                id_matches = TRACE_ID_PATTERN.findall(line)
+                for trace_id in id_matches:
+                    is_comment_or_doc = False
+                    trimmed = line.strip()
+                    if "#" in line or "//" in line or "/*" in line or "*" in line or trimmed.startswith(('"', "'")):
+                        is_comment_or_doc = True
+                    if is_comment_or_doc:
+                        already_added = any(item["file"] == rel_path and item["line_num"] == idx + 1 for item in trace_map.get(trace_id, []))
+                        if not already_added:
+                            trace_map.setdefault(trace_id, []).append({
+                                "file": rel_path,
+                                "line_num": idx + 1,
+                                "context": line.strip()
+                            })
+    return trace_map
+
+
+def scan_codebase_for_routes(project_dir="."):
+    routes = []
+    exclude_dirs = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv"}
+    for root, dirs, files in os.walk(project_dir):
+        dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
+        for file in files:
+            if file == "vulcan.py" or file.startswith("vulcan_"):
+                continue
+            if not file.endswith(".py"):
+                continue
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, project_dir)
+            try:
+                with open(filepath, encoding="utf-8") as f:
+                    lines = f.readlines()
+            except Exception:
+                continue
+            for idx, line in enumerate(lines):
+                route_match = re.search(r"@(?:[A-Za-z0-9_]+)\.(get|post|put|delete|patch|options)\(\s*['\"]([^'\"]+)['\"]", line)
+                if route_match:
+                    method = route_match.group(1).upper()
+                    path = route_match.group(2)
+                    routes.append({
+                        "method": method,
+                        "path": path,
+                        "file": rel_path,
+                        "line_num": idx + 1
+                    })
+    return routes
+
+
+def normalize_route_path(path: str) -> str:
+    return re.sub(r"\{[^}]+\}", "{}", path).rstrip("/")
+
+
+def normalize_sql_type(sql_type: str) -> str:
+    sql_type = sql_type.upper().strip()
+    if sql_type in ("INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT"):
+        return "INTEGER"
+    if sql_type in ("VARCHAR", "CHAR", "TEXT", "STRING"):
+        return "TEXT"
+    if sql_type in ("BOOL", "BOOLEAN"):
+        return "BOOLEAN"
+    if sql_type in ("REAL", "FLOAT", "DOUBLE", "NUMERIC", "DECIMAL"):
+        return "REAL"
+    return sql_type
+
+
+def cmd_drift_report(project_dir=".", output_file="contract-drift-report.md"):
+    print("==================================================")
+    print(" [drift-report] 설계-코드 불일치 검사 (Drift Analyzer)")
+    print("==================================================")
+    session = load_session(project_dir)
+    print(f" 프로젝트: {session.get('project', '프로젝트')}")
+    print()
+    has_drift = False
+    report_sections = []
+    report_sections.append(f"# Contract Drift Report - {session.get('project', '프로젝트')}\n")
+    report_sections.append(f"발생 일시: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    report_sections.append("본 보고서는 설계 산출물(Traceability Matrix, API 정의서, DB 명세서)과 실제 구현 소스코드/테스트/데이터베이스 물리 스키마 간의 불일치(Drift) 현상을 감지한 리포트입니다.\n")
+    report_sections.append("---")
+    
+    print("[1] Traceability 매핑 및 코드 내 주석 일치 검사")
+    trace_matrix_path = find_artifact_file(
+        project_dir,
+        os.path.join("docs", "artifacts", "02-traceability"),
+        r"traceability.*\.md$",
+    ) or find_first_existing(project_dir, [
+        os.path.join("docs", "TRACEABILITY.md"),
+    ])
+    trace_matrix_file = os.path.relpath(trace_matrix_path, project_dir) if trace_matrix_path else None
+    trace_drift_issues = []
+    if trace_matrix_path and os.path.exists(trace_matrix_path):
+        traceability = parse_traceability(project_dir)
+        code_traces = scan_codebase_for_traces(project_dir)
+        for req_id, info in traceability.items():
+            if info.get("status") == "삭제됨" or re.search(r'통합', info.get("status", "")):
+                continue
+            if req_id not in code_traces:
+                trace_drift_issues.append({
+                    "type": "Gap (구현 누락)",
+                    "id": req_id,
+                    "detail": f"추적표({trace_matrix_file}:{info.get('__line_num__')})에 정의되어 있으나, 소스코드/테스트 코드 내 주석태그(@vulcan.trace 등)로 탐지되지 않았습니다."
+                })
+        for trace_id, occurrences in code_traces.items():
+            if not re.match(r"^(REQ|NREQ)-\d+", trace_id):
+                continue
+            if trace_id not in traceability:
+                occ_desc = ", ".join(f"{o['file']}:{o['line_num']}" for o in occurrences[:3])
+                if len(occurrences) > 3:
+                    occ_desc += f" 외 {len(occurrences)-3}곳"
+                trace_drift_issues.append({
+                    "type": "Orphan (비계약 구현)",
+                    "id": trace_id,
+                    "detail": f"코드 내 주석태그로 기재되었으나({occ_desc}), 공식 추적표({trace_matrix_file})에 등록되어 있지 않습니다."
+                })
+    else:
+        trace_drift_issues.append({
+            "type": "오류",
+            "id": "-",
+            "detail": "공식 추적표(TRACEABILITY.md)를 찾을 수 없습니다."
+        })
+    report_sections.append("\n## 1. Traceability Drift (요구사항 추적 불일치)")
+    if trace_drift_issues:
+        has_drift = True
+        report_sections.append("\n| 구분 | 대상 ID | 상세 내용 |")
+        report_sections.append("| --- | --- | --- |")
+        for issue in trace_drift_issues:
+            report_sections.append(f"| {issue['type']} | `{issue['id']}` | {issue['detail']} |")
+        print(f"  -> 결과: ❌ {len(trace_drift_issues)}건의 불일치 감지")
+    else:
+        report_sections.append("\n✨ **일치**: 추적표와 코드 내 어노테이션/주석 정보가 100% 일치합니다.\n")
+        print("  -> 결과: ✨ 0건의 불일치 감지")
+    print()
+    
+    print("[2] API 정의서와 코드 라우트 일치 검사")
+    api_spec_path = find_api_spec_file(project_dir)
+    api_drift_issues = []
+    if api_spec_path and os.path.exists(api_spec_path):
+        designed_apis = parse_api_design(api_spec_path)
+        actual_routes = scan_codebase_for_routes(project_dir)
+        designed_map = {}
+        for api in designed_apis:
+            norm_path = normalize_route_path(api["path"])
+            key = (api["method"], norm_path)
+            designed_map[key] = api
+        actual_map = {}
+        for route in actual_routes:
+            norm_path = normalize_route_path(route["path"])
+            key = (route["method"], norm_path)
+            actual_map.setdefault(key, []).append(route)
+        for key, api in designed_map.items():
+            if key not in actual_map:
+                api_drift_issues.append({
+                    "type": "Missing Endpoint (설계 미구현)",
+                    "api_id": api["api_id"],
+                    "method": api["method"],
+                    "path": api["path"],
+                    "detail": f"API 정의서({os.path.relpath(api_spec_path, project_dir)}:{api['line_num']})에 존재하지만, 백엔드 코드에서 구현된 라우터를 찾을 수 없습니다."
+                })
+        for key, routes in actual_map.items():
+            if key not in designed_map:
+                for r in routes:
+                    api_drift_issues.append({
+                        "type": "Orphan Endpoint (비설계 구현)",
+                        "api_id": "-",
+                        "method": r["method"],
+                        "path": r["path"],
+                        "detail": f"백엔드 코드({r['file']}:{r['line_num']})에 라우터가 구현되어 있으나, API 정의서 설계 대상 목록에 없습니다."
+                    })
+    else:
+        api_drift_issues.append({
+            "type": "오류",
+            "api_id": "-",
+            "method": "-",
+            "path": "-",
+            "detail": "API 정의서(DOC-API-G2-001) 파일을 찾을 수 없습니다."
+        })
+    report_sections.append("\n## 2. API Specification Drift (API 명세 불일치)")
+    if api_drift_issues:
+        has_drift = True
+        report_sections.append("\n| 구분 | API-ID | Method | Path | 상세 내용 |")
+        report_sections.append("| --- | --- | --- | --- | --- |")
+        for issue in api_drift_issues:
+            report_sections.append(f"| {issue['type']} | `{issue['api_id']}` | **{issue['method']}** | `{issue['path']}` | {issue['detail']} |")
+        print(f"  -> 결과: ❌ {len(api_drift_issues)}건의 불일치 감지")
+    else:
+        report_sections.append("\n✨ **일치**: API 정의서의 설계 목록과 소스코드에 구현된 API 라우트가 100% 일치합니다.\n")
+        print("  -> 결과: ✨ 0건의 불일치 감지")
+    print()
+    
+    print("[3] DB 명세서와 물리 데이터베이스 스키마 일치 검사")
+    db_spec_path = find_db_spec_file(project_dir)
+    db_drift_issues = []
+    if db_spec_path and os.path.exists(db_spec_path):
+        designed_tables = parse_db_design(db_spec_path)
+        inspector = create_database_inspector(project_dir)
+        actual_tables = inspector.get_tables()
+        for t_name, info in designed_tables.items():
+            if t_name not in actual_tables:
+                db_drift_issues.append({
+                    "type": "Missing Table",
+                    "table": t_name,
+                    "column": "-",
+                    "detail": f"DB 명세서(`{info['db_id']}`)에 설계되어 있으나, 실제 DB 스키마에 테이블이 존재하지 않습니다."
+                })
+            else:
+                actual_cols = {c["name"]: c for c in inspector.get_columns(t_name)}
+                designed_cols = {c["name"]: c for c in info["columns"]}
+                for c_name, c_info in designed_cols.items():
+                    if c_name not in actual_cols:
+                        db_drift_issues.append({
+                            "type": "Missing Column",
+                            "table": t_name,
+                            "column": c_name,
+                            "detail": f"테이블 `{t_name}`의 설계 컬럼 `{c_name}`이 실제 DB 테이블에 없습니다."
+                        })
+                    else:
+                        act_type = normalize_sql_type(actual_cols[c_name]["type"])
+                        des_type = normalize_sql_type(c_info["type"])
+                        if act_type != des_type:
+                            db_drift_issues.append({
+                                "type": "Type Mismatch",
+                                "table": t_name,
+                                "column": c_name,
+                                "detail": f"컬럼 `{c_name}`의 타입 불일치 (설계: `{des_type}` vs 실제: `{act_type}`)"
+                            })
+                for c_name in actual_cols:
+                    if c_name not in designed_cols:
+                        db_drift_issues.append({
+                            "type": "Orphan Column",
+                            "table": t_name,
+                            "column": c_name,
+                            "detail": f"실제 DB 테이블 `{t_name}`에 컬럼 `{c_name}`이 존재하지만, DB 명세서 설계 컬럼 목록에 누락되었습니다."
+                        })
+        for act_t in actual_tables:
+            if act_t not in designed_tables:
+                db_drift_issues.append({
+                    "type": "Orphan Table",
+                    "table": act_t,
+                    "column": "-",
+                    "detail": f"실제 DB 스키마에 `{act_t}` 테이블이 존재하지만, DB 명세서 설계 대상 목록에 누락되었습니다."
+                })
+    else:
+        db_drift_issues.append({
+            "type": "오류",
+            "table": "-",
+            "column": "-",
+            "detail": "DB 명세서(DOC-DATA-G2-002) 파일을 찾을 수 없습니다."
+        })
+    report_sections.append("\n## 3. Database Schema Drift (데이터베이스 스키마 불일치)")
+    if db_drift_issues:
+        has_drift = True
+        report_sections.append("\n| 구분 | 대상 테이블 | 대상 컬럼 | 상세 내용 |")
+        report_sections.append("| --- | --- | --- | --- |")
+        for issue in db_drift_issues:
+            report_sections.append(f"| {issue['type']} | `{issue['table']}` | `{issue['column']}` | {issue['detail']} |")
+        print(f"  -> 결과: ❌ {len(db_drift_issues)}건의 불일치 감지")
+    else:
+        report_sections.append("\n✨ **일치**: DB 명세서의 상세 스펙과 실제 물리 DB 파일의 스키마가 100% 일치합니다.\n")
+        print("  -> 결과: ✨ 0건의 불일치 감지")
+    print()
+    
+    report_content = "\n".join(report_sections) + "\n"
+    report_path = os.path.join(project_dir, output_file)
+    try:
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(report_content)
+        print(f"불일치 분석 보고서 작성 완료: {output_file}")
+    except Exception as e:
+        print(f"보고서 파일 작성 실패: {e}")
+    print("--------------------------------------------------")
+    if has_drift:
+        print("진단 결과: ❌ [불일치(Drift) 발견]")
+        print(f"설계와 구현 간에 불일치가 감지되었습니다. 상세 내역은 '{output_file}'을 참조하여 조치하십시오.")
+        sys.exit(1)
+    else:
+        print("진단 결과: ✨ [정합성 완벽]")
+        print("설계 산출물과 실제 소스코드, 데이터베이스가 완벽히 동기화되어 있습니다.")
+    print("==================================================")
+
+
 def require_gate_start_sequence(session, target_gate):
     """Gate 시작이 현재 Gate 바로 다음 단계인지와 이전 Gate 승인 근거를 확인한다."""
     if target_gate not in GATE_ORDER:
@@ -12764,6 +13283,10 @@ def main():
     p_check_contract.add_argument("--report", default="", help="검증 결과 JSON 저장 경로")
     p_check_contract.add_argument("--emit-contract", default="", help="Program Design 표에서 추출한 계약 JSON 저장 경로")
 
+    p_drift_report = subparsers.add_parser("drift-report", help="설계 산출물과 실제 코드/DB 스키마 간의 불일치(Drift) 보고서 생성")
+    p_drift_report.add_argument("--project-dir", default=".", help="검증할 프로젝트 루트 경로")
+    p_drift_report.add_argument("--output", default="contract-drift-report.md", help="분석 결과를 작성할 마크다운 보고서 경로")
+
     p_check_architecture = subparsers.add_parser("check-architecture", help="SW 아키텍처 성숙도 검사")
     p_check_architecture.add_argument("--level", default="baseline", choices=["draft", "baseline"], help="검사 수준")
 
@@ -12968,6 +13491,8 @@ def main():
             emit_contract=args.emit_contract,
             project_dir=args.project_dir,
         ))
+    elif args.command == "drift-report":
+        cmd_drift_report(project_dir=args.project_dir, output_file=args.output)
     elif args.command == "check-architecture":
         cmd_check_architecture(level=args.level)
     elif args.command == "trace-context":
