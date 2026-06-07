@@ -260,6 +260,8 @@ Gate 3 승인
 
 Codex subagent, Codex thread, Claude subagent, Agy workspace branch agent처럼 native 위임을 사용한 경우에는 외부 CLI runner 수준의 stderr/jsonl/timeout 로그가 없을 수 있습니다. 이때는 현재 Run의 `delegation_records`에 위임 대상, scope, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다. `agent-run`/`run-exec` 같은 외부 CLI runner는 기존처럼 `Run Execution Record`, `_exec` 로그, watchdog/timeout 정보를 남깁니다.
 
+Antigravity/Agy의 `Workspace: branch`는 native branch agent 경로로 취급합니다. Agy가 가상 브랜치에서 작업하면 `delegation_records.mode: agy-branch-agent`로 얇게 기록하고, Orchestrator가 변경 파일과 검증 명령을 다시 확인합니다. `agy.exe`를 외부 CLI runner로 호출해 transcript/watchdog 증적을 남기는 경로는 선택 사항입니다. Agy 검토 기록은 [Agy Workspace Branch Delegation Review](reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)를 참고합니다.
+
 worker 실행은 즉시 kill 기준이 아니라 progress watchdog 기준입니다. `execution.progress_probe_seconds`마다 status 변화, worktree diff, 변경 파일 수, runner 로그 진척을 확인하고, `execution.no_progress_timeout_seconds` 동안 의미 있는 진척이 없으면 `stalled` timeout 후보로 종료합니다. `execution.hard_timeout_seconds`는 진척 여부와 무관한 절대 상한입니다.
 
 ```json

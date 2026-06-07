@@ -28,6 +28,18 @@ Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델의 API �
 * Gemini의 100만 토큰 이상 대용량 컨텍스트 윈도우를 활용하여, 부분 파일 탐색 대신 **전체 코드베이스와 모든 상류 설계서(Gate 1/2/3 산출물 전체)**를 단일 컨텍스트로 주입합니다.
 * 이를 통해 워커가 코드 정합성 검토 시 파일 간 의존 관계 누락으로 인한 시그니처 정합성 오류를 원천 차단합니다.
 
+### ③ Antigravity Workspace: branch native delegation
+
+Antigravity/Agy가 제공하는 `Workspace: branch` 방식은 Gemini adapter의 native branch agent 경로로 취급한다.
+
+이 경로는 일반 Git worktree 또는 `agy.exe` 외부 CLI runner와 다르다. Agy runtime이 가상 브랜치/오버레이 작업공간을 관리하므로, Run 문서에는 두꺼운 `_exec` 로그 대신 `delegation_records.mode: agy-branch-agent`로 delegate, task, status, changed files, result summary를 얇게 기록한다.
+
+Orchestrator는 Agy worker 결과를 그대로 확정하지 않고 부모 workspace에서 변경 파일과 `scope.writable`을 확인하고 필요한 검증 명령을 재실행한다.
+
+`agent-run`/`run-exec`로 `agy.exe`를 호출하는 경로는 transcript, watchdog, 프로세스 로그 같은 외부 CLI 증적이 필요한 경우의 선택 옵션이다.
+
+검토 기록: [Agy Workspace Branch Delegation Review](../../reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)
+
 ## 3. 하위 최소 산출물 구성
 
 Gemini 어댑터는 다음 문서들로 구성되어 제어 규칙을 이행합니다.

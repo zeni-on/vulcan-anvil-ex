@@ -130,6 +130,8 @@ Backlog는 Gate 밖에 따로 있는 단순 TODO가 아닙니다. Phase 0에서 
 
 위임 기록은 실행 방식에 따라 두께가 다릅니다. 외부 CLI worker는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남깁니다. Codex subagent/thread, Claude subagent, Agy workspace branch agent 같은 native 위임은 같은 프로세스 메타가 없을 수 있으므로 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다.
 
+Agy의 `Workspace: branch`는 Antigravity runtime이 제공하는 native branch agent 경로로 다룹니다. 일반 Git worktree와 달리 Copy-on-Write/가상 오버레이로 의존성 폴더를 재사용할 수 있다는 장점이 있지만, 이는 Agy runtime 특화 기능이므로 Core의 범용 실행 전제로 삼지 않습니다. Agy native branch 결과는 `delegation_records.mode: agy-branch-agent`로 기록하고, 외부 `agy.exe` runner의 transcript/watchdog 기록이 필요할 때만 `agent-run`/`run-exec` 경로를 선택합니다. 검토 기록은 [Agy Workspace Branch Delegation Review](reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)에 남겨둡니다.
+
 구현에 들어가면 먼저 `python vulcan.py branch-start impl`로 `workflow.integration_branch`를 만들거나 전환합니다. 신규 개발처럼 빌드 가능한 골격이 없으면 feature 구현 Wave 전에 `BW-000 implementation-scaffold`를 두어 package/build/test skeleton과 public class/interface/method signature를 먼저 고정합니다.
 
 ```text

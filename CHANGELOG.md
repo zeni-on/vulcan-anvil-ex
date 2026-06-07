@@ -8,6 +8,7 @@
 - Run 생성 시 `source_documents.read_first`에 Codex 전용 `GATE_PROMPTS.md`를 모든 runner에게 주입하지 않도록 정리했다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`로 분리하고, Codex/Claude/Gemini는 각 adapter 전용 Gate prompt만 추가로 받는다.
 - Core Run 입력 샘플에서 Codex adapter 전용 prompt 참조를 제거하고 공통 Gate 실행 체크리스트를 사용하도록 정리했다.
 - Codex subagent/thread, Claude subagent, Agy workspace branch agent 같은 native 위임 결과를 `delegation_records`로 남기는 Core 기준을 추가했다. 외부 CLI runner는 기존 `Run Execution Record`와 `_exec` 로그를 유지하고, native 위임은 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령 중심으로 얇게 추적한다.
+- Antigravity/Agy `Workspace: branch`와 `delegation_records.mode: agy-branch-agent` 정합성 검토 기록을 `docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md`에 추가하고, Getting Started, Concepts, Roadmap, Gemini adapter README에서 연결했다.
 
 ## 0.4.5 - 2026-06-06
 

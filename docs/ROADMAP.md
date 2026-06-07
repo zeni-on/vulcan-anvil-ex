@@ -38,6 +38,7 @@
 - Gate 전환 전 `prepare-transition` 통합 진단
 - `check-trace` semantic diagnostics 보강
 - 설계-코드 불일치 후보를 문서 자동 수정이 아니라 보고서로 남기는 `drift-report`
+- Antigravity/Agy `Workspace: branch` native delegation과 `delegation_records.mode: agy-branch-agent` 기준 정렬
 - Gate 4 QA 로그/독립검수/증적 문서 대시보드 표시
 - 요구사항추적표 기반 `trace-context` CLI와 Dashboard Trace Explorer
 - adapter별 Run 입력 문서 분리와 `docs/core/GATE_EXECUTION_CHECKLIST.md` 공통화
@@ -150,6 +151,7 @@ Run 품질 게이트 다음에 진행할 실전 리스크 영역이다.
 - `run-new`/`wave-start --trace-seed`가 만든 초안의 `scope.writable`, `interface_contract`, `source_documents` 품질을 더 구체적으로 진단한다.
 - 병렬화는 review Run, 독립검수, QA command group, UI viewport 증적 순서로 제한적으로 검토한다.
 - 구현 병렬화는 API/DTO/interface contract와 merge 전략이 충분히 안정된 뒤 검토한다.
+- Agy `Workspace: branch`의 Copy-on-Write 장점은 adapter-specific capability로 추적하고, Core에서는 native delegation 기록과 Orchestrator 재검증 기준만 유지한다. 검토 기록은 `docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md`를 따른다.
 
 Dashboard 성능 차트는 먼저 CLI 산출이 안정된 뒤 붙인다.
 
