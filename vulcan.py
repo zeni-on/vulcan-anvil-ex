@@ -5975,7 +5975,7 @@ def cmd_prepare_transition(project_dir="."):
             transition_issues.append("Implementation Plan Run 미완료: 구현 진행 전 구현 계획 Run(implementation-plan)이 완료되어야 합니다.")
 
         wave_records = collect_build_wave_records(project_dir)
-        active_waves = [w for w in wave_records.values() if w.get("status") not in ("Verified", "Completed", "Done")]
+        active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
         for w in active_waves:
             run_file_str = f" ({w['run']})" if w['run'] else ""
             transition_issues.append(f"진행 중인 Build Wave 존재: 완료되지 않은 Build Wave {w['id']} ({w['status']}){run_file_str}가 있습니다.")
