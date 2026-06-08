@@ -35,12 +35,12 @@ Agy를 메인 Orchestrator로 사용할 때는 다음 기준을 적용한다.
 * worker 결과는 `delegation_records.mode: agy-branch-agent`로 남기고, 최종 Gate/Wave/QA 판단은 Orchestrator가 부모 workspace에서 다시 검증한다.
 
 ### ① Structured Outputs (JSON Schema 강제) 활용
-* Gemini API가 지원하는 `responseSchema`를 활용하여 워커의 출력이 `RUN_OUTPUT_CONTRACT_GEMINI.md` 규격에 선언된 정형 JSON/YAML 스키마를 100% 무결하게 준수하도록 강제합니다.
-* 워커의 응답 오류 및 포맷 정합성 오류로 인한 파싱 실패율을 0%에 수렴시킵니다.
+* Gemini API가 지원하는 `responseSchema`를 활용하여 워커의 출력이 `RUN_OUTPUT_CONTRACT_GEMINI.md` 규격에 선언된 정형 JSON/YAML 스키마를 최대한 준수하도록 유도합니다.
+* 스키마 제약을 적용하여 워커의 포맷 정합성 오류 및 파싱 실패율을 획기적으로 낮춥니다. (단, 모델의 부분 출력이나 예외적인 API 오류 가능성이 있으므로 예외 대응 처리를 권장합니다.)
 
 ### ② 대규모 컨텍스트 윈도우 (Long-context Window) 최적화
-* Gemini의 100만 토큰 이상 대용량 컨텍스트 윈도우를 활용하여, 부분 파일 탐색 대신 **전체 코드베이스와 모든 상류 설계서(Gate 1/2/3 산출물 전체)**를 단일 컨텍스트로 주입합니다.
-* 이를 통해 워커가 코드 정합성 검토 시 파일 간 의존 관계 누락으로 인한 시그니처 정합성 오류를 원천 차단합니다.
+* Gemini의 대용량 컨텍스트 윈도우 특성을 유용하게 활용하되, 비효율적인 컨텍스트 낭비를 방지하기 위해 1차적으로는 작업에 핵심적인 trace seed와 관련 소스 문서(source_documents) 위주로 컨텍스트를 주입하고, 필요 시 의존 관계가 있는 파일들로 점진적 확장하는 방식을 지향합니다.
+* 이를 통해 파일 간 의존 관계 누락을 방지하면서도 경량화된 부트스트랩 조율 철학을 유지합니다.
 
 ### ③ Antigravity Workspace: branch native delegation
 

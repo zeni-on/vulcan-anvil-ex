@@ -35,7 +35,7 @@
 ## 3. 핵심 Guardrails
 
 - **지연 및 누수 방지**: 현재 Gate보다 앞서 구현/테스트/승인/릴리즈를 진행하지 않는다.
-- **상태의 임의 변경 금지**: `gate:` 텍스트 수정만으로는 Gate가 완료되지 않는다. 상태 갱신은 `vulcan.py` 내의 `transition` 또는 `session` 계열 명령을 실행해 반영한다.
+- **상태의 임의 변경 금지**: `gate:` 텍스트 수정만으로는 Gate가 완료되지 않는다. 상태 갱신은 `vulcan.py` 내의 `gate-start`, `session` 또는 `release-pr` 등의 실제 CLI 명령을 실행해 반영한다.
 - **Orchestrator의 역할 한정**: 구현 단계에서 오케스트레이터는 직접 대량의 코드를 작성하지 않는다. 실제 구현은 `build` 페르소나의 **Native Worker (subagent/thread/native branch agent)**에게 위임하는 것을 원칙으로 한다.
 - **사전 검사 의무화**: Native Worker에게 위임을 기동하기 전, 반드시 **`python vulcan.py run-preflight <run-file>`**을 직접 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소를 검사해야 한다.
 - **위임 사실의 기록**: subagent나 Workspace: branch 워커를 통해 작업을 수행한 경우, 반드시 완료 보고서(Run Output)의 **`delegation_records`**에 위임 대상, 작업 범위, 변경 파일, 오케스트레이터 재검증 명령을 충실히 기록한다.
@@ -43,16 +43,25 @@
 
 ---
 
-## 4. CLI 상위 Facade 표면 활용 규칙
+## 4. CLI 명령어 및 상위 Facade 로드맵 활용 규칙
 
-오케스트레이터는 다음 4개의 상위 명령어를 기본 동선으로 사용하여 탐색 비효율을 최소화한다.
+오케스트레이터는 탐색 비효율을 최소화하기 위해 다음 CLI 명령어 체계를 활용한다.
 
-| 상위 명령어 | 목적 | 주요 하위 동작 |
-| --- | --- | --- |
-| `status` | 현재 상태 조회 및 행동 추천 | `status --check` (준비 상태 진단), `status --trace-detail` (추적성 진단) |
-| `plan` | Gate/Run/Wave 계획 및 초안 작성 | `plan run --skill <name>`, `plan wave <id>` |
-| `execute` | 워커 기동, 통합, Wave 완료 | `execute --run-id <id> --runner native` (subagent 기동), `execute integrate --run-id <id>` (통합) |
-| `transition` | Gate 전환, 승인, 릴리즈 관리 | `transition start <gate>`, `transition complete <gate>`, `transition release-pr` |
+### 4-1. 현재 구현된 실제 CLI 명령어
+* **`status`**: 현재 상태 조회 및 행동 추천
+  * `status --check` : 준비 상태 및 Gate 완료 조건 진단
+  * `status --trace-detail` : 추적성 정합성 상세 진단
+* **`orchestrator-plan` / `run-new`**: Gate/Run/Wave 계획 수립 및 Run 문서(Input) 생성 및 동적 계약 주입
+* **`wave-start`**: Wave 기동 및 동적 브랜치 구성
+* **`run-integrate`**: 구현 결과물을 부모 workspace에 통합 및 병합 검증
+* **`gate-start` / `session` / `release-pr`**: Gate 시작 및 전환 완료, 세션 동기화, PR 생성 관리
+
+### 4-2. [To-Be 로드맵] 4+1 상위 Facade 제안
+향후 간소화된 4+1 CLI Facade 인터페이스가 완전히 적용되면 다음과 같이 통합될 예정입니다. (현재는 과도기 상태이므로 위의 실제 CLI 명령을 우선합니다.)
+* **`status`**: 현재 상태 조회 및 행동 추천 (동일)
+* **`plan`**: Gate/Run/Wave 계획 및 초안 작성 (`plan run --skill <name>`, `plan wave <id>`)
+* **`execute`**: 워커 기동 및 통합 (`execute --run-id <id> --runner native`, `execute integrate`)
+* **`transition`**: Gate 전환 및 릴리즈 관리 (`transition start <gate>`, `transition complete <gate>`, `transition release-pr`)
 
 *참고: `init`, `upgrade`, `version`, `export` 같은 특수 관리 목적 명령어는 `project` 또는 단독 명령어로 그대로 사용한다.*
 
@@ -60,9 +69,9 @@
 
 ## 5. Antigravity 동적 런타임 위임 프로토콜 (Agy 특화)
 
-* **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, `define_subagent`와 `invoke_subagent` 툴을 사용해 동적으로 하부 작업자를 기동한다.
+* **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Agy runtime이 제공하는 native subagent/branch delegation 도구(예: `define_subagent`, `invoke_subagent` 등)를 사용하여 동적으로 하부 작업자를 기동한다.
 * **가상 격리 워크스페이스 (`Workspace: branch`)**: 워커 위임 호출 시 `Workspace` 파라미터는 반드시 `'branch'` 모드로 설정하여 CoW 기반의 초고속 격리 빌드/테스트 환경을 활용한다.
-* **이벤트 기반 비동기 협업**: 에이전트 간 통신은 `send_message` 도구로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`execute integrate`) 및 재검증을 진행한다.
+* **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Agy runtime의 메시징 도구(예: `send_message` 등)로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
 
 ---
 

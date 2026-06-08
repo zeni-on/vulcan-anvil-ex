@@ -34,7 +34,7 @@
 * `vulcan.py gate-start` 및 오케스트레이터 계획에 따라, 대상 기능 단위에 부합하는 `RUN-NNN` 문서를 작성합니다.
 
 ### 2단계: Run Input 완전화 및 계약 주입 (Orchestrator Adapter)
-* 오케스트레이터는 [RUN_INPUT_CONTRACT_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_INPUT_CONTRACT_GEMINI.md) 규격에 맞춰 다음 동적 계약을 주입합니다.
+* 오케스트레이터는 [RUN_INPUT_CONTRACT.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_INPUT_CONTRACT.md) 규격에 맞춰 다음 동적 계약을 주입합니다.
   * **TBD 플레이스홀더 제거**: 초안(Draft)의 `target_contracts`와 `interface_contract`에 남아 있는 `"TBD:"` 플레이스홀더를 프로그램 설계서(Program-Design)의 실제 코드 시그니처와 스키마로 완전히 대체하여 바인딩합니다.
   * **Interface Signature**: Gate 2 설계서에서 명세된 함수 시그니처 및 Pydantic/TypeScript DTO 코드 블록.
   * **Test Stub**: Gate 3 테스트 설계서에서 도출된 필수 테스트 함수명 및 검증 시나리오 목록.
@@ -42,7 +42,7 @@
 
 ### 3단계: 워커 에이전트 기동 및 스트림 캡처 (Orchestrator -> Worker)
 * 오케스트레이터는 워커 에이전트(agy subagent 등)를 기동하기 직전, 반드시 `python vulcan.py run-preflight <RUN-file>`을 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소가 없음을 사전 검증합니다.
-* 검증 통과 후 동적 서브에이전트 위임 툴(`invoke_subagent`)을 호출하여 가상 격리 워크스페이스(`Workspace: branch` 모드) 상에서 워커를 기동합니다.
+* 검증 통과 후 Agy runtime이 제공하는 native subagent/branch delegation 도구(예: `invoke_subagent` 등)를 호출하여 가상 격리 워크스페이스(`Workspace: branch` 모드) 상에서 워커를 기동합니다.
 * 워커가 구동되는 동안 출력되는 진행 이력 및 실시간 로그 스트림을 파싱하여, 대화 단절 시 즉시 복구(Resume)할 수 있는 `conversation_id`(또는 `thread_id`) 및 실시간 태스크 대시보드 상태를 동적으로 갱신합니다.
 
 ### 4단계: 워커 수행 완료 및 출력 계약 검증 (Worker -> Orchestrator)
