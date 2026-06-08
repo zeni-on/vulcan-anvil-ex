@@ -52,7 +52,7 @@
   * `status --check` : 준비 상태 및 Gate 완료 조건 진단
   * `status --trace-detail` : 추적성 정합성 상세 진단
 * **`orchestrator-plan` / `run-new`**: Gate/Run/Wave 계획 수립 및 Run 문서(Input) 생성 및 동적 계약 주입
-* **`wave-start`**: Wave 기동 및 동적 브랜치 구성
+* **`wave-start`**: Build Wave 상태 시작 및 Run 초안 생성
 * **`run-integrate`**: 구현 결과물을 부모 workspace에 통합 및 병합 검증
 * **`gate-start` / `session` / `release-pr`**: Gate 시작 및 전환 완료, 세션 동기화, PR 생성 관리
 
@@ -63,7 +63,7 @@
 * **`execute`**: 워커 기동 및 통합 (`execute --run-id <id> --runner native`, `execute integrate`)
 * **`transition`**: Gate 전환 및 릴리즈 관리 (`transition start <gate>`, `transition complete <gate>`, `transition release-pr`)
 
-*참고: `init`, `upgrade`, `version`, `export` 같은 특수 관리 목적 명령어는 `project` 또는 단독 명령어로 그대로 사용한다.*
+*참고: `init`, `upgrade`, `version`, `export` 같은 특수 관리 목적 명령어는 단독 명령어로 그대로 사용한다.*
 
 ---
 
