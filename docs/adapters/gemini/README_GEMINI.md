@@ -28,6 +28,8 @@ Agy를 메인 Orchestrator로 사용할 때는 다음 기준을 적용한다.
 
 * Core Gate 규칙은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다.
 * Agy/Gemini 전용 prompt와 persona mapping은 `docs/adapters/gemini/` 문서를 따른다.
+* 현재 Gate/Profile/Branch/Run 상태와 다음 행동 후보는 먼저 `python vulcan.py status`로 확인한다.
+* Gate 전환 가능성은 `python vulcan.py status --check`로 요약 진단하고, `prepare-transition`은 상세/호환 진단이 필요할 때 직접 실행한다.
 * Agy native subagent와 `Workspace: branch`는 외부 CLI runner가 아니라 native delegation 경로로 취급한다.
 * worker 호출 전 Orchestrator가 직접 `python vulcan.py run-preflight <run-file>`를 실행한다.
 * worker 결과는 `delegation_records.mode: agy-branch-agent`로 남기고, 최종 Gate/Wave/QA 판단은 Orchestrator가 부모 workspace에서 다시 검증한다.
@@ -48,7 +50,7 @@ Antigravity/Agy가 제공하는 `Workspace: branch` 방식은 Gemini adapter의 
 
 Orchestrator는 Agy worker 결과를 그대로 확정하지 않고 부모 workspace에서 변경 파일과 `scope.writable`을 확인하고 필요한 검증 명령을 재실행한다.
 
-Orchestrator는 Agy native branch worker에게 위임하기 전에 반드시 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 이 경로는 `run-exec`/`agent-run --mode work`의 자동 preflight를 통과하지 않으므로, `prepare-transition`의 사후 점검은 누락을 발견하는 안전망으로만 취급한다.
+Orchestrator는 Agy native branch worker에게 위임하기 전에 반드시 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 이 경로는 `run-exec`/`agent-run --mode work`의 자동 preflight를 통과하지 않으므로, `status --check`/`prepare-transition`의 사후 점검은 누락을 발견하는 안전망으로만 취급한다.
 
 `agent-run`/`run-exec`로 `agy.exe`를 호출하는 경로는 transcript, watchdog, 프로세스 로그 같은 외부 CLI 증적이 필요한 경우의 선택 옵션이다.
 
