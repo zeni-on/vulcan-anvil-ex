@@ -69,9 +69,9 @@
 
 ## 5. Antigravity 동적 런타임 위임 프로토콜 (Agy 특화)
 
-* **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Agy runtime이 제공하는 native subagent/branch delegation 도구(예: `define_subagent`, `invoke_subagent` 등)를 사용하여 동적으로 하부 작업자를 기동한다.
+* **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Antigravity 런타임의 서브에이전트 제어 도구인 `define_subagent` 및 `invoke_subagent`를 사용하여 동적으로 하부 작업자를 기동한다.
 * **가상 격리 워크스페이스 (`Workspace: branch`)**: 워커 위임 호출 시 `Workspace` 파라미터는 반드시 `'branch'` 모드로 설정하여 CoW 기반의 초고속 격리 빌드/테스트 환경을 활용한다.
-* **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Agy runtime의 메시징 도구(예: `send_message` 등)로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
+* **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Antigravity 런타임의 메시징 도구인 `send_message`로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
 
 ---
 

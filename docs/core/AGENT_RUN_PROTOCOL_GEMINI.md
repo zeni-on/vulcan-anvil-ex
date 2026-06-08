@@ -42,7 +42,7 @@
 
 ### 3단계: 워커 에이전트 기동 및 스트림 캡처 (Orchestrator -> Worker)
 * 오케스트레이터는 워커 에이전트(agy subagent 등)를 기동하기 직전, 반드시 `python vulcan.py run-preflight <RUN-file>`을 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소가 없음을 사전 검증합니다.
-* 검증 통과 후 Agy runtime이 제공하는 native subagent/branch delegation 도구(예: `invoke_subagent` 등)를 호출하여 가상 격리 워크스페이스(`Workspace: branch` 모드) 상에서 워커를 기동합니다.
+* 검증 통과 후 Antigravity 런타임의 서브에이전트 기동 도구인 `invoke_subagent`를 호출하여 가상 격리 워크스페이스(`Workspace: branch` 모드) 상에서 워커를 기동합니다.
 * 워커가 구동되는 동안 출력되는 진행 이력 및 실시간 로그 스트림을 파싱하여, 대화 단절 시 즉시 복구(Resume)할 수 있는 `conversation_id`(또는 `thread_id`) 및 실시간 태스크 대시보드 상태를 동적으로 갱신합니다.
 
 ### 4단계: 워커 수행 완료 및 출력 계약 검증 (Worker -> Orchestrator)
