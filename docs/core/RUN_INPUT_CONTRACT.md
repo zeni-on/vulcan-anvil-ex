@@ -596,6 +596,15 @@ UI 검증이 포함된 Run은 화면 단위가 아니라 상태/시나리오 단
 ```yaml
 ui_evidence_policy:
   test_by_state: true
+  official_runner: "@playwright/test"
+  official_runner_command: "npx playwright test"
+  official_runner_required_profiles: [audit, solution]
+  poc_fallback_allowed: true
+  fallback_rule: "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."
+  required_artifacts:
+    - "playwright-report/index.html 또는 동등한 HTML report"
+    - "test-results/ trace, screenshot, video 중 프로젝트가 선택한 증적"
+    - "docs/artifacts/04-review/evidence/ui/ 상태별 screenshot"
   required_evidence:
     - ui_id: UI-001-01
       state: "기본 화면"
@@ -641,7 +650,7 @@ Gate 4 QA 실행은 다음 QA Run 순서로 쪼갠다.
 | --- | --- | --- |
 | `QA-000` | 환경 준비/스모크 | 통합 소스 존재 확인, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시, 차단 시 후속 QA 중단 조건 |
 | `QA-001` | 명령 기반 검증 | Gate 3/개발표준의 필수 명령, `check-contract`, `check-trace`, `run-check`, 로그 파일 경로, exit code 기록 기준 |
-| `QA-002` | UI/E2E 증적 | UI-ID 목록, viewport, 서버 기동 절차, Playwright screenshot/log/trace 경로, 상태/시나리오별 1:1 증적 기준 |
+| `QA-002` | UI/E2E 증적 | UI-ID 목록, viewport, 서버 기동 절차, `@playwright/test` 공식 runner 명령, HTML report/trace/screenshot/log 경로, 상태/시나리오별 1:1 증적 기준 |
 | `QA-003` | 결과 정리/판정 후보 | QA Finding/Test Result 갱신 범위, 추적표 반영 후보, FIND/CR/ISSUE 후보, Orchestrator 결정 필요 항목 |
 
 QA-003의 실행 상태 원본은 `DOC-QA-G4-002_Test-Result_v0.1.md`다.
@@ -668,6 +677,10 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 
 하나의 `qa-execution` Run이 Gate 4 전체를 모두 수행한다고 쓰지 않는다.
 `QA-000`이 통과하지 않으면 `QA-001`/`QA-002`를 실행하지 않고 `environment_blocked` 또는 `Not Run`으로 반환한다.
+
+Audit/Solution Profile에서 공식 UI Pass는 `@playwright/test` 러너 실행 결과를 기준으로 한다.
+권장 기준은 `playwright.config.ts` 또는 동등 설정, `tests/e2e/**/*.spec.*`, `npx playwright test`, `playwright-report/`, `test-results/`, 상태별 screenshot을 연결하는 것이다.
+`playwright` 라이브러리를 직접 호출하는 커스텀 Node 스크립트는 PoC smoke/demo 또는 보조 관찰로 남길 수 있지만, audit/solution의 Gate 4 UI Pass 근거로 단독 사용하지 않는다.
 
 QA 실행 worker는 다음을 수행하지 않는다.
 

@@ -63,8 +63,8 @@ Profile별 기본 Overlay는 다음과 같다.
 | Profile | `gate_approval` | `traceability_level` | `program_contract_level` | `qa_evidence_level` | `independent_review_level` | `run_preflight_strictness` |
 | --- | --- | --- | --- | --- | --- | --- |
 | `audit` | 모든 Gate 명시 승인 | 전체 REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI | class/interface/public method 수준 | QA-000~QA-003, 명령 로그, UI 증적, FIND/CR | Gate 2, Gate 4, 필요 시 PR | 강한 차단 중심 |
-| `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | 릴리즈 회귀, 주요 UI/API 증적 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
-| `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | smoke, 데모 캡처, 결과 로그 | 선택 | 경고 중심 |
+| `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | 릴리즈 회귀, 주요 UI/API 증적, 공식 UI runner 기본 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
+| `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | smoke, 데모 캡처, 결과 로그, 필요 시 경량 UI script | 선택 | 경고 중심 |
 
 `--trace-seed`는 모든 Profile에서 사용할 수 있다.
 다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `solution`, `poc`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
@@ -82,6 +82,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 자동화 테스트는 원칙적으로 전체 실행하고, 통합/API/UI 테스트는 영향 범위를 중심으로 증적을 남긴다.
 - Build Wave Run은 가능한 한 `wave-start --trace-seed <상세 ID>`로 생성하고, worker 실행 전 `scope.writable`, `interface_contract`, `contract_skeleton`, 검증 명령을 확정한다.
 - Gate 4 QA는 QA-000 환경 준비, QA-001 명령 기반 검증, QA-002 UI/E2E 증적, QA-003 결과 정리와 판정 후보로 나누어 수행한다.
+- Gate 4 공식 UI Pass는 `@playwright/test` runner, `npx playwright test`, HTML report/trace/screenshot 증적을 기준으로 한다. 커스텀 Playwright script는 보조 관찰로만 남긴다.
 
 ### 4.2 Solution Profile
 
@@ -95,6 +96,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Gate는 유지하되 승인 절차를 가볍게 운영할 수 있다.
 - Program Design은 모든 private method까지 요구하지 않고 public API, service/usecase, DTO, persistence adapter 경계를 중심으로 작성한다.
 - QA는 릴리즈 후보 기준의 회귀 테스트, 주요 화면/API 증적, release note와 backlog 연결을 우선한다.
+- UI Pass는 기본적으로 `@playwright/test` runner 증적을 사용한다. 단, 프로젝트가 UI 자동화 대상이 아니거나 환경 차단이 승인되면 `Not Run`, `Skipped`, `environment_blocked`로 정직하게 기록한다.
 
 ### 4.3 PoC Profile
 
@@ -110,6 +112,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과, 환경 차단, 다음 판단 항목으로 기록할 수 있다.
 - subagent/thread 실험이 의미 있는 코드/문서 변경을 만들었으면 Run을 만들지 않더라도 결과 요약에 `delegation_records`와 같은 최소 항목을 남긴다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이 기준이다.
 - worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
+- UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 smoke로 사용할 수 있다. 다만 PoC 결과를 audit/solution으로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
 - `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.
 - `TBD`, `확정필요`, `미정`은 PoC에서 허용한다. 단, 목표, 성공 기준, 실제 실행 결과는 `TBD`로 둘 수 없다.

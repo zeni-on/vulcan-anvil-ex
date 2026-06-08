@@ -47,7 +47,7 @@ change_reason: 최초 초안 작성
 > 개발표준정의서의 "빌드, 실행, 테스트 명령" 표에서 필수로 지정한 명령은 실행 결과를 모두 기록한다.
 > 프로그램 설계서에 Interface/Public Method Contract가 있으면 `python vulcan.py check-contract` 결과를 설계 계약 준수 검증으로 기록한다.
 > `Pass`는 성공 기준, exit code, 로그/증적이 모두 확인될 때만 기록한다.
-> 화면 QA는 Playwright 설치 확인과 `npx playwright test` 실행 결과를 필수로 기록한다. CDP 또는 브라우저 수동 캡처만으로 UI Pass를 확정하지 않는다.
+> 화면 QA는 `@playwright/test` 설치 확인과 `npx playwright test` 실행 결과를 필수로 기록한다. CDP, 브라우저 수동 캡처, 또는 `playwright` 라이브러리 직접 호출 커스텀 스크립트만으로 audit/solution UI Pass를 확정하지 않는다.
 
 | 검증 ID | 목적 | 실행 위치(cwd) | 명령/방법 | OS | 필수 여부 | 성공 기준 | Exit Code | 결과 | 로그/증적 | 요약 | 관련 Run |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ change_reason: 최초 초안 작성
 > `파일`과 `증적`에는 Markdown 링크보다 `docs/artifacts/04-review/evidence/ui/파일명.png` 같은 프로젝트 기준 경로를 직접 쓰는 것을 표준으로 한다.
 > 사람이 읽기 쉬운 링크가 필요하면 대시보드가 `[라벨](evidence/ui/파일명.png)`도 보정하지만, 공식 산출물은 project-root 상대 경로를 우선한다.
 > 화면 증적은 화면 단위가 아니라 상태/시나리오 단위로 기록한다. 기대 화면과 다른 캡처를 Pass 증적으로 연결하지 않는다.
-> 화면 캡처 파일은 Playwright 실행으로 생성한다. Playwright 미설치 시 설치 후 재실행하고, 설치/실행 실패는 `Not Run` 또는 `FIND`로 기록한다.
+> 화면 캡처 파일은 `@playwright/test` 공식 러너 실행과 연결해 생성한다. Playwright 미설치 시 설치 후 재실행하고, 설치/실행 실패는 `Not Run` 또는 `FIND`로 기록한다.
 
 | 증적 ID | 관련 UI | 관련 SCR | 상태/시나리오 | 기대 화면 | 실제 확인 | 파일 | 결과 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -83,7 +83,8 @@ change_reason: 최초 초안 작성
 | Fail | 화면은 확인했지만 기대 화면과 다르다 |
 | Not Run | 캡처 또는 브라우저 검증을 수행하지 못했다 |
 | FIND 등록 | 테스트 항목과 증적 파일이 맞지 않거나, 기대 화면을 보여주지 못하는 캡처가 Pass로 기록된 경우 |
-| CDP/수동 캡처 | 보조 관찰로만 허용하며, Playwright 실행 결과 없이 Pass 불가 |
+| CDP/수동 캡처 | 보조 관찰로만 허용하며, `@playwright/test` 실행 결과 없이 Pass 불가 |
+| 커스텀 Playwright script | PoC smoke/demo 또는 보조 관찰로 허용할 수 있으나, audit/solution 공식 UI Pass는 `npx playwright test` 결과와 report/trace/screenshot을 기준으로 한다 |
 
 ### 4.2 UIREF 구현 계약 비교
 

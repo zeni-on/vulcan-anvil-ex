@@ -470,15 +470,26 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "state_level_required": True,
     "id_pattern": "UI-001-01",
     "capture_tool": "Playwright",
+    "official_runner": "@playwright/test",
+    "official_runner_command": "npx playwright test",
+    "official_runner_required_profiles": ["audit", "solution"],
+    "poc_fallback_allowed": True,
     "install_if_missing": [
         "npx playwright --version",
         "npm install -D @playwright/test",
         "npx playwright install",
     ],
+    "required_artifacts": [
+        "playwright-report/index.html 또는 동등한 HTML report",
+        "test-results/ trace, screenshot, video 중 프로젝트가 선택한 증적",
+        "docs/artifacts/04-review/evidence/ui/ 상태별 screenshot",
+    ],
     "forbidden_as_pass_evidence": [
         "CDP-only capture",
         "browser manual screenshot without Playwright run",
+        "custom Playwright library script without @playwright/test runner in audit/solution profile",
     ],
+    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
     "minimum_fields": [
         "UI-ID",
         "관련 SCR",
@@ -2169,6 +2180,13 @@ qa_failure_report_contract:
 ui_evidence_policy:
   state_level_required: {str(ui_evidence["state_level_required"]).lower()}
   id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
+  official_runner: {format_yaml_scalar(ui_evidence.get("official_runner", "@playwright/test"))}
+  official_runner_command: {format_yaml_scalar(ui_evidence.get("official_runner_command", "npx playwright test"))}
+  official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "solution"]))}
+  poc_fallback_allowed: {str(ui_evidence.get("poc_fallback_allowed", True)).lower()}
+  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
+  required_artifacts:
+{format_yaml_sequence(ui_evidence.get("required_artifacts", []), 4)}
   minimum_fields:
 {format_yaml_sequence(ui_evidence["minimum_fields"], 4)}
   examples:
@@ -12464,6 +12482,25 @@ def check_run_file(path):
             ))
             if has_ui_pass_evidence and not has_playwright_evidence:
                 issues.append("UI Pass 증적이 있지만 Playwright 실행 결과 또는 capture_tool: Playwright 기록이 없습니다.")
+            has_official_playwright_runner = bool(re.search(
+                r"@playwright/test|npx\s+(?:--yes\s+)?playwright\s+test|(?:^|\s)playwright\s+test|playwright\.config\.(?:ts|js|mjs|cjs)|playwright-report|test-results",
+                content,
+                re.IGNORECASE | re.MULTILINE,
+            ))
+            has_custom_playwright_script = bool(re.search(
+                r"run-e2e\.(?:js|mjs|ts)|require\(['\"]playwright['\"]\)|from\s+['\"]playwright['\"]|page\.screenshot\s*\(",
+                content,
+                re.IGNORECASE,
+            ))
+            looks_like_official_gate4_ui_pass = bool(re.search(
+                r"\b(gate4|qa-execution|QA-002|DOC-QA-G4|Audit Profile|Solution Profile|profile\s*:\s*(audit|solution))\b",
+                content,
+                re.IGNORECASE,
+            ))
+            if has_ui_pass_evidence and looks_like_official_gate4_ui_pass and not has_official_playwright_runner:
+                issues.append("Gate 4 공식 UI Pass는 @playwright/test 러너 실행 결과가 필요합니다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 기록하세요.")
+            if has_ui_pass_evidence and has_custom_playwright_script and not has_official_playwright_runner:
+                issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/solution에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
 
     # JSON Schema 기반 구조화 출력(Run metadata & Output) 정합성 검증
     yaml_meta = parse_simple_yaml_block(content)

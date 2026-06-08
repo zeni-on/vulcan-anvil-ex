@@ -19,7 +19,7 @@ Use this for Gate 4 QA and QA iterations.
 
 1. `QA-000`: prepare or confirm the QA workspace on the integration branch, dependencies, ports, DB, and smoke readiness.
 2. `QA-001`: run command-based checks such as syntax, unit/integration tests, lint, build, and contract checks.
-3. `QA-002`: collect UI/E2E evidence, screenshots, logs, and browser artifacts.
+3. `QA-002`: collect UI/E2E evidence, screenshots, logs, and browser artifacts. For audit/solution profiles, official UI Pass must be based on `@playwright/test` and `npx playwright test`; custom Playwright library scripts are PoC smoke/demo or auxiliary evidence only.
 4. `QA-003`: synthesize Test Result, QA Finding, traceability status candidates, and approval/blocking issues.
 
 `QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`. A separate QA worktree is optional and should be used only when explicitly enabled by project policy.

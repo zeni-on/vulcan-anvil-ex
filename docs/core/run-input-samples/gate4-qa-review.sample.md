@@ -123,12 +123,21 @@ ui_evidence_policy:
   state_level_required: true
   id_pattern: "UI-001-01"
   capture_tool_required: "Playwright"
+  official_runner: "@playwright/test"
+  official_runner_command: "npx playwright test"
+  official_runner_required_profiles: [audit, solution]
+  poc_fallback_allowed: true
   install_if_missing:
     - "npx playwright --version"
     - "npm install -D @playwright/test"
     - "npx playwright install"
+  required_artifacts:
+    - "playwright-report/index.html 또는 동등한 HTML report"
+    - "test-results/ trace, screenshot, video 중 프로젝트가 선택한 증적"
+    - "docs/artifacts/04-review/evidence/ui/ 상태별 screenshot"
   pass_forbidden_when:
     - "CDP 또는 브라우저 수동 캡처만 있고 Playwright 실행 결과가 없다."
+    - "audit/solution에서 @playwright/test runner 없이 커스텀 Playwright script 결과만 있다."
   examples:
     - "UI-001-01 회원가입 기본 화면"
     - "UI-001-02 약한 비밀번호 오류"
@@ -154,7 +163,7 @@ ui_implementation_contract_policy:
 - QA 결함이 승인된 설계 범위 안이면 FIND로 처리한다.
 - 요구사항, 보안 기준, 릴리즈 범위를 바꾸면 CR로 승격한다.
 - 개발표준의 필수 명령이 테스트결과서에 없거나, exit code/성공 기준/로그 증적 없이 Pass로 기록되어 있으면 FIND로 남긴다.
-- 화면 QA는 Playwright 기준으로 수행한다. CDP나 브라우저 수동 캡처는 보조 관찰로만 남기고 Pass 증적으로 쓰지 않는다.
+- 화면 QA는 `@playwright/test` 공식 runner 기준으로 수행한다. CDP, 브라우저 수동 캡처, 커스텀 Playwright script는 PoC smoke/demo 또는 보조 관찰로만 남기고 audit/solution Pass 증적으로 단독 사용하지 않는다.
 - 화면 퍼블리싱 기반 화면이 UI Implementation Contract와 다르면 기준 UIREF와 구현 screenshot을 비교하고, 허용되지 않은 차이를 FIND로 남긴다.
 - 기대 화면과 다른 캡처를 Pass로 기록하지 않는다. 예를 들어 회원가입 성공 테스트에 로그인 화면만 있으면 FIND로 남긴다.
 
