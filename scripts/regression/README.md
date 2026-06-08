@@ -13,6 +13,7 @@ python scripts/regression/run_audit_smoke.py
 이 스크립트는 임시 프로젝트를 만들고 다음 항목을 확인한다.
 
 - `vulcan.py init`이 최신 템플릿과 기본 산출물을 생성한다.
+- `status`와 `status --json`이 새 프로젝트의 Gate/Profile/다음 행동을 요약한다.
 - `branch-status`, `check-contract`, `check-architecture --level baseline`이 crash 없이 실행된다.
 - Phase 0 승인 전 `gate-start gate1`이 차단된다.
 - `implementation-scaffold` Run 초안이 생성되고 `run-check`를 통과한다.
@@ -28,6 +29,7 @@ python scripts/regression/run_fixture_smoke.py
 이 스크립트는 `scripts/regression/fixtures/simple-hello-audit/` fixture를 임시 프로젝트에 적용하고 다음 항목을 확인한다.
 
 - 완료된 문서 세트에서 `check-trace`가 통과한다.
+- 완료된 fixture 프로젝트에서 `status`가 Gate/Profile/브랜치 상태를 요약한다.
 - 설계 산출물에서 `check-architecture --level baseline`이 통과한다.
 - 최소 backend 소스와 Program Design 계약에서 `check-contract`가 실패 없이 동작한다.
 - 대표 Run 문서들이 `run-check`를 통과한다.
@@ -37,6 +39,9 @@ python scripts/regression/run_fixture_smoke.py
 - `trace-context`는 YAML/JSON 고정 seed에서 기대 ID와 `target_contracts`를 반환한다.
 - `release-pr --dry-run`은 `.vulcan/release/release-pr-body.md`를 만들고 Gate 5 증적, 수동 merge 정책, 독립 PR review 체크리스트를 포함한다.
 - `release-pr`는 잘못된 브랜치, 없는 base 브랜치, 미커밋 변경이 있을 때 차단된다.
+- 공식 QA 로그는 `.gitignore`에 막히지 않고, Playwright HTML report와 `test-results/`는 보조 로컬 산출물로 ignored 처리된다.
+- `run-integrate --dry-run`은 scope 밖 `playwright.config.*` 같은 변경을 `Config Hotfix Candidate`로 분류하고 Orchestrator 판단 선택지를 출력한다.
+- native/Agy delegation 흔적이 있는데 `delegation_records`가 비어 있는 완료 Run은 `run-check`와 `run-preflight`에서 차단된다.
 
 ## 범위
 

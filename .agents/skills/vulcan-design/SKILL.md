@@ -11,9 +11,10 @@ Use this for Gate 2 design and design iteration.
 
 1. Read `AGENTS.md`, `session.json`, and the current Gate 2 Run.
 2. Read Gate 1 requirements, acceptance criteria, and open decisions.
-3. Confirm the delivery profile with `python vulcan.py profile-status` when document depth or review strictness is unclear.
-4. Apply profile-specific design depth from `docs/core/DELIVERY_PROFILES.md`.
-5. Prefer `docs/core/GATE2_DESIGN_SEQUENCE.md` when the design order is unclear.
+3. Run `python vulcan.py status` when current Gate, profile, branch, or next action is unclear.
+4. Confirm the delivery profile with `python vulcan.py profile-status` only when profile detail is needed beyond `status`.
+5. Apply profile-specific design depth from `docs/core/DELIVERY_PROFILES.md`.
+6. Prefer `docs/core/GATE2_DESIGN_SEQUENCE.md` when the design order is unclear.
 
 ## Workflow
 

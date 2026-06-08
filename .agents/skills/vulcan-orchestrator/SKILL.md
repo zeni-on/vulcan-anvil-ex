@@ -9,14 +9,15 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 
 ## Start
 
-1. Read `GEMINI.md` (or `AGENTS.md` depending on the primary runner), `session.json`, and the user's latest request.
+1. Read `AGENTS.md`, `session.json`, and the user's latest request when Codex is the primary runner.
 2. Confirm `session.json.current_gate` and do not create artifacts beyond the current approved Gate.
-3. Confirm the delivery profile from `session.json` or `python vulcan.py profile-status`.
-4. Apply profile-specific depth, evidence, review, and Run-weight rules from `docs/core/DELIVERY_PROFILES.md`.
+3. Run `python vulcan.py status` first when current Gate, profile, branch, Run, or next action is unclear.
+4. Confirm the delivery profile from `session.json`, `python vulcan.py status`, or `python vulcan.py profile-status`.
+5. Apply profile-specific depth, evidence, review, and Run-weight rules from `docs/core/DELIVERY_PROFILES.md`.
    - In `poc`, prefer subagent/result-summary flow for short experiments; create compact Runs only for external workers, independent review, long delegation, or reproducible experiment records.
    - In `poc`, allow `TBD` only with reason and next decision timing. Do not leave goals, success criteria, or actual execution results as `TBD`.
-5. If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.
-6. Use `python vulcan.py branch-status` when branch or implementation/QA workspace state is unclear.
+6. If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.
+7. Use `docs/core/ORCHESTRATOR_CLI_GUIDE.md` for CLI usage; use `python vulcan.py branch-status` only when branch detail is needed beyond `status`.
 
 ## Route
 
@@ -39,7 +40,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 
 - Gate transitions require explicit user approval or an explicit proceed instruction.
 - Gate status is changed through `vulcan.py` commands, not by editing `session.json` directly.
-- Use `prepare-transition` for Gate transition readiness. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
+- Use `python vulcan.py status --check` for Gate transition readiness summary. Use `prepare-transition` only when detailed/compatibility transition diagnostics are needed. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
 - Use `run-check`, `run-preflight`, and `check-contract` as applicable.
 - Before native subagent/thread/native branch worker delegation, run `python vulcan.py run-preflight <run-file>` explicitly. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
 - Treat `prepare-transition` preflight findings as a safety net for completed current-Gate worker Runs, not as a substitute for pre-worker handoff preflight.
@@ -47,28 +48,12 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Native subagent/thread outputs should be normalized into `delegation_records`; external CLI runner outputs keep the full Run Execution Record and `_exec` logs.
 - Do not treat global memory or other sample projects as project facts.
 
-## CLI Quick Commands Map (Do not run --help, use this immediately)
+## CLI
 
-- **Gate Control**:
-  - Start Gate: `python vulcan.py gate-start <gate>` (e.g. `phase0`, `gate1`, `gate2`, `gate3`, `impl`, `gate4`, `gate5`)
-  - Complete Gate: `python vulcan.py session --gate <gate> --status done` (Optional: `--feature <name>`)
-  - Sync Remote/Local: `python vulcan.py sync-session`
-- **Run Lifecyle**:
-  - Create Orchestrator Plan: `python vulcan.py orchestrator-plan --goal "<goal>" --gate <gate>`
-  - Create New Run: `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"`
-  - Preflight Check: `python vulcan.py run-preflight <run_file>`
-  - Complete Check: `python vulcan.py run-check <run_file>`
-  - Gate Transition Readiness: `python vulcan.py prepare-transition`
-  - Trace Detail Check: `python vulcan.py check-trace`
-- **Build Wave & QA**:
-  - Integration Branch Status: `python vulcan.py branch-status`
-  - Start Integration Branch: `python vulcan.py branch-start impl`
-  - Start Build Wave: `python vulcan.py wave-start <BW-ID> --trace-seed <seed_id>`
-  - Complete Build Wave: `python vulcan.py wave-complete <BW-ID> --status Verified`
-  - Integrate Run: `python vulcan.py run-integrate <run_file>`
-- **Release & Upgrade**:
-  - Dry-run Release PR: `python vulcan.py release-pr --dry-run`
-  - Upgrade framework: `python vulcan.py upgrade`
+Do not run `python vulcan.py --help` repeatedly to discover routine commands. Use `docs/core/ORCHESTRATOR_CLI_GUIDE.md` and start with:
+
+- Current overview: `python vulcan.py status`
+- Transition readiness summary: `python vulcan.py status --check`
 
 ## Report
 

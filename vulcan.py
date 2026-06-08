@@ -10046,6 +10046,83 @@ def path_matches_any_scope(path, patterns):
     return any(scope_pattern_matches(path, pattern) for pattern in patterns or [])
 
 
+def classify_config_hotfix_candidate(path, worktree_path=""):
+    path = normalize_repo_path(path)
+    name = os.path.basename(path)
+    lower_path = path.lower()
+    lower_name = name.lower()
+
+    if not path or lower_path.startswith("docs/") or lower_path.startswith(".vulcan/"):
+        return None
+
+    exact_names = {
+        "playwright.config.js",
+        "playwright.config.cjs",
+        "playwright.config.mjs",
+        "playwright.config.ts",
+        "vite.config.js",
+        "vite.config.cjs",
+        "vite.config.mjs",
+        "vite.config.ts",
+        "vitest.config.js",
+        "vitest.config.cjs",
+        "vitest.config.mjs",
+        "vitest.config.ts",
+        "pytest.ini",
+        "tox.ini",
+        "mypy.ini",
+    }
+    if lower_name in exact_names:
+        return {
+            "classification": "config_hotfix_candidate",
+            "reason": "테스트/빌드 실행 설정 파일입니다. 기능 계약 변경 없이 검증 실행을 가능하게 하는 보정인지 확인하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": False,
+        }
+
+    if re.fullmatch(r"tsconfig(?:\.[\w-]+)?\.json", lower_name):
+        return {
+            "classification": "config_hotfix_candidate",
+            "reason": "TypeScript compile/test 설정 파일입니다. include/path/moduleResolution 보정인지 확인하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": False,
+        }
+
+    if lower_name.startswith("eslint.config.") or lower_name.startswith(".eslintrc"):
+        return {
+            "classification": "config_hotfix_candidate",
+            "reason": "Lint 실행 설정 파일입니다. 규칙 완화가 아니라 실행 환경 보정인지 확인하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": False,
+        }
+
+    if lower_name == "pyproject.toml":
+        return {
+            "classification": "config_hotfix_candidate",
+            "reason": "Python tool/test 설정 파일일 수 있습니다. build-system/dependency 변경이 아닌 test/lint 설정 보정인지 확인하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": True,
+        }
+
+    if lower_name == "package.json":
+        return {
+            "classification": "config_hotfix_candidate_requires_dependency_review",
+            "reason": "npm script 또는 test/build tooling 보정일 수 있습니다. dependencies/devDependencies 변경이면 Config Hotfix로 자동 수용하지 말고 review/CR 여부를 판단하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": True,
+        }
+
+    if lower_name in {"package-lock.json", "pnpm-lock.yaml", "yarn.lock"}:
+        return {
+            "classification": "dependency_lock_review_candidate",
+            "reason": "Lockfile 변경은 의존성 변경을 동반할 수 있습니다. Config Hotfix로 수용하려면 package 변경 원인과 보안/버전 영향을 확인하세요.",
+            "contract_change_allowed": False,
+            "dependency_change_review_required": True,
+        }
+
+    return None
+
+
 def run_integration_report_rel_path(project_dir, run_id):
     return os.path.join(execution_rel_dir(project_dir), f"{run_id}_integrate-report.json")
 
@@ -11665,6 +11742,7 @@ def cmd_run_integrate(
     entries = parse_git_status_entries(status_text)
     allowed = []
     violations = []
+    config_hotfix_candidates = []
     for entry in entries:
         paths_to_check = [entry["path"]]
         if entry.get("old_path"):
@@ -11676,6 +11754,10 @@ def cmd_run_integrate(
         classified["old_path"] = normalize_repo_path(classified.get("old_path", ""))
         if excluded or not writable:
             classified["reason"] = "excluded_scope" if excluded else "outside_writable_scope"
+            hotfix = classify_config_hotfix_candidate(classified["path"], worktree_path=worktree_path)
+            if hotfix:
+                classified["config_hotfix_candidate"] = hotfix
+                config_hotfix_candidates.append(classified)
             violations.append(classified)
         else:
             allowed.append(classified)
@@ -11695,8 +11777,10 @@ def cmd_run_integrate(
         "excluded_scope": excluded_scope,
         "allowed_files": allowed,
         "violations": violations,
+        "config_hotfix_candidates": config_hotfix_candidates,
         "orchestrator_next_actions": [
             "위반 파일이 있으면 worker 재작업 Run 또는 FIND로 돌려보낸다.",
+            "Config Hotfix 후보가 있으면 자동 승인/자동 되돌림 없이 Accept Config Hotfix, qa-fix-loop, CR, Reject 중 하나를 Orchestrator가 선택한다.",
             "허용 파일만 반영한 뒤 별도 Review/QA worker로 검수한다.",
             "추적표, session, wave-complete, check-trace는 Orchestrator 통합 단계에서 별도 처리한다.",
         ],
@@ -11717,6 +11801,14 @@ def cmd_run_integrate(
         print("  status: blocked_scope_violation")
         for item in violations[:20]:
             print(f"    - {item['status']} {item['path']} ({item['reason']})")
+        if config_hotfix_candidates:
+            print("  config_hotfix_candidates:")
+            for item in config_hotfix_candidates[:20]:
+                candidate = item.get("config_hotfix_candidate") or {}
+                print(f"    - {item['path']} [{candidate.get('classification', 'config_hotfix_candidate')}]")
+                print(f"      reason: {candidate.get('reason', '')}")
+                print(f"      required_decision: accept_config_hotfix | create_qa_fix_loop | escalate_to_CR | reject_or_revert")
+            print("  decision_rule: do not revert automatically; do not apply silently; Orchestrator must decide.")
     else:
         print("  status: ready_to_apply")
 
@@ -13148,6 +13240,164 @@ def cmd_profile_status(project_dir="."):
         print("  note: non-audit profiles are recorded as overlay policy first; most checks still share audit-safe defaults until profile-specific strictness is implemented.")
 
 
+def collect_status_summary(project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    session = {}
+    session_path = os.path.join(project_abs, "session.json")
+    if os.path.exists(session_path):
+        try:
+            session = load_session(project_abs)
+        except SystemExit:
+            session = {}
+
+    workflow = workflow_policy(project_abs)
+    profile = load_delivery_profile(project_abs) if session else DEFAULT_DELIVERY_PROFILE
+    current_gate = session.get("current_gate") or "-"
+    gate_status = session.get("gate_status", {}) if isinstance(session.get("gate_status"), dict) else {}
+    implementation = session.get("implementation", {}) if isinstance(session.get("implementation"), dict) else {}
+    branch_state = session.get("branch_state", {}) if isinstance(session.get("branch_state"), dict) else {}
+    current_branch = git_current_branch(project_abs)
+    integration_branch = workflow.get("integration_branch") or "dev"
+    main_branch = workflow.get("main_branch") or "main"
+    qa_state = qa_workspace_state(session)
+
+    open_statuses = {"draft", "inprogress", "in progress", "running"}
+    active_runs = []
+    for record in collect_run_gate_records(project_abs):
+        if current_gate != "-" and record["gate"] != current_gate:
+            continue
+        if record["status"].strip().lower() in open_statuses:
+            active_runs.append(record)
+
+    wave_records = collect_build_wave_records(project_abs)
+    active_waves = [
+        wave for wave in wave_records
+        if wave.get("status") not in ("Verified", "Completed", "Done")
+    ]
+
+    next_actions = []
+    if not session:
+        next_actions.extend([
+            "python vulcan.py init <target-dir> <project-name>",
+            "python vulcan.py version",
+        ])
+    else:
+        if current_gate == "completed":
+            next_actions.append("프로젝트 완료: 추가 Gate 전환 없음")
+        else:
+            next_actions.append("python vulcan.py status --check")
+    if current_gate == "impl":
+        if current_branch != integration_branch:
+            next_actions.insert(0, "python vulcan.py branch-start impl")
+        elif active_waves:
+            next_actions.insert(0, "python vulcan.py wave-complete <BW-ID> --status Verified")
+        else:
+            next_actions.insert(0, "python vulcan.py wave-start <BW-ID> --trace-seed <ID>")
+    elif current_gate in ("gate4", "gate5"):
+        next_actions.insert(0, "python vulcan.py prepare-transition")
+    elif current_gate in GATE_ORDER:
+        next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
+
+    return {
+        "project": session.get("project") or os.path.basename(project_abs),
+        "profile": profile,
+        "current_gate": current_gate,
+        "gate_status": gate_status.get(current_gate, "-") if current_gate != "-" else "-",
+        "current_branch": current_branch,
+        "main_branch": main_branch,
+        "integration_branch": integration_branch,
+        "branch_mode": workflow.get("branch_mode"),
+        "impl_uses_integration_branch": workflow.get("impl_uses_integration_branch"),
+        "session_branch_role": branch_state.get("current_role", "") or "-",
+        "qa_workspace": qa_state,
+        "dirty_blocking": has_blocking_dirty_status(project_abs),
+        "integration_exists": git_branch_exists(integration_branch, project_abs),
+        "implementation": implementation,
+        "active_runs": active_runs,
+        "active_waves": active_waves,
+        "next_actions": next_actions[:3],
+    }
+
+
+def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
+    summary = collect_status_summary(project_dir)
+
+    if emit_json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        if check:
+            print("오류: status --json --check는 아직 지원하지 않습니다. `python vulcan.py status --check`를 사용하세요.", file=sys.stderr)
+            sys.exit(2)
+        if trace_detail:
+            print("오류: status --json --trace-detail은 아직 지원하지 않습니다. `python vulcan.py status --trace-detail`을 사용하세요.", file=sys.stderr)
+            sys.exit(2)
+        return
+
+    print("==================================================")
+    print(" [status] Vulcan Orchestrator status")
+    print("==================================================")
+    print(f" project: {summary['project']}")
+    print(f" profile: {summary['profile']}")
+    print(f" current_gate: {summary['current_gate']}")
+    print(f" gate_status: {summary['gate_status']}")
+    print()
+    print(" branch")
+    print(f"  current_branch: {summary['current_branch']}")
+    print(f"  main_branch: {summary['main_branch']}")
+    print(f"  integration_branch: {summary['integration_branch']}")
+    print(f"  integration_exists: {summary['integration_exists']}")
+    print(f"  dirty_blocking: {summary['dirty_blocking']}")
+    print(f"  session_branch_role: {summary['session_branch_role']}")
+    qa_state = summary.get("qa_workspace") or {}
+    if qa_state:
+        print(" qa_workspace")
+        print(f"  path: {qa_state.get('path') or '-'}")
+        print(f"  mode: {qa_state.get('mode') or '-'}")
+        print(f"  status: {qa_state.get('status') or '-'}")
+        print(f"  last_stage: {qa_state.get('last_stage') or '-'}")
+    print()
+
+    implementation = summary.get("implementation") or {}
+    if implementation:
+        print(" implementation")
+        print(f"  implemented: {implementation.get('implemented', 0)} / {implementation.get('total', 0)}")
+        print(f"  percent: {implementation.get('percent', 0)}")
+        print(f"  waves: {implementation.get('waves_completed', 0)} / {implementation.get('waves_total', 0)}")
+        print()
+
+    active_runs = summary.get("active_runs") or []
+    print(f" active_runs: {len(active_runs)}")
+    for run in active_runs[:5]:
+        print(f"  - {run['path']} ({run['status']})")
+    if len(active_runs) > 5:
+        print(f"  ... 외 {len(active_runs) - 5}건")
+
+    active_waves = summary.get("active_waves") or []
+    print(f" active_waves: {len(active_waves)}")
+    for wave in active_waves[:5]:
+        run_suffix = f" / {wave.get('run')}" if wave.get("run") else ""
+        print(f"  - {wave.get('id')} ({wave.get('status')}){run_suffix}")
+    if len(active_waves) > 5:
+        print(f"  ... 외 {len(active_waves) - 5}건")
+    print()
+
+    print(" next_actions")
+    for action in summary.get("next_actions") or []:
+        print(f"  - {action}")
+    print("==================================================")
+
+    if trace_detail:
+        print()
+        print("[status --trace-detail] check-trace 상세 진단")
+        issues, _warnings = check_trace(project_dir, exit_on_error=False)
+        if issues:
+            sys.exit(1)
+
+    if check:
+        print()
+        print("[status --check] prepare-transition 상세 진단")
+        cmd_prepare_transition(project_dir)
+
+
 def cmd_branch_start(stage="impl", project_dir="."):
     project_abs = os.path.abspath(project_dir)
     workflow = workflow_policy(project_abs)
@@ -13536,7 +13786,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         print(f"  생성: vulcan_core/")
 
     # .gitignore
-    gitignore = "node_modules/\n.env\n.env.local\n__pycache__/\n*.pyc\n.pytest_cache/\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n.vulcan/release/\n"
+    gitignore = "node_modules/\n.env\n.env.local\n__pycache__/\n*.pyc\n.pytest_cache/\nplaywright-report/\ntest-results/\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n.vulcan/release/\n"
     write_file(target_dir, ".gitignore", gitignore)
 
     # git init + 초기 커밋
@@ -13606,6 +13856,7 @@ def main():
         epilog="""
 명령어:
   init         새 프로젝트 초기화 (Vulcan-Anvil 디렉토리에서 실행)
+  status       현재 Gate/Profile/Branch/Run 상태 요약
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
   prepare-transition Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사
   check-contract Program Design 구현 계약과 코드 구조 대조
@@ -13625,6 +13876,8 @@ def main():
   python vulcan.py init ../my-app "MyApp"
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git
   python vulcan.py init ../my-app "MyApp" --remote https://github.com/me/my-app.git --require-remote
+  python vulcan.py status
+  python vulcan.py status --check
   python vulcan.py check-trace
   python vulcan.py check-contract --report docs/artifacts/04-review/evidence/contract/contract-conformance.json
   python vulcan.py trace-context --id REQ-001-01 --depth 2 --emit yaml
@@ -13652,6 +13905,11 @@ def main():
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
     p_init.add_argument("--profile", default=DEFAULT_DELIVERY_PROFILE, choices=list(SUPPORTED_DELIVERY_PROFILES), help="Delivery Profile")
     p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
+
+    p_status = subparsers.add_parser("status", help="현재 Gate/Profile/Branch/Run 상태 요약")
+    p_status.add_argument("--check", action="store_true", help="status 뒤에 prepare-transition 진단을 이어서 실행")
+    p_status.add_argument("--trace-detail", action="store_true", help="status 뒤에 check-trace 상세 진단을 이어서 실행")
+    p_status.add_argument("--json", action="store_true", help="상태 요약을 JSON으로 출력")
 
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
     subparsers.add_parser("prepare-transition", help="Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사하고 결과를 요약")
@@ -13858,6 +14116,8 @@ def main():
             profile=args.profile,
             primary=args.primary,
         )
+    elif args.command == "status":
+        cmd_status(check=args.check, trace_detail=args.trace_detail, emit_json=args.json)
     elif args.command == "check-trace":
         issues, _ = check_trace()
         if issues:

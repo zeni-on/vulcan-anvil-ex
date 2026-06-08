@@ -15,7 +15,9 @@ Orchestrator는 별도 persona가 아니다. Orchestrator는 현재 단계의 �
 - Orchestrator는 서브에이전트 결과를 최종 사실로 그대로 확정하지 않는다.
 - Orchestrator는 구현자가 자기 구현을 최종 승인하지 않도록 review persona 관점의 검수를 둔다. 별도 실행 환경 검수는 필요할 때 제안한다.
 - Orchestrator는 도구가 제공하는 편의 기능을 활용하되, 도구가 판단 주체가 되게 하지 않는다.
-- Orchestrator는 단계 종료 전에 `vulcan.py run-check`, `vulcan.py prepare-transition`, 테스트, 린트, 화면 증적 중 필요한 검증을 실행하거나 검증 계획을 남긴다. 추적성만 상세 디버깅해야 할 때는 `vulcan.py check-trace`를 별도로 실행한다.
+- Orchestrator는 현재 위치와 다음 행동이 애매하면 먼저 `python vulcan.py status`를 실행한다.
+- Orchestrator는 단계 종료 전에 기본적으로 `python vulcan.py status --check`로 전환 가능성을 확인하고, 필요한 경우 `run-check`, 테스트, 린트, 화면 증적, `prepare-transition`, `check-trace` 같은 원자 검증으로 내려간다.
+- Orchestrator는 CLI 세부 사용법을 `docs/core/ORCHESTRATOR_CLI_GUIDE.md`에서 확인한다.
 
 ## 3. 컨시어지 응답
 

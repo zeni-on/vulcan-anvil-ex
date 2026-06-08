@@ -105,6 +105,16 @@ def assert_paths(project_dir: Path) -> None:
         raise SmokeFailure("init missing required paths:\n" + "\n".join(f"  - {path}" for path in missing))
 
 
+def assert_init_gitignore_policy(project_dir: Path) -> None:
+    content = (project_dir / ".gitignore").read_text(encoding="utf-8")
+    required = ["playwright-report/", "test-results/"]
+    missing = [entry for entry in required if entry not in content]
+    if missing:
+        raise SmokeFailure(f"init .gitignore missing expected local-debug artifact entries: {missing}")
+    if "*.log" in content:
+        raise SmokeFailure("init .gitignore must not ignore all *.log files; official QA logs must remain trackable")
+
+
 def find_single_run(project_dir: Path) -> Path:
     runs = sorted((project_dir / "docs" / "runs").glob("RUN-*.md"))
     if len(runs) != 1:
@@ -144,8 +154,34 @@ def run_smoke(args: argparse.Namespace) -> int:
             )
         )
         assert_paths(project_dir)
+        assert_init_gitignore_policy(project_dir)
 
         steps.append(run_step("version", [py, "vulcan.py", "version"], cwd=project_dir))
+        steps.append(
+            run_step(
+                "status",
+                [py, "vulcan.py", "status"],
+                cwd=project_dir,
+                required_text=[
+                    "[status] Vulcan Orchestrator status",
+                    "current_gate: phase0",
+                    "profile: audit",
+                    "next_actions",
+                ],
+            )
+        )
+        steps.append(
+            run_step(
+                "status-json",
+                [py, "vulcan.py", "status", "--json"],
+                cwd=project_dir,
+                required_text=[
+                    '"current_gate": "phase0"',
+                    '"profile": "audit"',
+                    '"next_actions"',
+                ],
+            )
+        )
         steps.append(
             run_step(
                 "branch-status",

@@ -15,11 +15,13 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 `--profile`을 지정하지 않으면 기본값은 `audit`입니다.
 `solution`, `poc`는 초기화 시 선택할 수 있으며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
 Profile은 결과물의 품질 등급이 아니라 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식의 차이입니다.
-현재 프로젝트의 Profile은 다음 명령으로 확인합니다.
+현재 프로젝트의 Gate/Profile/Branch/다음 행동은 다음 명령으로 먼저 확인합니다.
 
 ```powershell
-python vulcan.py profile-status
+python vulcan.py status
 ```
+
+Profile 규칙을 더 자세히 확인해야 할 때만 `python vulcan.py profile-status`를 사용합니다.
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
@@ -137,15 +139,17 @@ my-project/
 | 명령 | 설명 |
 | --- | --- |
 | `init` | 새 프로젝트에 Vulcan-Anvil Ex 문서와 템플릿을 주입 |
+| `status` | 현재 Gate, Profile, 브랜치, active Run/Wave, 다음 행동 후보를 한 번에 요약 |
+| `status --check` | `prepare-transition` 기반 Gate 전환 진단을 status 출력 뒤에 이어서 실행 |
 | `orchestrator-plan` | Orchestrator 실행 계획 Run 생성 |
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
-| `prepare-transition` | 다음 Gate로 넘어가기 전 Run 완료, 추적성, 차단 사유를 한 번에 진단 |
+| `prepare-transition` | 다음 Gate로 넘어가기 전 상세/호환 진단. 일반적으로는 `status --check`를 먼저 사용 |
 | `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
 | `run-new --trace-seed <ID>` | 추적성 그래프 기반으로 Run 초안의 관련 ID와 참조 문서 후보 보강 |
 | `wave-start <BW-ID> --trace-seed <ID>` | Build Wave Run 초안의 `related_ids`, `target_contracts`, 참조 문서 후보 보강 |
-| `profile-status` | 현재 Delivery Profile과 `profile_rules` 확인 |
-| `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 확인 |
+| `profile-status` | 현재 Delivery Profile과 `profile_rules` 상세 확인 |
+| `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 상세 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
 | `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
 | `agent-run --mode work` | 선택 사항. Run 문서를 codex-cli, claude-cli, antigravity-cli 같은 외부 CLI worker runner로 실행 |
@@ -216,10 +220,12 @@ python vulcan.py run-preflight <run-file>
 Gate 산출물 작성이 끝났다고 바로 다음 Gate로 넘어가지 않습니다. Orchestrator는 먼저 현재 Gate 상태와 Run 완료 여부, 추적성 이슈를 한 번에 확인합니다.
 
 ```powershell
-python vulcan.py prepare-transition
+python vulcan.py status --check
 ```
 
-`prepare-transition`은 `check-trace`를 없애는 명령이 아니라, Gate 전환 전에 봐야 할 내용을 묶어서 보여주는 진단 명령입니다. 실패하면 다음 Gate로 넘어가지 말고, 출력된 산출물/ID/Run 기준으로 원인을 정리한 뒤 사용자에게 승인 또는 보완 방향을 묻습니다. 추적성 문제만 더 깊게 봐야 할 때만 `check-trace`를 별도로 실행합니다.
+`status --check`는 `prepare-transition` 진단을 status 흐름 안에서 보여주는 기본 진입점입니다. 실패하면 다음 Gate로 넘어가지 말고, 출력된 산출물/ID/Run 기준으로 원인을 정리한 뒤 사용자에게 승인 또는 보완 방향을 묻습니다.
+
+`prepare-transition`은 여전히 사용할 수 있지만, 일반적인 첫 명령이 아니라 상세/호환 진단 명령으로 둡니다. 추적성 문제만 더 깊게 봐야 할 때만 `check-trace`를 별도로 실행합니다.
 
 ### 4.4 설계-구현 Drift 확인
 

@@ -197,7 +197,7 @@ open_issues: []
 
 에이전트는 현재 Gate의 완료 조건을 만족하지 못하면 다음 Gate로 넘어갔다고 선언하지 않는다.
 
-에이전트는 `session.json.current_gate`보다 앞선 Gate의 작업을 임의로 수행하지 않는다. Run 문서의 `gate:` 값은 실제 진행 상태를 바꾸지 않는다. Gate 진행 상태는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py prepare-transition`을 통해 확인하고 갱신한다. `check-trace`는 추적성 오류를 상세 분석하거나 trace-only 회귀 검증이 필요할 때 직접 실행한다.
+에이전트는 `session.json.current_gate`보다 앞선 Gate의 작업을 임의로 수행하지 않는다. Run 문서의 `gate:` 값은 실제 진행 상태를 바꾸지 않는다. 현재 상태와 다음 행동은 먼저 `python vulcan.py status`로 확인하고, Gate 전환 가능성은 기본적으로 `python vulcan.py status --check`로 진단한다. 실제 Gate 상태 갱신은 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py sync-session`으로 수행한다. `prepare-transition`은 상세/호환 진단이 필요할 때 직접 실행하고, `check-trace`는 추적성 오류를 상세 분석하거나 trace-only 회귀 검증이 필요할 때 직접 실행한다.
 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py wave-start`, `vulcan.py wave-complete` 같은 상태 변경 명령은 대시보드용 stats 캐시를 함께 갱신해야 한다. `vulcan.py sync-session`은 수동 복구 또는 재계산이 필요할 때 사용하는 보조 명령이다.
 
 현재 Gate별 금지 예시는 다음과 같다.
@@ -377,6 +377,16 @@ worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으
 위반 파일이나 충돌이 있으면 Orchestrator가 직접 수정하지 않고 재작업 Run, QA Fix Run, Traceability Run, FIND/CR/ISSUE 중 하나로 돌려보낸다.
 `run-integrate --apply`는 허용 diff를 반영하는 팬인 동작일 뿐이며, 테스트 작성, 코드 보정, 추적표 보정, Gate/session 갱신을 대신하지 않는다.
 
+단, scope 위반 파일이 `playwright.config.*`, `vite.config.*`, `vitest.config.*`, `tsconfig*.json`, `eslint.config.*`, `pytest.ini`, `pyproject.toml`, `package.json`, lockfile처럼 테스트/빌드 실행 설정일 수 있으면 `run-integrate --dry-run`은 `Config Hotfix Candidate`로 분류할 수 있다.
+이 분류는 자동 승인이 아니다. Orchestrator는 다음 중 하나를 명시적으로 선택해야 한다.
+
+1. Config Hotfix로 수용하고 Run의 `scope.writable` 또는 결과 기록을 보정한 뒤 검증을 재실행한다.
+2. 승인된 설계 범위 안의 결함 수정이면 `qa-fix-loop`로 분리한다.
+3. 의존성, 보안, API/DTO/DB/UI 계약 변경이면 `CR` 후보로 승격한다.
+4. 해당 변경이 부적절하면 worker 변경을 거부하거나 되돌린다.
+
+`package.json`, lockfile, `pyproject.toml`은 dependency/security 영향이 있을 수 있으므로 Config Hotfix 후보로 보이더라도 dependency review가 필요하다.
+
 Codex desktop의 `spawn_agent`, Codex thread, Claude subagent, Agy workspace branch agent 같은 런타임 native worker는 같은 Gate/Run 계약 안에서 우선 사용할 수 있다.
 외부 CLI runner(`agent-run`/`run-exec`)는 장시간 독립 실행, cross-runner 검증, 별도 프로세스 로그/timeout/watchdog 증적이 필요한 경우에 사용한다.
 
@@ -438,7 +448,7 @@ Orchestrator는 각 Gate 2 Run에 현재 순서 위치와 다음 Gate 2 Run 후�
 | --- | --- | --- |
 | Gate 2 시작 | Architecture Draft를 만들고 C1/C2, 주요 CNT, 주요 ADR 후보, Pending 항목을 드러낸다 | `python vulcan.py check-architecture --level draft` |
 | 상세 설계 작성 후 | 기능/프로그램/API/DB/화면/보안가이드 내용을 아키텍처의 CMP/FLOW/품질속성/상세 설계 연결로 되돌려 반영한다 | `python vulcan.py check-architecture --level baseline` |
-| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py prepare-transition` |
+| Gate 3 진입 전 | Gate 3 테스트 설계에 영향을 주는 Pending을 닫거나 RISK/ASM/Q/ISSUE/CR로 분류한다 | `python vulcan.py status --check` |
 
 SW 아키텍처의 물리/운영 상세가 필요한 경우 `DOC-ARCH-G2-002_Deployment-Infrastructure-Architecture_v0.1.md`를 함께 작성한다.
 이 문서는 인프라 담당자의 상세 장비/네트워크 설정서를 대체하지 않고, SW 운영자가 알아야 할 배포 토폴로지, L2/L3/L4/WAF/FW/WAS/DB/Storage/Monitoring 연결, 이중화, 포트/프로토콜, TLS 종료 위치, health check, 세션, DB failover, 파일 저장소, 로그/백업/모니터링 영향을 기록한다.

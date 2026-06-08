@@ -276,6 +276,173 @@ def assert_release_pr_body(result: StepResult) -> None:
         raise FixtureSmokeFailure(f"release-pr body missing required text: {missing}\n{body}")
 
 
+def assert_gitignore_evidence_policy(project_dir: Path, py: str, steps: list[StepResult]) -> None:
+    official_log = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "logs" / "QA-CMD-999_fixture.log"
+    official_log.parent.mkdir(parents=True, exist_ok=True)
+    official_log.write_text("fixture official QA log\n", encoding="utf-8")
+    steps.append(
+        run_step(
+            "gitignore-allows-official-qa-log",
+            ["git", "check-ignore", str(official_log.relative_to(project_dir))],
+            cwd=project_dir,
+            expected_returncodes={1},
+        )
+    )
+
+    playwright_report = project_dir / "playwright-report" / "index.html"
+    playwright_report.parent.mkdir(parents=True, exist_ok=True)
+    playwright_report.write_text("<!doctype html><title>debug report</title>\n", encoding="utf-8")
+    steps.append(
+        run_step(
+            "gitignore-ignores-playwright-report",
+            ["git", "check-ignore", str(playwright_report.relative_to(project_dir))],
+            cwd=project_dir,
+            required_text=["playwright-report", "index.html"],
+        )
+    )
+
+    test_result = project_dir / "test-results" / "fixture.txt"
+    test_result.parent.mkdir(parents=True, exist_ok=True)
+    test_result.write_text("debug artifact\n", encoding="utf-8")
+    steps.append(
+        run_step(
+            "gitignore-ignores-test-results",
+            ["git", "check-ignore", str(test_result.relative_to(project_dir))],
+            cwd=project_dir,
+            required_text=["test-results", "fixture.txt"],
+        )
+    )
+
+
+def write_bad_native_delegation_run(project_dir: Path, source_run_name: str, target_run_name: str) -> Path:
+    source = project_dir / "docs" / "runs" / source_run_name
+    target = project_dir / "docs" / "runs" / target_run_name
+    content = source.read_text(encoding="utf-8")
+    content = re.sub(r"run_id:\s*RUN-\d+", "run_id: RUN-999", content, count=1)
+    content += (
+        "\n\n## Native Delegation Regression Fixture\n\n"
+        "Agy Workspace: branch worker completed this Run, but this fixture intentionally "
+        "omits delegation_records so run-check/run-preflight must block it.\n"
+    )
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def assert_native_delegation_guardrails(project_dir: Path, py: str, steps: list[StepResult]) -> None:
+    bad_build_run = write_bad_native_delegation_run(
+        project_dir,
+        "RUN-012_build-wave-BW-001_python-hello-api-feature-implementation_v0.1.md",
+        "RUN-999_native-delegation-missing-records-build_v0.1.md",
+    )
+    build_arg = str(bad_build_run.relative_to(project_dir))
+    steps.append(
+        run_step(
+            "run-check-blocks-native-build-without-delegation-records",
+            [py, "vulcan.py", "run-check", build_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=["native/Agy worker 사용 흔적", "delegation_records"],
+        )
+    )
+    steps.append(
+        run_step(
+            "run-preflight-blocks-native-build-without-delegation-records",
+            [py, "vulcan.py", "run-preflight", build_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=["native/Agy worker 사용 흔적", "delegation_records"],
+        )
+    )
+
+    bad_qa_run = write_bad_native_delegation_run(
+        project_dir,
+        "RUN-014_qa-000-gate-4-environment-smoke-for-python-hello-api_v0.1.md",
+        "RUN-998_native-delegation-missing-records-qa_v0.1.md",
+    )
+    qa_arg = str(bad_qa_run.relative_to(project_dir))
+    steps.append(
+        run_step(
+            "run-check-blocks-native-qa-without-delegation-records",
+            [py, "vulcan.py", "run-check", qa_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=["native/Agy", "delegation_records"],
+        )
+    )
+    steps.append(
+        run_step(
+            "run-preflight-blocks-native-qa-without-delegation-records",
+            [py, "vulcan.py", "run-preflight", qa_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=["native/Agy", "delegation_records"],
+        )
+    )
+
+
+def assert_run_integrate_config_hotfix_candidate(project_dir: Path, py: str, steps: list[StepResult]) -> None:
+    session_path = project_dir / "session.json"
+    session_before = json.loads(session_path.read_text(encoding="utf-8"))
+    session_for_integrate = json.loads(json.dumps(session_before))
+    session_for_integrate["current_gate"] = "impl"
+    session_path.write_text(
+        json.dumps(session_for_integrate, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    worker_dir = project_dir.parent / "config-hotfix-worker"
+    try:
+        steps.append(
+            run_step(
+                "worktree-add-config-hotfix-worker",
+                ["git", "worktree", "add", "-b", "codex/config-hotfix-fixture", str(worker_dir), "HEAD"],
+                cwd=project_dir,
+            )
+        )
+        (worker_dir / "playwright.config.ts").write_text(
+            "export default { testDir: './frontend/e2e' };\n",
+            encoding="utf-8",
+        )
+        steps.append(
+            run_step(
+                "run-integrate-detects-config-hotfix-candidate",
+                [
+                    py,
+                    "vulcan.py",
+                    "run-integrate",
+                    "--run-id",
+                    "RUN-012",
+                    "--worktree-dir",
+                    str(worker_dir),
+                    "--dry-run",
+                ],
+                cwd=project_dir,
+                required_text=[
+                    "blocked_scope_violation",
+                    "config_hotfix_candidates",
+                    "playwright.config.ts",
+                    "required_decision",
+                    "accept_config_hotfix",
+                    "do not revert automatically",
+                ],
+            )
+        )
+    finally:
+        session_path.write_text(
+            json.dumps(session_before, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        if worker_dir.exists():
+            steps.append(
+                run_step(
+                    "worktree-remove-config-hotfix-worker",
+                    ["git", "worktree", "remove", "--force", str(worker_dir)],
+                    cwd=project_dir,
+                    expected_returncodes={0, 1},
+                )
+            )
+
+
 def run_fixture_smoke(args: argparse.Namespace) -> int:
     root = repo_root()
     fixture_dir = root / "scripts" / "regression" / "fixtures" / args.fixture
@@ -384,7 +551,21 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         steps.append(run_step("commit-fixture-state:add", ["git", "add", "-A"], cwd=project_dir))
         steps.append(run_step("commit-fixture-state:commit", ["git", "commit", "-m", "test: apply completed fixture"], cwd=project_dir))
         steps.append(run_step("checkout-integration-branch", ["git", "checkout", "-B", "dev"], cwd=project_dir))
+        assert_run_integrate_config_hotfix_candidate(project_dir, py, steps)
 
+        steps.append(
+            run_step(
+                "status-fixture",
+                [py, "vulcan.py", "status"],
+                cwd=project_dir,
+                required_text=[
+                    "[status] Vulcan Orchestrator status",
+                    "current_gate: completed",
+                    "profile: audit",
+                    "current_branch: dev",
+                ],
+            )
+        )
         steps.append(run_step("branch-status", [py, "vulcan.py", "branch-status"], cwd=project_dir))
         steps.append(
             run_step(
@@ -623,6 +804,9 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         assert_poc_trace_seed_generated_run(project_dir, poc_trace_seed_run_new)
         steps.append(poc_trace_seed_run_new)
+
+        assert_gitignore_evidence_policy(project_dir, py, steps)
+        assert_native_delegation_guardrails(project_dir, py, steps)
 
         print("Vulcan fixture smoke regression: PASS")
         print(f"  fixture: {args.fixture}")

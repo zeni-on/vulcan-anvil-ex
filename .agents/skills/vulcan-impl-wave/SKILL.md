@@ -11,9 +11,9 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 
 1. Confirm `session.json.current_gate` is `impl`.
 2. Confirm previous Gate approval exists.
-3. Confirm the delivery profile with `session.json` or `python vulcan.py profile-status`.
+3. Run `python vulcan.py status` to confirm Gate, profile, branch, active Run/Wave, and dirty state.
 4. Apply profile-specific Run weight and trace depth rules from `docs/core/DELIVERY_PROFILES.md`.
-5. Confirm implementation branch state with `python vulcan.py branch-status`.
+5. Use `python vulcan.py branch-status` only if branch-only detail is needed beyond `status`.
 
 ## Workflow
 

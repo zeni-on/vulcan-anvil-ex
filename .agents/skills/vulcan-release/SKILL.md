@@ -11,9 +11,9 @@ Use this for Gate 5 release and release preparation.
 
 1. Confirm `session.json.current_gate` is `gate5` or that Gate 4 is approved for Gate 5.
 2. Read Release Approval, Test Result, QA Finding, Backlog, Change Request, and Traceability Matrix.
-3. Confirm the delivery profile with `session.json` or `python vulcan.py profile-status`.
+3. Run `python vulcan.py status` to confirm Gate, profile, branch, release readiness context, and dirty state.
 4. Apply profile-specific release control from `docs/core/DELIVERY_PROFILES.md`.
-5. Confirm branch state with `python vulcan.py branch-status`.
+5. Use `python vulcan.py branch-status` only if branch-only detail is needed beyond `status`.
 
 ## Workflow
 
@@ -25,7 +25,8 @@ Use this for Gate 5 release and release preparation.
 
 ## Verification
 
-- `python vulcan.py prepare-transition`
+- `python vulcan.py status --check`
+- `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed
 - `python vulcan.py check-trace` only when traceability needs detailed debugging
 - Relevant `run-check` commands for release Runs
 - `python vulcan.py release-pr --dry-run`

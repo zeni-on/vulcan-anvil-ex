@@ -81,7 +81,7 @@ flowchart LR
   PR -->|"명시 승인 후 수동 merge"| Release["main 또는 workflow.release_merge_to"]
 ```
 
-대시보드는 현재 폴더가 어떤 브랜치를 checkout하고 있는지와 설정된 `workflow.integration_branch`를 보여주는 관찰 화면입니다. 실제 규약 위반 여부와 브랜치 전환은 `vulcan.py branch-status`, `branch-start impl`, `wave-start`, `run-exec` guard가 담당합니다.
+대시보드는 현재 폴더가 어떤 브랜치를 checkout하고 있는지와 설정된 `workflow.integration_branch`를 보여주는 관찰 화면입니다. 실제 규약 위반 여부와 브랜치 전환은 `vulcan.py status`, 필요 시 `branch-status`, `branch-start impl`, `wave-start`, `run-exec` guard가 담당합니다.
 
 Gate 5에서는 `python vulcan.py release-pr`로 통합 브랜치에서 기준 브랜치로 가는 Release PR을 만들 수 있습니다.
 Release PR은 릴리즈 후보를 검토하기 위한 단위이며, runner 결과만으로 자동 merge하지 않습니다.
@@ -90,13 +90,13 @@ merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤
 
 ## Gate Transition Readiness
 
-Gate 산출물이 작성되었다고 해서 다음 Gate로 자동 진행하지 않습니다. `prepare-transition`은 다음 Gate로 넘어가기 전에 Run 완료 상태, 추적성 정합성, 차단 이슈를 한 번에 확인하는 사전 진단입니다.
+Gate 산출물이 작성되었다고 해서 다음 Gate로 자동 진행하지 않습니다. `status --check`는 다음 Gate로 넘어가기 전에 Run 완료 상태, 추적성 정합성, 차단 이슈를 한 번에 확인하는 기본 사전 진단입니다.
 
 ```powershell
-python vulcan.py prepare-transition
+python vulcan.py status --check
 ```
 
-이 명령은 승인 판단을 대신하지 않습니다. Orchestrator가 결과를 해석하고, 실패한 산출물/ID/Run을 정리한 뒤 사용자에게 다음 Gate 진행 여부를 묻기 위한 준비 단계입니다.
+이 명령은 승인 판단을 대신하지 않습니다. Orchestrator가 결과를 해석하고, 실패한 산출물/ID/Run을 정리한 뒤 사용자에게 다음 Gate 진행 여부를 묻기 위한 준비 단계입니다. `prepare-transition`은 같은 진단의 상세/호환 명령으로 남깁니다.
 
 ## Drift Report
 

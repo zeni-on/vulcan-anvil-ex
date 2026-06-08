@@ -54,166 +54,85 @@
 
 ## 다음 초점
 
-`0.4.x`에서는 기능을 무작정 늘리기보다, 실제 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중합니다.
+`0.4.x`에서는 기능을 더 많이 넣기보다, 실제 샘플 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중한다.
+세부 아이디어는 reference 문서로 넘기고, 이 문서는 "지금 무엇을 먼저 볼지"를 정하는 큐로 사용한다.
 
-### 실행 순서
+### Now: 0.4.x 안정화
 
-현재 우선순위는 다음 순서로 본다.
+지금 바로 반복 검증하거나 보강할 항목이다.
 
-1. **샘플 프로젝트 기준 0.4.x 회귀 재검증**
-   - 새 `v0.4.x` 기준으로 sample 프로젝트를 다시 진행해 Run 품질, trace-context, Gate 4 QA, release-pr, worker watchdog 흐름을 실제 사용감으로 확인한다.
-   - 발견한 회귀는 fixture smoke, `prepare-transition`, `drift-report`, 문서 규칙 중 하나로 흡수한다.
-2. **Run 생성 품질 자동화**
-   - `run-new --trace-seed`와 `wave-start --trace-seed`의 최소 연동은 들어갔다.
-   - 다음 단계는 샘플 프로젝트에서 생성된 Run 초안의 `scope.writable`, `interface_contract`, `source_documents` 품질을 확인하고 보강한다.
-   - adapter별 `source_documents.read_first`가 공통 Core 체크리스트와 runner 전용 prompt만 포함하는지 fixture smoke로 고정한다.
-3. **Performance & Parallelization 기준 수립**
-   - `sample-ex-0530-1`의 Run, worker summary, git log를 기준으로 병목을 1차 분석했다.
-   - 샘플 기준 worker 실행 합계는 약 96.8분이며, 그중 Gate 4 QA와 QA-Fix가 약 73분을 차지했다.
-   - 다음 단계는 `perf-report`류 CLI로 Gate별 wall-clock, worker duration, QA-Fix 왕복, timeout/watchdog 이벤트를 자동 산출하는 것이다.
-   - Codex runner는 역할별 model/effort 정책을 먼저 심고, 실제 Run 기록으로 효과를 관찰한다.
+1. **샘플 발견 회귀의 fixture 고정**
+   - 샘플 프로젝트를 매번 처음부터 재실행하는 것이 아니라, 이미 발견한 회귀를 `scripts/regression` fixture smoke로 옮긴다.
+   - 공식 QA 로그 누락, Playwright 보조 report 오인, Config Hotfix scope 후보, native/Agy `delegation_records` 누락은 fixture smoke에 고정했다.
+   - 다음 고정 후보는 Run 입력 계약 metadata 불일치, QA worker 수정 지시 오염처럼 실제 샘플에서 다시 관찰되는 회귀로 제한한다.
+   - 새 샘플 end-to-end 재실행은 큰 프로세스 변경이나 릴리즈 전 확인이 필요할 때만 수행한다.
+   - 회귀 하네스 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
+
+2. **Run/위임 품질 게이트 보강**
+   - `run-check`, `run-preflight`, `trace-context`, `--trace-seed`, native 위임용 `delegation_records`의 MVP는 이미 들어갔다.
+   - 남은 작업은 샘플에서 나온 실제 누락 사례를 기준으로 `scope.writable`, `interface_contract`, `source_documents`, `delegation_records` 진단을 더 정확하게 만드는 것이다.
+   - 외부 CLI runner는 `_exec` 로그와 Run Execution Record를 유지하되, subagent/thread/Agy Workspace branch는 얇은 `delegation_records`를 기본 기록으로 정리한다.
+   - 추적성 그래프 기준은 `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md`를 따른다.
+
+3. **Gate 4 QA 안정화**
+   - 신규 프로젝트 기본 `.gitignore`는 공식 QA 로그를 막지 않고 `playwright-report/`, `test-results/`를 보조 로컬 산출물로 제외한다.
+   - 공식 증적은 `docs/artifacts/04-review/evidence/logs/*`와 `docs/artifacts/04-review/evidence/ui/*.png`에 둔다.
+   - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
+   - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
+
+4. **전환 진단 정리**
+   - Gate 전환 판단은 `prepare-transition`을 기본으로 사용한다.
+   - `check-trace`는 traceability 상세 디버깅과 회귀 검증용으로 남긴다.
+   - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
+   - Orchestrator가 직접 기억해야 하는 CLI 표면은 먼저 `status` 하나로 줄인다. `status --check`가 `prepare-transition` 진단을 요약하고, 원자 명령은 고급/호환 명령으로 유지한다. 상세 전략은 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
+
+### Next: 0.5 후보
+
+`0.4.x` 안정화 뒤 제품성이나 생산성을 키우는 항목이다.
+
+1. **Spec-to-Scaffold MVP**
+   - Gate 2 Program Design에서 class/component, public method, DTO/entity, test mapping을 읽어 skeleton 후보를 만든다.
+   - 자동 반영이 아니라 `scaffold-plan`, `scaffold-generate --dry-run`, Orchestrator 확인 순서로 둔다.
+   - 코드에서 설계로 역투영하는 기능은 자동 수정이 아니라 `drift-report` 후보로 남긴다.
+
+2. **Performance & Parallelization**
+   - `perf-report`류 CLI로 Gate별 wall-clock, Run별 worker duration, QA-Fix 왕복, timeout/watchdog 이벤트를 산출한다.
+   - 병렬화는 review, 독립검수, QA command group, UI viewport 증적부터 제한적으로 검토한다.
+   - 구현 병렬화는 API/DTO/interface contract와 merge 전략이 충분히 안정된 뒤 검토한다.
    - 상세 기준은 `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md`를 따른다.
-4. **Gate 4 QA 실사용 안정화**
-   - QA worker가 테스트 실행자와 수정자 역할을 섞지 않는지 샘플 프로젝트로 반복 확인한다.
-   - 실패 보고가 실제 사용자 판단에 충분한지 보고서/대시보드 관점에서 다듬는다.
-5. **회귀 검증 하네스 확장**
-   - 새 기능이 추가될 때마다 fixture smoke에 고정 입력/고정 결과 검증을 붙인다.
-   - trace-context, release-pr, QA workspace 같은 흐름은 이미 최소 검증이 있으므로 샘플에서 나온 실제 회귀를 우선 추가한다.
-6. **Dashboard Trace Explorer 후속 polish**
-   - `0.4.0`에서 문서 Drawer의 Trace 버튼, `depth 1` 직접 edge 그래프, ID 제목 표시, 관련 목록 MVP는 완료했다.
-   - 다음 단계는 실제 샘플 사용 후 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어, Run 입력 후보 복사 UX가 필요한지 판단한다.
-7. **PR 교차검증 자동화와 Dispatcher**
-   - `run-exec`, `agent-run`, release-pr, QA 흐름이 충분히 안정된 뒤 자동 큐와 PR 교차검증을 검토한다.
 
-### P0. 회귀 검증 하네스
+3. **Delivery Profile 구체화**
+   - Audit/SI, Solution/Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
+   - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
 
-기본 안전망 역할을 한다. 최소 하네스는 이미 존재하므로, 앞으로는 새 기능을 만들 때마다 회귀 케이스를 추가하는 방식으로 확장한다.
+4. **Dashboard 증적/추적 polish**
+   - Trace Explorer는 MVP가 들어갔으므로, 샘플 사용 결과를 보고 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어를 보강한다.
+   - QA evidence 확대 보기, UIREF와 screenshot side-by-side 비교는 실제 Gate 4 사용감 확인 뒤 진행한다.
 
-- 최소 샘플 프로젝트를 `init -> Phase 0 -> Gate 1 -> Gate 2 -> Gate 3 -> impl -> Gate 4`까지 반복 검증하는 시나리오를 만든다.
-- 구현 단계에서 `branch-start impl`, `BW-000 implementation-scaffold`, `Build Wave`, `agent-run --mode work`, `run-preflight`, `run-integrate`가 기대대로 연결되는지 확인한다.
-- Gate 4에서 `QA-000` workspace 준비, `QA-001` 명령 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리가 실제로 분리되는지 확인한다.
-- Gate 3 테스트케이스는 계획 상태로 유지하고, Gate 4 테스트 결과서와 요구사항추적표가 실제 Pass/Fail/Not Run 상태를 담당하는지 확인한다.
-- 에이전트가 직접 구현, 직접 QA 수정, Gate 승인 선행, session 통계 누락 같은 회귀를 만들지 않는지 검사한다.
+5. **Orchestrator CLI facade**
+   - `status` MVP부터 시작해 `branch-status`, `profile-status`, `prepare-transition` 진단을 한 화면으로 요약한다.
+   - `transition check` 같은 유사 진단 명령은 만들지 않는다. 진단 표면은 `status --check`로 모은다.
+   - 이후 필요성이 검증되면 `plan`, `execute`, `transition`은 후보로 다시 검토한다.
+   - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
-현재 최소 smoke harness는 `scripts/regression/run_audit_smoke.py`에 있다.
-이 스크립트는 실제 AI runner나 frontend/backend dependency 설치 없이 `init`, 핵심 check 명령, Gate 차단, Run 생성/검사, preflight 차단을 빠르게 확인한다.
-완료된 문서 세트를 사용하는 fixture smoke harness는 `scripts/regression/run_fixture_smoke.py`에 있으며, 첫 fixture는 `scripts/regression/fixtures/simple-hello-audit/`이다.
-fixture smoke는 QA-001~QA-003이 QA-000의 QA workspace 기록 없이 실행되지 않도록 `run-preflight` 차단 회귀 케이스도 포함한다.
-또한 `trace-context` 고정 seed의 YAML/JSON 결과와 `release-pr` dry-run body, 없는 base 브랜치, 잘못된 현재 브랜치, dirty worktree 차단을 함께 검증한다.
+### Later: 장기 확장 후보
 
-하네스 fixture는 새로 사람이 작성하지 않고, 기존 샘플 프로젝트에서 완결된 산출물 문서 세트를 추출해 정규화하는 방향을 우선 검토한다.
-상세 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
+우선순위는 낮지만 방향성은 유지하는 항목이다.
 
-### P1. Run 품질 게이트 강화
+- **Agent-aware output checker**: 테스트 ID 누락, 공식 로그 미추적, 완료 문서의 `TBD`, 부적절한 `N/A`, 얇은 `delegation_records` 같은 반복 실수를 가볍게 검사한다.
+- **Multi-Agent Dispatcher / PR 교차검증**: Ready Run 자동 실행, worker lock, fan-in review, PR cross validation은 현재 실행 흐름이 더 안정된 뒤 검토한다.
+- **제출용 문서 생성**: Markdown 원천 문서를 DOCX/XLSX/HWPX 제출본으로 합성하는 전략은 `docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
+- **Git log 기반 진행 이력**: 별도 통계 저장소를 만들기보다 Git commit 날짜와 메시지에서 파생하는 방향을 검토한다.
+- **Canary deployment verification**: Gate 5 이후 preview/staging/canary 검증은 GitHub Actions, secret 관리, 외부 URL 보안 정책이 안정된 뒤 검토한다.
+- **외부 runtime backend 후보**: Google AX 같은 event log/resume/trace 지향 runtime은 장기 실험 후보로만 추적한다.
 
-`0.4.x`에서 최소 CLI와 smoke 검증, `run-new`/`wave-start` trace seed 연동은 들어갔다.
-다음 단계는 worker에게 넘기는 Run 문서 초안 품질을 생성 시점부터 더 안정화하는 것이다.
+### Parking Lot
 
-- `run-check`: 형식과 완료 보고 기준 검사
-- `run-preflight`: worker에게 넘겨도 되는 작업지시서인지 검사
-- `check-contract`: Program Design의 class/interface/public method 계약과 코드 구조 대조
-- `trace-context`: 요구사항추적표를 그래프 원장으로 사용해 Run의 `related_ids`, `target_contracts`, `source_documents`를 추천한다.
+현재는 하지 않는 항목이다.
 
-Run 입력 ID는 agent가 여러 문서를 뒤져 수동으로 긁어넣기보다 traceability graph에서 파생하는 방향을 검토한다.
-상세 구상은 `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md`를 기준으로 한다.
-
-다음 구현 후보:
-
-- `run-new`/`wave-start --trace-seed`가 만든 초안에서 `scope.writable`과 `interface_contract`를 더 잘 좁히는 보조 규칙을 추가한다.
-- edge type과 status 필터를 Run 작성 규칙에 더 직접적으로 연결한다.
-- fixture smoke에 샘플 프로젝트에서 발견한 실제 trace-context 회귀 케이스를 추가한다.
-- adapter별 Run 입력 문서 분리 기준을 smoke fixture로 검증한다.
-- 샘플 프로젝트에서 `--trace-seed` UX를 확인한 뒤 기본 추천 여부를 판단한다.
-- PoC profile의 Run 입력 문서는 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`에 따라 compact preset을 우선 적용한다.
-
-### P1. Gate 4 QA 안정화
-
-Run 품질 게이트 다음에 진행할 실전 리스크 영역이다.
-
-- `QA-000`이 integration branch 작업공간을 QA workspace로 기록하고 `QA-001`~`QA-003`이 재사용하는 흐름을 더 강하게 검증한다.
-- `run-preflight`와 fixture smoke에서 QA-000 workspace 기록이 없는 후속 QA Run을 차단한다.
-- QA worker가 테스트 실행자 역할과 수정자 역할을 섞지 않게 한다.
-- `qa-fix-loop`는 사용자 또는 Orchestrator 판단 후 별도 Run으로만 시작한다.
-- `qa-execution` Run이 실패를 발견했을 때 즉시 수정하지 않고 원인, 재현 명령, 로그, 영향 ID, FIND/CR/ISSUE 후보를 남기는지 검사한다.
-- QA 결과서와 Finding 문서가 로그, 이미지, trace, command result를 Dashboard에서 확인할 수 있게 유지한다.
-
-### P1. Performance & Parallelization
-
-`audit` profile은 산출물, 추적성, 검수, 증적을 남기기 때문에 단순 구현형 coding보다 느린 것이 정상이다.
-다만 샘플 프로젝트 기준으로 병목을 측정하고, 안전하게 줄일 수 있는 시간을 찾아야 한다.
-
-`sample-ex-0530-1` 기준 1차 분석은 `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md`에 정리했다.
-
-우선순위는 다음과 같다.
-
-- `perf-report`류 CLI로 Gate별 wall-clock, Run별 worker duration, QA-Fix 왕복 횟수, timeout/watchdog 이벤트를 자동 산출한다.
-- Codex model/effort routing 결과를 Run Execution Record와 summary에 남기고, role별 duration과 실패 경향을 축적한다.
-- QA Test Result에서 Traceability Matrix 상태/증적 후보를 자동 생성해 Gate 4 정합성 정리 시간을 줄인다.
-- `run-new`/`wave-start --trace-seed`가 만든 초안의 `scope.writable`, `interface_contract`, `source_documents` 품질을 더 구체적으로 진단한다.
-- 병렬화는 review Run, 독립검수, QA command group, UI viewport 증적 순서로 제한적으로 검토한다.
-- 구현 병렬화는 API/DTO/interface contract와 merge 전략이 충분히 안정된 뒤 검토한다.
-- Agy `Workspace: branch`의 Copy-on-Write 장점은 adapter-specific capability로 추적하고, Core에서는 native delegation 기록과 Orchestrator 재검증 기준만 유지한다. 검토 기록은 `docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md`를 따른다.
-
-Dashboard 성능 차트는 먼저 CLI 산출이 안정된 뒤 붙인다.
-
-### P2. Delivery Profile 구체화
-
-프로젝트 성격에 따라 문서 깊이와 Gate 강도를 조절합니다.
-
-- Audit/SI Profile: 감리, 인수인계, 장기 유지보수 기준
-- Solution/Product Profile: 제품 로드맵, 릴리즈, 품질 기준 중심
-- PoC Profile: 빠른 검증과 핵심 리스크 확인 중심
-- Profile은 결과물의 품질 등급이 아니라 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식의 차이다.
-
-현재는 `init --profile audit|solution|poc`와 `profile-status`로 선택 Profile과 `profile_rules`를 기록/확인하는 MVP가 들어갔다.
-PoC Profile은 `run-new`/`gate-start`에서 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심의 얇은 Run 입력 계약을 생성한다.
-`0.4.4`부터 PoC Profile은 `run-new`/`wave-start`에서 명시 `--trace-depth`가 없으면 depth 1을 기본값으로 사용하고, `source_documents.reference_on_demand`를 직접 관련 문서 중심으로 제한한다.
-`0.4.5`부터 PoC Profile은 사유와 후속 판단 시점이 있는 `TBD`/`확정필요`, 일부 상세 추적 누락, 미실행, `environment_blocked`를 차단보다 경고/판단 항목으로 우선 분류한다.
-`0.4.6`부터 Agy native subagent/Workspace branch를 메인 Orchestrator 경로에서 사용할 수 있도록 사용자 문서와 Gemini adapter 문서를 보강하고, native 위임 전 `run-preflight` 직접 실행과 `delegation_records` 기록을 강화한다.
-상세 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
-다음 단계는 `solution`용 Run preset과 `run-check`, `run-preflight`, `check-trace`, Dashboard 표시를 Profile별 엄격도와 연결하는 것이다.
-
-### P2. 제출용 문서 생성
-
-감리 제출이나 대외 공유를 위해 Markdown 원천 문서를 제출본으로 합성하는 흐름을 설계합니다.
-
-- DOCX/XLSX/HWPX 생성 전략
-- Mermaid 다이어그램 이미지화 또는 읽을 수 있는 코드블록 처리
-- 원천 문서 버전과 제출본 생성 commit 기록
-- 민감자료 원문 유출 방지
-
-### P3. Dashboard 관제성 개선
-
-Dashboard는 기능 수보다 사용자가 판단해야 할 신호를 잘 보여주는 방향으로 발전한다.
-Trace Explorer MVP는 `0.4.0`에서 문서 Drawer 안에 들어갔다. 다음 단계는 샘플 프로젝트 사용 결과를 보고 탐색성과 복잡도 제어가 실제로 필요한 만큼만 보강하는 것이다.
-
-- 현재 Gate에서 다음에 해야 할 일
-- 승인 대기와 차단 상태
-- QA workspace와 최근 QA 실패 원인
-- Run/Review/Worker 실행 로그와 증적
-- Worker watchdog 상태(active/quiet/stalled), 마지막 진척 시각, timeout reason
-- Gate별 소요시간, Run별 worker duration, QA-Fix 왕복 횟수
-- 추적성 drill-down과 ID 기반 Trace Context
-- Trace Explorer의 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어
-- 감리 제출 패키지 준비율
-- Git log 기반 날짜별 진행 이력 요약
-
-날짜별 진행 이력은 새 통계 저장소를 만들기보다 Git commit 날짜와 메시지를 파생해 보여주는 방향을 우선 검토한다.
-상세 구상은 `docs/reference/GIT-LOG-PROGRESS-HISTORY.md`를 기준으로 한다.
-
-### P3. Multi-Agent Dispatcher
-
-`run-exec`와 `agent-run` 기반 실행이 안정된 뒤, 자동 큐/dispatcher를 검토합니다.
-
-- Ready 상태 Run 자동 실행
-- worker lock과 writable scope 충돌 방지
-- fan-in review
-- PR cross validation
-- review-import/watch 확장
-
-외부 agent runtime backend는 현재 `subprocess` 기반 실행을 기본으로 유지한다.
-Google AX 같은 event log/resume/trace 지향 runtime은 즉시 도입하지 않고, 장기 실험 후보로만 추적한다.
-상세 기준은 `docs/reference/AGENT-RUNTIME-BACKEND-CANDIDATES.md`를 따른다.
+- 파일 watcher 기반 Reactive Session Stream: 문서 임시 저장 중 불완전 상태를 읽거나 승인 전 통계가 완료처럼 보이는 위험이 있어 보류한다.
+- 구현 산출물에서 설계 문서를 자동 덮어쓰기: 설계와 코드의 주종 관계가 뒤집힐 수 있으므로 `drift-report` 후보 생성까지만 허용한다.
+- 대규모 병렬 구현 자동화: 계약/merge/검증 전략이 더 안정될 때까지 보류한다.
 
 ## Delivery Profile 방향
 
@@ -264,6 +183,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/reference/EX-DIRECTION-INVESTMENT-REVIEW.md` | Ex 방향성/투자 판단 기준 | 빠른 AI coding tool이 아니라 AI coding governance framework로 투자할 조건과 축소 신호를 정리 |
 | `docs/reference/CODEX-REPO-LOCAL-SKILL-STRATEGY.md` | Codex repo-local skill 전략 | 전역 skill을 건드리지 않고 `.agents/skills`로 Vulcan 절차 카드를 제공하는 기준 |
 | `docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md` | Codex custom agent 전략 | `.codex/agents`로 메인 Orchestrator의 읽기 중심 보조 에이전트를 정의하는 기준 |
+| `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md` | Orchestrator CLI 표면 축소 전략 | 원자 명령은 유지하고 `status` MVP부터 운영 표면을 줄이는 방향 |
 | `docs/reference/GIT-LOG-PROGRESS-HISTORY.md` | 날짜별 진행 이력 구상 | 별도 통계 저장소 없이 Git log 기반으로 파생 |
 | `docs/reference/SESSION-COORDINATION-IDEAL.md` | 세션 협업 이상형 | 실시간 통신은 Core 전제 조건 아님 |
 | `docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md` | 제출용 문서 생성 전략 | DOCX/XLSX/HWPX 기능 구현 전 전략 기준 |

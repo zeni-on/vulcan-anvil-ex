@@ -11,7 +11,7 @@ Use this for Gate 4 QA and QA iterations.
 
 1. Confirm `session.json.current_gate` is `gate4`.
 2. Confirm Impl was approved or explicitly completed for QA.
-3. Confirm the delivery profile with `session.json` or `python vulcan.py profile-status`.
+3. Run `python vulcan.py status` to confirm Gate, profile, branch, QA workspace, active Run, and dirty state.
 4. Apply profile-specific QA evidence and review strictness from `docs/core/DELIVERY_PROFILES.md`.
 5. Read the current QA Run and Gate 3 test cases.
 
@@ -38,6 +38,7 @@ Use this for Gate 4 QA and QA iterations.
 ## Verification
 
 - Run `python vulcan.py run-check <run-file>` for QA and fix Runs.
-- Run `python vulcan.py prepare-transition` after QA result synthesis to check Gate readiness.
+- Run `python vulcan.py status --check` after QA result synthesis to check Gate readiness.
+- Run `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed.
 - Run `python vulcan.py check-trace` only if the readiness output points to traceability errors that need detailed debugging.
 - Run `python vulcan.py check-contract` when Program Design contracts are relevant.
