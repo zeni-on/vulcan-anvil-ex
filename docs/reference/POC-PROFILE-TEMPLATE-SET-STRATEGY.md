@@ -42,7 +42,50 @@ Gate 5 성격은 별도 문서로 늘리지 않고 `POC_TEST_REPORT_TEMPLATE.md`
 | `Stop` | 가설이 성립하지 않거나 투자 가치가 낮아 중단한다. |
 | `Promote to solution/audit` | 제품화 또는 감리형 프로젝트로 승격한다. |
 
-## 3. PoC 추적성 기준
+## 3. 승격 레이어
+
+PoC 결과가 유효하다고 해서 바로 audit profile로 가야 하는 것은 아니다.
+대부분의 제품형 작업에서는 중간에 solution profile을 두는 편이 자연스럽다.
+
+```text
+PoC
+가설 검증, 빠른 구현, 최소 문서, smoke/demo 증적
+
+        -> promote
+
+Solution
+제품 백로그, 운영 가능한 아키텍처, API/DB 계약, 회귀 테스트, 릴리즈 기준
+
+        -> promote
+
+Audit
+상세 요구추적, 세부 설계, 공식 QA 증적, FIND/CR, 승인 문서
+```
+
+Solution profile은 audit의 가벼운 버전이 아니라 제품화/운영 가능 기준선이다.
+PoC에서 확인한 가설과 데모 코드를 바로 감리 문서로 늘리기 전에, solution 단계에서 다음을 정리한다.
+
+| 영역 | Solution에서 정리할 것 |
+| --- | --- |
+| 요구사항 | 제품 백로그, 핵심 사용자 시나리오, 릴리즈 범위 |
+| 설계 | 운영 가능한 아키텍처, 주요 API/DB 계약, ADR |
+| 구현 | 모듈 경계, public interface, 테스트 가능한 구조 |
+| QA | 회귀 테스트, 주요 화면/API 증적 |
+| 운영 | 설정, 배포, 로그, 장애 대응 기준 |
+| 릴리즈 | 버전, 변경로그, backlog, release note |
+
+PoC 산출물은 버리지 않고 승격의 입력 재료로 사용한다.
+
+| PoC 산출물 | Solution 후보 | Audit 후보 |
+| --- | --- | --- |
+| `POC_REQUIREMENTS_TEMPLATE.md` | 제품 백로그, 핵심 시나리오 | Requirements Spec, AC, NREQ 후보 |
+| `POC_SYSTEM_DESIGN_TEMPLATE.md` | 아키텍처, ADR, API/DB 계약 | SW Architecture, API Spec, DB Spec, Program Design 후보 |
+| `POC_TEST_REPORT_TEMPLATE.md` | 회귀 테스트 후보, release note, backlog | Gate 3 Test Cases, Gate 4 Test Result, FIND/CR 후보 |
+
+승격은 자동 덮어쓰기가 아니라 gap report 기반으로 수행한다.
+권장 흐름은 `promote-profile --to solution|audit --dry-run` 같은 후보 명령으로 부족한 산출물, ID, 테스트, 증적을 보고하고, Orchestrator가 사용자 승인 후 보강 Run을 만든다.
+
+## 4. PoC 추적성 기준
 
 PoC의 추적성 목적은 감리 제출용 완결성이 아니라 실험 가설과 실행 결과의 연결이다.
 
@@ -61,7 +104,7 @@ Hypothesis/REQ -> API/DB/UI or Implementation -> Test -> Evidence -> Decision
 즉, PoC에서도 목표, 성공 기준, 실행 결과, 미실행 사유는 명확해야 한다.
 다만 모든 PGM/IF/MTH/UT/IT/UI 세부 ID를 강제하지 않는다.
 
-## 4. UI/E2E 증적 경계
+## 5. UI/E2E 증적 경계
 
 PoC에서는 빠른 커스텀 Playwright script나 데모 캡처를 smoke evidence로 사용할 수 있다.
 
@@ -72,7 +115,7 @@ PoC에서는 빠른 커스텀 Playwright script나 데모 캡처를 smoke eviden
 - PoC 결과를 solution/audit로 승격할 때는 `@playwright/test`, `npx playwright test`, report/trace/screenshot 기준의 공식 UI 증적으로 보강한다.
 - audit/solution profile의 Gate 4 UI Pass는 커스텀 Playwright library script만으로 확정하지 않는다.
 
-## 5. CLI와 검사 영향
+## 6. CLI와 검사 영향
 
 PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 원장을 다르게 봐야 한다.
 
@@ -85,7 +128,7 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 | `check-contract` | 상세 class/interface/public method보다 선언한 API/DB/UI/진입점이 실제 코드에 존재하는지 가볍게 확인한다. |
 | Dashboard | audit 문서 목록이 비어 보이지 않도록 PoC 산출물 묶음을 별도 표시한다. |
 
-## 6. Agy 제안 검토 반영
+## 7. Agy 제안 검토 반영
 
 `sample-ex-agy-0608-1/docs/poc_profile_proposal.md`의 핵심 제안은 채택할 가치가 있다.
 
@@ -104,7 +147,7 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 - `python vulcan.py session --profile audit`처럼 현재 CLI에 없는 명령은 문서에 현재 기능처럼 쓰지 않는다. profile 승격은 별도 `profile-switch` 또는 `promote-profile` 후보로 설계한다.
 - `run-integrate`를 main 병합으로 설명하지 않는다. worker 결과는 현재 workspace 또는 integration branch에 통합하고, main 반영은 Gate 5 release 흐름에서 처리한다.
 
-## 7. 이번 주 검증 계획
+## 8. 이번 주 검증 계획
 
 1차 PoC template set 검증은 다음 목표로 진행한다.
 
@@ -114,10 +157,11 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 4. 커스텀 Playwright smoke와 공식 `@playwright/test` 증적 경계를 실제 QA 문서에서 확인한다.
 5. PoC 결과를 `Continue`, `Pivot`, `Stop`, `Promote to solution/audit` 중 하나로 정리할 수 있는지 확인한다.
 
-## 8. 후속 후보
+## 9. 후속 후보
 
 - `profile-switch` 또는 `promote-profile` CLI 설계
 - PoC 산출물 3종 기반 `status --check` 원장
 - PoC Dashboard 문서 묶음 표시
 - PoC fixture smoke 추가
-- solution/audit 승격 Gap report
+- PoC -> Solution 승격 Gap report
+- Solution -> Audit 승격 Gap report
