@@ -19,6 +19,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 표면 | 용도 |
 | --- | --- |
 | `status` | 현재 Gate/profile/branch/Run/Wave/다음 행동 확인 |
+| `metrics` | git/Run/증적 기반 진행 시간, 파일 수, 라인 수, 위임 기록 요약 |
 | `gate-start`, `session`, `sync-session` | Gate 라이프사이클 갱신 |
 | `orchestrator-plan`, `run-new`, `run-check`, `run-preflight` | Run 생성과 검증 |
 | `branch-start`, `wave-start`, `wave-complete`, `run-integrate` | 구현/QA 통합 브랜치와 Build Wave 운영 |
@@ -35,6 +36,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | JSON 출력 | `python vulcan.py status --json` |
 | 추적성 상세 진단 포함 | `python vulcan.py status --trace-detail` |
 | 브랜치만 상세 확인 | `python vulcan.py branch-status` |
+| 회고/성능 통계 | `python vulcan.py metrics` 또는 `python vulcan.py metrics --json` |
 
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
 

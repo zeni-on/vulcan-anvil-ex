@@ -82,13 +82,19 @@
    - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
 
-4. **PoC template set 1차 검증**
+4. **Fast PoC와 Environment Readiness Track**
+   - PoC profile은 "경량 audit"이 아니라 5~10분 안에 동작 결과를 확인하는 fast-track으로 재정의한다.
+   - 구현 단계에서 `BW-000`으로 처음 개발환경을 만들지 않고, Phase 0~Gate 3 동안 SA/AA 성격의 subagent가 Environment Readiness Track으로 병렬 준비할 수 있게 한다.
+   - Environment Readiness Track은 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke까지만 허용하고 업무 요구사항 구현/Pass 확정은 금지한다.
+   - 상세 설계는 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 따른다.
+
+5. **PoC template set 1차 검증**
    - PoC를 audit 템플릿의 느슨한 검사 모드로만 다루지 않고, 별도 `docs/templates/poc/` 산출물 세트로 분리하는 방향을 검증한다.
    - 1차 후보는 PoC 요구사항/가설, PoC 시스템 통합 설계, PoC 테스트/결과/판정의 3개 템플릿이다.
    - 이번 주 샘플에서 `init --profile poc` 기준으로 3개 산출물만으로 Phase 0~Gate 5를 끝까지 진행해 보고, `status --check`, `run-check`, `check-trace`, Dashboard가 audit 문서 누락으로 과하게 막히는 지점을 기록한다.
    - 상세 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
 
-5. **전환 진단 정리**
+6. **전환 진단 정리**
    - Gate 전환 판단은 `prepare-transition`을 기본으로 사용한다.
    - `check-trace`는 traceability 상세 디버깅과 회귀 검증용으로 남긴다.
    - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
@@ -189,6 +195,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md` | 회귀 하네스 fixture 전략 | 기존 샘플 프로젝트 문서를 정규화해 테스트 입력으로 사용하는 방향 |
 | `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md` | 추적성 그래프 전략 | 추적표를 그래프 원장으로 사용해 Run 입력과 Dashboard ID 탐색을 자동 추천하는 방향 |
 | `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md` | 성능/병렬화 전략 | 샘플 프로젝트 로그 기준 병목 분석과 perf-report, QA 정합성 자동화, 제한적 병렬화 방향 |
+| `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md` | Fast PoC와 개발환경 runway 전략 | PoC 5~10분 목표, Environment Readiness Track, BW-000 재정의 방향 |
 | `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md` | PoC 전용 템플릿 세트 전략 | PoC를 audit 템플릿 완충이 아니라 3개 통합 산출물 세트로 검증하는 방향 |
 | `docs/reference/EX-DIRECTION-INVESTMENT-REVIEW.md` | Ex 방향성/투자 판단 기준 | 빠른 AI coding tool이 아니라 AI coding governance framework로 투자할 조건과 축소 신호를 정리 |
 | `docs/reference/CODEX-REPO-LOCAL-SKILL-STRATEGY.md` | Codex repo-local skill 전략 | 전역 skill을 건드리지 않고 `.agents/skills`로 Vulcan 절차 카드를 제공하는 기준 |

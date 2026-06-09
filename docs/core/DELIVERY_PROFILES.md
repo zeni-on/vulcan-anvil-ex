@@ -104,13 +104,20 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 
 - Phase 0, Gate 1, Gate 2를 짧게 묶어 목표, 가설, 성공 기준, 주요 제약을 먼저 정한다.
 - 모든 산출물을 완성하려고 하지 않고 핵심 요구사항, 핵심 설계, 핵심 테스트만 작성한다.
+- PoC profile의 기본 산출물 세트는 `docs/poc/POC_REQUIREMENTS.md`, `docs/poc/POC_SYSTEM_DESIGN.md`, `docs/poc/POC_TEST_REPORT.md` 3종이다.
+- 새 PoC 프로젝트는 이 3종을 공식 작업 문서로 생성한다. Audit 산출물 템플릿 파일은 기본 생성하지 않으며, 필요 시 Solution/Audit 승격 후보로 만든다.
+- 이 3종 산출물은 audit 문서를 대체하는 최종 제출본이 아니라, 가설-설계-검증-판단을 빠르게 연결하는 PoC 원장이다.
 - 추적성은 최소한 `가설/요구사항 -> 구현 -> 검증 결과`를 연결하는 수준으로 유지한다.
 - 보안/데이터/운영 기준은 실제 배포가 아니라 위험 식별과 향후 전환 조건 중심으로 작성한다.
 - PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Solution Profile로 승격한다.
+- PoC에서 `gate-start`는 Gate 상태만 갱신하고 Orchestrator Plan Run을 자동 생성하지 않는다. Gate별 계획은 `docs/poc` 3종과 `status --check` 결과로 충분하면 생략한다.
 - Run 문서는 기본 필수 산출물이 아니다. 외부 worker 실행, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
 - PoC 구현은 메인 Orchestrator가 직접 독주하지 않고 subagent 또는 worker를 우선 사용한다. 다만 외부 CLI worker와 worktree를 반드시 요구하지는 않는다.
+- PoC 구현은 `BW-000 implementation-scaffold`를 기본 생성하지 않는다. 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행할 수 있다.
+- 개발환경 준비는 모든 Profile에서 Environment Readiness Track으로 앞당길 수 있다. 이 Track은 Phase 0~Gate 3 동안 병렬로 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke를 준비하되 업무 요구사항 구현과 Pass 확정은 하지 않는다.
 - 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과, 환경 차단, 다음 판단 항목으로 기록할 수 있다.
 - subagent/thread 실험이 의미 있는 코드/문서 변경을 만들었으면 Run을 만들지 않더라도 결과 요약에 `delegation_records`와 같은 최소 항목을 남긴다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이 기준이다.
+- 가능하면 `delegation_records`에 `started_at`, `completed_at`, `duration_seconds`, `heartbeat_count`, `status_probe_count`, `self_check`를 함께 남긴다. PoC 병목은 기능 정합성보다 worker 대기/검증 시간이 원인인 경우가 많다.
 - worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
 - UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 smoke로 사용할 수 있다. 다만 PoC 결과를 audit/solution으로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
@@ -118,6 +125,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - `TBD`, `확정필요`, `미정`은 PoC에서 허용한다. 단, 목표, 성공 기준, 실제 실행 결과는 `TBD`로 둘 수 없다.
 - `TBD`가 남는 항목은 반드시 사유와 후속 판단 시점을 함께 남긴다. 예: `TBD: 배포 방식은 PoC 범위 밖. 제품화 전환 판단 시 결정`.
 - `check-trace`와 `run-check`는 PoC에서 상세 추적 누락, 미실행, 환경 차단, 사유 있는 TBD를 차단 이슈보다 경고/판단 항목으로 우선 분류한다. 제품 실패(`Fail`)와 실제 실행 결과 허위 보고는 계속 차단한다.
+- `status --check`의 산출물 완성도 검사는 PoC에서 `docs/poc/` 3종을 기준으로 한다. Gate 전환 필수 요구사항도 profile별 필수 PoC 문서 존재 여부를 우선 본다.
 
 ## 5. Profile 선택 기준
 
@@ -133,7 +141,8 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 `0.4.x` 기준 새 프로젝트의 기본 Profile은 `audit`이다.
 
 `vulcan.py init`은 `session.json.profile`, `vulcan.config.json.delivery_profile`, `vulcan.config.json.profile_rules`에 선택한 Profile과 Overlay 기준을 기록한다.
-Profile을 지정하지 않으면 `audit`으로 초기화한다.
+대화형 터미널에서 Profile을 지정하지 않으면 `audit`, `solution`, `poc` 중 하나를 선택할 수 있다.
+비대화형 자동화에서는 기존 호환성을 위해 `audit`으로 초기화한다.
 
 사용 예:
 
@@ -149,7 +158,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 | --- | --- |
 | `audit` | 기본 Profile이며 가장 강하게 문서화/검증된다. |
 | `solution` | `init --profile solution`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
-| `poc` | `init --profile poc`으로 선택할 수 있고, `run-new`/`gate-start`가 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
+| `poc` | `init --profile poc`으로 선택할 수 있고, `docs/poc/` 3종 산출물과 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
 | `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
 | `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. PoC는 일부 추적성/placeholder 검사를 경고 중심으로 조정한다. |
 
@@ -176,7 +185,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 3. `profile-status`로 현재 Profile과 Overlay를 확인한다. (완료)
 4. PoC Profile의 Run 입력 계약은 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심으로 얇게 생성한다. (완료)
 5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다. (PoC TBD 경고화 1차 완료)
-6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 상세 매핑/환경 차단 경고화 1차 완료)
+6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 3종 산출물 원장 기반 1차 완료)
 7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
 8. `solution`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
 
@@ -189,6 +198,7 @@ PoC Profile에서는 Phase 0부터 Gate 5까지 다음 원칙으로 Run 입력 �
 - `reference_on_demand`는 이전 Gate 산출물 또는 Core 규칙 확인이 필요할 때만 읽는다.
 - 완료 기준은 "문서 완성"보다 목표/가설/성공 기준, smoke/demo 결과, 실패/미실행의 정직한 기록, 제품화 또는 audit 전환 보강 항목을 우선한다.
 - PoC에서 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과 또는 다음 판단 항목으로 기록한다.
+- PoC 회고나 성능 비교가 필요하면 `python vulcan.py metrics`를 먼저 실행해 git timeline, 파일/라인 수, Run/위임 기록 수를 확인한다.
 
 모든 Profile에서 Impl 단계의 `check-trace`는 Gate 3 테스트케이스의 `Planned`/미실행 항목을 Gate 4 실행 대기 항목으로 취급한다.
 실제 Pass/Fail/Not Run 판정은 Gate 4 QA 결과서와 증적으로 확정한다.
@@ -199,8 +209,12 @@ PoC 빠른 시작 예:
 python vulcan.py init ../my-poc "My PoC" --profile poc
 cd ../my-poc
 python vulcan.py profile-status
-python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
+# docs/poc/POC_REQUIREMENTS.md에 목표, 가설, 성공 기준을 먼저 채운다.
+python vulcan.py status --check
 ```
+
+PoC 산출물 세트와 승격 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`와 `docs/reference/POC-SOLUTION-LIFECYCLE-INTEGRATION-DESIGN-AGY.md`를 참고한다.
+Fast PoC와 Environment Readiness Track 기준은 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 참고한다.
 
 Audit Profile에서는 Phase 0부터 Gate 5까지 빈 Run 껍데기를 만들지 않고 다음 항목을 포함한다.
 

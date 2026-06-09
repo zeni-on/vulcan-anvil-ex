@@ -18,7 +18,9 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 ## Workflow
 
 1. Create or review an implementation plan Run when scope is more than a tiny change.
-2. If buildable skeleton is missing, start `BW-000 implementation-scaffold` before feature waves.
+2. If buildable skeleton is missing, check the delivery profile before starting `BW-000`.
+   - In `poc`, do not create `BW-000` by default. Let the first native worker create the environment, hello/build smoke, and the core feature together unless the user asks for stricter separation.
+   - In `solution` or `audit`, prefer an earlier Environment Readiness Track when possible; use `BW-000 implementation-scaffold` when official contract skeleton or build smoke must be isolated.
 3. Create one active Build Wave at a time.
 4. Prefer `wave-start <BW-ID> --trace-seed <detailed-id>` or `run-new ... --trace-seed <id>`.
 5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.
@@ -29,7 +31,7 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 10. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
 11. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
 12. Integrate worker output only after diff/scope verification.
-13. Record native subagent/thread output in `delegation_records`; external CLI workers also keep Run Execution Record and `_exec` logs.
+13. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
 14. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
 
 ## Guardrails

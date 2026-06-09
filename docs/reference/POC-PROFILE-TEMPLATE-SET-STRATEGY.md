@@ -21,6 +21,10 @@ Phase0 -> Gate1 -> Gate2 -> Gate3 -> Impl -> Gate4 -> Gate5
 흐름은 유지, 산출물은 통합, 검사는 smoke/demo 중심
 ```
 
+다만 실제 샘플에서 Gate 4까지 약 30분이 걸린 사례는 PoC profile이 아직 "빠른 실험"이라기보다 "경량 governance"에 가깝다는 신호다.
+단순 화면/API PoC는 5~10분 안에 동작 결과를 확인하는 fast-track을 목표로 한다.
+상세 전략은 `FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 따른다.
+
 ## 2. 제안 산출물 세트
 
 PoC profile은 기존 `docs/templates/`의 audit 문서를 모두 채우는 대신 `docs/templates/poc/` 아래의 통합 템플릿을 우선 사용한다.
@@ -119,6 +123,8 @@ PoC에서는 빠른 커스텀 Playwright script나 데모 캡처를 smoke eviden
 
 PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 원장을 다르게 봐야 한다.
 
+새 PoC 프로젝트는 `docs/poc/` 3종을 공식 작업 문서로 생성한다. Audit 산출물 템플릿 파일은 기본 생성하지 않고, Solution/Audit 승격 판단 시 후보 문서와 Gap Report로 만든다.
+
 | 영역 | PoC 기준 |
 | --- | --- |
 | `gate-start` | PoC profile에서는 통합 산출물 초안을 생성하거나 다음 작성 후보를 안내한다. |
@@ -127,6 +133,18 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 | `check-trace` | 상세 ID 누락보다 가설/요구사항과 실행 결과의 연결을 우선 본다. |
 | `check-contract` | 상세 class/interface/public method보다 선언한 API/DB/UI/진입점이 실제 코드에 존재하는지 가볍게 확인한다. |
 | Dashboard | audit 문서 목록이 비어 보이지 않도록 PoC 산출물 묶음을 별도 표시한다. |
+
+## 6.1 구현환경 Runway와 BW-000
+
+PoC에서 `BW-000 implementation-scaffold`를 기본 생성하면 빠른 실험의 장점이 줄어든다.
+따라서 PoC는 기본적으로 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행한다.
+
+모든 profile에서 개발환경 준비는 업무 기능 구현과 분리된 Environment Readiness Track으로 앞당길 수 있다.
+이 Track은 Phase 0~Gate 3 동안 설계 문서를 보며 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke를 준비한다.
+업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 반영은 금지한다.
+
+Audit/Solution에서는 공식 계약 skeleton이 필요하거나 환경 준비가 기능 구현 수준으로 커질 때만 `BW-000`을 사용한다.
+PoC에서는 `BW-000`을 기본값이 아니라 fallback으로 둔다.
 
 ## 7. Agy 제안 검토 반영
 
@@ -151,9 +169,9 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 
 1차 PoC template set 검증은 다음 목표로 진행한다.
 
-1. `docs/templates/poc/`에 3개 템플릿 초안을 추가한다.
+1. `docs/templates/poc/`에 3개 템플릿 초안을 추가한다. (1차 반영)
 2. `init --profile poc` 또는 `upgrade`된 샘플에서 PoC 필수 산출물 3종만으로 Phase 0~Gate 5를 끝까지 진행해 본다.
-3. `status --check`, `run-check`, `check-trace`가 audit 문서 누락으로 불필요하게 막히는 지점을 기록한다.
+3. `status --check`, `run-check`, `check-trace`가 audit 문서 누락으로 불필요하게 막히는 지점을 기록한다. (PoC 3종 원장 기반 `check-trace` 1차 반영)
 4. 커스텀 Playwright smoke와 공식 `@playwright/test` 증적 경계를 실제 QA 문서에서 확인한다.
 5. PoC 결과를 `Continue`, `Pivot`, `Stop`, `Promote to solution/audit` 중 하나로 정리할 수 있는지 확인한다.
 

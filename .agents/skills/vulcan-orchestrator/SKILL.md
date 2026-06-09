@@ -15,6 +15,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 4. Confirm the delivery profile from `session.json`, `python vulcan.py status`, or `python vulcan.py profile-status`.
 5. Apply profile-specific depth, evidence, review, and Run-weight rules from `docs/core/DELIVERY_PROFILES.md`.
    - In `poc`, prefer subagent/result-summary flow for short experiments; create compact Runs only for external workers, independent review, long delegation, or reproducible experiment records.
+   - In `poc`, do not create Gate-level Orchestrator Plan Runs by habit. Use `docs/poc` plus `python vulcan.py status --check` unless a Run is needed for handoff or replay.
    - In `poc`, allow `TBD` only with reason and next decision timing. Do not leave goals, success criteria, or actual execution results as `TBD`.
 6. If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.
 7. Use `docs/core/ORCHESTRATOR_CLI_GUIDE.md` for CLI usage; use `python vulcan.py branch-status` only when branch detail is needed beyond `status`.
@@ -54,6 +55,7 @@ Do not run `python vulcan.py --help` repeatedly to discover routine commands. Us
 
 - Current overview: `python vulcan.py status`
 - Transition readiness summary: `python vulcan.py status --check`
+- Retrospective/performance summary: `python vulcan.py metrics`
 
 ## Report
 

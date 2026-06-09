@@ -1,8 +1,8 @@
 # PoC & Solution Lifecycle Integration Design (AGY-PROPOSAL)
 
-> **상태**: v1.0 (설계 제안서)  
-> **오케스트레이터**: AGY (Antigravity)  
-> **목적**: Vulcan-Anvil Ex 프레임워크에 PoC 및 Solution 프로필을 유기적으로 융합하고, 아키텍처 결정 기록(ADR) 필수화 및 단계별 승격(Promotion)을 처리하기 위한 상세 스펙을 정의하여 Codex 에이전트 및 팀과의 설계를 싱크한다.
+> **상태**: v1.1 (설계 제안서, Codex review 반영)
+> **오케스트레이터**: AGY (Antigravity) 초안, Codex 검토 보정
+> **목적**: Vulcan-Anvil Ex 프레임워크에 PoC 및 Solution 프로필을 유기적으로 융합하고, 제품 요구사항 추적성, 아키텍처 결정 기록(ADR), 단계별 승격(Promotion)을 처리하기 위한 상세 스펙을 정의하여 에이전트 및 팀과의 설계를 싱크한다.
 
 ---
 
@@ -16,15 +16,16 @@
 
 ### 1-2. 핵심 설계 철학
 1. **감리의 본질은 존중하되, 비효율은 걷어낸다**: 감리는 프로젝트 참여자 간의 용어 불일치, 설계 오차, 테스트 누락을 기계적으로 잡아내는 훌륭한 장치입니다. 이를 포기하지 않고, 프로필 수준에 맞추어 검사 규칙을 지능적으로 완화합니다.
-2. **ADR (Architecture Decision Record)의 필수화**: Solution 프로필의 정수는 쓸데없는 문서 작업의 배제가 아니라, **"왜 이 기술 스택을 선택했고, 왜 이 설계 패턴을 적용했는가"**에 대한 의사결정의 이력을 관리하는 것입니다. 이를 위해 표준 ADR 작성을 의무화합니다.
-3. **가설-검증 및 승격(Promotion)의 흐름화**: PoC에서 검증된 팩트를 기반으로 자동으로 뼈대를 추출하고, Gap 분석을 통해 Solution과 Audit으로 정밀 보강 및 전환되는 순방향 흐름을 제공합니다.
+2. **Solution은 제품화/운영 가능 기준선이다**: Solution은 audit의 가벼운 버전이 아니라, 제품 백로그와 핵심 요구사항이 구현 위치, 테스트, 릴리즈 버전으로 이어지는 운영 가능한 제품 개발 레이어입니다.
+3. **ADR (Architecture Decision Record)의 필수화**: Solution 프로필의 정수는 쓸데없는 문서 작업의 배제가 아니라, **"왜 이 기술 스택을 선택했고, 왜 이 설계 패턴을 적용했는가"**에 대한 의사결정의 이력을 관리하는 것입니다. 이를 위해 표준 ADR 작성을 기본값으로 둡니다.
+4. **가설-검증 및 승격(Promotion)의 흐름화**: PoC에서 검증된 팩트를 기반으로 다음 단계의 문서와 계약 후보를 생성하되, 자동 덮어쓰기는 하지 않습니다. Gap Report와 후보 초안을 통해 Solution과 Audit으로 점진 보강합니다.
 
 ---
 
 ## 2. 하려고 하는 범위 (Scope)
 
 * **PoC 3종 통합 산출물 연동**: 가설 수립부터 최종 의사결정(Decision)까지를 3개 문서로 압축 관리.
-* **Solution 5종 산출물 & ADR 의무화**: 운영 가능한 5대 영역 문서 및 `docs/adr/` 이력 관리 강제.
+* **Solution 핵심 산출물 & ADR 운영**: 제품 요구사항/백로그, 운영 아키텍처, API/DB/UI 계약, 회귀 테스트, 릴리즈/운영 기록, `docs/adr/` 이력 관리 기준 정의.
 * **vulcan.py 검사기 개조**: `status --check`, `check-trace`, `check-contract`가 각 프로필(PoC, Solution)에서 동작할 때의 세부 검증 완화 및 분기 처리.
 * **승격(Promotion) 매커니즘**: 프로필 간 전환 시 누락 요소를 진단해 주는 Gap Report 생성 및 CLI 스위칭 기능.
 
@@ -40,21 +41,22 @@
   3. `docs/poc/POC_TEST_REPORT.md` (Gate 3 ~ Gate 5 통합): 테스트 방법, 실행 로그/화면 캡처 증적, 그리고 최종 의사결정(`Continue`, `Pivot`, `Stop`, `Promote to solution/audit`).
 * **검사 완화 및 TBD 허용**:
   * PoC 진행 중 미결 사항(TBD)이 남아 있더라도 **"사유와 후속 판단 시점"**이 함께 기재되어 있으면 에러 대신 경고(Warning)만 주고 빌드/통합을 통과시킵니다.
-  * Playwright E2E 검증 시 공식 `@playwright/test` 러너 대신 수동 실행 캡처나 커스텀 스크립트 로그(`smoke-demo-log`)를 정식 증적으로 인정합니다.
+  * Playwright E2E 검증 시 공식 `@playwright/test` 러너 대신 수동 실행 캡처나 커스텀 스크립트 로그(`smoke-demo-log`)를 PoC smoke/demo 증적으로 인정할 수 있습니다. 단, audit/solution의 공식 UI Pass 증적으로 승격하려면 `@playwright/test` 실행 결과와 report/trace/screenshot을 보강해야 합니다.
 
 ### 3-2. Solution 프로필 (제품화-운영 중심)
 * **목표**: 감리 문서는 배제하고 실제 배포/운영 가능한 제품 수준의 베이스라인 확립.
-* **필수 5종 산출물 및 ADR**:
-  1. `docs/SW_ARCHITECTURE.md` & `docs/adr/`: 시스템 구조 및 주요 아키텍처 의사결정 기록(ADR) 목록.
-     * `docs/adr/ADR-001-some-decision.md`와 같이 표준 ADR 양식(Status, Context, Decision, Consequences)으로 기술적 선택들을 명문화해야 합니다.
-  2. `docs/API_SPEC.md`: 외부 노출 API 규격 및 요청/응답 DTO 구조 정의.
-  3. `docs/DATABASE_SPEC.md`: 데이터 스키마 명세 및 인덱스 전략.
-  4. `docs/SECURITY_GUIDE.md`: 암호화 기준, 인증/인가(OAuth/JWT 등) 설계.
-  5. `docs/RELEASE_APPROVAL.md` (릴리즈 노트): 변경 이력 및 미해결 백로그 요약.
+* **필수 산출물 묶음 및 ADR**:
+  1. **Product Backlog / Feature Requirements**: 제품 기능, 핵심 사용자 시나리오, 릴리즈 범위, 인수 기준을 관리합니다.
+  2. **Feature Trace / Release Trace**: 요구사항 또는 백로그 항목이 구현 위치, API/UI/모듈, 회귀 테스트, 릴리즈 버전으로 연결되는지 관리합니다.
+  3. **Architecture & ADR**: 시스템 구조 및 주요 아키텍처 의사결정 기록(ADR) 목록을 관리합니다. `docs/adr/ADR-001-some-decision.md`와 같이 Status, Context, Decision, Consequences를 남깁니다.
+  4. **API / DB / UI Contract**: 외부 노출 API, 요청/응답 DTO, 주요 데이터 스키마, 주요 화면 흐름과 상태를 정의합니다.
+  5. **Security / Ops Guide**: 인증/인가, 비밀정보, 로그, 설정, 배포, 장애 대응 기준을 제품 운영 수준으로 정리합니다.
+  6. **Release Note / Backlog**: 변경 이력, 미해결 백로그, 알려진 이슈, 릴리즈 판단을 기록합니다.
 * **승인 지점 단축 (`major-gates-and-release`)**:
   * 모든 Gate마다 개별 승인을 받아야 하는 audit과 달리, **설계 완료(Gate 2)** 및 **릴리즈 최종 검수(Gate 4)** 지점에서만 명시적 승인을 요구하여 속도를 향상시킵니다.
-* **회귀 테스트 및 주요 UI/API 검증 (`release-regression-major-ui-api`)**:
-  * 개별 함수 단위의 UT/IT ID 매핑은 배제하되, 전체 API 통합 테스트 및 주요 서비스 화면의 Playwright 회귀 테스트 스위트가 100% 통과했는지 검증합니다.
+* **제품 추적성 및 회귀 테스트 (`feature-release-trace`)**:
+  * 개별 함수 단위의 모든 UT/IT ID 매핑은 배제할 수 있지만, 제품 기능 또는 백로그 항목이 구현 위치, API/UI/모듈, 테스트, 릴리즈 노트로 이어지는 핵심 추적성은 유지합니다.
+  * 전체 API 통합 테스트 및 주요 서비스 화면의 Playwright 회귀 테스트 스위트가 통과했는지 검증합니다.
 * **코드 계약 검증 완화 (`public-api-service-dto`)**:
   * `check-contract` 시 private 함수는 검증하지 않으며 컨트롤러의 Public API 엔드포인트 및 서비스 인터페이스의 시그니처만 대조합니다.
 
@@ -78,8 +80,8 @@ DELIVERY_PROFILE_RULES = {
     },
     "solution": {
         "gate_approval": "major-gates-and-release",
-        "required_artifacts": "architecture-api-db-security-release-core-and-adr",
-        "traceability_level": "core-requirement-api-db-security-regression",
+        "required_artifacts": "product-backlog-feature-trace-architecture-contracts-ops-release-and-adr",
+        "traceability_level": "feature-to-api-ui-module-test-release",
         "program_contract_level": "public-api-service-dto",
         "qa_evidence_level": "release-regression-major-ui-api",
         "independent_review_level": "release-candidate-or-large-change",
@@ -102,12 +104,12 @@ DELIVERY_PROFILE_RULES = {
 ### 4-2. validate_artifacts_presence() 수정
 현재 프로젝트의 프로필을 로드하고 필수 문서가 존재하는지 판단할 때, 아래 분기 처리를 구현합니다:
 * `poc` 프로필: `docs/poc/` 폴더 내 3종 통합 문서 존재 여부만 체크.
-* `solution` 프로필: 5종 필수 문서 및 `docs/adr/` 폴더가 존재하고 그 하위에 최소 1개 이상의 `ADR-*.md` 파일이 존재하는지 체크.
+* `solution` 프로필: 제품 요구사항/백로그, feature trace, architecture/ADR, API/DB/UI contract, security/ops, release/backlog 산출물 존재 여부를 체크. 물리 경로는 Ex artifact registry 또는 profile별 template registry에서 정한다.
 
 ### 4-3. check_trace() 및 check_contract() 분기 처리
 * **check_trace**:
   * `poc`: 기존 풀 체인 검증을 건너뛰고, 가설에서 테스트 결과 및 최종 의사결정으로의 단선 링크 정합성만 검증.
-  * `solution`: `REQ -> API -> DB -> SEC -> Regression Test` 핵심 운영 맵핑 매트릭스만 추출 및 누락 체크.
+  * `solution`: `Feature/REQ -> API/UI/Module -> Regression Test -> Release` 핵심 운영 맵핑 매트릭스만 추출 및 누락 체크.
 * **check_contract**:
   * `poc`: 주 진입점의 존재 여부만 검증.
   * `solution`: Public API 및 Service DTO 수준까지만 컴파일 시그니처 대조 검사 적용.
@@ -116,24 +118,28 @@ DELIVERY_PROFILE_RULES = {
 
 ## 5. 단계별 승격 방안 (Promotion Strategy)
 
-승격은 이전 단계의 산출물 및 코드를 입력 재료(Seed)로 삼아, 다음 단계의 필수 문서 뼈대를 자동 생성(Scaffolding)하고 누락된 요소를 채우도록 유도하는 **Gap-driven** 방식으로 수행합니다.
+승격은 이전 단계의 산출물 및 코드를 입력 재료(Seed)로 삼아, 다음 단계의 필수 문서 뼈대 후보를 생성하고 누락된 요소를 보고하는 **Gap-driven** 방식으로 수행합니다.
+자동 생성 결과는 공식 산출물을 덮어쓰지 않습니다. Orchestrator가 Gap Report를 검토하고 사용자 승인 후 보강 Run 또는 수정 작업을 분리합니다.
 
 ### 5-1. PoC -> Solution 승격
 1. **의사결정 확인**: `POC_TEST_REPORT.md` 내 `Decision` 항목이 `Promote to solution/audit`인지 검사.
-2. **뼈대 역생성 (Scaffolding)**:
-   * `POC_SYSTEM_DESIGN.md`에 정의된 핵심 API와 스키마 정보를 파싱하여 `API_SPEC.md`와 `DATABASE_SPEC.md` 초안을 자동 생성.
-   * `docs/adr/` 폴더를 생성하고 PoC 기술 스택 선택 내용을 바탕으로 `ADR-001-stack-selection.md` 초안을 배치.
-3. **Gap 분석 및 리포팅**: Solution에 필요한 아키텍처(SW_ARCHITECTURE.md) 및 보안(SECURITY_GUIDE.md) 등 누락 사항을 콘솔과 마크다운 Gap Report로 요약 안내.
-4. **프로필 스위칭**: 사용자가 수긍하면 `vulcan.config.json` 및 `session.json`을 `solution` 프로필로 전환하고 커밋 유도.
+2. **후보 뼈대 생성 (Scaffolding Candidate)**:
+   * `POC_REQUIREMENTS.md`의 가설과 핵심 시나리오를 제품 백로그/Feature 후보로 변환.
+   * `POC_SYSTEM_DESIGN.md`에 정의된 핵심 API와 스키마 정보를 파싱하여 API/DB/UI contract 후보 초안을 생성.
+   * `docs/adr/` 후보 폴더와 `ADR-001-stack-selection.md` 초안을 생성하되, 공식 반영은 Orchestrator 승인 후 수행.
+3. **Gap 분석 및 리포팅**: Solution에 필요한 제품 추적성, 아키텍처, 보안/운영, 회귀 테스트, 릴리즈 문서 누락 사항을 콘솔과 마크다운 Gap Report로 요약 안내.
+4. **프로필 스위칭 후보**: 사용자가 수긍하면 `promote-profile --to solution --dry-run` 같은 후보 명령의 결과를 기준으로 `vulcan.config.json` 및 `session.json` 전환을 제안한다. 현재 CLI에 없는 전환 명령은 현재 기능처럼 문서화하지 않고 후속 후보로 둔다.
 
 ### 5-2. Solution -> Audit 승격
-1. **뼈대 정밀 역생성**:
-   * 실제 동작하는 코드의 라우터와 데이터 모델을 정적 분석하여 감리용 `PROGRAM_SPEC.md` 및 상세 `DATABASE_SPEC.md`에 들어갈 클래스/메서드/테이블 목록 테이블을 역으로 채워 넣음.
-2. **추적성 복원 (Reverse Traceability)**:
-   * 기존의 기능 명세와 코드 진입점 관계를 기반으로 `TRACEABILITY_MATRIX_TEMPLATE.md`에 맵핑을 채우고, 끊어지는 연결 고리(Gap)를 찾아내어 오케스트레이터 및 워커에게 보강을 지시.
+1. **감리 산출물 후보 생성**:
+   * Solution 문서와 실제 코드의 라우터/서비스/DTO/데이터 모델을 정적 분석하여 감리용 `PROGRAM_SPEC.md`, 상세 `DATABASE_SPEC.md`, API/보안/테스트 문서에 들어갈 후보 목록을 생성한다.
+   * 후보 목록은 drift/gap report이며 공식 산출물에 자동 반영하지 않는다.
+2. **추적성 Gap Report 생성**:
+   * 기존 기능 명세와 코드 진입점 관계를 기반으로 `TRACEABILITY_MATRIX_TEMPLATE.md`에 들어갈 후보 매핑을 만들고, 끊어지는 연결 고리(Gap)를 찾아낸다.
+   * Orchestrator는 Gap Report를 보고 Gate별 보강 Run을 만들며, worker가 공식 문서를 직접 덮어쓰게 하지 않는다.
 3. **공식 증적 취합**:
    * Playwright 테스트 스위트를 정식 구동하여 QA-000부터 QA-003에 이르는 공식 증적 문서로 이전하고, 발견된 미해결 이슈를 `QA_FINDING_TEMPLATE.md`로 변환.
-4. **프로필 스위칭**: `audit` 프로필로 전환하여 최종 컴플라이언스 검증 가동.
+4. **프로필 스위칭 후보**: `audit` 프로필 전환은 사용자 승인과 Gap 보강 계획을 전제로 수행한다. 전환 이후 최종 컴플라이언스 검증은 `status --check`, 필요 시 `check-trace`, `check-contract`, 공식 Gate 4 QA 증적으로 확인한다.
 
 ---
 

@@ -178,6 +178,9 @@ delegation_records:
         - backend/tests/
     started_at: "2026-06-07T10:00:00+09:00"
     completed_at: "2026-06-07T10:08:00+09:00"
+    duration_seconds: 480
+    heartbeat_count: 2
+    status_probe_count: 1
     status: completed
     changed_files:
       - backend/app/todos/service.py
@@ -211,6 +214,17 @@ delegation_records:
 - `changed_files`
 - `result_summary`
 - `orchestrator_verification`
+
+권장 계측 필드:
+
+- `started_at`
+- `completed_at`
+- `duration_seconds`
+- `heartbeat_count`
+- `status_probe_count`
+- `self_check`
+
+이 필드들은 승인 차단 조건은 아니지만, PoC/worker 병목 분석과 `vulcan.py metrics` 회고 자료를 만들 때 중요하다. 시간이 확실하지 않으면 추정하지 말고 비워두거나 `notes`에 근거를 남긴다.
 
 PoC profile의 짧은 실험은 Run 문서를 만들지 않을 수 있다. 이 경우에도 Gate 산출물 또는 결과 요약에 같은 항목을 간단히 남긴다.
 
