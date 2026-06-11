@@ -40,6 +40,8 @@
 - **Profile Overlay 준수**: `profile`은 Core 규칙을 대체하지 않지만 산출물 범위, 검사 엄격도, 증적 수준을 조정한다. 특히 PoC에서는 `docs/poc/` 3종과 `status --check` 결과를 우선 기준으로 삼는다.
 - **환경 Runway 선행 가능**: Phase 0~Gate 3 동안 Agy `Workspace: branch` 또는 subagent로 구현 환경을 병렬 준비할 수 있다. 이 작업은 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke까지만 허용하며, 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경, Gate/session 변경은 금지한다.
 - **Orchestrator의 역할 한정**: 구현 단계에서 오케스트레이터는 직접 대량의 코드를 작성하지 않는다. 실제 구현은 `build` 페르소나의 **Native Worker (subagent/thread/native branch agent)**에게 위임하는 것을 원칙으로 한다.
+- **PoC Impl 책임 경계**: `profile: poc`의 구현 worker는 코드, dependency manifest, 빠른 self-check까지만 담당한다. `README.md`, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker가 담당한다.
+- **PoC 정합성 표현**: PoC에서는 "계약 100% 일치" 같은 audit식 단정보다 "PoC 목표 검증에 충분히 일치"와 "제품화/감리 승격 시 보강 gap"을 함께 기록한다.
 - **사전 검사 의무화**: Native Worker에게 위임을 기동하기 전, 반드시 **`python vulcan.py run-preflight <run-file>`**을 직접 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소를 검사해야 한다.
 - **위임 사실의 기록**: subagent나 Workspace: branch 워커를 통해 작업을 수행한 경우, 반드시 완료 보고서(Run Output)의 **`delegation_records`**에 위임 대상, 작업 범위, 변경 파일, 오케스트레이터 재검증 명령을 충실히 기록한다.
 - **검증의 엄격성**: 실제로 실행하여 통과하지 않은 테스트 결과를 Pass로 기록하지 않는다.
@@ -75,6 +77,7 @@
 * **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Antigravity 런타임의 서브에이전트 제어 도구인 `define_subagent` 및 `invoke_subagent`를 사용하여 동적으로 하부 작업자를 기동한다.
 * **가상 격리 워크스페이스 (`Workspace: branch`)**: 워커 위임 호출 시 `Workspace` 파라미터는 반드시 `'branch'` 모드로 설정하여 CoW 기반의 초고속 격리 빌드/테스트 환경을 활용한다.
 * **환경 준비 위임**: `Workspace: branch`는 PoC/solution/audit 모두에서 Environment Readiness Track에 사용할 수 있다. 부모 workspace에 반영되는 결과는 환경 기준선 후보이며, 오케스트레이터가 scope와 smoke 검증을 재실행한 뒤에만 확정한다.
+* **PoC 구현 위임 축소**: Agy `Workspace: branch`가 빠르더라도 PoC Impl worker에게 browser evidence, README, 최종 결과서, release/backlog 정리를 한꺼번에 맡기지 않는다. 구현이 끝나고 비차단 `run-preflight`/`run-check` 경고만 남으면 경고를 기록하고 Orchestrator에게 반환한다.
 * **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Antigravity 런타임의 메시징 도구인 `send_message`로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
 
 ---

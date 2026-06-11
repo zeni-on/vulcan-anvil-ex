@@ -1784,8 +1784,6 @@ POC_GATE_WORKING_DOCUMENTS = {
         "static/",
         "tests/",
         "requirements.txt",
-        "README.md",
-        "docs/poc/evidence/",
     ],
     "gate4": [
         "docs/poc/POC_TEST_REPORT.md",
@@ -1849,9 +1847,10 @@ POC_GATE_COMPLETION_CRITERIA = {
         "미실행 또는 수동 확인 항목은 Pass로 기록하지 않고 Not Run 또는 open_issues로 남긴다.",
     ],
     "impl": [
-        "PoC 목표를 확인하는 최소 구현과 smoke 검증이 가능하다.",
-        "실패한 실험은 구현 성공처럼 포장하지 않고 결과와 원인을 기록한다.",
-        "제품화 전환 시 필요한 리팩토링, 보안, 테스트 보강 후보가 남아 있다.",
+        "PoC 목표를 확인하는 최소 코드와 빠른 self-check가 가능하다.",
+        "구현 worker는 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog 정리를 직접 완료 조건으로 삼지 않는다.",
+        "Browser smoke/screenshot, 결과서 정규화, 제품화 전환 후보 정리는 Gate 4/5에서 수행한다.",
+        "실패한 실험은 구현 성공처럼 포장하지 않고 원인과 다음 판단 필요 항목으로 반환한다.",
     ],
     "gate4": [
         "PoC smoke/demo 검증 결과와 로그 또는 캡처 증적이 남아 있다.",
@@ -1881,9 +1880,10 @@ POC_WORKER_EXECUTION_POLICY = {
         "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다.",
         "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다.",
         "scope.writable 밖 파일을 수정하지 않는다.",
+        "PoC 구현 worker라면 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog 정리를 직접 완료 조건으로 삼지 않는다.",
     ],
     "required_outputs": [
-        "수행한 변경과 smoke 검증 결과를 Run 결과에 남긴다.",
+        "수행한 변경과 빠른 self-check 결과를 Run 결과에 남긴다.",
         "실패 또는 미실행 항목은 원인과 다음 판단 필요 항목으로 반환한다.",
         "native 위임이면 delegation_records에 시작/종료 시각, duration_seconds, heartbeat/status probe 횟수, self-check와 Orchestrator 재검증 명령을 남긴다.",
     ],
@@ -1904,7 +1904,7 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""
         f"python vulcan.py run-check {run_rel_path}",
         "python vulcan.py profile-status",
     ]
-    if gate in ("gate3", "impl", "gate4"):
+    if gate in ("gate3", "gate4"):
         verification_commands.append("python vulcan.py check-trace")
     output_include = [
         "changed_files",
@@ -1941,7 +1941,7 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""
         "verification": {
             "commands": verification_commands,
             "evidence": {
-                "required": gate in ("impl", "gate4", "gate5"),
+                "required": gate in ("gate4", "gate5"),
                 "target_documents": merge_unique([run_rel_path], gate_working[:1]),
             },
         },
@@ -2642,6 +2642,9 @@ def compute_stats(project_dir="."):
     Returns:
         requirements, tests, docs 섹션과 updated_at을 포함한 stats dict.
     """
+    if load_delivery_profile(project_dir) == "poc":
+        return compute_poc_stats(project_dir)
+
     # requirements 섹션
     try:
         group_reqs, detail_reqs, defined_acs, ac_delegates = parse_requirements(project_dir)
@@ -2715,6 +2718,120 @@ def compute_stats(project_dir="."):
         "docs":         docs_stats,
         "backlog":      backlog_stats,
         "updated_at":   date.today().isoformat(),
+    }
+
+
+def _ids_from_text(pattern, content):
+    return sorted(set(re.findall(pattern, content or "")))
+
+
+def _poc_test_status_counts(test_content):
+    rank = {"pending": 0, "skipped": 1, "passed": 2, "failed": 3}
+    seen = {}
+    for line in (test_content or "").splitlines():
+        if "|" not in line:
+            continue
+        ids = re.findall(r"\bT-(?:[A-Z]+-)?\d{3}\b", line)
+        if not ids:
+            continue
+        lowered = line.lower()
+        if "fail" in lowered:
+            status = "failed"
+        elif "environment_blocked" in lowered or "environment blocked" in lowered:
+            status = "pending"
+        elif "not run" in lowered or "not_run" in lowered or "skipped" in lowered:
+            status = "skipped"
+        elif "planned" in lowered or "tbd" in lowered:
+            status = "pending"
+        elif "pass" in lowered or "통과" in lowered:
+            status = "passed"
+        else:
+            status = "pending"
+        for test_id in ids:
+            previous = seen.get(test_id)
+            if previous is None or rank[status] > rank[previous]:
+                seen[test_id] = status
+    counts = {"total": len(seen), "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
+    for status in seen.values():
+        counts[status] += 1
+    return counts
+
+
+def compute_poc_stats(project_dir="."):
+    req_content = read_project_text(project_dir, "docs/poc/POC_REQUIREMENTS.md")
+    design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
+    test_content = read_project_text(project_dir, "docs/poc/POC_TEST_REPORT.md")
+
+    hyp_ids = _ids_from_text(r"\bHYP-\d{3}\b", req_content)
+    req_ids = _ids_from_text(r"\bREQ-\d{3}\b", req_content)
+    nreq_ids = _ids_from_text(r"\bNREQ-\d{3}\b", req_content)
+    ac_ids = _ids_from_text(r"\bAC-(?:NREQ-)?\d{3}-\d{2}\b", req_content)
+    test_link_text = test_content or ""
+    implemented_req_ids = [req_id for req_id in req_ids if req_id in test_link_text and re.search(r"\bPass\b", test_link_text, re.IGNORECASE)]
+    api_ids = _ids_from_text(r"\bAPI-\d{3}\b", design_content)
+    data_ids = _ids_from_text(r"\bDATA-\d{3}\b", design_content)
+    scr_ids = _ids_from_text(r"\bSCR-\d{3}\b", design_content)
+    app_ids = _ids_from_text(r"\bAPP-\d{3}\b", design_content)
+    evidence_ids = _ids_from_text(r"\bEV-(?:[A-Z]+-)?\d{3}\b", test_content)
+
+    tests_stats = _poc_test_status_counts(test_content)
+    requirements_stats = {
+        "groups": len(hyp_ids),
+        "total": len(req_ids),
+        "implemented": len(implemented_req_ids),
+        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
+        "ac_defined": len(ac_ids),
+        "ac_missing": 0,
+        "nreq_total": len(nreq_ids),
+    }
+
+    try:
+        docs_stats = count_docs(project_dir)
+    except Exception:
+        docs_stats = {"requirements": 0, "design": 0, "test_plan": 0, "review": 0, "total": 0}
+    try:
+        backlog_stats = compute_backlog_stats(project_dir)
+    except Exception:
+        backlog_stats = {
+            "active": 0, "done": 0, "rejected": 0,
+            "by_level": {"trivial": 0, "small": 0, "major": 0},
+            "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
+        }
+    try:
+        implementation_stats = compute_implementation_progress(project_dir)
+    except Exception:
+        implementation_stats = {
+            "requirements": {"total": 0, "implemented": 0, "pending": 0, "completed_ids": []},
+            "waves": {"total": 0, "completed": 0, "current": "", "items": []},
+        }
+    implementation_stats = dict(implementation_stats)
+    implementation_stats["requirements"] = {
+        "total": len(req_ids),
+        "implemented": len(implemented_req_ids),
+        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
+        "completed_ids": implemented_req_ids,
+    }
+
+    return {
+        "requirements": requirements_stats,
+        "implementation": implementation_stats,
+        "tests": tests_stats,
+        "docs": docs_stats,
+        "backlog": backlog_stats,
+        "poc": {
+            "hypotheses": {"total": len(hyp_ids), "ids": hyp_ids},
+            "requirements": {"total": len(req_ids), "implemented": len(implemented_req_ids), "ids": req_ids, "implemented_ids": implemented_req_ids},
+            "nreq": {"total": len(nreq_ids), "ids": nreq_ids},
+            "design": {
+                "api": {"total": len(api_ids), "ids": api_ids},
+                "data": {"total": len(data_ids), "ids": data_ids},
+                "screen": {"total": len(scr_ids), "ids": scr_ids},
+                "app": {"total": len(app_ids), "ids": app_ids},
+            },
+            "tests": {"total": tests_stats["total"]},
+            "evidence": {"total": len(evidence_ids), "ids": evidence_ids},
+        },
+        "updated_at": date.today().isoformat(),
     }
 
 
@@ -3048,10 +3165,15 @@ def implementation_display_counts(implementation):
     implementation = implementation or {}
     reqs = implementation.get("requirements", {}) if isinstance(implementation, dict) else {}
     waves = implementation.get("waves", {}) if isinstance(implementation, dict) else {}
+    implemented = reqs.get("implemented", implementation.get("implemented", 0) if isinstance(implementation, dict) else 0)
+    total = reqs.get("total", implementation.get("total", 0) if isinstance(implementation, dict) else 0)
+    percent = implementation.get("percent", 0) if isinstance(implementation, dict) else 0
+    if not percent and total:
+        percent = int((implemented / total) * 100)
     return {
-        "implemented": reqs.get("implemented", implementation.get("implemented", 0) if isinstance(implementation, dict) else 0),
-        "total": reqs.get("total", implementation.get("total", 0) if isinstance(implementation, dict) else 0),
-        "percent": implementation.get("percent", 0) if isinstance(implementation, dict) else 0,
+        "implemented": implemented,
+        "total": total,
+        "percent": percent,
         "waves_completed": waves.get("completed", implementation.get("waves_completed", 0) if isinstance(implementation, dict) else 0),
         "waves_total": waves.get("total", implementation.get("waves_total", 0) if isinstance(implementation, dict) else 0),
         "waves_current": waves.get("current", ""),
@@ -4191,6 +4313,8 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
             issues.append("docs/poc/POC_REQUIREMENTS.md에 핵심 REQ-ID가 없습니다.")
         if mostly_placeholder_row(req_content, r"HYP-\d{3}") or mostly_placeholder_row(req_content, r"REQ-\d{3}"):
             warnings.append("docs/poc/POC_REQUIREMENTS.md에 placeholder 중심의 HYP/REQ 행이 남아 있습니다.")
+        if gate in ("gate4", "gate5", "completed") and re.search(r"(?im)^\s*status\s*:\s*Draft\s*$", req_content):
+            warnings.append("docs/poc/POC_REQUIREMENTS.md가 PoC 완료 구간에서도 status: Draft입니다. 실제 상태에 맞게 Completed/Accepted 등으로 정리하세요.")
 
     design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
     if "docs/poc/POC_SYSTEM_DESIGN.md" in required and design_content:
@@ -4200,6 +4324,8 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
             issues.append("docs/poc/POC_SYSTEM_DESIGN.md에 API/DATA/SCR 중 하나 이상의 설계 ID가 없습니다.")
         if mostly_placeholder_row(design_content, r"(?:API|DATA|SCR)-\d{3}"):
             warnings.append("docs/poc/POC_SYSTEM_DESIGN.md에 placeholder 중심의 설계 행이 남아 있습니다.")
+        if gate in ("gate4", "gate5", "completed") and re.search(r"(?im)^\s*status\s*:\s*Draft\s*$", design_content):
+            warnings.append("docs/poc/POC_SYSTEM_DESIGN.md가 PoC 완료 구간에서도 status: Draft입니다. 실제 상태에 맞게 Designed/Completed 등으로 정리하세요.")
 
     test_content = read_project_text(project_dir, "docs/poc/POC_TEST_REPORT.md")
     if "docs/poc/POC_TEST_REPORT.md" in required and test_content:
@@ -8363,6 +8489,8 @@ def cmd_upgrade(project_dir="."):
     else:
         install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
+    for db_ignore in ("*.db", "*.sqlite", "*.sqlite3"):
+        ensure_gitignore_entry(project_dir, db_ignore)
     create_vulcan_config(project_dir)
     if migrate_vulcan_config_models(project_dir):
         print(f"  마이그레이션: vulcan.config.json unsupported Codex model → gpt-5.5")
@@ -12453,6 +12581,38 @@ def yaml_field_has_nonempty_items(content, key):
     return bool(re.search(r"(?m)^\s{2,}[\w_-]+\s*:\s*(?!\[\]\s*$|null\s*$|~\s*$).+", block_text))
 
 
+def delegation_record_shape_warnings(content, prefix="delegation_records"):
+    if "delegation_records" not in content:
+        return []
+    match = re.search(
+        r"(?ms)^\s*delegation_records\s*:\s*\n((?:[ \t]+.*(?:\n|$)|\s*\n)*)",
+        content,
+    )
+    if not match:
+        return []
+    block_text = match.group(1)
+    warnings = []
+    for field in (
+        "mode",
+        "delegate",
+        "started_at",
+        "completed_at",
+        "duration_seconds",
+        "heartbeat_count",
+        "status_probe_count",
+        "first_file_change_at",
+        "last_file_change_at",
+        "worker_final_response_at",
+        "final_response_lag_seconds",
+    ):
+        values = re.findall(rf"(?im)^\s*{field}\s*:\s*(.*?)\s*$", block_text)
+        if len(values) > 1:
+            warnings.append(f"{prefix}.{field}가 중복 기록되어 있습니다. 같은 field는 한 번만 남기세요.")
+        if any((value or "").strip().lower() in {"null", "~"} for value in values):
+            warnings.append(f"{prefix}.{field}가 null로 기록되어 있습니다. 알 수 없으면 필드를 생략하거나 notes에 근거를 남기세요.")
+    return warnings
+
+
 def impl_code_result_claim(body):
     if re.search(r"구현\s*완료|implementation-complete|직접\s*구현\s*완료", body, re.IGNORECASE):
         return True
@@ -12671,6 +12831,7 @@ def check_run_file(path):
         elif is_worker_result_run and not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
             warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 어떤 실행 경로였는지 추적 기록을 남기세요.")
         elif is_worker_result_run and has_delegation_records:
+            warnings.extend(delegation_record_shape_warnings(content))
             missing_timing = [
                 field for field in ("started_at", "completed_at", "duration_seconds")
                 if not re.search(rf"(?im)^\s*{field}\s*:", content)
@@ -13013,7 +13174,7 @@ def run_preflight_file(path):
         all_ids_text = " ".join(related_ids + req_ids)
         has_parent_req = bool(re.search(r"\bREQ-\d{3}\b", all_ids_text))
         has_detail_req = bool(re.search(r"\bREQ-\d{3}-\d{2}\b", all_ids_text))
-        if has_parent_req and not has_detail_req:
+        if has_parent_req and not has_detail_req and profile != "poc":
             warnings.append("target_contracts/related_ids가 parent REQ 중심입니다. 상세 REQ-NNN-NN 단위 매핑을 추가하세요.")
 
         ui_ids = set(re.findall(r"\bUI-\d{3}-\d{2}\b", content))
@@ -13052,6 +13213,8 @@ def run_preflight_file(path):
             blockers.append("native/Agy worker 사용 흔적이 있지만 delegation_records가 비어 있습니다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 기록하세요.")
         elif status in {"Completed", "Verified", "CompletedWithIssues"} and not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
             warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 실행 경로를 기록하세요.")
+        elif status in {"Completed", "Verified", "CompletedWithIssues"} and has_delegation_records:
+            warnings.extend(delegation_record_shape_warnings(content))
 
     if skill == "qa-execution":
         qa_stage = qa_stage_from_run(content, metadata)
@@ -13082,6 +13245,7 @@ def run_preflight_file(path):
             elif not has_delegation_records and not has_run_execution_record and not direct_edit_reason_present(content):
                 warnings.append("완료된 QA worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. QA 실행 경로를 추적할 수 있게 기록하세요.")
             elif has_delegation_records:
+                warnings.extend(delegation_record_shape_warnings(content, prefix="QA delegation_records"))
                 missing_timing = [
                     field for field in ("started_at", "completed_at", "duration_seconds")
                     if not re.search(rf"(?im)^\s*{field}\s*:", content)
@@ -13551,6 +13715,19 @@ def collect_status_summary(project_dir="."):
     current_gate = session.get("current_gate") or "-"
     gate_status = session.get("gate_status", {}) if isinstance(session.get("gate_status"), dict) else {}
     implementation = session.get("implementation", {}) if isinstance(session.get("implementation"), dict) else {}
+    if profile == "poc":
+        try:
+            poc_stats = compute_poc_stats(project_abs)
+            poc_requirements = poc_stats.get("requirements", {})
+            implementation = dict(implementation)
+            implementation["requirements"] = {
+                "total": poc_requirements.get("total", 0),
+                "implemented": poc_requirements.get("implemented", 0),
+                "pending": poc_requirements.get("pending", 0),
+                "completed_ids": poc_stats.get("poc", {}).get("requirements", {}).get("implemented_ids", []),
+            }
+        except Exception:
+            pass
     branch_state = session.get("branch_state", {}) if isinstance(session.get("branch_state"), dict) else {}
     current_branch = git_current_branch(project_abs)
     integration_branch = workflow.get("integration_branch") or "dev"
@@ -13594,6 +13771,8 @@ def collect_status_summary(project_dir="."):
     elif current_gate in GATE_ORDER:
         next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
 
+    dashboard_comments = collect_dashboard_comments(project_abs)
+
     return {
         "project": session.get("project") or os.path.basename(project_abs),
         "profile": profile,
@@ -13611,8 +13790,52 @@ def collect_status_summary(project_dir="."):
         "implementation": implementation,
         "active_runs": active_runs,
         "active_waves": active_waves,
+        "dashboard_comments": dashboard_comments,
         "next_actions": next_actions[:3],
     }
+
+
+def collect_dashboard_comments(project_dir="."):
+    comments_path = os.path.join(os.path.abspath(project_dir), ".vulcan", "comments", "comments.jsonl")
+    summary = {
+        "path": ".vulcan/comments/comments.jsonl",
+        "total": 0,
+        "open": 0,
+        "closed": 0,
+        "items": [],
+    }
+    if not os.path.exists(comments_path):
+        return summary
+
+    try:
+        with open(comments_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except Exception:
+                    continue
+                status = str(item.get("status") or "open").strip().lower()
+                if status in ("resolved", "converted", "stale"):
+                    status = "closed"
+                if status not in ("open", "closed"):
+                    status = "open"
+                summary["total"] += 1
+                summary[status] += 1
+                if status == "open":
+                    anchor = item.get("anchor") if isinstance(item.get("anchor"), dict) else {}
+                    summary["items"].append({
+                        "comment_id": item.get("comment_id") or "",
+                        "document": item.get("document") or "",
+                        "category": item.get("category") or "note",
+                        "line": anchor.get("start_line") or "",
+                        "body": truncate_dashboard_message(item.get("body") or "", limit=90),
+                    })
+    except Exception:
+        summary["read_error"] = True
+    return summary
 
 
 def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
@@ -13678,6 +13901,21 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
     if len(active_waves) > 5:
         print(f"  ... 외 {len(active_waves) - 5}건")
     print()
+
+    comments = summary.get("dashboard_comments") or {}
+    if comments.get("total"):
+        print(" dashboard_comments")
+        print(f"  path: {comments.get('path')}")
+        print(
+            f"  open: {comments.get('open', 0)} / total: {comments.get('total', 0)} "
+            f"(closed {comments.get('closed', 0)})"
+        )
+        for item in (comments.get("items") or [])[:5]:
+            line = f":L{item.get('line')}" if item.get("line") else ""
+            print(f"  - {item.get('comment_id') or '-'} [{item.get('category')}] {item.get('document')}{line} - {item.get('body')}")
+        if comments.get("open", 0) > 5:
+            print(f"  ... 외 {comments.get('open', 0) - 5}건")
+        print()
 
     print(" next_actions")
     for action in summary.get("next_actions") or []:
@@ -13779,6 +14017,59 @@ def _changed_files_since_root(project_dir="."):
     return sorted(set([f for f in files + status_files if f]))
 
 
+def _first_yaml_scalar(content, key):
+    match = re.search(rf"(?im)^\s*{re.escape(key)}\s*:\s*(.+?)\s*$", content)
+    if not match:
+        return ""
+    value = match.group(1).strip()
+    if value.lower() in {"null", "~"}:
+        return ""
+    return value.strip('"').strip("'")
+
+
+def _first_yaml_int(content, key):
+    value = _first_yaml_scalar(content, key)
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def _collect_delegation_lifecycle(rel_path, content):
+    if "delegation_records" not in content:
+        return []
+    has_lifecycle = any(
+        re.search(rf"(?im)^\s*{field}\s*:", content)
+        for field in (
+            "started_at",
+            "completed_at",
+            "duration_seconds",
+            "first_file_change_at",
+            "last_file_change_at",
+            "worker_final_response_at",
+            "final_response_lag_seconds",
+        )
+    )
+    if not has_lifecycle:
+        return []
+    return [{
+        "run": rel_path,
+        "mode": _first_yaml_scalar(content, "mode"),
+        "delegate": _first_yaml_scalar(content, "delegate"),
+        "started_at": _first_yaml_scalar(content, "started_at"),
+        "completed_at": _first_yaml_scalar(content, "completed_at"),
+        "duration_seconds": _first_yaml_int(content, "duration_seconds"),
+        "first_file_change_at": _first_yaml_scalar(content, "first_file_change_at"),
+        "last_file_change_at": _first_yaml_scalar(content, "last_file_change_at"),
+        "worker_final_response_at": _first_yaml_scalar(content, "worker_final_response_at"),
+        "final_response_lag_seconds": _first_yaml_int(content, "final_response_lag_seconds"),
+        "heartbeat_count": _first_yaml_int(content, "heartbeat_count"),
+        "status_probe_count": _first_yaml_int(content, "status_probe_count"),
+    }]
+
+
 def collect_project_metrics(project_dir="."):
     project_abs = os.path.abspath(project_dir)
     summary = collect_status_summary(project_abs)
@@ -13814,6 +14105,7 @@ def collect_project_metrics(project_dir="."):
 
     run_files = []
     delegation_records = 0
+    delegation_lifecycle = []
     runs_dir = os.path.join(project_abs, runs_rel_dir(project_abs))
     if os.path.isdir(runs_dir):
         for name in sorted(os.listdir(runs_dir)):
@@ -13823,6 +14115,7 @@ def collect_project_metrics(project_dir="."):
             content = read_project_text(project_abs, rel)
             run_files.append(rel)
             delegation_records += len(re.findall(r"(?im)^\s*-\s*(?:mode|runner|delegate|persona)\s*:", content))
+            delegation_lifecycle.extend(_collect_delegation_lifecycle(rel, content))
 
     return {
         "project": summary["project"],
@@ -13840,6 +14133,7 @@ def collect_project_metrics(project_dir="."):
             "files": len(run_files),
             "paths": run_files,
             "delegation_record_like_entries": delegation_records,
+            "delegation_lifecycle": delegation_lifecycle,
         },
         "implementation": summary.get("implementation") or {},
     }
@@ -13887,6 +14181,14 @@ def cmd_metrics(project_dir=".", emit_json=False):
     print(" runs")
     print(f"  files: {metrics['runs']['files']}")
     print(f"  delegation_record_like_entries: {metrics['runs']['delegation_record_like_entries']}")
+    lifecycle = metrics["runs"].get("delegation_lifecycle") or []
+    if lifecycle:
+        print("  delegation_lifecycle")
+        for item in lifecycle:
+            label = item.get("delegate") or item.get("mode") or item.get("run")
+            duration = format_duration(item.get("duration_seconds"))
+            lag = format_duration(item.get("final_response_lag_seconds"))
+            print(f"    - {label}: duration={duration}, final_response_lag={lag}, run={item.get('run')}")
     print("==================================================")
 
 
@@ -13951,10 +14253,37 @@ def cmd_branch_start(stage="impl", project_dir="."):
 def release_pr_body(project_dir, base_branch, head_branch, title):
     session = load_session(project_dir)
     project_name = session.get("project") or session.get("name") or os.path.basename(project_dir)
-    release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
-    qa_finding = "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md"
-    qa_result = "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"
-    traceability = "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md"
+    profile = load_delivery_profile(project_dir)
+    if profile == "poc":
+        release_doc = "docs/poc/POC_TEST_REPORT.md"
+        evidence_documents = [
+            "docs/poc/POC_REQUIREMENTS.md",
+            "docs/poc/POC_SYSTEM_DESIGN.md",
+            "docs/poc/POC_TEST_REPORT.md",
+        ]
+        verification_checklist = [
+            "`python vulcan.py status --check`",
+            "PoC evidence logs and smoke result reviewed",
+            "Open ISSUE/Backlog/promotion candidates reviewed",
+            "PoC continue/pivot/stop decision reviewed",
+            "Independent review completed or explicitly waived",
+        ]
+    else:
+        release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+        evidence_documents = [
+            release_doc,
+            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+        ]
+        verification_checklist = [
+            "`python vulcan.py check-trace`",
+            "`python vulcan.py check-contract` if Program Design contracts are in scope",
+            "Gate 4 QA command logs and evidence reviewed",
+            "Open FIND/CR/ISSUE/Backlog items reviewed",
+            "Release approval document reviewed",
+            "Independent PR review completed or explicitly waived",
+        ]
 
     diff_stat = git_text(["diff", "--stat", f"{base_branch}...{head_branch}"], project_dir)
     commit_log = git_text(["log", "--oneline", "--decorate", f"{base_branch}..{head_branch}"], project_dir)
@@ -13964,15 +14293,17 @@ def release_pr_body(project_dir, base_branch, head_branch, title):
         commit_log = "(no local commits found between base/head)"
 
     doc_lines = []
-    for rel_path in [release_doc, qa_finding, qa_result, traceability]:
+    for rel_path in evidence_documents:
         marker = "OK" if os.path.exists(os.path.join(project_dir, rel_path)) else "MISSING"
         doc_lines.append(f"- [{marker}] `{rel_path}`")
+    checklist_lines = "\n".join(f"- [ ] {item}" for item in verification_checklist)
 
     return f"""# {title}
 
 ## Release Candidate
 
 - Project: `{project_name}`
+- Profile: `{profile}`
 - Base: `{base_branch}`
 - Head: `{head_branch}`
 - Source of truth: `{release_doc}`
@@ -13984,12 +14315,7 @@ def release_pr_body(project_dir, base_branch, head_branch, title):
 
 ## Verification Checklist
 
-- [ ] `python vulcan.py check-trace`
-- [ ] `python vulcan.py check-contract` if Program Design contracts are in scope
-- [ ] Gate 4 QA command logs and evidence reviewed
-- [ ] Open FIND/CR/ISSUE/Backlog items reviewed
-- [ ] Release approval document reviewed
-- [ ] Independent PR review completed or explicitly waived
+{checklist_lines}
 
 ## Diff Stat
 
@@ -14303,7 +14629,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         print(f"  생성: vulcan_core/")
 
     # .gitignore
-    gitignore = "node_modules/\n.env\n.env.local\n__pycache__/\n*.pyc\n.pytest_cache/\nplaywright-report/\ntest-results/\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n.vulcan/release/\n"
+    gitignore = "node_modules/\n.env\n.env.local\n__pycache__/\n*.pyc\n.pytest_cache/\n*.db\n*.sqlite\n*.sqlite3\nplaywright-report/\ntest-results/\ndashboard/.next/\ndashboard/node_modules/\ndocs/ref-docs/\n.vulcan/release/\n"
     write_file(target_dir, ".gitignore", gitignore)
 
     # git init + 초기 커밋

@@ -43,11 +43,14 @@
 ### 3단계: 워커 에이전트 기동 및 스트림 캡처 (Orchestrator -> Worker)
 * 오케스트레이터는 워커 에이전트(agy subagent 등)를 기동하기 직전, 반드시 `python vulcan.py run-preflight <RUN-file>`을 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소가 없음을 사전 검증합니다.
 * 검증 통과 후 Antigravity 런타임의 서브에이전트 기동 도구인 `invoke_subagent`를 호출하여 가상 격리 워크스페이스(`Workspace: branch` 모드) 상에서 워커를 기동합니다.
+* `profile: poc`의 Impl worker에게는 코드, dependency manifest, 빠른 self-check만 맡깁니다. `README.md`, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker로 분리합니다.
 * 워커가 구동되는 동안 출력되는 진행 이력 및 실시간 로그 스트림을 파싱하여, 대화 단절 시 즉시 복구(Resume)할 수 있는 `conversation_id`(또는 `thread_id`) 및 실시간 태스크 대시보드 상태를 동적으로 갱신합니다.
 
 ### 4단계: 워커 수행 완료 및 출력 계약 검증 (Worker -> Orchestrator)
 * 워커는 작업을 완료하고 [RUN_OUTPUT_CONTRACT.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_OUTPUT_CONTRACT.md) 포맷에 맞춰 완료보고서를 작성 및 반환합니다.
 * 오케스트레이터는 구조적 Schema 정합성, 준수 보고서(`standard_compliance_report`), 그리고 위임(subagent, branch agent 등) 발생 시의 `delegation_records` 누락 여부를 검증합니다.
+* PoC Impl worker가 비차단 `run-preflight`/`run-check` 경고를 받았더라도 이를 제거하기 위해 장시간 반복하지 않습니다. 구현 테스트와 빠른 self-check가 통과했다면 경고와 후속 판단 필요 항목을 출력 계약에 남기고 반환합니다.
+* Agy `Workspace: branch` worker가 격리 workspace 안에서 부모의 untracked Run 문서를 직접 갱신하지 못해도 실패로 보지 않습니다. worker 반환 요약을 기준으로 Orchestrator가 부모 workspace에서 Run 결과와 `delegation_records`를 정규화합니다.
 
 ### 5단계: 변경 사항 통합 및 세션 동기화 (Orchestrator)
 * 오케스트레이터는 `python vulcan.py run-integrate` 명령을 실행해 워커가 수정한 파일이 `scope.writable`에 부합하는지 최종 git diff를 검증한 후 부모 workspace 또는 통합 브랜치에 반영 후보로 통합합니다.

@@ -179,6 +179,10 @@ delegation_records:
     started_at: "2026-06-07T10:00:00+09:00"
     completed_at: "2026-06-07T10:08:00+09:00"
     duration_seconds: 480
+    first_file_change_at: "2026-06-07T10:01:10+09:00"
+    last_file_change_at: "2026-06-07T10:06:40+09:00"
+    worker_final_response_at: "2026-06-07T10:08:00+09:00"
+    final_response_lag_seconds: 80
     heartbeat_count: 2
     status_probe_count: 1
     status: completed
@@ -220,11 +224,17 @@ delegation_records:
 - `started_at`
 - `completed_at`
 - `duration_seconds`
+- `first_file_change_at`
+- `last_file_change_at`
+- `worker_final_response_at`
+- `final_response_lag_seconds`
 - `heartbeat_count`
 - `status_probe_count`
 - `self_check`
 
-이 필드들은 승인 차단 조건은 아니지만, PoC/worker 병목 분석과 `vulcan.py metrics` 회고 자료를 만들 때 중요하다. 시간이 확실하지 않으면 추정하지 말고 비워두거나 `notes`에 근거를 남긴다.
+`first_file_change_at`과 `last_file_change_at`은 worker가 실제 파일 변경을 시작/마친 시각이다. `worker_final_response_at`은 worker가 최종 응답을 반환한 시각이고, `final_response_lag_seconds`는 `last_file_change_at`부터 최종 응답까지의 대기/문서 정리 시간을 나타낸다.
+
+이 필드들은 승인 차단 조건은 아니지만, PoC/worker 병목 분석과 `vulcan.py metrics` 회고 자료를 만들 때 중요하다. 시간이 확실하지 않으면 추정하지 말고 비워두거나 `notes`에 근거를 남긴다. PoC worker는 이 값을 맞추려고 추가 루프를 돌지 않고, 알 수 있는 범위만 기록한다.
 
 PoC profile의 짧은 실험은 Run 문서를 만들지 않을 수 있다. 이 경우에도 Gate 산출물 또는 결과 요약에 같은 항목을 간단히 남긴다.
 

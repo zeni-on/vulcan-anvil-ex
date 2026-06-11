@@ -183,6 +183,9 @@ export interface RuntimeActivity {
   hard_timeout_seconds?: number
   extension_seconds?: number
   max_extensions?: number
+  progress_probe_seconds?: number
+  no_progress_timeout_seconds?: number
+  min_runtime_seconds?: number
   timed_out?: boolean
   timeout_reason?: string
   timeout_policy?: RuntimeTimeoutPolicy

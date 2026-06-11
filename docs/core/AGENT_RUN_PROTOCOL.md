@@ -392,6 +392,7 @@ Codex desktop의 `spawn_agent`, Codex thread, Claude subagent, Agy workspace bra
 
 subagent/thread가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 `delegation_records`로 정규화한다.
 이 기록은 `Run Execution Record`보다 얇다. stderr, jsonl, cache, timeout policy 같은 외부 프로세스 메타는 필요 없지만, 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령은 남긴다.
+PoC 병목 분석이 필요하면 `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`를 함께 남겨 코드 변경 시간과 최종 응답 지연을 구분한다. 알 수 없는 값은 추정하지 않고 비워두거나 notes에 근거를 남긴다.
 변경 파일은 `scope.writable` 안에 있는지 확인하고, worker/subagent가 만든 테스트케이스와 관련 회귀 검증을 Orchestrator가 재실행한다.
 
 Orchestrator 직접 수정 예외:
@@ -423,6 +424,10 @@ Build Wave 분할을 생략하는 경우에도 구현 Run은 worker 실행 단�
 - 담당 worker 또는 subagent
 - 관련 ID
 - 실행할 테스트와 검증 명령
+
+PoC에서 구현 worker는 `app/`, `static/`, `tests/`, `requirements.txt`와 최소 self-check를 담당한다. README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 로그 정규화까지 맡기면 Impl 비용이 실제 코드 비용처럼 보이므로 worker handoff 전에 분리한다.
+PoC Impl worker의 완료 기준은 `코드 변경 + 빠른 self-check + 남은 판단 항목 보고`다. Gate 4 smoke/evidence/report는 별도 QA/Evidence 단계가 담당한다. 이미 worker가 진행 중이고 코드 구현은 끝난 상태에서 문서/경고 정리에 오래 머문다면 Orchestrator가 증적 정리와 Run 경고 정규화를 회수한다.
+Agy `Workspace: branch` 또는 native branch worker가 격리 workspace 안에서 Run 문서를 직접 수정하지 못한 경우도 정상 경로로 처리할 수 있다. worker는 변경 파일과 self-check 결과를 반환하고, Orchestrator가 부모 workspace에서 `delegation_records`, Run 결과, scope 검증을 정규화한다.
 - 추적표 갱신 기준
 - 커밋 메시지 후보
 

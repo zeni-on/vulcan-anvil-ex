@@ -33,6 +33,8 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 12. Integrate worker output only after diff/scope verification.
 13. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
 14. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
+15. In `poc`, do not let workers chase non-blocking `run-preflight` or `run-check` warnings. If implementation tests pass and only non-blocking warnings remain, the worker records them and returns for Orchestrator judgment.
+16. In `poc`, keep Build Worker scope to code, requirements/dependency files, and fast self-checks. README, final test report, browser screenshots, release/backlog, and evidence normalization belong to Gate 4/5 or a separate Evidence/Normalization Worker.
 
 ## Guardrails
 
@@ -40,6 +42,9 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 - User silence about worker usage is not a direct-implementation exception.
 - Do not mark Gate 3 planned tests as Pass during Impl just to satisfy trace checks.
 - Full E2E/UI evidence belongs to Gate 4 unless explicitly scoped as smoke evidence.
+- In `poc`, warning cleanup is not a worker completion goal unless the warning hides a real product failure, broken test, or scope violation.
+- For PoC performance review, prefer recording file-change lifecycle fields when known: `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`.
+- In `poc` Impl, do not ask the Build Worker to create final browser evidence or complete `POC_TEST_REPORT.md`; that turns the build worker into a QA/doc worker and hides the real cost.
 
 ## Verification
 

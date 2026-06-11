@@ -379,6 +379,8 @@ completion_criteria:
   - "Wave 검증은 담당 계약 테스트와 가능한 회귀 검증까지만 의미하며, 전체 E2E/QA Pass로 보고하지 않는다."
   - "가능하면 worker self-check를 실행하고, 실행하지 못하면 Not Run 사유를 남긴다."
   - "worker worktree에서 npm/build/Playwright를 못 실행해도 그 사실만으로 구현 실패를 확정하지 않고 environment_blocked/not_run과 Orchestrator 재실행 명령을 남긴다."
+  - "PoC profile에서 run-preflight/run-check가 비차단 경고만 남기면 경고 제거를 반복하지 않고 경고 내용과 후속 판단 필요 항목을 보고한다."
+  - "PoC profile의 Impl Build worker는 코드, dependency manifest, 빠른 self-check에 집중하고 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 worker로 넘긴다."
   - "추적표 또는 session 갱신 필요 항목은 Orchestrator 결정 필요 항목으로 반환하고, Implemented/Verified 상태를 직접 확정하지 않는다."
 verification:
   owner: "orchestrator-rerun"

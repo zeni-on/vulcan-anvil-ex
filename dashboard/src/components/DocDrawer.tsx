@@ -16,8 +16,9 @@ import { Children, isValidElement, useEffect, useMemo, useRef, useState, type Re
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import { X, AlertCircle, ChevronDown, Maximize2, Minimize2, Network } from 'lucide-react'
+import { X, AlertCircle, ChevronDown, Maximize2, Minimize2, Network, MessageSquarePlus } from 'lucide-react'
 import { DocNode } from '@/lib/types'
+import type { DocCommentDraftAnchor } from '@/lib/docCommentTypes'
 import { useDocContent } from '@/hooks/useDocContent'
 import { isScreenSpecDoc, parseScreenSpecDoc } from '@/lib/screenSpecDoc'
 import { isTraceabilityDoc, parseTraceabilityDoc } from '@/lib/traceabilityDoc'
@@ -26,6 +27,7 @@ import MermaidBlock from './MermaidBlock'
 import ScreenSpecDocView from './ScreenSpecDocView'
 import TraceabilityDocView from './TraceabilityDocView'
 import TraceExplorerOverlay, { extractTraceIds } from './TraceExplorerOverlay'
+import DocCommentsPanel from './DocCommentsPanel'
 
 // rehype-sanitize 기본 스키마는 <code>의 className을 제거한다. mermaid 코드 블록을
 // 식별하려면 language-* 클래스가 보존되어야 하므로 code의 className을 허용한다.
@@ -88,29 +90,45 @@ function parseMetadataBlock(block: string): DocumentMetadata {
   return metadata
 }
 
-function splitDocumentMetadata(content: string): { metadata: DocumentMetadata; body: string; raw?: string } {
+function lineCount(text: string): number {
+  if (!text) return 0
+  return text.split(/\r?\n/).length
+}
+
+function splitDocumentMetadata(content: string): {
+  metadata: DocumentMetadata
+  body: string
+  raw?: string
+  bodyStartLine: number
+} {
   const frontMatterMatch = content.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/i)
   if (frontMatterMatch) {
+    const rawBody = content.replace(frontMatterMatch[0], '')
+    const leadingTrimLineCount = lineCount(rawBody.match(/^\s*/)?.[0] ?? '')
     return {
       metadata: parseMetadataBlock(frontMatterMatch[1]),
-      body: content.replace(frontMatterMatch[0], '').trimStart(),
+      body: rawBody.trimStart(),
       raw: frontMatterMatch[1].trim(),
+      bodyStartLine: lineCount(frontMatterMatch[0]) + leadingTrimLineCount + 1,
     }
   }
 
   const yamlMatch = content.match(/```ya?ml\s*\n([\s\S]*?)\n```/i)
   if (!yamlMatch || yamlMatch.index == null || yamlMatch.index > 240) {
-    return { metadata: {}, body: content }
+    return { metadata: {}, body: content, bodyStartLine: 1 }
   }
 
   const rawYaml = yamlMatch[1].trim()
   const looksLikeRunMetadata = /^(run_id|adapter|gate|persona|skill|status|created_at):/m.test(rawYaml)
-  if (!looksLikeRunMetadata) return { metadata: {}, body: content }
+  if (!looksLikeRunMetadata) return { metadata: {}, body: content, bodyStartLine: 1 }
 
+  const rawBody = content.replace(yamlMatch[0], '')
+  const leadingTrimLineCount = lineCount(rawBody.match(/^\s*/)?.[0] ?? '')
   return {
     metadata: parseMetadataBlock(rawYaml),
-    body: content.replace(yamlMatch[0], '').trimStart(),
+    body: rawBody.trimStart(),
     raw: rawYaml,
+    bodyStartLine: lineCount(yamlMatch[0]) + leadingTrimLineCount + 1,
   }
 }
 
@@ -120,6 +138,12 @@ function encodeDocPath(path: string): string {
 
 function projectRawUrl(projectId: string, path: string): string {
   return `/api/projects/${encodeURIComponent(projectId)}/raw/${encodeDocPath(path)}`
+}
+
+function docPathForComments(doc: DocNode): string {
+  const segments = doc.slug[0] === '_root' ? doc.slug.slice(1) : doc.slug
+  const joined = segments.join('/')
+  return joined.toLowerCase().endsWith('.md') ? joined : `${joined}.md`
 }
 
 function normalizeEvidenceHref(href?: string): string | undefined {
@@ -242,6 +266,165 @@ function LoadingSkeleton() {
   )
 }
 
+interface MarkdownPosition {
+  start?: { line?: number }
+  end?: { line?: number }
+}
+
+function markdownNodePosition(node: unknown): MarkdownPosition | undefined {
+  if (!node || typeof node !== 'object') return undefined
+  const maybeNode = node as { position?: MarkdownPosition }
+  return maybeNode.position
+}
+
+function anchorFromMarkdownNode(
+  node: unknown,
+  children: ReactNode,
+  lineOffset: number,
+): DocCommentDraftAnchor | null {
+  const position = markdownNodePosition(node)
+  const startLine = position?.start?.line
+  const endLine = position?.end?.line ?? startLine
+  if (!startLine || !endLine) return null
+  const selectedText = extractText(children).replace(/\s+/g, ' ').trim()
+  return {
+    start_line: startLine + lineOffset,
+    end_line: endLine + lineOffset,
+    selected_text: selectedText,
+  }
+}
+
+function CommentButton({
+  anchor,
+  onSelect,
+}: {
+  anchor: DocCommentDraftAnchor | null
+  onSelect: (anchor: DocCommentDraftAnchor) => void
+}) {
+  if (!anchor) return null
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onSelect(anchor)
+      }}
+      className="not-prose absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded border border-blue-200 bg-white/95 text-blue-700 opacity-0 shadow-sm transition-opacity hover:bg-blue-50 group-hover/comment:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      title={`L${anchor.start_line}에 코멘트 추가`}
+      aria-label={`L${anchor.start_line}에 코멘트 추가`}
+    >
+      <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
+  )
+}
+
+function commentableComponents(
+  baseComponents: Components,
+  onSelect: (anchor: DocCommentDraftAnchor) => void,
+  bodyStartLine: number,
+): Components {
+  const lineOffset = bodyStartLine - 1
+
+  return {
+    ...baseComponents,
+    p(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <p className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </p>
+      )
+    },
+    h1(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <h1 className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </h1>
+      )
+    },
+    h2(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <h2 className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </h2>
+      )
+    },
+    h3(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <h3 className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </h3>
+      )
+    },
+    h4(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <h4 className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </h4>
+      )
+    },
+    li(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <li className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </li>
+      )
+    },
+    blockquote(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <blockquote className={`group/comment relative pr-8 ${className ?? ''}`} {...rest}>
+          {children}
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </blockquote>
+      )
+    },
+    pre(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <div className="group/comment relative">
+          <pre className={className} {...rest}>
+            {children}
+          </pre>
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </div>
+      )
+    },
+    table(props) {
+      const { node, children, className, ...rest } = props
+      const anchor = anchorFromMarkdownNode(node, children, lineOffset)
+      return (
+        <div className="group/comment relative">
+          <table className={className} {...rest}>
+            {children}
+          </table>
+          <CommentButton anchor={anchor} onSelect={onSelect} />
+        </div>
+      )
+    },
+  }
+}
+
 const markdownBodyClassName = `prose prose-slate prose-sm max-w-none rounded-md bg-white p-5 shadow-sm
   prose-headings:text-slate-950
   prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-3
@@ -267,20 +450,26 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
   const [showMetadata, setShowMetadata] = useState(false)
   const [traceOpen, setTraceOpen] = useState(false)
   const [traceSeed, setTraceSeed] = useState('')
+  const [selectedCommentAnchor, setSelectedCommentAnchor] = useState<DocCommentDraftAnchor | null>(null)
   const genericDoc = splitDocumentMetadata(content ?? '')
   const detectedTraceIds = useMemo(() => extractTraceIds(content ?? ''), [content])
   const isQaMarkdownDoc = Boolean(content && isQaDoc(doc, content))
   const markdownBody = isQaMarkdownDoc
     ? linkBareEvidencePaths(genericDoc.body)
     : genericDoc.body
-  const components = isQaMarkdownDoc
+  const baseComponents = isQaMarkdownDoc
     ? markdownComponentsForProject(projectId)
     : markdownComponents
+  const components = useMemo(
+    () => commentableComponents(baseComponents, setSelectedCommentAnchor, genericDoc.bodyStartLine),
+    [baseComponents, genericDoc.bodyStartLine],
+  )
   const hasMetadataHeader =
     genericDoc.metadata.titleKo ||
     genericDoc.metadata.title ||
     genericDoc.metadata.runId ||
     genericDoc.raw
+  const docPath = docPathForComments(doc)
 
   if (isLoading) return <LoadingSkeleton />
 
@@ -295,6 +484,77 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
       </div>
     )
   }
+
+  const renderedDocument =
+    content && isTraceabilityDoc(doc, content) ? (
+      <div className="space-y-4 rounded-md bg-slate-100 p-4 text-slate-800">
+        <TraceabilityDocView model={parseTraceabilityDoc(content)} summaryOnly />
+        <div className={markdownBodyClassName}>
+          <ReactMarkdown
+            remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+            rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+            components={components}
+          >
+            {genericDoc.body}
+          </ReactMarkdown>
+        </div>
+      </div>
+    ) : content && isScreenSpecDoc(doc, content) ? (
+      <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
+    ) : (
+      <div className="rounded-md bg-slate-100 p-4 text-slate-800">
+        {hasMetadataHeader && (
+          <header className="mb-4 rounded-md border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-4 shadow-sm">
+            <div className="text-xs font-medium text-blue-700">
+              {genericDoc.metadata.title ?? genericDoc.metadata.runId ?? 'Document'}
+            </div>
+            <h2 className="mt-1 text-lg font-semibold text-slate-950">
+              {genericDoc.metadata.titleKo ?? genericDoc.metadata.title ?? doc.name}
+            </h2>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+              {genericDoc.metadata.project && <span>프로젝트: {genericDoc.metadata.project}</span>}
+              {genericDoc.metadata.gate && <span>Gate: {genericDoc.metadata.gate}</span>}
+              {genericDoc.metadata.persona && <span>Persona: {genericDoc.metadata.persona}</span>}
+              {genericDoc.metadata.skill && <span>Skill: {genericDoc.metadata.skill}</span>}
+              {genericDoc.metadata.status && <span>상태: {genericDoc.metadata.status}</span>}
+              {(genericDoc.metadata.updatedAt || genericDoc.metadata.createdAt) && (
+                <span>일자: {genericDoc.metadata.updatedAt ?? genericDoc.metadata.createdAt}</span>
+              )}
+            </div>
+            {genericDoc.raw && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMetadata((value) => !value)}
+                  className="inline-flex items-center gap-1 rounded border border-blue-200 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                  aria-expanded={showMetadata}
+                >
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${showMetadata ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                  메타데이터 보기
+                </button>
+                {showMetadata && (
+                  <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                    <code>{genericDoc.raw}</code>
+                  </pre>
+                )}
+              </div>
+            )}
+          </header>
+        )}
+        <div className={markdownBodyClassName}>
+          <ReactMarkdown
+            remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+            rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+            components={components}
+          >
+            {markdownBody}
+          </ReactMarkdown>
+        </div>
+      </div>
+    )
 
   return (
     <div
@@ -331,75 +591,17 @@ function DrawerContent({ projectId, doc }: { projectId: string; doc: DocNode }) 
         />
       )}
 
-      {content && isTraceabilityDoc(doc, content) ? (
-        <div className="space-y-4 rounded-md bg-slate-100 p-4 text-slate-800">
-          <TraceabilityDocView model={parseTraceabilityDoc(content)} summaryOnly />
-          <div className={markdownBodyClassName}>
-            <ReactMarkdown
-              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
-              rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
-              components={markdownComponents}
-            >
-              {genericDoc.body}
-            </ReactMarkdown>
-          </div>
-        </div>
-      ) : content && isScreenSpecDoc(doc, content) ? (
-        <ScreenSpecDocView model={parseScreenSpecDoc(content)} projectId={projectId} />
-      ) : (
-        <div className="rounded-md bg-slate-100 p-4 text-slate-800">
-          {hasMetadataHeader && (
-            <header className="mb-4 rounded-md border border-blue-200 bg-gradient-to-r from-blue-50 to-white p-4 shadow-sm">
-              <div className="text-xs font-medium text-blue-700">
-                {genericDoc.metadata.title ?? genericDoc.metadata.runId ?? 'Document'}
-              </div>
-              <h2 className="mt-1 text-lg font-semibold text-slate-950">
-                {genericDoc.metadata.titleKo ?? genericDoc.metadata.title ?? doc.name}
-              </h2>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                {genericDoc.metadata.project && <span>프로젝트: {genericDoc.metadata.project}</span>}
-                {genericDoc.metadata.gate && <span>Gate: {genericDoc.metadata.gate}</span>}
-                {genericDoc.metadata.persona && <span>Persona: {genericDoc.metadata.persona}</span>}
-                {genericDoc.metadata.skill && <span>Skill: {genericDoc.metadata.skill}</span>}
-                {genericDoc.metadata.status && <span>상태: {genericDoc.metadata.status}</span>}
-                {(genericDoc.metadata.updatedAt || genericDoc.metadata.createdAt) && (
-                  <span>일자: {genericDoc.metadata.updatedAt ?? genericDoc.metadata.createdAt}</span>
-                )}
-              </div>
-              {genericDoc.raw && (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowMetadata((value) => !value)}
-                    className="inline-flex items-center gap-1 rounded border border-blue-200 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
-                    aria-expanded={showMetadata}
-                  >
-                    <ChevronDown
-                      className={`h-3 w-3 transition-transform ${showMetadata ? 'rotate-180' : ''}`}
-                      aria-hidden="true"
-                    />
-                    메타데이터 보기
-                  </button>
-                  {showMetadata && (
-                    <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                      <code>{genericDoc.raw}</code>
-                    </pre>
-                  )}
-                </div>
-              )}
-            </header>
-          )}
-          <div className={markdownBodyClassName}>
-            <ReactMarkdown
-              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
-              rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
-              components={components}
-            >
-              {markdownBody}
-            </ReactMarkdown>
-          </div>
-        </div>
-      )}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0">{renderedDocument}</div>
+        {content && (
+          <DocCommentsPanel
+            projectId={projectId}
+            docPath={docPath}
+            selectedAnchor={selectedCommentAnchor}
+            onClearSelectedAnchor={() => setSelectedCommentAnchor(null)}
+          />
+        )}
+      </div>
     </div>
   )
 }

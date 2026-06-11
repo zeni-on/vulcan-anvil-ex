@@ -113,18 +113,24 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - PoC에서 `gate-start`는 Gate 상태만 갱신하고 Orchestrator Plan Run을 자동 생성하지 않는다. Gate별 계획은 `docs/poc` 3종과 `status --check` 결과로 충분하면 생략한다.
 - Run 문서는 기본 필수 산출물이 아니다. 외부 worker 실행, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
 - PoC 구현은 메인 Orchestrator가 직접 독주하지 않고 subagent 또는 worker를 우선 사용한다. 다만 외부 CLI worker와 worktree를 반드시 요구하지는 않는다.
-- PoC 구현은 `BW-000 implementation-scaffold`를 기본 생성하지 않는다. 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행할 수 있다.
+- PoC 구현은 `BW-000 implementation-scaffold`를 기본 생성하지 않는다. 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행할 수 있다. 단, Impl worker의 완료 조건은 `코드 + dependency manifest + 빠른 self-check`로 제한한다.
 - 개발환경 준비는 모든 Profile에서 Environment Readiness Track으로 앞당길 수 있다. 이 Track은 Phase 0~Gate 3 동안 병렬로 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke를 준비하되 업무 요구사항 구현과 Pass 확정은 하지 않는다.
+- PoC Build worker는 `app/`, `static/`, `tests/`, `requirements.txt` 같은 구현 파일과 빠른 self-check에 집중한다. `README.md`, `POC_TEST_REPORT.md` 최종화, browser smoke/screenshot, release/backlog, 증적 로그 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker로 분리한다.
+- 이미 진행 중인 Build worker가 코드 구현을 끝낸 뒤 Run 경고 제거, screenshot, README, 결과서 정리에 오래 머물면 Orchestrator가 해당 정리 작업을 회수하고, worker는 구현 변경과 self-check 결과만 보고하게 한다.
 - 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과, 환경 차단, 다음 판단 항목으로 기록할 수 있다.
 - subagent/thread 실험이 의미 있는 코드/문서 변경을 만들었으면 Run을 만들지 않더라도 결과 요약에 `delegation_records`와 같은 최소 항목을 남긴다. 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령이 기준이다.
 - 가능하면 `delegation_records`에 `started_at`, `completed_at`, `duration_seconds`, `heartbeat_count`, `status_probe_count`, `self_check`를 함께 남긴다. PoC 병목은 기능 정합성보다 worker 대기/검증 시간이 원인인 경우가 많다.
+- 파일 변경 완료 후 최종 응답이 늦어지는지 보려면 `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`를 선택적으로 남긴다.
+- Agy `Workspace: branch` 같은 native branch worker가 Run 문서를 직접 수정하지 못해도 실패로 보지 않는다. worker는 변경 파일, self-check, 요약을 반환하고, Orchestrator가 부모 workspace에서 Run 문서와 `delegation_records`를 정규화하는 흐름을 기본값으로 둔다.
 - worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
-- UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 smoke로 사용할 수 있다. 다만 PoC 결과를 audit/solution으로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
+- PoC worker는 비차단 경고를 모두 제거하려고 반복하지 않는다. 구현 테스트와 `run-check`가 통과하고 `run-preflight`가 경고만 남긴 상태라면, 경고 내용과 후속 판단자를 기록한 뒤 Orchestrator에게 반환한다.
+- UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 Gate 4 smoke/demo로 사용할 수 있다. Impl worker의 완료 조건은 HTTP/API smoke 또는 빠른 단위 테스트까지만 두고, 브라우저 screenshot은 Gate 4에서 판단한다. PoC 결과를 audit/solution으로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
+- PoC 정합성 평가는 "설계와 100% 일치" 같은 audit식 단정 대신 "PoC 목표 검증에 충분히 일치"와 "solution/audit 승격 시 보강할 gap"을 함께 기록한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
 - `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.
 - `TBD`, `확정필요`, `미정`은 PoC에서 허용한다. 단, 목표, 성공 기준, 실제 실행 결과는 `TBD`로 둘 수 없다.
 - `TBD`가 남는 항목은 반드시 사유와 후속 판단 시점을 함께 남긴다. 예: `TBD: 배포 방식은 PoC 범위 밖. 제품화 전환 판단 시 결정`.
-- `check-trace`와 `run-check`는 PoC에서 상세 추적 누락, 미실행, 환경 차단, 사유 있는 TBD를 차단 이슈보다 경고/판단 항목으로 우선 분류한다. 제품 실패(`Fail`)와 실제 실행 결과 허위 보고는 계속 차단한다.
+- `check-trace`, `run-check`, `run-preflight`는 PoC에서 상세 추적 누락, 미실행, 환경 차단, 사유 있는 TBD를 차단 이슈보다 경고/판단 항목으로 우선 분류한다. 제품 실패(`Fail`), 실제 실행 결과 허위 보고, scope 위반, 깨진 테스트는 계속 차단한다.
 - `status --check`의 산출물 완성도 검사는 PoC에서 `docs/poc/` 3종을 기준으로 한다. Gate 전환 필수 요구사항도 profile별 필수 PoC 문서 존재 여부를 우선 본다.
 
 ## 5. Profile 선택 기준
@@ -198,7 +204,7 @@ PoC Profile에서는 Phase 0부터 Gate 5까지 다음 원칙으로 Run 입력 �
 - `reference_on_demand`는 이전 Gate 산출물 또는 Core 규칙 확인이 필요할 때만 읽는다.
 - 완료 기준은 "문서 완성"보다 목표/가설/성공 기준, smoke/demo 결과, 실패/미실행의 정직한 기록, 제품화 또는 audit 전환 보강 항목을 우선한다.
 - PoC에서 실패한 실험은 구현 결함으로 숨기지 않고 검증 결과 또는 다음 판단 항목으로 기록한다.
-- PoC 회고나 성능 비교가 필요하면 `python vulcan.py metrics`를 먼저 실행해 git timeline, 파일/라인 수, Run/위임 기록 수를 확인한다.
+- PoC 회고나 성능 비교가 필요하면 `python vulcan.py metrics`를 먼저 실행해 git timeline, 파일/라인 수, Run/위임 기록 수를 확인한다. 사람이 작성한 회고 문서의 소요 시간이나 라인 수가 `metrics`와 다르면 `metrics` 기준을 우선하고, 다른 기준을 썼다면 시작/종료 범위를 명시한다.
 
 모든 Profile에서 Impl 단계의 `check-trace`는 Gate 3 테스트케이스의 `Planned`/미실행 항목을 Gate 4 실행 대기 항목으로 취급한다.
 실제 Pass/Fail/Not Run 판정은 Gate 4 QA 결과서와 증적으로 확정한다.

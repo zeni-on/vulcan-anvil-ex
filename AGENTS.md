@@ -24,7 +24,8 @@
 2. `session.json`에서 `current_gate`, profile, branch 상태를 확인한다.
 3. 위치나 다음 행동이 애매하면 `python vulcan.py status`를 실행한다.
 4. Gate 전환 가능성을 판단해야 하면 `python vulcan.py status --check`를 실행한다.
-5. 현재 작업과 맞는 repo-local skill 또는 Core 문서만 추가로 읽는다.
+5. `status`에 `dashboard_comments`가 표시되면 먼저 확인하고, 사용자 코멘트/질문/FIND 후보/CR 후보를 현재 작업 판단에 반영한다.
+6. 현재 작업과 맞는 repo-local skill 또는 Core 문서만 추가로 읽는다.
 
 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기록은 보조 힌트일 뿐이다. 현재 프로젝트의 사실 근거는 반드시 `session.json`, 현재 산출물, 현재 Run, `docs/core/`, 사용자의 최신 지시에서 확인한다.
 
@@ -39,6 +40,7 @@
 - subagent/thread/native branch agent를 사용했으면 현재 Run 또는 결과 요약에 `delegation_records`를 남긴다. 외부 CLI runner를 사용한 경우에는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남긴다.
 - worker, subagent, 외부 runner 결과는 후보 산출물이다. Orchestrator가 재검증하기 전에는 최종 사실로 확정하지 않는다.
 - 실행하지 않은 테스트, 빌드, QA, 화면 증적을 `Pass`로 기록하지 않는다.
+- 대시보드 문서 코멘트는 `.vulcan/comments/comments.jsonl`에 sidecar로 저장된다. 원본 Markdown에 보이지 않으므로 `python vulcan.py status`의 `dashboard_comments` 요약을 확인한다. 코멘트 상태는 `open` 또는 `closed`만 사용한다.
 
 ## 4. 문서 라우팅
 
