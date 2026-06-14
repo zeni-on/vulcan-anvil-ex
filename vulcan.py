@@ -4687,6 +4687,7 @@ def validate_product_trace(project_dir=".", gate=None):
 
     scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", brief_content))
     req_ids = set(re.findall(r"\bREQ-\d{3}(?:-\d{2})?\b", brief_content))
+    downstream_scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", "\n".join([contracts_content, trace_content, release_content])))
 
     if gate in ("phase0", "gate1") and not scenario_ids:
         issues.append("docs/product/PRODUCT_BRIEF.md에 SCN-ID가 없습니다.")
@@ -4695,6 +4696,8 @@ def validate_product_trace(project_dir=".", gate=None):
 
     if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
         linked_text = "\n".join([contracts_content, trace_content, release_content])
+        for scenario_id in sorted(downstream_scenario_ids - scenario_ids):
+            warnings.append(f"Product trace warning: {scenario_id}가 downstream 문서에는 있지만 PRODUCT_BRIEF.md 시나리오에 없습니다.")
         for scenario_id in sorted(scenario_ids):
             if linked_text and scenario_id not in linked_text:
                 warnings.append(f"Product trace warning: {scenario_id}가 계약/회귀/릴리즈 문서에 연결되지 않았습니다.")
