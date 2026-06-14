@@ -8,7 +8,7 @@
 `docs/templates/poc/`는 PoC profile에서 사용하는 통합 산출물 양식이다.
 PoC에서는 audit 문서 전체를 느슨하게 채우는 대신 `docs/poc/`의 3종 문서로 목표, 설계, 검증 결과를 먼저 연결한다.
 
-`0.4.6` 기준 공식 템플릿:
+`0.4.7` 기준 공식 템플릿:
 
 - `PROJECT_BRIEF_TEMPLATE.md`: 프로젝트 개요서
 - `STAKEHOLDER_SCOPE_TEMPLATE.md`: 이해관계자 및 범위 정의서

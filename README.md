@@ -18,7 +18,7 @@ Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 �
 - **Adapter**: Codex, Claude, Gemini/Antigravity 같은 런타임 차이를 흡수한다.
 - **Dashboard**: Gate, 문서, Run, 통계, 최근 커밋을 한 화면에서 확인한다.
 
-최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, native subagent/Agy Workspace branch 위임 기록, 더 구체적인 `check-trace` 진단을 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
+최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, native subagent/Agy Workspace branch 위임 기록, 더 구체적인 `check-trace` 진단, Dashboard 문서 코멘트를 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
 
 ## 왜 필요한가
 
@@ -125,11 +125,11 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.6**
+**Experimental - v0.4.7**
 
-`0.4.6`은 `0.4.4` 이후 누적된 Codex custom agent, PoC profile 완충, Agy native main orchestration, `Workspace: branch` 위임 기록, Run preflight guard, `prepare-transition` 완성도 검사를 묶은 패치입니다. audit profile은 기존 강한 기준을 유지하고, PoC profile은 사유 있는 TBD와 환경 차단을 경고/판단 항목으로 다룹니다.
+`0.4.7`은 Dashboard 문서 코멘트와 Orchestrator 가시성을 보강한 패치입니다. Dashboard에서 Markdown 산출물에 코멘트를 남기면 원본 문서를 수정하지 않고 `.vulcan/comments/comments.jsonl`에 sidecar로 저장하며, Orchestrator는 `python vulcan.py status`의 `dashboard_comments` 요약을 통해 코멘트와 사용자 판단 요청을 먼저 확인할 수 있습니다.
 
-`v0.4.5`는 문서상 버전으로 정리되었지만 GitHub release/tag는 만들지 않았습니다. 공개 릴리즈 기준으로는 `v0.4.6`이 `v0.4.4` 이후 변경을 포함하는 다음 패치 릴리즈입니다.
+`0.4.6`은 Codex custom agent, PoC profile 완충, Agy native main orchestration, `Workspace: branch` 위임 기록, Run preflight guard, `prepare-transition` 완성도 검사를 묶은 패치였습니다.
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
