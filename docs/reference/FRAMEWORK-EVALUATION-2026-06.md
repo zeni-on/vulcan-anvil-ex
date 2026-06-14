@@ -30,9 +30,9 @@
 
 | 항목 | 규모 |
 | --- | --- |
-| `vulcan.py` | 약 15,170줄, 38개 서브명령 |
-| Core 규칙 문서 | 26개 (`docs/core/`) |
-| 산출물 템플릿 | 26개 |
+| `vulcan.py` | 약 15,000줄대, 38개 서브명령 |
+| Core 규칙 문서 | 25개 (`docs/core/`) |
+| 산출물 템플릿 | 28개 |
 | Runner adapter | 3개 (Codex/GPT, Claude, Gemini/Antigravity) |
 | Persona | 16개 표준 작업 모드 |
 | 개발 활동 | 최근 5일간 30+ 커밋 (매우 활발) |
@@ -85,7 +85,7 @@ PoC라고 증거를 느슨하게 적지 않았다. `POC_TEST_REPORT`는 실제 �
 
 핵심은 단정이 아니라 이 한 줄이다:
 
-> `session --status done`을 누르기 전에 에이전트가 `check-trace`를 *부르지 않으면*, 게이팅은 일어나지 않는다. 호출 여부가 모델 판단에 맡겨져 있는 한, 강제력은 "강제"가 아니라 "권고"다.
+> `session --status done`을 누르기 전에 에이전트가 `status --check` 또는 그 하위 진단(`prepare-transition`/`check-trace`)을 *부르지 않으면*, 게이팅은 일어나지 않는다. 호출 여부가 모델 판단에 맡겨져 있는 한, 강제력은 "강제"가 아니라 "권고"다.
 
 ### 관찰의 범위와 한계 (단정 금지)
 
@@ -107,7 +107,7 @@ PoC라고 증거를 느슨하게 적지 않았다. `POC_TEST_REPORT`는 실제 �
 이건 Ex만의 숙제가 아니라 모든 마크다운/프롬프트 기반 SDD 프레임워크(BMAD 포함)의 공통 한계다. 차이를 만드는 건 **얼마나 많은 규칙을 소프트(권고)에서 하드(거부 가능한 CLI 게이트)로 옮기느냐**이고, Ex는 이 방향으로 비교적 멀리 가 있는 편이다.
 
 **개선 레버 (우선순위 순):**
-1. **session 전환을 check 통과에 종속**: `session --status done`이 내부적으로 `prepare-transition`/`check-trace`를 자동 실행하고 실패 시 거부하도록. (LLM이 별도 호출을 빼먹어도 시스템이 막는다.) — *이게 가장 효과 큰 단일 레버다.*
+1. **session 전환을 check 통과에 종속**: `session --status done`이 내부적으로 `status --check` 계열 진단을 자동 실행하고 실패 시 거부하도록. 단, 즉시 전면 차단하면 PoC/legacy/사용자 승인 흐름의 마찰이 크므로 `audit` profile부터 warning → blocking으로 단계 전환한다. (LLM이 별도 호출을 빼먹어도 시스템이 막는다.) — *이게 가장 효과 큰 단일 레버다.*
 2. **빈 표준 템플릿 잔존 시 Gate 완료 거부**: 이미 일부 구현됨. 전 Gate로 확대.
 3. **작업 시작 시 Run 부재 감지**: 산출물이 수정됐는데 연결된 Run이 없으면 경고/거부.
 4. **Agent-aware output checker** (로드맵 Later 항목): 비표준 ID, TBD, 얇은 delegation record를 가볍게 자동 검사 — runner 편차를 흡수하는 안전망이므로 우선순위를 올릴 후보.
@@ -192,7 +192,7 @@ README의 문제:
 
 | 격차 | 현재 | 필요 |
 | --- | --- | --- |
-| **완성 샘플의 가시성** | `docs/examples/`에 샘플이 있으나 README에서 "완성된 모습"을 보여주지 않음 | 끝까지 진행된 샘플 1개의 산출물 묶음 + 추적표 + Gate 진행 스크린샷을 README/Dashboard 데모로 전면 노출 |
+| **완성 샘플의 가시성** | 완결 샘플은 repo 밖 실험 프로젝트에 존재하지만, 공개 repo 안에는 재현 가능한 fixture/요약 증적이 충분하지 않음 | 끝까지 진행된 샘플 1개의 요약 산출물 묶음 + 추적표 + Gate 진행 스크린샷을 README/Dashboard 데모로 전면 노출 |
 | **5분 성공 경험** | PoC profile은 있으나 "init → 첫 산출물"까지의 마찰이 큼 | `--profile poc`로 5~10분 내 동작+산출물을 보는 경로를 README 최상단 데모로 (로드맵 Fast PoC와 연결) |
 | **강제력 자동화** | check 명령 호출이 LLM 자발성에 의존 | A3의 하드 게이트화 (Now 우선순위로) |
 | **온보딩 곡선** | 26 core 문서 + 38 CLI를 사람이 이해해야 한다는 인상 | "사용자는 목표만 말하면 된다"는 약속을 첫 화면에서 *증명* (실제 대화 트랜스크립트 예시) |
@@ -219,7 +219,7 @@ README의 문제:
 
 **한 줄 요약**: *엔진은 동종 최고 수준으로 보이나, 계기판과 진입로가 약하고 길 방향이 주류와 다르다.* 다음 투자는 기능이 아니라 **강제력의 하드화 + 표현의 선명화 + 타겟 전략 결정**에 가야 한다.
 
-## A9. 현재 AI 에이전트 코딩 트렌드와의 정합성 — 대체로 역류
+## A9. 현재 AI 에이전트 코딩 트렌드와의 정합성 — 주류 속도 흐름에는 역류, spec-driven 흐름에는 인접
 
 이 섹션은 초안에 없던 축이다. "Ex가 좋은가"와 별개로 "**지금 흐름에 맞는가**"는 다른 질문이고, 정직한 답은 **대체로 거스른다**이다.
 
@@ -234,7 +234,7 @@ README의 문제:
 | spec-driven 규율 (Spec Kit/Kiro) | spec-driven + 감리 거버넌스 | △ 같은 역류, 더 무거움 |
 | AI 신뢰성·평가·관측(eval/trace/guardrail) | Gate·추적성·증적 | ○ 인접 (단 Ex는 제품 AI가 아니라 SI 산출물 축) |
 
-요점: Ex가 타는 흐름은 **하나의 작은 역류(spec-driven 규율)**뿐이고, 그조차 Spec Kit/Kiro가 *가벼운* spec→code인 데 비해 Ex는 훨씬 무겁다. 주류(자율·속도·수직통합)와는 정면으로 어긋난다. Ex의 니치(감리·SI·규제 산출물)는 실재하지만 **AI 코딩 세계의 돈·관심·인재가 몰리는 곳이 아니다.**
+요점: Ex는 **자율 앱 빌더·vibe coding의 속도 중심 흐름에는 역류**하지만, **Spec Kit/Kiro/BMAD로 대표되는 spec-driven·agentic process 흐름에는 인접**해 있다. 다만 Spec Kit/Kiro가 상대적으로 가벼운 spec→code/IDE 경험을 지향하는 데 비해 Ex는 감리·증적·추적성까지 얹어 훨씬 무겁다. Ex의 니치(감리·SI·규제 산출물)는 실재하지만 **AI 코딩 세계의 돈·관심·인재가 몰리는 주류 지점은 아니다.**
 
 ### 진자(振子) 논점 — 틀린 게 아니라 이를 수 있다
 
@@ -250,6 +250,45 @@ README의 문제:
 - 외롭다 (커뮤니티·기여자·검증자가 적음)
 
 **정직한 종합**: Ex는 트렌드에 *맞춰* 만든 도구가 아니라, 트렌드가 빠뜨리는 것을 *겨냥한* 도구다. 이건 비전이 될 수도, 고립이 될 수도 있다. 둘을 가르는 변수는 기술 깊이(이미 충분)가 아니라 **(1) 진자가 실제로 돌아오는가, (2) 돌아올 때 Ex가 발견될 위치에 있는가(표현·유통·타겟), (3) 그 전에 대형 플랫폼에 흡수되지 않는가**이다. 현재 Ex는 (1)을 통제할 수 없고, (2)가 가장 약하며(A6), (3)은 시간 싸움이다.
+
+## A10. 검토자의 결론 — 방향은 유지하되, 제품화 축을 바꿔야 한다
+
+이 보고서의 핵심 판단에는 대체로 동의한다. Ex가 선택한 문제는 "AI가 코드를 만들 수 있는가"가 아니라 **AI가 만든 결과를 누가 설명하고, 검증하고, 인수인계할 수 있는가**이다. 이 문제는 작지만 실재한다. 특히 SI/감리/규제/장기 유지보수 맥락에서는 빠른 생성보다 **결정 근거와 증적의 회수 가능성**이 중요하다. 따라서 Ex의 방향은 버릴 방향이 아니다.
+
+다만 다음 투자는 기능 깊이를 더하는 쪽이 아니라 **제품화 축을 바꾸는 쪽**이어야 한다. 현재 Ex는 이미 충분히 깊다. 문제는 깊이가 아니라 다음 네 가지다.
+
+1. **Trust Layer로 재정의**
+   Ex를 "AI 코딩 프레임워크"라고 부르면 Replit/Lovable/Bolt/v0와 속도 경쟁을 하게 된다. 그 경쟁은 Ex가 이기기 어렵고 이길 필요도 없다. Ex는 "앱을 만드는 도구"보다 **AI-generated work trust layer** 또는 **감리 가능한 SDD governance layer**에 가깝다. 즉 빠른 빌더와 경쟁하는 게 아니라, 빠르게 만들어진 결과를 요구사항·설계·테스트·증적으로 정리하는 후속/상위 계층으로 설명해야 한다.
+
+2. **PoC를 온보딩 제품으로 만들기**
+   `audit`은 Ex의 핵심 가치지만 첫 경험으로는 무겁다. 반대로 `poc`는 Ex의 진입로다. `poc`는 "품질 낮은 모드"가 아니라 **5~10분 안에 동작 코드 + 최소 산출물 + smoke evidence를 보여주는 체험판**이어야 한다. 여기서 성공 경험을 얻은 뒤 `solution`/`audit`으로 승격하는 경로가 필요하다.
+
+3. **하드 게이트는 profile별로 단계 적용**
+   `session --status done`을 무조건 막는 방식은 이론적으로 맞지만, 실제 운영에서는 너무 빨리 강제하면 사용자가 도구와 싸우게 된다. `audit`에서는 blocking, `solution`에서는 warning+approval, `poc`에서는 warning 중심으로 나누고, `status --check`를 공통 진입점으로 두는 것이 현실적이다.
+
+4. **증거를 숨기지 말고 제품 메시지로 전환**
+   샘플 프로젝트의 시간, 산출물 수, Gate 완료, evidence 로그는 Ex가 가진 거의 유일한 신뢰 신호다. 다만 raw sample을 public repo에 그대로 넣을 필요는 없다. 대신 `docs/reference/benchmarks/`에 **요약 metrics report + 재현 가능한 fixture 최소판**을 두고 README/랜딩에서 "같은 TODO 앱을 PoC와 Audit으로 돌렸을 때 무엇이 달라지는가"를 보여주는 편이 낫다.
+
+### A10.1. 고도화 우선순위
+
+| 우선순위 | 방향 | 이유 | 산출물 후보 |
+| --- | --- | --- | --- |
+| P0 | Public positioning 재정의 | README/landing이 Ex의 실제 해자를 즉시 보여줘야 함 | README hero 문구, 비교표, 1개 benchmark summary |
+| P0 | PoC fast-track 안정화 | 첫 성공 경험이 없으면 audit 가치는 전달되지 않음 | `--profile poc` quickstart, 3문서 템플릿, smoke evidence 기준 |
+| P1 | Gate hardening 단계 적용 | runner 편차를 줄이되 운영 마찰을 관리해야 함 | `session --status done` profile-aware guard |
+| P1 | Benchmark fixture/metrics | "좋다"가 아니라 "이만큼 걸리고 이만큼 남긴다"를 보여줘야 함 | `docs/reference/benchmarks/README.md`, metrics JSON/MD |
+| P2 | Adapter-native delegation 정리 | Codex thread/subagent, Agy workspace branch, Claude 흐름은 각기 달라져야 함 | Core 공통 계약 + adapter별 native best path |
+| P2 | Dashboard decision panel | 정보 나열보다 open comment, active gate blocker, evidence gap을 보여줘야 함 | dashboard status/comment/evidence summary |
+
+### A10.2. 전략적 선택
+
+이 보고서에서 가장 중요한 미결 질문은 "한국 SI/감리 특화"와 "글로벌 SDD 도구" 중 어느 쪽으로 갈 것인가다. 단기적으로는 **한국어 SI/감리 특화 + 영어 public summary 최소화**가 더 현실적이다. 이유는 다음과 같다.
+
+- Ex의 차별점인 감리 산출물, 요구사항추적표, FIND/CR/ISSUE 분류는 한국 SI/공공/규제 맥락에서 가장 잘 이해된다.
+- 글로벌 시장에서는 Spec Kit/BMAD/Kiro의 인지도와 생태계를 바로 넘기 어렵다.
+- 지금 필요한 것은 글로벌 확장보다, 작은 표적 사용자에게 "아, 이거 내 프로젝트에서 필요하다"는 확신을 주는 것이다.
+
+따라서 당장은 **한국어 audit depth를 유지하되, 외부 소개 문구와 benchmark 요약만 영어/중립 톤으로 분리**하는 전략이 좋다. 완전한 영문화는 실제 외부 사용자가 생긴 뒤 결정해도 늦지 않다.
 
 ---
 
