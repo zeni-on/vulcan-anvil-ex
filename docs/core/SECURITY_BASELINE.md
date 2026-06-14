@@ -20,7 +20,7 @@
 
 | 기준 | 역할 | Ex 사용 방식 |
 | --- | --- | --- |
-| OWASP ASVS | 웹 애플리케이션 보안 요구사항과 검증 기준 | Solution/Audit의 기본 보안 체크리스트 |
+| OWASP ASVS | 웹 애플리케이션 보안 요구사항과 검증 기준 | Product/Audit의 기본 보안 체크리스트 |
 | OWASP Top 10 | 웹 애플리케이션 위험 분류 | 위험 유형 및 누락 체크 |
 | OWASP API Security Top 10 | API 보안 위험 분류 | API 중심 앱의 접근통제, 인증, 리소스 사용 위험 점검 |
 | CWE | 코드 레벨 보안약점 분류 | 구현/리뷰/진단 시 약점 ID 연결 |
@@ -31,8 +31,8 @@ Profile별 기본 적용은 다음과 같다.
 | Profile | 기본 보안 기준 |
 | --- | --- |
 | `poc` | 주요 위험 식별, 민감정보/인증/외부입력 여부, 제품화 전환 시 보강할 gap |
-| `solution` | OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE 기반 제품 보안 기준선 |
-| `audit` | Solution 기준선 + KISA/공공/고객사 기준 매핑 + 제출/검수용 증적 |
+| `product` | OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE 기반 제품 보안 기준선 |
+| `audit` | Product 기준선 + KISA/공공/고객사 기준 매핑 + 제출/검수용 증적 |
 
 ## 2. 참조 표준
 
@@ -79,7 +79,7 @@ verification:
 - `SEC-ID`는 최소 하나 이상의 `REQ` 또는 `NREQ`와 연결한다.
 - `SEC-ID`는 최소 하나 이상의 `PGM`, `SCR`, `DB`, `IF` 중 하나와 연결한다.
 - `SEC-ID`는 최소 하나 이상의 테스트 또는 리뷰 증적과 연결한다.
-- Solution profile에서는 OWASP ASVS/Top 10/API Top 10과 CWE를 먼저 작성하고, KISA/SR은 필요할 때 참고 또는 Audit 전환 gap으로 남긴다.
+- Product profile에서는 OWASP ASVS/Top 10/API Top 10과 CWE를 먼저 작성하고, KISA/SR은 필요할 때 참고 또는 Audit 전환 gap으로 남긴다.
 - 공공/SI/Audit profile에서는 `KISA/SR` 매핑을 먼저 작성하고, OWASP/CWE는 보조 분류로 추가한다.
 
 ## 4. 기능 유형별 필수 보안항목

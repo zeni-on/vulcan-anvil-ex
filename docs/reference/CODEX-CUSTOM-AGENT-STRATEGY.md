@@ -24,7 +24,7 @@ Codex custom agent는 Ex의 공식 worker 실행을 대체하지 않는다.
 2. 파일 수정, Gate 전환, session 갱신, 최종 승인 판단은 custom agent에게 맡기지 않는다.
 3. 공식 구현, QA 실행, 증적 생성은 기본적으로 Run 문서와 `agent-run/run-exec` 경로를 우선한다.
 4. custom agent 결과는 후보 의견이며 Orchestrator가 다시 검증한다.
-5. delivery profile(`audit`, `solution`, `poc`)은 agent 이름으로 만들지 않는다. agent는 역할 중심으로 정의하고, 현재 profile은 `session.json` 또는 `python vulcan.py profile-status`로 확인한다.
+5. delivery profile(`audit`, `product`, `poc`)은 agent 이름으로 만들지 않는다. agent는 역할 중심으로 정의하고, 현재 profile은 `session.json` 또는 `python vulcan.py profile-status`로 확인한다.
 6. agent 수는 작게 시작한다. 너무 많은 역할을 만들면 선택 비용과 결과 통합 비용이 커진다.
 
 ## 3. 1차 Agent Set

@@ -8,7 +8,7 @@
 Vulcan-Anvil Ex는 감리 대응형 프로젝트에서 강하게 동작하도록 설계되었다.
 하지만 모든 작업이 공공/SI/감리 수준의 산출물과 검수 강도를 필요로 하지는 않는다.
 
-작은 PoC, 내부 검증, 솔루션 제품 개발, 개인 기능 개발에 같은 절차를 적용하면 개발보다 문서와 검수 비용이 더 커질 수 있다.
+작은 PoC, 내부 검증, 제품/업무 앱 개발, 개인 기능 개발에 같은 절차를 적용하면 개발보다 문서와 검수 비용이 더 커질 수 있다.
 반대로 감리 대응 프로젝트에서 절차를 너무 줄이면 요구사항, 설계, 테스트, 증적, 변경관리의 추적성이 무너질 수 있다.
 
 따라서 Vulcan-Anvil Ex는 프로젝트 성격별 기본값 묶음인 `Delivery Profile`을 둔다.
@@ -28,7 +28,7 @@ Profile은 Core 규칙을 없애는 예외가 아니다.
 Core의 ID, Run, Traceability, Gate 원칙은 유지하되, 프로젝트 목적에 맞게 산출물 깊이와 검증 범위를 조절한다.
 
 Profile은 별도 Core 문서 세트가 아니라 `Core + Profile Overlay`로 운영한다.
-즉 `audit`, `solution`, `poc`마다 규칙을 복제하지 않고, 동일한 Core 문서와 명령을 사용하되 산출물 필수 여부, 검사 엄격도, 승인 지점, 증적 수준만 Profile Overlay로 조정한다.
+즉 `audit`, `product`, `poc`마다 규칙을 복제하지 않고, 동일한 Core 문서와 명령을 사용하되 산출물 필수 여부, 검사 엄격도, 승인 지점, 증적 수준만 Profile Overlay로 조정한다.
 Profile이 달라져도 Run, ID, Traceability, Gate, Worker, QA의 기본 의미는 바뀌지 않는다.
 
 ## 3. Profile 분류
@@ -36,7 +36,7 @@ Profile이 달라져도 Run, ID, Traceability, Gate, Worker, QA의 기본 의미
 | Profile | 대상 | 특징 | 기본 강도 |
 | --- | --- | --- | --- |
 | `Audit Profile` | 공공/SI/감리 대응 프로젝트 | 요구사항, 설계, 테스트, 보안, 증적, CR을 가장 엄격하게 관리 | 높음 |
-| `Solution Profile` | 일반 앱/제품/솔루션 개발 | 품질은 유지하되 감리 제출 수준의 문서/증적 밀도는 줄이고, 제품 로드맵, 릴리즈, 아키텍처 결정, 품질 기준 중심으로 운영 | 중간 |
+| `Product Profile` | 일반 앱/제품/업무 시스템 개발 | 품질은 유지하되 감리 제출 수준의 문서/증적 밀도는 줄이고, 제품 로드맵, 릴리즈, 아키텍처 결정, 품질 기준 중심으로 운영 | 중간 |
 | `PoC Profile` | 실험/검증/프로토타입 | Phase 0, Gate 1, Gate 2를 가볍게 묶고 핵심 가설 검증에 집중 | 낮음~중간 |
 
 ## 4. Profile별 운영 기준
@@ -65,11 +65,11 @@ Profile별 기본 Overlay는 다음과 같다.
 | Profile | `gate_approval` | `traceability_level` | `program_contract_level` | `security_standard_level` | `data_standard_level` | `qa_evidence_level` | `independent_review_level` | `run_preflight_strictness` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `audit` | 모든 Gate 명시 승인 | 전체 REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI | class/interface/public method 수준 | KISA/공공/고객사 기준 + OWASP/CWE | 공공데이터 공통표준 + 프로젝트 단어사전 | QA-000~QA-003, 명령 로그, UI 증적, FIND/CR | Gate 2, Gate 4, 필요 시 PR | 강한 차단 중심 |
-| `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | OWASP ASVS/Top 10/API Top 10 + CWE | 프로젝트 단어사전 + ISO 11179식 metadata 요소 + 필요 시 공공표준 참고 | 릴리즈 회귀, 주요 UI/API 증적, 공식 UI runner 기본 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
+| `product` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | OWASP ASVS/Top 10/API Top 10 + CWE | 프로젝트 단어사전 + ISO 11179식 metadata 요소 + 필요 시 공공표준 참고 | 릴리즈 회귀, 주요 UI/API 증적, 공식 UI runner 기본 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
 | `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | 주요 보안 위험 식별과 제품화 전환 gap | 핵심 데이터 항목과 민감정보 식별 | smoke, 데모 캡처, 결과 로그, 필요 시 경량 UI script | 선택 | 경고 중심 |
 
 `--trace-seed`는 모든 Profile에서 사용할 수 있다.
-다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `solution`, `poc`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
+다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `product`, `poc`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
 PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본값으로 사용한다. 사용자가 더 넓은 영향 분석이 필요하다고 판단하면 `--trace-depth 2` 이상을 명시한다.
 
 ### 4.1 Audit Profile
@@ -86,17 +86,18 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Gate 4 QA는 QA-000 환경 준비, QA-001 명령 기반 검증, QA-002 UI/E2E 증적, QA-003 결과 정리와 판정 후보로 나누어 수행한다.
 - Gate 4 공식 UI Pass는 `@playwright/test` runner, `npx playwright test`, HTML report/trace/screenshot 증적을 기준으로 한다. 커스텀 Playwright script는 보조 관찰로만 남긴다.
 
-### 4.2 Solution Profile
+### 4.2 Product Profile
 
-상용 제품, 사내 솔루션, 반복 릴리즈가 필요한 제품형 개발에 사용한다.
+상용 제품, 사내 업무 앱, 반복 릴리즈가 필요한 제품형 개발에 사용한다.
 
 - 문서의 목적은 감리 제출보다 제품 의사결정, 품질 유지, 릴리즈 추적에 둔다.
 - 요구사항은 제품 백로그, 사용자 시나리오, 릴리즈 범위와 연결한다.
 - 설계 문서는 SW Architecture, ADR, API/DB 계약, 보안/개발표준 중심으로 유지한다.
 - 보안 기준은 KISA/공공 제출 근거가 아니라 OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE를 기본 기준선으로 사용한다.
-- KISA, 공공, 고객사 보안 기준은 Solution에서 선택 참고로 둘 수 있으며, Audit 전환 시 공식 매핑과 증적으로 보강한다.
+- 설계자가 우선 읽을 기준선은 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`다.
+- KISA, 공공, 고객사 보안 기준은 Product에서 선택 참고로 둘 수 있으며, Audit 전환 시 공식 매핑과 증적으로 보강한다.
 - 데이터 표준은 프로젝트 단어사전, 화면/API/DB 항목 매핑, 데이터 도메인, 개인정보/인증정보/민감정보 분류를 기본으로 한다.
-- 공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이지만, Solution에서는 조직/도메인 표준이 없을 때 참고 표준으로 사용할 수 있다.
+- 공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이지만, Product에서는 조직/도메인 표준이 없을 때 참고 표준으로 사용할 수 있다.
 - 화면설계와 증적은 주요 사용자 흐름과 회귀 테스트 기준에 집중한다.
 - 변경관리는 CR보다 Issue, Feature, Release Note, ADR과 연결될 수 있다.
 - Gate는 유지하되 승인 절차를 가볍게 운영할 수 있다.
@@ -111,11 +112,11 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Phase 0, Gate 1, Gate 2를 짧게 묶어 목표, 가설, 성공 기준, 주요 제약을 먼저 정한다.
 - 모든 산출물을 완성하려고 하지 않고 핵심 요구사항, 핵심 설계, 핵심 테스트만 작성한다.
 - PoC profile의 기본 산출물 세트는 `docs/poc/POC_REQUIREMENTS.md`, `docs/poc/POC_SYSTEM_DESIGN.md`, `docs/poc/POC_TEST_REPORT.md` 3종이다.
-- 새 PoC 프로젝트는 이 3종을 공식 작업 문서로 생성한다. Audit 산출물 템플릿 파일은 기본 생성하지 않으며, 필요 시 Solution/Audit 승격 후보로 만든다.
+- 새 PoC 프로젝트는 이 3종을 공식 작업 문서로 생성한다. Audit 산출물 템플릿 파일은 기본 생성하지 않으며, 필요 시 Product/Audit 승격 후보로 만든다.
 - 이 3종 산출물은 audit 문서를 대체하는 최종 제출본이 아니라, 가설-설계-검증-판단을 빠르게 연결하는 PoC 원장이다.
 - 추적성은 최소한 `가설/요구사항 -> 구현 -> 검증 결과`를 연결하는 수준으로 유지한다.
 - 보안/데이터/운영 기준은 실제 배포가 아니라 위험 식별과 향후 전환 조건 중심으로 작성한다.
-- PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Solution Profile로 승격한다.
+- PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Product Profile로 승격한다.
 - PoC에서 `gate-start`는 Gate 상태만 갱신하고 Orchestrator Plan Run을 자동 생성하지 않는다. Gate별 계획은 `docs/poc` 3종과 `status --check` 결과로 충분하면 생략한다.
 - Run 문서는 기본 필수 산출물이 아니다. 외부 worker 실행, 독립 검수, 긴 작업 위임, 재현 가능한 실험 기록이 필요한 경우에만 compact Run을 만든다.
 - PoC 구현은 메인 Orchestrator가 직접 독주하지 않고 subagent 또는 worker를 우선 사용한다. 다만 외부 CLI worker와 worktree를 반드시 요구하지는 않는다.
@@ -130,8 +131,8 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Agy `Workspace: branch` 같은 native branch worker가 Run 문서를 직접 수정하지 못해도 실패로 보지 않는다. worker는 변경 파일, self-check, 요약을 반환하고, Orchestrator가 부모 workspace에서 Run 문서와 `delegation_records`를 정규화하는 흐름을 기본값으로 둔다.
 - worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
 - PoC worker는 비차단 경고를 모두 제거하려고 반복하지 않는다. 구현 테스트와 `run-check`가 통과하고 `run-preflight`가 경고만 남긴 상태라면, 경고 내용과 후속 판단자를 기록한 뒤 Orchestrator에게 반환한다.
-- UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 Gate 4 smoke/demo로 사용할 수 있다. Impl worker의 완료 조건은 HTTP/API smoke 또는 빠른 단위 테스트까지만 두고, 브라우저 screenshot은 Gate 4에서 판단한다. PoC 결과를 audit/solution으로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
-- PoC 정합성 평가는 "설계와 100% 일치" 같은 audit식 단정 대신 "PoC 목표 검증에 충분히 일치"와 "solution/audit 승격 시 보강할 gap"을 함께 기록한다.
+- UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 Gate 4 smoke/demo로 사용할 수 있다. Impl worker의 완료 조건은 HTTP/API smoke 또는 빠른 단위 테스트까지만 두고, 브라우저 screenshot은 Gate 4에서 판단한다. PoC 결과를 audit/product로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
+- PoC 정합성 평가는 "설계와 100% 일치" 같은 audit식 단정 대신 "PoC 목표 검증에 충분히 일치"와 "product/audit 승격 시 보강할 gap"을 함께 기록한다.
 - Run 입력 문서는 `POC-RUN-COMPACT-STRATEGY.md` 기준으로 compact하게 생성한다. `AGENT_RUN_PROTOCOL`, `RUN_INPUT_CONTRACT`, `RUN_OUTPUT_CONTRACT`, Traceability Matrix 같은 오케스트레이터용 문서는 worker Run에 반복 삽입하지 않는다.
 - `source_documents.reference_on_demand`는 trace-context 직접 관련 문서 중심으로 제한하며, 기본 후보 수는 5개 이내로 둔다.
 - `TBD`, `확정필요`, `미정`은 PoC에서 허용한다. 단, 목표, 성공 기준, 실제 실행 결과는 `TBD`로 둘 수 없다.
@@ -144,8 +145,8 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 | 질문 | 예라면 |
 | --- | --- |
 | 외부 감리, 고객 검수, 공식 산출물 제출이 필요한가? | `Audit Profile` |
-| 일반 앱/솔루션 개발이며 품질은 유지하되 감리 수준 산출물 밀도는 줄이고 싶은가? | `Solution Profile` |
-| 반복 릴리즈와 제품 로드맵, 품질 기준이 중요한가? | `Solution Profile` |
+| 일반 제품/업무 앱 개발이며 품질은 유지하되 감리 수준 산출물 밀도는 줄이고 싶은가? | `Product Profile` |
+| 반복 릴리즈와 제품 로드맵, 품질 기준이 중요한가? | `Product Profile` |
 | 핵심 가설이나 기술 가능성을 빠르게 검증하려는가? | `PoC Profile` |
 
 ## 6. 도구 적용 기준
@@ -153,14 +154,15 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 `0.4.x` 기준 새 프로젝트의 기본 Profile은 `audit`이다.
 
 `vulcan.py init`은 `session.json.profile`, `vulcan.config.json.delivery_profile`, `vulcan.config.json.profile_rules`에 선택한 Profile과 Overlay 기준을 기록한다.
-대화형 터미널에서 Profile을 지정하지 않으면 `audit`, `solution`, `poc` 중 하나를 선택할 수 있다.
+대화형 터미널에서 Profile을 지정하지 않으면 `audit`, `product`, `poc` 중 하나를 선택할 수 있다.
+기존 문서와 명령어 호환을 위해 `solution`은 `product`의 alias로 입력만 허용한다.
 비대화형 자동화에서는 기존 호환성을 위해 `audit`으로 초기화한다.
 
 사용 예:
 
 ```powershell
 python vulcan.py init ../my-project "My Project" --profile audit
-python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-product "My Product" --profile product
 python vulcan.py init ../my-poc "My PoC" --profile poc
 ```
 
@@ -169,7 +171,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 | 항목 | 현재 상태 |
 | --- | --- |
 | `audit` | 기본 Profile이며 가장 강하게 문서화/검증된다. |
-| `solution` | `init --profile solution`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
+| `product` | `init --profile product`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
 | `poc` | `init --profile poc`으로 선택할 수 있고, `docs/poc/` 3종 산출물과 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
 | `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
 | `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. PoC는 일부 추적성/placeholder 검사를 경고 중심으로 조정한다. |
@@ -178,11 +180,13 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 
 ```json
 {
-  "delivery_profile": "solution",
+  "delivery_profile": "product",
   "profile_rules": {
     "gate_approval": "major-gates",
     "traceability_level": "core",
     "program_contract_level": "public-api-and-service",
+    "security_standard_level": "owasp-asvs-top10-api-top10-cwe",
+    "data_standard_level": "project-glossary-field-domain-security-classification",
     "qa_evidence_level": "release-regression",
     "independent_review_level": "release-candidate",
     "run_preflight_strictness": "contract-and-scope"
@@ -199,7 +203,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다. (PoC TBD 경고화 1차 완료)
 6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 3종 산출물 원장 기반 1차 완료)
 7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
-8. `solution`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
+8. `product`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
 
 `run-new`는 Profile과 Gate, skill 조합을 보고 가능한 경우 Run 입력 계약을 자동 확장한다.
 
@@ -225,7 +229,7 @@ python vulcan.py profile-status
 python vulcan.py status --check
 ```
 
-PoC 산출물 세트와 승격 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`와 `docs/reference/POC-SOLUTION-LIFECYCLE-INTEGRATION-DESIGN-AGY.md`를 참고한다.
+PoC 산출물 세트와 승격 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`와 `docs/reference/POC-PRODUCT-LIFECYCLE-INTEGRATION-DESIGN-AGY.md`를 참고한다.
 Fast PoC와 Environment Readiness Track 기준은 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 참고한다.
 
 Audit Profile에서는 Phase 0부터 Gate 5까지 빈 Run 껍데기를 만들지 않고 다음 항목을 포함한다.

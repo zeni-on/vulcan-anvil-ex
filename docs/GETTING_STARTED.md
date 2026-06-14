@@ -6,14 +6,14 @@ Vulcan-Anvil Ex는 사용자가 명령어를 하나씩 넣어 산출물을 수�
 
 ```powershell
 python vulcan.py init ../my-project "My Project"
-python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-product "My Product" --profile product
 python vulcan.py init ../my-poc "My PoC" --profile poc
 ```
 
 초기화하면 Core 문서, 템플릿, adapter 문서, 공개 표준 참고자료, `AGENTS.md`, `session.json`, 프로젝트용 `vulcan.py`가 생성됩니다.
 
 `--profile`을 지정하지 않으면 기본값은 `audit`입니다.
-`solution`, `poc`는 초기화 시 선택할 수 있으며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
+`product`, `poc`는 초기화 시 선택할 수 있으며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
 Profile은 결과물의 품질 등급이 아니라 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식의 차이입니다.
 현재 프로젝트의 Gate/Profile/Branch/다음 행동은 다음 명령으로 먼저 확인합니다.
 
@@ -28,7 +28,7 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 | 원하는 것 | 선택 |
 | --- | --- |
 | 빠른 기술/아이디어 검증 | `--profile poc` |
-| 제품/업무 앱 개발과 반복 릴리즈 | `--profile solution` |
+| 제품/업무 앱 개발과 반복 릴리즈 | `--profile product` |
 | 감리, 고객 검수, 인수인계, 강한 QA 증적 | 기본값 `audit` |
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
@@ -91,10 +91,10 @@ PoC Profile로 시작했다면 다음처럼 목표와 운영 강도를 함께 �
 TBD가 필요한 항목은 사유와 후속 판단 시점을 같이 남겨줘.
 ```
 
-Solution Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다.
+Product Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다.
 
 ```text
-이 프로젝트는 Solution profile이야.
+이 프로젝트는 Product profile이야.
 일반 제품/업무 앱 수준으로 요구사항, 주요 설계, API/DB/UI 계약, 릴리즈 회귀 기준을 남겨줘.
 감리 제출 수준의 과도한 증적보다는 제품 품질과 유지보수성을 우선해줘.
 ```

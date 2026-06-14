@@ -320,23 +320,30 @@ GATE_LABELS = {
 
 GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 DEFAULT_DELIVERY_PROFILE = "audit"
-SUPPORTED_DELIVERY_PROFILES = ("audit", "solution", "poc")
+SUPPORTED_DELIVERY_PROFILES = ("audit", "product", "poc")
+DELIVERY_PROFILE_ALIASES = {
+    "solution": "product",
+}
 DELIVERY_PROFILE_RULES = {
     "audit": {
         "gate_approval": "all-gates-explicit",
         "required_artifacts": "full-audit-set",
         "traceability_level": "full",
         "program_contract_level": "class-interface-public-method",
+        "security_standard_level": "kisa-public-customer-plus-owasp-cwe",
+        "data_standard_level": "public-data-standard-plus-project-glossary",
         "qa_evidence_level": "qa-000-to-qa-003-command-ui-log-finding",
         "independent_review_level": "gate2-gate4-pr-as-needed",
         "run_preflight_strictness": "blocking",
         "release_control": "gate5-release-approval-pr",
     },
-    "solution": {
+    "product": {
         "gate_approval": "major-gates-and-release",
         "required_artifacts": "architecture-api-db-security-release-core",
         "traceability_level": "core-requirement-api-db-security-regression",
         "program_contract_level": "public-api-service-dto",
+        "security_standard_level": "owasp-asvs-top10-api-top10-cwe",
+        "data_standard_level": "project-glossary-field-domain-security-classification",
         "qa_evidence_level": "release-regression-major-ui-api",
         "independent_review_level": "release-candidate-or-large-change",
         "run_preflight_strictness": "scope-contract-blocking-other-warning",
@@ -347,6 +354,8 @@ DELIVERY_PROFILE_RULES = {
         "required_artifacts": "poc-requirements-system-design-test-report",
         "traceability_level": "hypothesis-to-implementation-to-result",
         "program_contract_level": "main-interface-entrypoint",
+        "security_standard_level": "risk-identification-and-productization-gap",
+        "data_standard_level": "core-fields-and-sensitive-data-identification",
         "qa_evidence_level": "smoke-demo-log",
         "independent_review_level": "optional",
         "run_preflight_strictness": "warning-first",
@@ -488,7 +497,7 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "capture_tool": "Playwright",
     "official_runner": "@playwright/test",
     "official_runner_command": "npx playwright test",
-    "official_runner_required_profiles": ["audit", "solution"],
+    "official_runner_required_profiles": ["audit", "product"],
     "poc_fallback_allowed": True,
     "install_if_missing": [
         "npx playwright --version",
@@ -503,9 +512,9 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "forbidden_as_pass_evidence": [
         "CDP-only capture",
         "browser manual screenshot without Playwright run",
-        "custom Playwright library script without @playwright/test runner in audit/solution profile",
+        "custom Playwright library script without @playwright/test runner in audit/product profile",
     ],
-    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
+    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
     "minimum_fields": [
         "UI-ID",
         "관련 SCR",
@@ -1610,6 +1619,7 @@ def split_working_and_reference(paths):
 
 def normalize_delivery_profile(profile):
     normalized = str(profile or DEFAULT_DELIVERY_PROFILE).strip().lower()
+    normalized = DELIVERY_PROFILE_ALIASES.get(normalized, normalized)
     if normalized not in SUPPORTED_DELIVERY_PROFILES:
         return DEFAULT_DELIVERY_PROFILE
     return normalized
@@ -2220,9 +2230,9 @@ ui_evidence_policy:
   id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
   official_runner: {format_yaml_scalar(ui_evidence.get("official_runner", "@playwright/test"))}
   official_runner_command: {format_yaml_scalar(ui_evidence.get("official_runner_command", "npx playwright test"))}
-  official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "solution"]))}
+  official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "product"]))}
   poc_fallback_allowed: {str(ui_evidence.get("poc_fallback_allowed", True)).lower()}
-  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
+  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
   required_artifacts:
 {format_yaml_sequence(ui_evidence.get("required_artifacts", []), 4)}
   minimum_fields:
@@ -12904,14 +12914,14 @@ def check_run_file(path):
                 re.IGNORECASE,
             ))
             looks_like_official_gate4_ui_pass = bool(re.search(
-                r"\b(gate4|qa-execution|QA-002|DOC-QA-G4|Audit Profile|Solution Profile|profile\s*:\s*(audit|solution))\b",
+                r"\b(gate4|qa-execution|QA-002|DOC-QA-G4|Audit Profile|Product Profile|Solution Profile|profile\s*:\s*(audit|product|solution))\b",
                 content,
                 re.IGNORECASE,
             ))
             if has_ui_pass_evidence and looks_like_official_gate4_ui_pass and not has_official_playwright_runner:
                 issues.append("Gate 4 공식 UI Pass는 @playwright/test 러너 실행 결과가 필요합니다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 기록하세요.")
             if has_ui_pass_evidence and has_custom_playwright_script and not has_official_playwright_runner:
-                issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/solution에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
+                issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/product에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
 
     # JSON Schema 기반 구조화 출력(Run metadata & Output) 정합성 검증
     yaml_meta = parse_simple_yaml_block(content)
@@ -13684,12 +13694,17 @@ def cmd_profile_status(project_dir="."):
     if config_profile != profile:
         print("  warning: session profile and config delivery_profile differ; session wins for Run preset selection")
     print("  supported_profiles: " + ", ".join(SUPPORTED_DELIVERY_PROFILES))
+    if DELIVERY_PROFILE_ALIASES:
+        aliases = ", ".join(f"{alias}->{target}" for alias, target in DELIVERY_PROFILE_ALIASES.items())
+        print(f"  aliases: {aliases}")
     print("  profile_rules:")
     for key in (
         "gate_approval",
         "required_artifacts",
         "traceability_level",
         "program_contract_level",
+        "security_standard_level",
+        "data_standard_level",
         "qa_evidence_level",
         "independent_review_level",
         "run_preflight_strictness",
@@ -14512,7 +14527,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     if not profile_was_explicit and sys.stdin.isatty():
         profile_options = [
             ("audit", "감리/공식 제출 수준 문서와 강한 추적성"),
-            ("solution", "제품화/운영 가능한 솔루션 기준"),
+            ("product", "실사용/릴리즈 가능한 제품 기준"),
             ("poc", "가설 검증과 빠른 실험 중심"),
         ]
         print("프로젝트 Delivery Profile을 선택해 주세요:")
@@ -14748,7 +14763,7 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
-    p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit)")
+    p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit; solution은 product alias)")
     p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
 
     p_status = subparsers.add_parser("status", help="현재 Gate/Profile/Branch/Run 상태 요약")

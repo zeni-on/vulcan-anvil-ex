@@ -42,7 +42,7 @@ related_documents:
 
 | 항목 | 내용 |
 | --- | --- |
-| 최종 판단 | Continue / Pivot / Stop / Promote to solution / Promote to audit |
+| 최종 판단 | Continue / Pivot / Stop / Promote to product / Promote to audit |
 | 근거 | TBD |
 | 다음 행동 | TBD |
 
@@ -50,6 +50,6 @@ related_documents:
 
 | 승격 후보 | 후보 내용 | Gap |
 | --- | --- | --- |
-| Solution Backlog | TBD | TBD |
-| Solution Contract | TBD | TBD |
+| Product Backlog | TBD | TBD |
+| Product Contract | TBD | TBD |
 | Audit Evidence | TBD | TBD |

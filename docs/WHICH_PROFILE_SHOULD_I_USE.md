@@ -7,7 +7,7 @@ Vulcan-Anvil Ex는 프로젝트마다 같은 무게의 문서와 검증을 강�
 | 질문 | 추천 profile |
 | --- | --- |
 | "일단 되는지 빨리 보고 싶다" | `poc` |
-| "업무 앱/솔루션을 제품처럼 만들고 릴리즈 품질을 유지하고 싶다" | `solution` |
+| "제품/업무 앱을 만들고 릴리즈 품질을 유지하고 싶다" | `product` |
 | "감리, 고객 검수, 인수인계, 보안/QA 증적이 필요하다" | `audit` |
 
 ## Profile별 의도
@@ -29,15 +29,15 @@ PoC에서 중요한 것은 "완벽한 산출물"이 아니라 다음 질문에 �
 
 PoC에서도 실행하지 않은 테스트를 `Pass`로 쓰지 않습니다. 실패, 미실행, 환경 차단은 다음 판단 항목으로 남깁니다.
 
-### Solution
+### Product
 
-Solution은 일반 제품, 사내 업무 앱, 반복 릴리즈가 필요한 솔루션 개발의 기본값입니다. 감리 제출 수준의 모든 문서가 필요하지는 않지만, API/DB/UI/보안/릴리즈 품질은 유지해야 할 때 사용합니다.
+Product는 일반 제품, 사내 업무 앱, 반복 릴리즈가 필요한 개발의 기본값입니다. 감리 제출 수준의 모든 문서가 필요하지는 않지만, API/DB/UI/보안/릴리즈 품질은 유지해야 할 때 사용합니다.
 
 ```powershell
-python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-product "My Product" --profile product
 ```
 
-Solution에서 중요한 것은 다음입니다.
+Product에서 중요한 것은 다음입니다.
 
 - 핵심 요구사항과 사용자 시나리오
 - 제품/업무 아키텍처와 ADR
@@ -47,7 +47,7 @@ Solution에서 중요한 것은 다음입니다.
 - 릴리즈 회귀 테스트와 주요 화면/API 증적
 - backlog, issue, release note 연결
 
-Solution은 "가벼운 Audit"이 아니라 제품 운영에 필요한 중간 레이어입니다. 자세한 기준은 [Solution Profile Baseline](reference/SOLUTION-PROFILE-BASELINE.md)을 참고합니다.
+Product는 "가벼운 Audit"이 아니라 제품 운영에 필요한 중간 레이어입니다. 자세한 기준은 [Product Profile Baseline](core/PRODUCT_PROFILE_BASELINE.md)을 참고합니다.
 
 ### Audit
 
@@ -75,10 +75,10 @@ Audit에서 중요한 것은 다음입니다.
 감리 제출 수준 문서는 만들지 말고, 실패나 미실행은 다음 판단 항목으로 남겨줘.
 ```
 
-### Solution
+### Product
 
 ```text
-이 프로젝트는 Solution profile이야.
+이 프로젝트는 Product profile이야.
 일반 제품/업무 앱 수준으로 요구사항, 주요 설계, API/DB/UI 계약, 릴리즈 회귀 기준을 남겨줘.
 감리 제출 수준의 과도한 증적보다는 제품 품질과 유지보수성을 우선해줘.
 ```
@@ -93,12 +93,12 @@ Gate 전환 전에는 status --check 결과와 남은 이슈를 보고해줘.
 
 ## 전환 기준
 
-PoC로 시작해도 결과가 의미 있으면 Solution 또는 Audit으로 승격할 수 있습니다.
+PoC로 시작해도 결과가 의미 있으면 Product 또는 Audit으로 승격할 수 있습니다.
 
 | 현재 | 전환 후보 | 조건 |
 | --- | --- | --- |
-| `poc` | `solution` | 실제 사용자/릴리즈 계획이 생겼고 API/DB/UI 계약을 유지해야 함 |
+| `poc` | `product` | 실제 사용자/릴리즈 계획이 생겼고 API/DB/UI 계약을 유지해야 함 |
 | `poc` | `audit` | 고객 검수, 감리, 보안/인수인계 증적이 필요해짐 |
-| `solution` | `audit` | 공식 산출물, 변경관리, QA 증적, 승인 절차가 강해짐 |
+| `product` | `audit` | 공식 산출물, 변경관리, QA 증적, 승인 절차가 강해짐 |
 
 전환은 단순 설정 변경이 아니라 부족한 산출물과 추적성을 보강하는 작업입니다.

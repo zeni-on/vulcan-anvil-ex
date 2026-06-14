@@ -15,10 +15,10 @@ Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 �
 | 상황 | 추천 |
 | --- | --- |
 | 빠르게 가능성만 보고 싶다 | `--profile poc` |
-| 업무 앱/솔루션을 제품처럼 만들고 릴리즈 품질을 유지하고 싶다 | `--profile solution` |
+| 제품/업무 앱을 만들고 릴리즈 품질을 유지하고 싶다 | `--profile product` |
 | 감리, 고객 검수, 인수인계, 보안/QA 증적이 필요하다 | 기본값 `--profile audit` |
 
-PoC는 품질이 낮은 모드가 아니라 문서와 증적의 깊이를 줄여 핵심 가설을 빨리 확인하는 모드입니다. Solution은 일반 제품/업무 앱 개발의 중간층이고, Audit은 감리/SI/규제 대응처럼 가장 강한 추적성과 증적이 필요한 경우에 사용합니다.
+PoC는 품질이 낮은 모드가 아니라 문서와 증적의 깊이를 줄여 핵심 가설을 빨리 확인하는 모드입니다. Product는 일반 제품/업무 앱 개발의 중간층이고, Audit은 감리/SI/규제 대응처럼 가장 강한 추적성과 증적이 필요한 경우에 사용합니다.
 
 Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
 
@@ -62,10 +62,10 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 cd ../my-poc
 ```
 
-일반 제품/업무 앱은 `solution`, 감리 대응 프로젝트는 기본값인 `audit`을 사용합니다.
+일반 제품/업무 앱은 `product`, 감리 대응 프로젝트는 기본값인 `audit`을 사용합니다.
 
 ```powershell
-python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-product "My Product" --profile product
 python vulcan.py init ../my-audit-project "My Audit Project"
 ```
 
@@ -174,10 +174,10 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | 문서 | 내용 |
 | --- | --- |
 | [Getting Started](docs/GETTING_STARTED.md) | 초기화, 원격 저장소, 프로젝트 시작, 주요 명령 |
-| [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Solution, Audit 선택 기준 |
+| [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Product, Audit 선택 기준 |
 | [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
-| [Solution Profile Baseline](docs/reference/SOLUTION-PROFILE-BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |
+| [Product Profile Baseline](docs/core/PRODUCT_PROFILE_BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |

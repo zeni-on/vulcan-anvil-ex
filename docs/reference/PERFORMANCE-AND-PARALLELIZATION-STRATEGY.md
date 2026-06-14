@@ -189,7 +189,7 @@ Dashboard에는 다음을 추가할 수 있다.
 - QA-Fix 왕복 횟수
 - Worker 시간 vs Orchestrator/정합성 시간 추정
 - 가장 오래 걸린 Run과 timeout/watchdog 이벤트
-- `audit`, `solution`, `poc` profile별 예상 비용 비교
+- `audit`, `product`, `poc` profile별 예상 비용 비교
 
 단, Dashboard는 먼저 `perf-report` 같은 CLI 출력이 안정된 뒤 붙이는 것이 좋다.
 

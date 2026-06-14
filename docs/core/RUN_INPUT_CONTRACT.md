@@ -602,9 +602,9 @@ ui_evidence_policy:
   test_by_state: true
   official_runner: "@playwright/test"
   official_runner_command: "npx playwright test"
-  official_runner_required_profiles: [audit, solution]
+  official_runner_required_profiles: [audit, product]
   poc_fallback_allowed: true
-  fallback_rule: "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."
+  fallback_rule: "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."
   required_artifacts:
     - "playwright-report/index.html 또는 동등한 HTML report"
     - "test-results/ trace, screenshot, video 중 프로젝트가 선택한 증적"
@@ -682,9 +682,9 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 하나의 `qa-execution` Run이 Gate 4 전체를 모두 수행한다고 쓰지 않는다.
 `QA-000`이 통과하지 않으면 `QA-001`/`QA-002`를 실행하지 않고 `environment_blocked` 또는 `Not Run`으로 반환한다.
 
-Audit/Solution Profile에서 공식 UI Pass는 `@playwright/test` 러너 실행 결과를 기준으로 한다.
+Audit/Product Profile에서 공식 UI Pass는 `@playwright/test` 러너 실행 결과를 기준으로 한다.
 권장 기준은 `playwright.config.ts` 또는 동등 설정, `tests/e2e/**/*.spec.*`, `npx playwright test`, `playwright-report/`, `test-results/`, 상태별 screenshot을 연결하는 것이다.
-`playwright` 라이브러리를 직접 호출하는 커스텀 Node 스크립트는 PoC smoke/demo 또는 보조 관찰로 남길 수 있지만, audit/solution의 Gate 4 UI Pass 근거로 단독 사용하지 않는다.
+`playwright` 라이브러리를 직접 호출하는 커스텀 Node 스크립트는 PoC smoke/demo 또는 보조 관찰로 남길 수 있지만, audit/product의 Gate 4 UI Pass 근거로 단독 사용하지 않는다.
 
 QA 실행 worker는 다음을 수행하지 않는다.
 

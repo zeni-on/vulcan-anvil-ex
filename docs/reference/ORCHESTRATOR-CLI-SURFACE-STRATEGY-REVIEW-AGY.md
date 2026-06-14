@@ -44,7 +44,7 @@
 
 > [!IMPORTANT]
 > ### 3. Profile별 엄격도 분기 설계의 과도한 복잡화
-> * **위험**: `audit`, `solution`, `poc` 등 프로필에 따른 검사 강도 및 차단/경고 필터링을 Facade 내부의 IF-ELSE 분기로 관리하면 코드 유지보수성이 급격히 저하됩니다.
+> * **위험**: `audit`, `product`, `poc` 등 프로필에 따른 검사 강도 및 차단/경고 필터링을 Facade 내부의 IF-ELSE 분기로 관리하면 코드 유지보수성이 급격히 저하됩니다.
 > * **대응**: Facade는 최대한 얇게(Thin) 유지하고, 검사 엄격도 판정은 `vulcan.config.json`의 `profile_rules` 정책이나 각 내부 검사 서브루틴(`run_preflight_file`) 내부로 격리하여 Facade에는 결과(`Pass`, `Warning`, `Block`)만 리턴해 주어야 합니다.
 
 > [!NOTE]

@@ -26,7 +26,7 @@
   - profile 전환 시 비용 변화(같은 작업을 audit→poc로 옮길 때 wall-clock·문서량 감소율)
   - trace graph 추천의 precision/recall(Orchestrator가 추천을 수용·수정·기각한 비율)
   - governance 산출물의 **재사용 사례 수**(인수인계, 감리 대응에 실제로 인용된 횟수) — ROI 대리지표
-- **§6에 정량 임계 추가.** "Run 생성 시간이 줄고"가 아니라 "Run 생성 wall-clock이 profile별 기준치(예: poc < 5분, solution < 15분) 이하"처럼 측정 가능한 형태로.
+- **§6에 정량 임계 추가.** "Run 생성 시간이 줄고"가 아니라 "Run 생성 wall-clock이 profile별 기준치(예: poc < 5분, product < 15분) 이하"처럼 측정 가능한 형태로.
 - **§7에 시간 축 명시.** "반복되면"이 아니라 "2개 분기 연속 또는 3개 샘플 프로젝트 중 2개에서 관측되면" 같은 trigger.
 - **§5에 5.6 "경쟁 흡수 방어" 절 신설.** Core 규칙·Run 계약·Gate 정의를 **adapter-agnostic 사양**으로 외재화하고, Codex/Claude/Cursor 각각의 어댑터에서 동일 산출물이 나오는지를 정합성 지표로 추적.
 - **§3의 부적합 조건에 한 줄 추가.** "사용자가 governance 부하를 감당할 수 있는 단일 판단자가 없는 팀" — 다인 팀에서 승인이 분산될 때의 한계를 명시.

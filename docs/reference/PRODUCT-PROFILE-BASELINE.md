@@ -1,28 +1,31 @@
-# Solution Profile Baseline
+# Product Profile Baseline
 
 > 상태: 초안 v0.1
-> 목적: `solution` profile을 "가벼운 audit"이 아니라 일반 제품/업무 앱 개발의 기본 레이어로 운영하기 위한 기준을 정리한다.
+> 목적: `product` profile을 "가벼운 audit"이 아니라 일반 제품/업무 앱 개발의 기본 레이어로 운영하기 위한 기준을 정리한다.
+
+실제 프로젝트 `init`에 기본 포함되는 실행 기준선은 `docs/core/PRODUCT_PROFILE_BASELINE.md`다.
+본 문서는 프레임워크 레벨의 배경과 검토 기록을 보존하는 reference 문서로 둔다.
 
 ## 1. 포지션
 
-Solution Profile은 PoC와 Audit 사이의 중간 레이어다.
+Product Profile은 PoC와 Audit 사이의 중간 레이어다.
 
 | Profile | 목적 |
 | --- | --- |
 | `poc` | 아이디어, 기술, 화면, API가 가능한지 빠르게 확인 |
-| `solution` | 실제 사용자와 릴리즈가 있는 제품/업무 앱을 유지 가능한 수준으로 개발 |
+| `product` | 실제 사용자와 릴리즈가 있는 제품/업무 앱을 유지 가능한 수준으로 개발 |
 | `audit` | 감리, 고객 검수, 공공/SI, 인수인계, 강한 QA 증적 대응 |
 
-Solution은 Audit의 축소판이 아니다. 제품 운영에 필요한 의사결정, 계약, 테스트, 릴리즈 근거를 남기는 profile이다.
+Product는 Audit의 축소판이 아니다. 제품 운영에 필요한 의사결정, 계약, 테스트, 릴리즈 근거를 남기는 profile이다.
 
 ## 2. 필수 관점
 
-Solution Profile에서 유지해야 할 핵심 관점은 다음이다.
+Product Profile에서 유지해야 할 핵심 관점은 다음이다.
 
 | 관점 | 기준 |
 | --- | --- |
-| Product/Solution Brief | 목표, 사용자, 핵심 시나리오, 비목표, 성공 기준 |
-| Solution Design | 아키텍처, 주요 컴포넌트, API/DB/UI 계약, ADR |
+| Product Brief | 목표, 사용자, 핵심 시나리오, 비목표, 성공 기준 |
+| Product Design | 아키텍처, 주요 컴포넌트, API/DB/UI 계약, ADR |
 | Backlog/Release Scope | 이번 릴리즈 범위, 제외 범위, 다음 릴리즈 후보 |
 | Test & Release Report | 핵심 회귀 테스트, 주요 화면/API 검증, known issue, release note |
 | Traceability | 핵심 요구사항 -> 구현 -> 테스트 -> 릴리즈 근거 연결 |
@@ -31,7 +34,7 @@ Audit처럼 모든 ID를 촘촘하게 확장하지 않아도 되지만, 핵심 �
 
 ## 3. 보안 기준선
 
-Solution 보안은 KISA/공공 제출용 매핑을 기본 강제하지 않는다. 대신 일반 제품 개발에서 납득 가능한 보안 기준선을 둔다.
+Product 보안은 KISA/공공 제출용 매핑을 기본 강제하지 않는다. 대신 일반 제품 개발에서 납득 가능한 보안 기준선을 둔다.
 
 기본 기준:
 
@@ -41,7 +44,7 @@ Solution 보안은 KISA/공공 제출용 매핑을 기본 강제하지 않는다
 - CWE
 - 프로젝트별 Security Baseline
 
-Solution에서 최소 검토할 보안 항목:
+Product에서 최소 검토할 보안 항목:
 
 | 항목 | 확인 |
 | --- | --- |
@@ -57,7 +60,7 @@ KISA, 공공, 고객사 보안 기준은 선택 참고로 둘 수 있다. 다만
 
 ## 4. 데이터/단어사전 기준선
 
-Solution에서도 단어사전은 필요하다. 다만 목적은 감리 제출이 아니라 팀과 AI 에이전트가 같은 데이터 의미를 쓰게 하는 것이다.
+Product에서도 단어사전은 필요하다. 다만 목적은 감리 제출이 아니라 팀과 AI 에이전트가 같은 데이터 의미를 쓰게 하는 것이다.
 
 기본 기준:
 
@@ -68,9 +71,9 @@ Solution에서도 단어사전은 필요하다. 다만 목적은 감리 제출�
 - 필요 시 ISO/IEC 11179 metadata registry 개념 참고
 - 필요 시 DAMA Dictionary/DMBOK 용어 참고
 
-공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이다. Solution에서는 조직 표준이 없거나 공공 데이터와 연계할 때 참고한다.
+공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이다. Product에서는 조직 표준이 없거나 공공 데이터와 연계할 때 참고한다.
 
-Solution 단어사전의 최소 항목:
+Product 단어사전의 최소 항목:
 
 | 항목 | 설명 |
 | --- | --- |
@@ -84,11 +87,11 @@ Solution 단어사전의 최소 항목:
 
 ## 5. Gate 운영
 
-| 단계 | Solution 기준 |
+| 단계 | Product 기준 |
 | --- | --- |
 | Phase 0 | 제품 목표, 사용자, 문제, 범위 후보 |
 | Gate 1 | 핵심 요구사항/시나리오와 release scope |
-| Gate 2 | Solution Design, API/DB/UI 계약, 보안/데이터 기준선 |
+| Gate 2 | Product Design, API/DB/UI 계약, 보안/데이터 기준선 |
 | Gate 3 | 핵심 회귀 테스트와 릴리즈 판단 기준 |
 | Impl | 기능 단위 worker/subagent 구현과 self-check |
 | Gate 4 | 릴리즈 후보 검증, 주요 UI/API/E2E, known issue |
@@ -96,7 +99,7 @@ Solution 단어사전의 최소 항목:
 
 ## 6. Audit 전환 Gap
 
-Solution에서 Audit으로 전환할 때 보강할 수 있는 항목:
+Product에서 Audit으로 전환할 때 보강할 수 있는 항목:
 
 - 공공데이터 공통표준 준용/변형/신규 사유
 - KISA/SR 또는 고객사 보안 기준 공식 매핑
