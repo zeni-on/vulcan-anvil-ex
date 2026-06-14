@@ -88,6 +88,8 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 
 구현은 기본적으로 통합 브랜치에서 수행한다. Orchestrator는 기능 구현의 주 작성자가 아니라 worker 결과를 통합하고 검증하는 역할이다.
 
+Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 `docs/product/PRODUCT_BRIEF.md`, `PRODUCT_CONTRACTS.md`, `PRODUCT_TRACEABILITY.md`, `REGRESSION_AND_RELEASE_REPORT.md`를 기준으로 관련 `REQ/API/DATA/UI/REG`를 추천한다. 생성된 Product Build Wave Run은 audit 산출물 대신 `docs/product/` 문서 세트를 worker 입력으로 사용한다.
+
 `BW-000 implementation-scaffold`는 skeleton/build smoke만 검증한다. 업무 요구사항, 테스트, UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다.
 
 ## 7. QA와 릴리즈

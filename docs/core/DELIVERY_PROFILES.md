@@ -104,6 +104,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Program Design은 모든 private method까지 요구하지 않고 public API, service/usecase, DTO, persistence adapter 경계를 중심으로 작성한다.
 - QA는 릴리즈 후보 기준의 회귀 테스트, 주요 화면/API 증적, release note와 backlog 연결을 우선한다.
 - UI Pass는 기본적으로 `@playwright/test` runner 증적을 사용한다. 단, 프로젝트가 UI 자동화 대상이 아니거나 환경 차단이 승인되면 `Not Run`, `Skipped`, `environment_blocked`로 정직하게 기록한다.
+- Product 구현 Run은 `wave-start --trace-seed SCN-001`처럼 Product Scenario ID를 seed로 만들 수 있다. 이때 Run은 `docs/product/` 문서 세트를 기준으로 `SCN -> REQ/API/DATA/UI/REG` 연결을 추천하고, audit용 `docs/artifacts/` 산출물을 worker 입력 문서로 끌고 오지 않는다.
 
 ### 4.3 PoC Profile
 

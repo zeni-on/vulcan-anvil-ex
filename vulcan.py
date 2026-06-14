@@ -8174,6 +8174,83 @@ def cmd_sync_session(project_dir="."):
         print(f"  현재 Wave: {waves.get('current')}")
 
 
+def product_related_ids_for_seeds(project_dir, seeds, base_ids=None):
+    ids = list(base_ids or [])
+    seed_set = {str(seed).strip().upper() for seed in seeds or [] if str(seed).strip()}
+    if not seed_set:
+        return ids
+
+    product_docs = [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ]
+    for rel_path in product_docs:
+        path = os.path.join(project_dir, rel_path)
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        for _headers, rows in parse_markdown_tables(content):
+            for row in rows:
+                row_text = " ".join(str(value) for key, value in row.items() if not key.startswith("__"))
+                row_ids = product_trace_find_ids(row_text)
+                if seed_set.intersection(row_ids):
+                    ids = merge_unique(ids, row_ids)
+    return ids
+
+
+def product_trace_find_ids(value):
+    product_id_pattern = re.compile(
+        r"\b(?:"
+        r"SCN-\d{3}|REQ-\d{3}(?:-\d{2})?|API-\d{3}|DATA-\d{3}|UI-\d{3}(?:-\d{2})?|"
+        r"REG-\d{3}|EV-[A-Z0-9-]+|ISSUE-[A-Z0-9-]+|FIND-\d{3}|CR-\d{3}"
+        r")\b",
+        re.IGNORECASE,
+    )
+    ids = []
+    for match in product_id_pattern.finditer(value or ""):
+        if match.start() > 0 and value[match.start() - 1] == "~":
+            continue
+        if match.end() < len(value) and value[match.end()] == "~":
+            continue
+        item = match.group(0).upper()
+        if item not in ids:
+            ids.append(item)
+    return ids
+
+
+def classify_product_target_contracts(ids):
+    groups = classify_related_ids(ids)
+    product_groups = {
+        "scenario": [],
+        "req": groups.get("req", []),
+        "api": groups.get("api", []),
+        "data": [],
+        "ui": groups.get("ui", []),
+        "regression": [],
+        "test": groups.get("test", []),
+        "other": [],
+    }
+    for item in ids or []:
+        value = str(item).strip().upper()
+        if not value:
+            continue
+        if value.startswith("SCN-"):
+            product_groups["scenario"].append(value)
+        elif value.startswith("DATA-"):
+            product_groups["data"].append(value)
+        elif value.startswith("REG-"):
+            product_groups["regression"].append(value)
+        elif value.startswith(("REQ-", "API-", "UI-", "UT-", "IT-", "PT-", "TST-")):
+            continue
+        else:
+            product_groups["other"].append(value)
+    return {key: merge_unique(values) for key, values in product_groups.items()}
+
+
 def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=None, project_dir="."):
     if not re.fullmatch(r"BW-\d{3}", bw_id):
         print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
@@ -8209,18 +8286,23 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
         direction="both",
     )
     ids = trace_info.get("related_ids", split_csv(related_ids))
+    if profile == "product":
+        ids = product_related_ids_for_seeds(project_dir, trace_info.get("seeds", []), ids)
+        trace_info["related_ids"] = ids
+        trace_info["target_contracts"] = classify_product_target_contracts(ids)
     run_path = find_wave_run_file(project_dir, bw_id)
     if not run_path:
         run_id = next_run_id(project_dir)
         run_title = title or f"Build Wave {bw_id}"
         rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_build-wave-{bw_id}_{slugify(run_title)}_v0.1.md")
+        rel_path_posix = rel_path.replace("\\", "/")
         is_scaffold_wave = bw_id == "BW-000"
         wave_skill = "implementation-scaffold" if is_scaffold_wave else "build-wave"
         skill_path = RUN_SKILLS[wave_skill]
         wave_read_first = [
             "AGENTS.md",
             "session.json",
-            rel_path.replace("\\", "/"),
+            rel_path_posix,
             skill_path,
         ]
         wave_working_documents = [
@@ -8260,11 +8342,215 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
             "docs/core/RUN_OUTPUT_CONTRACT.md",
         ]
         wave_writable = [
-            rel_path.replace("\\", "/"),
+            rel_path_posix,
             "docs/artifacts/04-review/evidence/",
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
-        if profile == "poc":
+        if profile == "product":
+            product_contracts = classify_product_target_contracts(ids)
+            product_read_first = [
+                "AGENTS.md",
+                "session.json",
+                rel_path_posix,
+                ".agents/skills/vulcan-impl-wave/SKILL.md",
+            ]
+            product_working_documents = [
+                "docs/product/PRODUCT_BRIEF.md",
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/product/PRODUCT_CONTRACTS.md",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            ]
+            product_reference_documents = [
+                "docs/core/DELIVERY_PROFILES.md",
+                "docs/core/TECH_STACK_BASELINES.md",
+            ]
+            product_writable = [
+                rel_path_posix,
+                "app/",
+                "src/",
+                "backend/",
+                "frontend/",
+                "static/",
+                "tests/",
+                "requirements.txt",
+                "pyproject.toml",
+                "package.json",
+                "package-lock.json",
+                "README.md",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/evidence/",
+            ]
+            content = f"""# {run_id} Build Wave {bw_id} - {run_title}
+
+```yaml
+run_id: {run_id}
+gate: impl
+persona: build
+adapter: codex-gpt
+skill: {wave_skill}
+skill_path: .agents/skills/vulcan-impl-wave/SKILL.md
+profile: product
+bw_id: {bw_id}
+run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
+status: InProgress
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
+target_contracts:
+{format_yaml_mapping_sequences(product_contracts, 2)}
+  interface_contract:
+    language: "Product profile stack/runtime is defined in PRODUCT_ARCHITECTURE and PRODUCT_CONTRACTS."
+    signatures:
+      - "Implement only the scenarios in target_contracts.scenario using the API/UI/DATA contracts listed in target_contracts."
+    schemas:
+      - "Use PRODUCT_CONTRACTS API/data tables as the public request, response, and persistence shape."
+    error_contracts:
+      - "Use PRODUCT_CONTRACTS accepted error/validation behavior; if missing, report an open issue instead of inventing a new public contract."
+runner_role: worker-runner
+source_documents:
+  read_first:
+{format_yaml_sequence(product_read_first, 4)}
+  working_documents:
+{format_yaml_sequence(product_working_documents, 4)}
+  reference_on_demand:
+{format_yaml_sequence(product_reference_documents, 4)}
+orchestrator_reference:
+  - "docs/core/AGENT_RUN_PROTOCOL.md"
+  - "docs/core/RUN_INPUT_CONTRACT.md"
+  - "docs/core/RUN_OUTPUT_CONTRACT.md"
+scope:
+  writable:
+{format_yaml_sequence(product_writable, 4)}
+  readonly:
+    - "docs/core/"
+    - "docs/templates/"
+    - "docs/product/PRODUCT_BRIEF.md"
+    - "docs/product/PRODUCT_ARCHITECTURE.md"
+    - "docs/product/PRODUCT_CONTRACTS.md"
+    - "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+  excluded:
+    - "docs/ref-docs/"
+    - "**/*.db"
+    - "**/__pycache__/"
+    - "**/.ruff_cache/"
+    - "**/node_modules/"
+    - "**/.next/"
+worker_execution_policy:
+  forbidden_actions:
+    - "Gate 전환을 수행하지 않는다."
+    - "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다."
+    - "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다."
+    - "scope.writable 밖 파일을 수정하지 않는다."
+  required_outputs:
+    - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
+    - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
+  completion_rules:
+    - "이 Run의 target_contracts.scenario만 완결한다."
+    - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
+dependency_install_policy:
+  worker_cache_required: true
+  npm_cache_env: "npm_config_cache"
+  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
+  if_install_blocked: "dependency install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
+development_standards_applied:
+  - standard_id: "PRODUCT-LOG-001"
+    source: "docs/product/PRODUCT_CONTRACTS.md"
+    rule: "사용자 입력, 내부 오류, 저장소 경로, stack trace를 화면이나 공개 응답에 노출하지 않는다."
+  - standard_id: "PRODUCT-TEST-001"
+    source: "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+    rule: "테스트는 어떤 시나리오와 기대 결과를 검증하는지 사람이 읽을 수 있게 남긴다."
+development_standard_checklist:
+  logging:
+    required: true
+    targets:
+      - "API handler"
+      - "Service or state handler"
+    rule: "표준 logger 또는 최소 오류 처리 흐름을 사용하고 민감정보를 로그/화면에 남기지 않는다."
+  comments:
+    required: true
+    targets:
+      - "public API handler"
+      - "core state mutation function"
+    rule: "핵심 책임과 관련 scenario/API/DATA ID를 짧은 주석 또는 docstring으로 남긴다."
+  tests:
+    required: true
+    targets:
+      - "scenario smoke"
+      - "unit or integration test"
+    rule: "테스트 이름이나 설명에 입력값, 기대값, 관련 SCN/REG ID를 남긴다."
+verification:
+  commands:
+    - "python -m compileall app backend src"
+    - "python -m pytest"
+    - "npm test"
+    - "npm run build"
+    - "python vulcan.py run-check {rel_path_posix}"
+    - "python vulcan.py run-preflight {rel_path_posix}"
+  evidence:
+    required: true
+    target_documents:
+      - "docs/product/PRODUCT_TRACEABILITY.md"
+      - "docs/product/evidence/"
+verification_results: []
+evidence: []
+delegation_records: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Wave 목표
+
+{run_title}
+
+## 2. Product 구현 범위
+
+- 기준 시나리오: {format_yaml_list(product_contracts.get("scenario", []))}
+- 관련 요구/계약: {format_yaml_list(ids)}
+- Product profile은 audit 산출물 대신 `docs/product/` 문서 세트를 기준으로 구현한다.
+
+## 3. 작업자 입력 계약
+
+- 먼저 `source_documents.read_first`를 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
+- `source_documents.working_documents`의 Product Brief, Architecture, Contracts, Traceability, Regression 문서를 구현 기준으로 삼는다.
+- `target_contracts.scenario`, `api`, `data`, `ui`, `regression`에 없는 기능은 추가하지 않는다.
+- `target_contracts.interface_contract`는 세부 class 설계가 아니라 Product 계약 경계다. public API/data/UI shape가 충돌하면 임의 변경하지 말고 `open_issues`로 보고한다.
+- `scope.writable` 안에서만 코드, 테스트, 자기 Run, Product Trace/evidence를 수정한다.
+- 전체 QA Pass, 릴리즈 가능 여부, Gate 전환은 Orchestrator가 판단한다.
+
+## 4. Orchestrator 지시
+
+- 실제 구현은 native worker(subagent/thread/native branch agent)가 수행한다.
+- Orchestrator는 worker 결과의 diff/scope를 확인하고, 관련 테스트를 재실행한 뒤 `wave-complete {bw_id}` 여부를 판단한다.
+- `agent-run`/`run-exec`는 외부 CLI 실행 증적이나 worktree/watchdog이 필요할 때만 선택한다.
+
+## 5. 검증 계획
+
+- worker는 가능한 self-check만 실행하고, 실패/미실행 명령은 이유를 남긴다.
+- Orchestrator는 worker가 작성한 테스트와 가능한 build/smoke를 재실행한다.
+- Gate 4의 공식 UI/E2E 증적과 릴리즈 판정은 이 Run 완료 조건이 아니다.
+
+## 6. 결과 기록
+
+### 변경 파일
+
+작성 예정
+
+### 검증 결과
+
+작성 예정
+
+### 위임 기록
+
+작성 예정
+
+### 후속 조치
+
+작성 예정
+"""
+        elif profile == "poc":
             poc_preset = build_poc_run_input_preset("impl", wave_skill, skill_path, rel_path)
             poc_preset["source_documents"]["reference_on_demand"] = compact_reference_documents_for_profile(
                 "poc",
@@ -13568,7 +13854,7 @@ def run_preflight_file(path):
         all_ids_text = " ".join(related_ids + req_ids)
         has_parent_req = bool(re.search(r"\bREQ-\d{3}\b", all_ids_text))
         has_detail_req = bool(re.search(r"\bREQ-\d{3}-\d{2}\b", all_ids_text))
-        if has_parent_req and not has_detail_req and profile != "poc":
+        if has_parent_req and not has_detail_req and profile not in ("poc", "product"):
             warnings.append("target_contracts/related_ids가 parent REQ 중심입니다. 상세 REQ-NNN-NN 단위 매핑을 추가하세요.")
 
         ui_ids = set(re.findall(r"\bUI-\d{3}-\d{2}\b", content))
