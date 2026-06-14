@@ -232,6 +232,56 @@ POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "gate5": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
     "completed": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
 }
+PRODUCT_REQUIRED_ARTIFACTS_BY_GATE = {
+    "phase0": ["docs/product/PRODUCT_BRIEF.md"],
+    "gate1": ["docs/product/PRODUCT_BRIEF.md"],
+    "gate2": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+    ],
+    "gate3": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "impl": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "gate4": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "gate5": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "completed": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+}
 PROFILE_GAP_RULES = {
     "product": [
         {
@@ -4443,6 +4493,10 @@ def poc_required_artifacts_for_gate(gate):
     return POC_REQUIRED_ARTIFACTS_BY_GATE.get(gate, POC_REQUIRED_ARTIFACTS_BY_GATE["phase0"])
 
 
+def product_required_artifacts_for_gate(gate):
+    return PRODUCT_REQUIRED_ARTIFACTS_BY_GATE.get(gate, PRODUCT_REQUIRED_ARTIFACTS_BY_GATE["phase0"])
+
+
 def read_project_text(project_dir, rel_path):
     path = os.path.join(project_dir, rel_path)
     try:
@@ -4525,6 +4579,77 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
         else:
             if mostly_placeholder_row(test_content, r"T-\d{3}"):
                 warnings.append("docs/poc/POC_TEST_REPORT.md에 placeholder 중심의 테스트 계획 행이 남아 있습니다.")
+
+    return issues, warnings
+
+
+def collect_product_profile_findings(project_dir=".", gate=None):
+    if load_delivery_profile(project_dir) != "product":
+        return [], []
+
+    session = load_session(project_dir)
+    gate = gate or session.get("current_gate", "phase0")
+    issues = []
+    warnings = []
+    required = product_required_artifacts_for_gate(gate)
+
+    for rel_path in required:
+        abs_path = os.path.join(project_dir, rel_path)
+        if not os.path.isfile(abs_path):
+            issues.append(f"Product 필수 산출물 없음: {rel_path}")
+            continue
+        content = read_project_text(project_dir, rel_path)
+        if HARD_TEMPLATE_PLACEHOLDER_RE.search(content):
+            issues.append(f"{rel_path}에 치환되지 않은 템플릿 값이 남아 있습니다.")
+        elif SOFT_TBD_PLACEHOLDER_RE.search(content):
+            warnings.append(f"{rel_path}에 TBD/확정필요 항목이 남아 있습니다. Product 판단에 필요한 항목인지 확인하세요.")
+
+    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
+    if "docs/product/PRODUCT_BRIEF.md" in required and brief_content:
+        for label in ("목표", "주요 사용자", "성공 기준"):
+            if table_value_is_tbd(brief_content, label):
+                issues.append(f"docs/product/PRODUCT_BRIEF.md의 {label} 항목이 TBD입니다.")
+        if mostly_placeholder_row(brief_content, r"SCN-\d{3}"):
+            warnings.append("docs/product/PRODUCT_BRIEF.md에 placeholder 중심의 Scenario 행이 남아 있습니다.")
+
+    architecture_content = read_project_text(project_dir, "docs/product/PRODUCT_ARCHITECTURE.md")
+    if "docs/product/PRODUCT_ARCHITECTURE.md" in required and architecture_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
+            for label in ("Runtime", "Data Store"):
+                if table_value_is_tbd(architecture_content, label):
+                    issues.append(f"docs/product/PRODUCT_ARCHITECTURE.md의 {label}가 TBD입니다.")
+        if mostly_placeholder_row(architecture_content, r"CMP-\d{3}") or mostly_placeholder_row(architecture_content, r"GAP-\d{3}"):
+            warnings.append("docs/product/PRODUCT_ARCHITECTURE.md에 placeholder 중심의 Component/Gap 행이 남아 있습니다.")
+
+    adr_content = read_project_text(project_dir, "docs/product/ADR_LOG.md")
+    if "docs/product/ADR_LOG.md" in required and adr_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(adr_content, r"ADR-\d{3}"):
+            warnings.append("docs/product/ADR_LOG.md에 placeholder 중심의 ADR 행이 남아 있습니다.")
+
+    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
+    if "docs/product/PRODUCT_CONTRACTS.md" in required and contracts_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
+            if mostly_placeholder_row(contracts_content, r"API-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:DATA|DB)-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:UI|SCR)-\d{3}"):
+                issues.append("docs/product/PRODUCT_CONTRACTS.md의 API/Data/UI 계약 행이 모두 placeholder입니다.")
+        if mostly_placeholder_row(contracts_content, r"GAP-\d{3}"):
+            warnings.append("docs/product/PRODUCT_CONTRACTS.md에 placeholder 중심의 Contract Gap 행이 남아 있습니다.")
+
+    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
+    if "docs/product/PRODUCT_TRACEABILITY.md" in required and trace_content:
+        if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
+            if mostly_placeholder_row(trace_content, r"SCN-\d{3}"):
+                issues.append("docs/product/PRODUCT_TRACEABILITY.md의 Scenario Trace가 placeholder입니다.")
+            if re.search(r"\|\s*SCN-\d{3}\s*\|[^\n]*\|\s*Planned\s*\|", trace_content, re.IGNORECASE) and gate in ("gate4", "gate5", "completed"):
+                warnings.append("docs/product/PRODUCT_TRACEABILITY.md에 Gate 4 이후에도 Planned 추적 상태가 남아 있습니다.")
+
+    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+    if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
+        if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
+            issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
+        if gate in ("gate5", "completed"):
+            for label in ("포함 범위", "남은 리스크"):
+                if table_value_is_tbd(release_content, label):
+                    issues.append(f"docs/product/REGRESSION_AND_RELEASE_REPORT.md의 {label}가 TBD입니다.")
 
     return issues, warnings
 
@@ -6666,6 +6791,8 @@ def cmd_prepare_transition(project_dir="."):
     print("[4] 산출물 내용 완성도 검사")
     if profile == "poc":
         artifact_issues, artifact_warnings = collect_poc_profile_findings(project_dir, gate=current_gate)
+    elif profile == "product":
+        artifact_issues, artifact_warnings = collect_product_profile_findings(project_dir, gate=current_gate)
     else:
         artifact_issues, artifact_warnings = collect_artifact_completion_findings(project_dir)
     if artifact_issues:
@@ -6694,6 +6821,19 @@ def cmd_prepare_transition(project_dir="."):
         missing_poc_docs = [rel_path for rel_path in required_poc_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
         for rel_path in missing_poc_docs:
             transition_issues.append(f"PoC 필수 산출물 없음: {rel_path}")
+
+        if current_gate == "impl":
+            wave_records = collect_build_wave_records(project_dir)
+            active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
+            for w in active_waves:
+                run_file_str = f" ({w['run']})" if w['run'] else ""
+                transition_issues.append(f"진행 중인 Build Wave 존재: 완료되지 않은 Build Wave {w['id']} ({w['status']}){run_file_str}가 있습니다.")
+
+    elif profile == "product":
+        required_product_docs = product_required_artifacts_for_gate(current_gate)
+        missing_product_docs = [rel_path for rel_path in required_product_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
+        for rel_path in missing_product_docs:
+            transition_issues.append(f"Product 필수 산출물 없음: {rel_path}")
 
         if current_gate == "impl":
             wave_records = collect_build_wave_records(project_dir)
@@ -13924,7 +14064,11 @@ def _profile_gap_rule_status(project_dir, rule):
 def collect_profile_gap(project_dir=".", target_profile="product"):
     project_abs = os.path.abspath(project_dir)
     current_profile = load_delivery_profile(project_abs)
+    session = load_session(project_abs)
+    current_gate = session.get("current_gate", "phase0") if isinstance(session, dict) else "phase0"
     target = normalize_delivery_profile(target_profile)
+    content_issues = []
+    content_warnings = []
     if target == "poc":
         items = [{
             "id": "poc_target",
@@ -13948,15 +14092,25 @@ def collect_profile_gap(project_dir=".", target_profile="product"):
                 "recommendation": rule.get("recommendation") or "",
             })
 
+    if target == "product":
+        content_issues, content_warnings = collect_product_profile_findings(project_abs, gate=current_gate)
+    elif target == "audit":
+        content_issues, content_warnings = collect_artifact_completion_findings(project_abs)
+
     summary = {"ok": 0, "partial": 0, "missing": 0, "review": 0}
     for item in items:
         summary[item["status"]] = summary.get(item["status"], 0) + 1
+    summary["content_issues"] = len(content_issues)
+    summary["content_warnings"] = len(content_warnings)
     return {
         "project": os.path.basename(project_abs),
         "current_profile": current_profile,
         "target_profile": target,
+        "current_gate": current_gate,
         "items": items,
         "summary": summary,
+        "content_issues": content_issues,
+        "content_warnings": content_warnings,
         "note": "profile-gap is read-only; it does not change session.json or vulcan.config.json.",
     }
 
@@ -13973,10 +14127,11 @@ def cmd_profile_gap(target_profile="product", emit_json=False, project_dir="."):
     print(f" project: {gap['project']}")
     print(f" current_profile: {gap['current_profile']}")
     print(f" target_profile: {gap['target_profile']}")
+    print(f" current_gate: {gap['current_gate']}")
     print(" read_only: true")
     print()
     print(" summary")
-    for key in ("ok", "partial", "missing", "review"):
+    for key in ("ok", "partial", "missing", "review", "content_issues", "content_warnings"):
         print(f"  {key}: {gap['summary'].get(key, 0)}")
     print()
     print(" items")
@@ -13986,10 +14141,28 @@ def cmd_profile_gap(target_profile="product", emit_json=False, project_dir="."):
         print(f"    matched: {matched}")
         print(f"    recommendation: {item.get('recommendation') or '-'}")
     print()
+    if gap.get("content_issues"):
+        print(" content issues")
+        for issue in gap["content_issues"][:20]:
+            print(f"  - {issue}")
+        if len(gap["content_issues"]) > 20:
+            print(f"  ... 외 {len(gap['content_issues']) - 20}건")
+        print()
+    if gap.get("content_warnings"):
+        print(" content warnings")
+        for warning in gap["content_warnings"][:20]:
+            print(f"  - {warning}")
+        if len(gap["content_warnings"]) > 20:
+            print(f"  ... 외 {len(gap['content_warnings']) - 20}건")
+        print()
     if gap["summary"].get("missing", 0) or gap["summary"].get("partial", 0):
         print(" next:")
         print("  부족 항목은 profile 변경 차단 조건이 아니라 backlog 또는 다음 Gate 작업 후보입니다.")
         print("  profile 값을 바꾸려면 사용자 승인 후 session/config 갱신을 별도 수행하세요.")
+    elif gap["summary"].get("content_issues", 0) or gap["summary"].get("content_warnings", 0):
+        print(" next:")
+        print("  목표 profile 문서 세트는 있지만 현재 Gate 판단에 필요한 내용 보완이 남아 있습니다.")
+        print("  status --check로 전환 차단 여부를 확인하세요.")
     else:
         print(" next:")
         print("  목표 profile로 운영 강도를 바꿀 수 있는 기본 근거가 있습니다. 최종 변경은 사용자 승인 후 수행하세요.")
@@ -14067,6 +14240,29 @@ def collect_status_summary(project_dir="."):
         next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
 
     dashboard_comments = collect_dashboard_comments(project_abs)
+    profile_gap = None
+    if session and profile in ("poc", "product", "audit"):
+        gap_target = "product" if profile == "poc" else profile
+        try:
+            profile_gap = collect_profile_gap(project_abs, target_profile=gap_target)
+        except Exception as exc:
+            profile_gap = {
+                "target_profile": gap_target,
+                "summary": {"ok": 0, "partial": 0, "missing": 0, "review": 0, "content_issues": 0, "content_warnings": 0},
+                "read_error": str(exc),
+            }
+        gap_summary = profile_gap.get("summary", {}) if isinstance(profile_gap, dict) else {}
+        if current_gate in GATE_ORDER and (
+            gap_summary.get("content_issues", 0) > 0 or gap_summary.get("missing", 0) > 0
+        ):
+            preferred_actions = [
+                "python vulcan.py status --check",
+                f"python vulcan.py profile-gap --to {gap_target}",
+            ]
+            next_actions = preferred_actions + [
+                action for action in next_actions
+                if action not in preferred_actions and not action.startswith("python vulcan.py session --gate")
+            ]
 
     return {
         "project": session.get("project") or os.path.basename(project_abs),
@@ -14085,6 +14281,7 @@ def collect_status_summary(project_dir="."):
         "implementation": implementation,
         "active_runs": active_runs,
         "active_waves": active_waves,
+        "profile_gap": profile_gap,
         "dashboard_comments": dashboard_comments,
         "next_actions": next_actions[:3],
     }
@@ -14196,6 +14393,26 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
     if len(active_waves) > 5:
         print(f"  ... 외 {len(active_waves) - 5}건")
     print()
+
+    profile_gap = summary.get("profile_gap") or {}
+    if profile_gap:
+        gap_summary = profile_gap.get("summary") or {}
+        print(" profile_gap")
+        print(f"  target_profile: {profile_gap.get('target_profile') or '-'}")
+        print(
+            "  docs: "
+            f"ok {gap_summary.get('ok', 0)}, "
+            f"partial {gap_summary.get('partial', 0)}, "
+            f"missing {gap_summary.get('missing', 0)}"
+        )
+        print(
+            "  content: "
+            f"issues {gap_summary.get('content_issues', 0)}, "
+            f"warnings {gap_summary.get('content_warnings', 0)}"
+        )
+        if profile_gap.get("read_error"):
+            print(f"  read_error: {profile_gap.get('read_error')}")
+        print()
 
     comments = summary.get("dashboard_comments") or {}
     if comments.get("total"):

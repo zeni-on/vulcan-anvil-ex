@@ -304,6 +304,7 @@ export const SessionDataSchema = z.object({
   project: z.string().min(1),
   vulcan_src: z.string().optional(),
   vulcan_version: z.string().min(1),
+  profile: z.string().optional(),
   current_gate: GateKeySchema,
   gate_status: z.object({
     gate1: GateStatusSchema,

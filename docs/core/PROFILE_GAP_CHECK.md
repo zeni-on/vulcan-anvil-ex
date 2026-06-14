@@ -42,6 +42,14 @@ python vulcan.py profile-gap --to product --json
 `profile-gap`은 읽기 전용 진단이다.
 `session.json`, `vulcan.config.json`, 산출물, 코드를 수정하지 않는다.
 
+`profile-gap`은 두 층으로 결과를 나눈다.
+
+- `ok` / `partial` / `missing`: 목표 profile에서 기대하는 문서나 동등 산출물이 있는지
+- `content_issues` / `content_warnings`: 현재 Gate에서 판단에 필요한 핵심 내용이 비어 있거나 확인이 필요한지
+
+예를 들어 Product profile을 새로 init하면 `docs/product/` 6종 문서는 모두 있으므로 문서 세트는 `ok`가 될 수 있다.
+하지만 `PRODUCT_BRIEF.md`의 목표, 주요 사용자, 성공 기준이 `TBD`라면 `content_issues`가 남고 `status --check`는 Gate 완료를 차단한다.
+
 ## 4. PoC -> Product Gap
 
 Product로 이어가기 전에 최소 확인할 항목은 다음이다.
@@ -91,3 +99,6 @@ Audit 전환은 Product보다 더 엄격하다.
 
 `missing`이 있어도 profile 변경 자체가 금지되는 것은 아니다.
 단, 변경 후에는 해당 항목을 backlog, Run, 또는 다음 Gate 작업으로 남겨야 한다.
+
+`content_issues`는 현재 Gate 전환의 차단 후보로 본다.
+`content_warnings`는 전환 가능할 수 있지만 Orchestrator가 사용자에게 남은 판단 항목으로 보고해야 한다.

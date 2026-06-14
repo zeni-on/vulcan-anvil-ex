@@ -316,6 +316,7 @@ export interface SessionData {
   project: string
   vulcan_src?: string
   vulcan_version: string
+  profile?: 'audit' | 'product' | 'poc' | string
   current_gate: GateKey
   gate_status: Record<GateStatusKey, GateStatus>
   feature?: string

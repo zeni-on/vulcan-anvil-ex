@@ -200,11 +200,11 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 1. Profile별 의미와 Overlay 기준을 문서로 먼저 고정한다.
 2. `vulcan.config.json` 또는 `session.json`에 선택된 Profile과 `profile_rules` 기본값을 기록한다. (완료)
 3. `profile-status`로 현재 Profile과 Overlay를 확인한다. (완료)
-3-1. `profile-gap --to product|audit`로 profile 전환 전 부족 항목을 읽기 전용으로 확인한다. (1차 완료)
+3-1. `profile-gap --to product|audit`로 profile 전환 전 부족 항목을 읽기 전용으로 확인한다. (파일 존재 + 내용 보완 요약 1차 완료)
 4. PoC Profile의 Run 입력 계약은 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심으로 얇게 생성한다. (완료)
 5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다. (PoC TBD 경고화 1차 완료)
 6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 3종 산출물 원장 기반 1차 완료)
-7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
+7. Dashboard에 Profile badge와 Product 필수 산출물 범위를 표시한다. (Product 문서 세트 표시 1차 완료)
 8. `product`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
 
 Product Profile의 기본 산출물 세트는 다음 6종이다.
@@ -220,6 +220,8 @@ docs/product/REGRESSION_AND_RELEASE_REPORT.md
 
 이 문서들은 Gate별 제출 폴더가 아니라 제품 운영 문서 세트다.
 각 문서의 `gate_scope`와 본문 섹션이 Gate 1~5 역할에 대응한다.
+`profile-gap`은 Product 문서 세트의 존재 여부와 현재 Gate의 핵심 내용 보완 필요 여부를 분리해 보여준다.
+예를 들어 `PRODUCT_BRIEF.md`의 목표, 주요 사용자, 성공 기준이 `TBD`이면 Phase 0 완료 전 `status --check`에서 차단된다.
 
 `run-new`는 Profile과 Gate, skill 조합을 보고 가능한 경우 Run 입력 계약을 자동 확장한다.
 
