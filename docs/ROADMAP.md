@@ -48,6 +48,8 @@
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
 - PoC profile의 compact Run 완충과, 별도 PoC 템플릿 세트 설계 초안
 - Upgrade와 Dashboard 운영 흐름
+- 사용자용 profile 선택 가이드와 샘플/benchmark 요약 문서
+- Dashboard 문서 코멘트와 `status.dashboard_comments` 기반 Orchestrator 가시성
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
@@ -94,7 +96,13 @@
    - 이번 주 샘플에서 `init --profile poc` 기준으로 3개 산출물만으로 Phase 0~Gate 5를 끝까지 진행해 보고, `status --check`, `run-check`, `check-trace`, Dashboard가 audit 문서 누락으로 과하게 막히는 지점을 기록한다.
    - 상세 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
 
-6. **전환 진단 정리**
+6. **사용자 온보딩과 샘플 증거 정리**
+   - README 첫 화면에서 Ex를 "빠른 앱 빌더"가 아니라 AI-generated work Trust/Governance Layer로 설명한다.
+   - `docs/WHICH_PROFILE_SHOULD_I_USE.md`로 PoC/Solution/Audit 선택 기준을 분리한다.
+   - `docs/EXAMPLES_AND_BENCHMARKS.md`로 샘플 소요 시간, 산출물, profile별 차이를 공개 요약한다.
+   - 다음 단계는 fixture/metrics 기반으로 샘플 수치를 더 재현 가능하게 만드는 것이다.
+
+7. **전환 진단 정리**
    - Gate 전환 판단은 `prepare-transition`을 기본으로 사용한다.
    - `check-trace`는 traceability 상세 디버깅과 회귀 검증용으로 남긴다.
    - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
@@ -191,6 +199,8 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/RUN_FIRST_MULTI_AGENT_DISPATCHER.md` | dispatcher 장기 구상 | 일부는 이미 구현됨. 자동 큐/PR 교차검증 검토 시 참고 |
 | `docs/core/REFACTORING_PROCESS.md` | 리팩토링 분류 기준 초안 | DEBT/FIND/CR 판단과 문서 영향 분석 기준. 자동화는 향후 보강 |
 | `docs/core/DELIVERY_PROFILES.md` | Delivery Profile 기준 | `init --profile`, `profile-status`, profile_rules 기반 Overlay. 검사 엄격도/Dashboard 연동은 후속 보강 |
+| `docs/WHICH_PROFILE_SHOULD_I_USE.md` | 사용자용 Profile 선택 가이드 | PoC/Solution/Audit을 처음 고르는 기준과 시작 메시지 예시 |
+| `docs/EXAMPLES_AND_BENCHMARKS.md` | 샘플/benchmark 요약 | 샘플 실행 결과, profile별 산출물과 시간 차이를 사용자 관점으로 요약 |
 | `docs/core/CODEX_MODEL_POLICY.md` | Codex model/effort 정책 | Codex runner의 역할별 모델 선택, 실행 기록, 성능 측정 기준 |
 | `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md` | 회귀 하네스 fixture 전략 | 기존 샘플 프로젝트 문서를 정규화해 테스트 입력으로 사용하는 방향 |
 | `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md` | 추적성 그래프 전략 | 추적표를 그래프 원장으로 사용해 Run 입력과 Dashboard ID 탐색을 자동 추천하는 방향 |

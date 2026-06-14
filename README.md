@@ -4,9 +4,23 @@
 
 Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 않도록 돕는 AI 협업 개발 운영 프레임워크입니다.
 
+한 줄로 말하면, Ex는 앱을 가장 빨리 만드는 도구가 아니라 **AI가 만든 결과를 요구사항, 설계, 테스트, 증적, 승인 흐름으로 회수하는 Trust/Governance Layer**입니다.
+
 사용자는 "무엇을 만들고 싶은지"와 중요한 제약을 말하고, 메인 에이전트인 Orchestrator가 요구사항, 설계, 구현, 테스트, 증적 수집을 단계별로 조율합니다. `vulcan.py`는 그 과정에서 LLM이 놓치기 쉬운 ID 체계, Run 기록, 추적성, Gate 전환 규칙을 프로그램으로 점검합니다.
 
 에이전트가 코딩하고, Vulcan-Anvil이 그 일을 설명 가능하게 만듭니다.
+
+## 어떤 상황에 맞나
+
+| 상황 | 추천 |
+| --- | --- |
+| 빠르게 가능성만 보고 싶다 | `--profile poc` |
+| 업무 앱/솔루션을 제품처럼 만들고 릴리즈 품질을 유지하고 싶다 | `--profile solution` |
+| 감리, 고객 검수, 인수인계, 보안/QA 증적이 필요하다 | 기본값 `--profile audit` |
+
+PoC는 품질이 낮은 모드가 아니라 문서와 증적의 깊이를 줄여 핵심 가설을 빨리 확인하는 모드입니다. Solution은 일반 제품/업무 앱 개발의 중간층이고, Audit은 감리/SI/규제 대응처럼 가장 강한 추적성과 증적이 필요한 경우에 사용합니다.
+
+Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
 
 ## 한눈에 보기
 
@@ -44,8 +58,15 @@ Vulcan-Anvil Ex는 이 문제를 문서화된 Core 규칙, Adapter, Run 기록, 
 ## 빠른 시작
 
 ```powershell
-python vulcan.py init ../my-project "My Project"
-cd ../my-project
+python vulcan.py init ../my-poc "My PoC" --profile poc
+cd ../my-poc
+```
+
+일반 제품/업무 앱은 `solution`, 감리 대응 프로젝트는 기본값인 `audit`을 사용합니다.
+
+```powershell
+python vulcan.py init ../my-product "My Product" --profile solution
+python vulcan.py init ../my-audit-project "My Audit Project"
 ```
 
 원격 저장소와 함께 시작하려면 `--remote`를 추가합니다.
@@ -61,6 +82,19 @@ python vulcan.py init ../my-project "My Project" --remote https://github.com/<ow
 ```
 
 자세한 시작 방법은 [Getting Started](docs/GETTING_STARTED.md)를 참고합니다.
+
+## 무엇이 남나
+
+Ex 프로젝트가 끝나면 단순히 코드만 남지 않습니다. Profile에 따라 깊이는 다르지만 다음 정보가 함께 남습니다.
+
+- 목표와 요구사항, 설계 판단
+- 구현 코드와 테스트 코드
+- 실행한 테스트 명령과 로그
+- 화면 증적 또는 smoke/demo 결과
+- FIND/CR/ISSUE와 남은 판단 항목
+- 요구사항에서 증적까지 이어지는 추적 정보
+
+샘플 기준의 소요 시간과 산출물 차이는 [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md)를 참고합니다.
 
 ## Codex에서 사용할 때
 
@@ -140,6 +174,8 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | 문서 | 내용 |
 | --- | --- |
 | [Getting Started](docs/GETTING_STARTED.md) | 초기화, 원격 저장소, 프로젝트 시작, 주요 명령 |
+| [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Solution, Audit 선택 기준 |
+| [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |

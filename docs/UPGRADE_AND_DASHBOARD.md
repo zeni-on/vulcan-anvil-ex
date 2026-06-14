@@ -157,3 +157,17 @@ Dashboard는 프로젝트 폴더의 현재 Git checkout을 읽어 현재 브랜�
 대시보드는 브랜치를 제한하지 않습니다. `dev-happy` 같은 브랜치도 현재 checkout이라면 그대로 표시합니다. 규칙상 올바른 통합 브랜치인지 여부는 `workflow.integration_branch`와 현재 브랜치 비교로 판단합니다.
 
 QA 문서와 증적은 산출물 목록과 문서 drawer에서 확인합니다. Gate 4 Test Result에 연결된 screenshot, log, JSON report 경로는 링크로 표시되며, 긴 QA 문서는 요약 카드가 아니라 Markdown 본문 중심으로 읽습니다. 추적표의 최종 `Verified`, `Fail`, `Not Run`, `environment_blocked` 판단은 Gate 4 Test Result와 증적 링크를 근거로 확인합니다.
+
+## Dashboard 문서 코멘트
+
+Dashboard에서 Markdown 산출물을 읽다가 질문, 수정 요청, FIND 후보, CR 후보가 보이면 문서 블록의 `+` 버튼으로 코멘트를 남길 수 있습니다.
+
+코멘트는 원본 Markdown을 직접 수정하지 않고 프로젝트의 sidecar 파일에 저장합니다.
+
+```text
+.vulcan/comments/comments.jsonl
+```
+
+상태는 단순하게 `open` 또는 `closed`로 관리합니다. Orchestrator는 작업을 시작할 때 `python vulcan.py status`의 `dashboard_comments` 요약을 확인해 열려 있는 사용자 코멘트가 있는지 먼저 봅니다.
+
+코멘트는 문서를 고치는 명령 자체가 아닙니다. Orchestrator가 코멘트를 읽고 반영한 뒤, 반영 결과가 문서와 검증 결과에 나타나면 `closed`로 정리합니다.

@@ -23,6 +23,14 @@ python vulcan.py status
 
 Profile 규칙을 더 자세히 확인해야 할 때만 `python vulcan.py profile-status`를 사용합니다.
 
+Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. 자세한 설명은 [Which Profile Should I Use?](WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
+
+| 원하는 것 | 선택 |
+| --- | --- |
+| 빠른 기술/아이디어 검증 | `--profile poc` |
+| 제품/업무 앱 개발과 반복 릴리즈 | `--profile solution` |
+| 감리, 고객 검수, 인수인계, 강한 QA 증적 | 기본값 `audit` |
+
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
 ```powershell
@@ -83,6 +91,22 @@ PoC Profile로 시작했다면 다음처럼 목표와 운영 강도를 함께 �
 TBD가 필요한 항목은 사유와 후속 판단 시점을 같이 남겨줘.
 ```
 
+Solution Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다.
+
+```text
+이 프로젝트는 Solution profile이야.
+일반 제품/업무 앱 수준으로 요구사항, 주요 설계, API/DB/UI 계약, 릴리즈 회귀 기준을 남겨줘.
+감리 제출 수준의 과도한 증적보다는 제품 품질과 유지보수성을 우선해줘.
+```
+
+Audit Profile은 기본값입니다. 감리, 고객 검수, 인수인계가 필요하다면 다음처럼 명확히 말합니다.
+
+```text
+이 프로젝트는 Audit profile이야.
+요구사항, 설계, 테스트, QA 증적, 변경관리, 릴리즈 승인까지 추적 가능하게 진행해줘.
+Gate 전환 전에는 status --check 결과와 남은 이슈를 보고해줘.
+```
+
 PoC Run은 기본 필수가 아닙니다. 외부 CLI worker, 독립 검수, 긴 위임, 재현 가능한 실험 기록이 필요하면 다음처럼 compact Run 초안을 생성할 수 있습니다.
 짧은 subagent/thread 실험은 별도 Run 없이 결과 요약에 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령만 남길 수 있습니다.
 
@@ -97,6 +121,8 @@ python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC �
 ```
 
 Orchestrator는 `AGENTS.md`, `docs/core/`, adapter 규칙을 읽고 필요한 질문을 한 뒤 현재 Gate에서 허용된 범위부터 진행합니다. Phase 0 또는 Gate 1에서는 바로 구현하지 않고 범위, 요구사항, 질문, 승인 지점을 먼저 정리합니다.
+
+처음 실행이 끝났을 때 무엇이 남는지 감을 잡고 싶다면 [Examples And Benchmarks](EXAMPLES_AND_BENCHMARKS.md)를 먼저 읽어도 됩니다.
 
 ## 3. 기본 프로젝트 구조
 
