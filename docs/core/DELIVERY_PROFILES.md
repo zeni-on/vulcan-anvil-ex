@@ -49,6 +49,8 @@ Profile Overlay는 다음 필드를 기준으로 정의한다.
 | `required_artifacts` | Gate별 필수 산출물 범위 |
 | `traceability_level` | ID 연결과 추적표 정합성 요구 수준 |
 | `program_contract_level` | Program Design, interface, public method 계약의 상세도 |
+| `security_standard_level` | 보안 기준선과 외부 표준 매핑 강도 |
+| `data_standard_level` | 프로젝트 단어사전, 데이터 도메인, 외부 데이터 표준 적용 강도 |
 | `qa_evidence_level` | 테스트 로그, 화면 캡처, Playwright, QA Finding 증적 수준 |
 | `independent_review_level` | 독립 검수 또는 교차 검증을 요구하는 시점 |
 | `run_preflight_strictness` | Run 입력 계약 사전 차단/경고 기준 |
@@ -60,11 +62,11 @@ Profile은 결과물의 품질 등급이 아니다.
 
 Profile별 기본 Overlay는 다음과 같다.
 
-| Profile | `gate_approval` | `traceability_level` | `program_contract_level` | `qa_evidence_level` | `independent_review_level` | `run_preflight_strictness` |
-| --- | --- | --- | --- | --- | --- | --- |
-| `audit` | 모든 Gate 명시 승인 | 전체 REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI | class/interface/public method 수준 | QA-000~QA-003, 명령 로그, UI 증적, FIND/CR | Gate 2, Gate 4, 필요 시 PR | 강한 차단 중심 |
-| `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | 릴리즈 회귀, 주요 UI/API 증적, 공식 UI runner 기본 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
-| `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | smoke, 데모 캡처, 결과 로그, 필요 시 경량 UI script | 선택 | 경고 중심 |
+| Profile | `gate_approval` | `traceability_level` | `program_contract_level` | `security_standard_level` | `data_standard_level` | `qa_evidence_level` | `independent_review_level` | `run_preflight_strictness` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `audit` | 모든 Gate 명시 승인 | 전체 REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI | class/interface/public method 수준 | KISA/공공/고객사 기준 + OWASP/CWE | 공공데이터 공통표준 + 프로젝트 단어사전 | QA-000~QA-003, 명령 로그, UI 증적, FIND/CR | Gate 2, Gate 4, 필요 시 PR | 강한 차단 중심 |
+| `solution` | 주요 Gate와 릴리즈 승인 | 핵심 요구사항, API, DB, 보안, 회귀 테스트 | public API, service/usecase, DTO 수준 | OWASP ASVS/Top 10/API Top 10 + CWE | 프로젝트 단어사전 + ISO 11179식 metadata 요소 + 필요 시 공공표준 참고 | 릴리즈 회귀, 주요 UI/API 증적, 공식 UI runner 기본 | release candidate 또는 큰 변경 | scope/contract 차단, 나머지 경고 |
+| `poc` | 시작/중간 점검/종료 승인 | 가설/요구사항 -> 구현 -> 결과 | 주요 인터페이스와 실험 코드 진입점 | 주요 보안 위험 식별과 제품화 전환 gap | 핵심 데이터 항목과 민감정보 식별 | smoke, 데모 캡처, 결과 로그, 필요 시 경량 UI script | 선택 | 경고 중심 |
 
 `--trace-seed`는 모든 Profile에서 사용할 수 있다.
 다만 `audit`에서는 대표 상세 ID를 기준으로 Run 입력 계약을 보강하는 것을 기본값으로 보고, `solution`, `poc`에서는 필요한 경우 관련 ID 추천과 source document 축소 목적으로 사용한다.
@@ -91,6 +93,10 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 문서의 목적은 감리 제출보다 제품 의사결정, 품질 유지, 릴리즈 추적에 둔다.
 - 요구사항은 제품 백로그, 사용자 시나리오, 릴리즈 범위와 연결한다.
 - 설계 문서는 SW Architecture, ADR, API/DB 계약, 보안/개발표준 중심으로 유지한다.
+- 보안 기준은 KISA/공공 제출 근거가 아니라 OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE를 기본 기준선으로 사용한다.
+- KISA, 공공, 고객사 보안 기준은 Solution에서 선택 참고로 둘 수 있으며, Audit 전환 시 공식 매핑과 증적으로 보강한다.
+- 데이터 표준은 프로젝트 단어사전, 화면/API/DB 항목 매핑, 데이터 도메인, 개인정보/인증정보/민감정보 분류를 기본으로 한다.
+- 공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이지만, Solution에서는 조직/도메인 표준이 없을 때 참고 표준으로 사용할 수 있다.
 - 화면설계와 증적은 주요 사용자 흐름과 회귀 테스트 기준에 집중한다.
 - 변경관리는 CR보다 Issue, Feature, Release Note, ADR과 연결될 수 있다.
 - Gate는 유지하되 승인 절차를 가볍게 운영할 수 있다.

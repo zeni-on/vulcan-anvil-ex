@@ -42,10 +42,12 @@ Solution에서 중요한 것은 다음입니다.
 - 핵심 요구사항과 사용자 시나리오
 - 제품/업무 아키텍처와 ADR
 - API, DB, DTO, 주요 UI 계약
+- OWASP/CWE 기반 보안 기준선
+- 프로젝트 단어사전, 화면/API/DB 항목 매핑, 데이터 보안 분류
 - 릴리즈 회귀 테스트와 주요 화면/API 증적
 - backlog, issue, release note 연결
 
-Solution은 "가벼운 Audit"이 아니라 제품 운영에 필요한 중간 레이어입니다.
+Solution은 "가벼운 Audit"이 아니라 제품 운영에 필요한 중간 레이어입니다. 자세한 기준은 [Solution Profile Baseline](reference/SOLUTION-PROFILE-BASELINE.md)을 참고합니다.
 
 ### Audit
 

@@ -16,13 +16,23 @@
 3. 세부 판단이 필요할 때만 `docs/seed-docs/reference-standards/`의 원문을 확인한다.
 4. 원문과 본 문서가 충돌하면 원문을 우선하고, 본 문서 갱신 후보를 `FIND` 또는 `CR`로 남긴다.
 
-본 문서는 다음 세 기준을 기본 축으로 사용한다.
+본 문서는 다음 기준을 기본 축으로 사용한다. 적용 강도는 Delivery Profile에 따라 다르다.
 
 | 기준 | 역할 | Ex 사용 방식 |
 | --- | --- | --- |
-| 행안부/KISA `SR-ID` | 국내 공공 개발보안 및 감리 대응 기준 | 요구사항, 설계, 테스트의 1차 근거 |
+| OWASP ASVS | 웹 애플리케이션 보안 요구사항과 검증 기준 | Solution/Audit의 기본 보안 체크리스트 |
 | OWASP Top 10 | 웹 애플리케이션 위험 분류 | 위험 유형 및 누락 체크 |
+| OWASP API Security Top 10 | API 보안 위험 분류 | API 중심 앱의 접근통제, 인증, 리소스 사용 위험 점검 |
 | CWE | 코드 레벨 보안약점 분류 | 구현/리뷰/진단 시 약점 ID 연결 |
+| 행안부/KISA `SR-ID` | 국내 공공 개발보안 및 감리 대응 기준 | Audit profile 또는 고객/공공 기준이 필요한 경우 1차 근거 |
+
+Profile별 기본 적용은 다음과 같다.
+
+| Profile | 기본 보안 기준 |
+| --- | --- |
+| `poc` | 주요 위험 식별, 민감정보/인증/외부입력 여부, 제품화 전환 시 보강할 gap |
+| `solution` | OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE 기반 제품 보안 기준선 |
+| `audit` | Solution 기준선 + KISA/공공/고객사 기준 매핑 + 제출/검수용 증적 |
 
 ## 2. 참조 표준
 
@@ -30,7 +40,9 @@
 | --- | --- | --- | --- |
 | `KISA-SD-2021` | 소프트웨어 개발보안 가이드(2021.12.29) | `docs/seed-docs/reference-standards/` | 설계/구현 보안 기준 |
 | `KISA-SWVD-2021` | 소프트웨어 보안약점 진단가이드(2021) | `docs/seed-docs/reference-standards/` | 감리/진단/검증 기준 |
+| `OWASP-ASVS` | OWASP Application Security Verification Standard | `https://owasp.org/www-project-application-security-verification-standard/` | 웹 애플리케이션 보안 요구사항/검증 기준 |
 | `OWASP-T10-2021` | OWASP Top 10:2021 | `https://owasp.org/Top10/2021/` | 웹 위험 분류 |
+| `OWASP-API-T10-2023` | OWASP API Security Top 10:2023 | `https://owasp.org/www-project-api-security/` | API 보안 위험 분류 |
 | `CWE` | Common Weakness Enumeration | `https://cwe.mitre.org/` | 코드 약점 분류 |
 
 ## 3. 보안항목 작성 규칙
@@ -67,7 +79,8 @@ verification:
 - `SEC-ID`는 최소 하나 이상의 `REQ` 또는 `NREQ`와 연결한다.
 - `SEC-ID`는 최소 하나 이상의 `PGM`, `SCR`, `DB`, `IF` 중 하나와 연결한다.
 - `SEC-ID`는 최소 하나 이상의 테스트 또는 리뷰 증적과 연결한다.
-- 공공/SI 프로젝트에서는 `KISA/SR` 매핑을 먼저 작성하고, OWASP/CWE는 보조 분류로 추가한다.
+- Solution profile에서는 OWASP ASVS/Top 10/API Top 10과 CWE를 먼저 작성하고, KISA/SR은 필요할 때 참고 또는 Audit 전환 gap으로 남긴다.
+- 공공/SI/Audit profile에서는 `KISA/SR` 매핑을 먼저 작성하고, OWASP/CWE는 보조 분류로 추가한다.
 
 ## 4. 기능 유형별 필수 보안항목
 
@@ -152,7 +165,7 @@ verification:
 | --- | --- |
 | P0 | 보안 민감 도메인, 개인정보, 외부연계, 인증/권한 여부를 질문으로 남긴다. |
 | G1 | 기능 유형별 필수 보안항목을 `NREQ`, `SEC`, `AC` 후보로 식별한다. |
-| G2 | 보안가이드에서 `KISA/SR` 근거, 프로젝트 상세스펙, OWASP/CWE 보조 분류를 확정하고 프로그램 설계, 화면설계, DB명세에 반영한다. |
+| G2 | 보안가이드에서 Profile별 보안 근거, 프로젝트 상세스펙, OWASP/CWE 분류를 확정하고 프로그램 설계, 화면설계, DB명세에 반영한다. Audit은 `KISA/SR` 근거를 포함한다. |
 | G3 | 모든 `SEC-ID`의 구체 규격에 보안 테스트 또는 리뷰 증적 기준을 연결한다. |
 | G4 | 구현 코드가 보안 기준을 만족하는지 확인하고, 미흡하면 `FIND` 또는 `CR`로 분류한다. |
 | G5 | 미해결 보안 Finding, 보안 테스트 미실행, CR 승격 대상을 확인한다. |
@@ -179,7 +192,7 @@ verification:
 | 산출물 | 필수 반영 |
 | --- | --- |
 | 요구사항정의서 | 보안 요구사항, 비기능 요구사항, 보안 인수기준 |
-| 요구사항추적표 | `SEC-ID`, `KISA/SR`, `OWASP`, `CWE`, 테스트/증적 |
+| 요구사항추적표 | `SEC-ID`, Profile별 보안 기준, `OWASP`, `CWE`, 테스트/증적. Audit은 `KISA/SR` 포함 |
 | 보안가이드 | `SEC-ID`별 구현 규격, 정책값, 오류/메시지, 적용 위치, 검증 ID |
 | 기능명세서 | 기능별 보안 제약과 예외 흐름 |
 | 화면설계서 | 인증/권한 상태, 오류 메시지, 입력값 검증, 민감정보 표시 여부 |

@@ -177,6 +177,7 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Solution, Audit 선택 기준 |
 | [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
+| [Solution Profile Baseline](docs/reference/SOLUTION-PROFILE-BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |

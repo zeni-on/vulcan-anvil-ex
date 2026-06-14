@@ -125,8 +125,10 @@
 
 3. **Delivery Profile 구체화**
    - Audit/SI, Solution/Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
+   - Solution profile은 OWASP/CWE 기반 보안 기준선과 프로젝트 단어사전/데이터 매핑을 기본으로 삼고, KISA/공공데이터 공통표준은 Audit 전환 gap으로 정리한다.
    - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
    - PoC 산출물 세트 분리 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
+   - Solution 기준은 `docs/reference/SOLUTION-PROFILE-BASELINE.md`를 따른다.
 
 4. **Dashboard 증적/추적 polish**
    - Trace Explorer는 MVP가 들어갔으므로, 샘플 사용 결과를 보고 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어를 보강한다.
@@ -201,6 +203,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/core/DELIVERY_PROFILES.md` | Delivery Profile 기준 | `init --profile`, `profile-status`, profile_rules 기반 Overlay. 검사 엄격도/Dashboard 연동은 후속 보강 |
 | `docs/WHICH_PROFILE_SHOULD_I_USE.md` | 사용자용 Profile 선택 가이드 | PoC/Solution/Audit을 처음 고르는 기준과 시작 메시지 예시 |
 | `docs/EXAMPLES_AND_BENCHMARKS.md` | 샘플/benchmark 요약 | 샘플 실행 결과, profile별 산출물과 시간 차이를 사용자 관점으로 요약 |
+| `docs/reference/SOLUTION-PROFILE-BASELINE.md` | Solution Profile 기준 | 제품/업무 앱 기본 레이어의 보안, 데이터, Gate, Audit 전환 gap 기준 |
 | `docs/core/CODEX_MODEL_POLICY.md` | Codex model/effort 정책 | Codex runner의 역할별 모델 선택, 실행 기록, 성능 측정 기준 |
 | `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md` | 회귀 하네스 fixture 전략 | 기존 샘플 프로젝트 문서를 정규화해 테스트 입력으로 사용하는 방향 |
 | `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md` | 추적성 그래프 전략 | 추적표를 그래프 원장으로 사용해 Run 입력과 Dashboard ID 탐색을 자동 추천하는 방향 |

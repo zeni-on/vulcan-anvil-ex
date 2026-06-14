@@ -68,6 +68,8 @@ Vulcan-Anvil Ex는 모든 프로젝트를 같은 무게로 운영하지 않습�
 
 Profile은 품질 등급이 아닙니다. PoC도 실패와 미실행을 정직하게 기록해야 하고, Audit도 불필요한 문서 작업을 늘리는 것이 목적은 아닙니다. 차이는 **얼마나 깊게 설명하고 얼마나 강하게 증적을 남길 것인가**입니다.
 
+Solution profile은 일반 제품 개발에서 납득 가능한 기준을 기본값으로 둡니다. 보안은 OWASP/CWE 기반 제품 보안 기준선, 데이터는 프로젝트 단어사전과 화면/API/DB 항목 매핑을 중심으로 운영합니다. KISA/공공데이터 공통표준은 Audit 또는 공공/SI 전환 시 공식 매핑으로 보강합니다.
+
 처음 선택할 때는 [Which Profile Should I Use?](WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
 
 ## Branch Workflow
