@@ -4675,6 +4675,36 @@ def validate_poc_trace(project_dir=".", gate=None):
     return issues, warnings
 
 
+def validate_product_trace(project_dir=".", gate=None):
+    issues, warnings = collect_product_profile_findings(project_dir, gate=gate)
+    if load_delivery_profile(project_dir) != "product":
+        return issues, warnings
+
+    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
+    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
+    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
+    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+
+    scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", brief_content))
+    req_ids = set(re.findall(r"\bREQ-\d{3}(?:-\d{2})?\b", brief_content))
+
+    if gate in ("phase0", "gate1") and not scenario_ids:
+        issues.append("docs/product/PRODUCT_BRIEF.md에 SCN-ID가 없습니다.")
+    if gate in ("phase0", "gate1") and not req_ids:
+        warnings.append("docs/product/PRODUCT_BRIEF.md에 REQ-ID가 없습니다. Product에서는 허용되지만 이후 계약/회귀 연결 전에 보강하세요.")
+
+    if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
+        linked_text = "\n".join([contracts_content, trace_content, release_content])
+        for scenario_id in sorted(scenario_ids):
+            if linked_text and scenario_id not in linked_text:
+                warnings.append(f"Product trace warning: {scenario_id}가 계약/회귀/릴리즈 문서에 연결되지 않았습니다.")
+        for req_id in sorted(req_ids):
+            if trace_content and req_id not in trace_content:
+                warnings.append(f"Product trace warning: {req_id}가 PRODUCT_TRACEABILITY.md에 연결되지 않았습니다.")
+
+    return issues, warnings
+
+
 def is_markdown_separator_row(line):
     cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
     return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell or "") for cell in cells)
@@ -6016,6 +6046,8 @@ def check_trace(project_dir=".", exit_on_error=True):
     if profile == "poc":
         print("  Profile: poc (누락/TBD 일부는 가설 검증 경고로 처리)")
         warnings.extend(collect_poc_tbd_warnings(project_dir))
+    elif profile == "product":
+        print("  Profile: product (docs/product 원장 기준으로 핵심 시나리오와 릴리즈 추적을 확인)")
 
     progression_issues = validate_gate_progression(project_dir, current_gate)
     if progression_issues:
@@ -6035,6 +6067,41 @@ def check_trace(project_dir=".", exit_on_error=True):
             print(f"  PoC profile 검사: 경고 {len(poc_warnings)}건")
         else:
             print("  PoC profile 검사: OK")
+
+        try:
+            stats = compute_stats(project_dir)
+            session["stats"] = stats
+            save_session(session, project_dir)
+        except Exception as e:
+            print(f"  [경고] stats 계산 실패: {e}")
+
+        print()
+        if warnings:
+            print(f"경고 {len(warnings)}건:\n")
+            for warning in warnings:
+                print(f"  {warning}")
+            print()
+        if issues:
+            print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
+            for issue in issues:
+                print(f"  {issue}")
+            if exit_on_error:
+                sys.exit(1)
+        else:
+            print("이슈 0건 - Gate 완료 가능합니다.")
+        return issues, warnings
+
+    if profile == "product":
+        print("  Product profile 검사: Product 문서 세트와 핵심 trace 연결 확인")
+        product_issues, product_warnings = validate_product_trace(project_dir, gate=current_gate)
+        issues.extend(product_issues)
+        warnings.extend(product_warnings)
+        if product_issues:
+            print(f"  Product profile 검사: 이슈 {len(product_issues)}건")
+        elif product_warnings:
+            print(f"  Product profile 검사: 경고 {len(product_warnings)}건")
+        else:
+            print("  Product profile 검사: OK")
 
         try:
             stats = compute_stats(project_dir)
@@ -8072,6 +8139,10 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
     if profile == "poc":
         print("  PoC profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
         print("  다음 단계: docs/poc/ 문서를 갱신하고 필요할 때만 compact Run 또는 worker Run을 생성하세요.")
+        return
+    if profile == "product":
+        print("  Product profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
+        print("  다음 단계: docs/product/ 문서를 갱신하고 구현/검수 위임이 필요할 때만 Run을 생성하세요.")
         return
 
     goal = f"{GATE_LABELS[gate]} 시작 계획"

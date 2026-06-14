@@ -57,6 +57,8 @@ Product profile에서는 `docs/product/` 6종 문서 존재 여부와 현재 Gat
 | 상태 재계산/동기화 | `python vulcan.py sync-session` |
 
 `gate-start`는 해당 Gate의 기본 Orchestrator Plan Run 초안을 자동 생성할 수 있다. 이미 Draft 또는 InProgress Run이 있으면 중복 생성하지 않는다.
+PoC와 Product profile에서는 Gate별 Orchestrator Plan Run 자동 생성을 생략한다.
+이 두 profile은 각각 `docs/poc/`, `docs/product/` 원장과 `status --check`를 우선 사용하고, 위임/재현/검수 기록이 필요할 때만 Run을 만든다.
 
 Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때만 수행한다.
 

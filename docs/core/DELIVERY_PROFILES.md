@@ -222,6 +222,8 @@ docs/product/REGRESSION_AND_RELEASE_REPORT.md
 각 문서의 `gate_scope`와 본문 섹션이 Gate 1~5 역할에 대응한다.
 `profile-gap`은 Product 문서 세트의 존재 여부와 현재 Gate의 핵심 내용 보완 필요 여부를 분리해 보여준다.
 예를 들어 `PRODUCT_BRIEF.md`의 목표, 주요 사용자, 성공 기준이 `TBD`이면 Phase 0 완료 전 `status --check`에서 차단된다.
+Product Profile에서는 Gate 시작 시 Orchestrator Plan Run을 자동 생성하지 않는다.
+Gate 계획과 판단은 `docs/product/` 문서와 `status --check`를 우선 사용하고, 구현/검수 위임이나 재현 가능한 작업 기록이 필요할 때만 Run을 만든다.
 
 `run-new`는 Profile과 Gate, skill 조합을 보고 가능한 경우 Run 입력 계약을 자동 확장한다.
 
