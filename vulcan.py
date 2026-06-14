@@ -214,6 +214,14 @@ POC_ARTIFACT_TEMPLATES = [
     ("docs/templates/poc/POC_SYSTEM_DESIGN_TEMPLATE.md", "docs/poc/POC_SYSTEM_DESIGN.md"),
     ("docs/templates/poc/POC_TEST_REPORT_TEMPLATE.md", "docs/poc/POC_TEST_REPORT.md"),
 ]
+PRODUCT_ARTIFACT_TEMPLATES = [
+    ("docs/templates/product/PRODUCT_BRIEF_TEMPLATE.md", "docs/product/PRODUCT_BRIEF.md"),
+    ("docs/templates/product/PRODUCT_ARCHITECTURE_TEMPLATE.md", "docs/product/PRODUCT_ARCHITECTURE.md"),
+    ("docs/templates/product/ADR_LOG_TEMPLATE.md", "docs/product/ADR_LOG.md"),
+    ("docs/templates/product/PRODUCT_CONTRACTS_TEMPLATE.md", "docs/product/PRODUCT_CONTRACTS.md"),
+    ("docs/templates/product/PRODUCT_TRACEABILITY_TEMPLATE.md", "docs/product/PRODUCT_TRACEABILITY.md"),
+    ("docs/templates/product/REGRESSION_AND_RELEASE_REPORT_TEMPLATE.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"),
+]
 POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "phase0": ["docs/poc/POC_REQUIREMENTS.md"],
     "gate1": ["docs/poc/POC_REQUIREMENTS.md"],
@@ -223,6 +231,148 @@ POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "gate4": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
     "gate5": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
     "completed": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
+}
+PROFILE_GAP_RULES = {
+    "product": [
+        {
+            "id": "product_brief",
+            "title": "Product brief",
+            "ok_any": [
+                "docs/product/PRODUCT_BRIEF.md",
+                "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_REQUIREMENTS.md"],
+            "recommendation": "목표, 사용자, 핵심 시나리오, 비목표, 성공 기준을 Product 관점으로 정리합니다.",
+        },
+        {
+            "id": "product_architecture",
+            "title": "Product architecture",
+            "ok_any": [
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "주요 컴포넌트, 런타임, 배포/운영 경계, 품질속성을 정리합니다.",
+        },
+        {
+            "id": "adr",
+            "title": "ADR log",
+            "ok_any": [
+                "docs/product/ADR_LOG.md",
+                "docs/artifacts/02-design/architecture/ADR_LOG.md",
+                "docs/artifacts/02-design/architecture/adr/README.md",
+            ],
+            "partial_any": [
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+                "docs/poc/POC_SYSTEM_DESIGN.md",
+            ],
+            "recommendation": "기술/구조 선택 이유와 대안을 ADR로 남깁니다.",
+        },
+        {
+            "id": "product_contracts",
+            "title": "Product contracts",
+            "ok_any": ["docs/product/PRODUCT_CONTRACTS.md"],
+            "ok_all": [
+                "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+                "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            ],
+            "partial_any": [
+                "docs/poc/POC_SYSTEM_DESIGN.md",
+                "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+                "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            ],
+            "recommendation": "API/DB/UI/Security/Data 계약의 진입점 또는 상세 설계 링크를 정리합니다.",
+        },
+        {
+            "id": "regression_release",
+            "title": "Regression and release report",
+            "ok_any": [
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            ],
+            "partial_any": [
+                "docs/poc/POC_TEST_REPORT.md",
+                "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            ],
+            "recommendation": "반복 실행할 회귀 테스트와 릴리즈 판단 근거를 정리합니다.",
+        },
+        {
+            "id": "traceability",
+            "title": "Release traceability",
+            "ok_any": [
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_TEST_REPORT.md"],
+            "recommendation": "핵심 시나리오 -> 계약 -> 구현 -> 테스트 -> 릴리즈 근거를 연결합니다.",
+        },
+    ],
+    "audit": [
+        {
+            "id": "requirements",
+            "title": "Requirements and traceability",
+            "ok_all": [
+                "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+                "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            ],
+            "partial_any": ["docs/product/PRODUCT_BRIEF.md", "docs/poc/POC_REQUIREMENTS.md"],
+            "recommendation": "REQ/NREQ/AC와 추적표를 공식 산출물로 분리합니다.",
+        },
+        {
+            "id": "design",
+            "title": "Full design artifacts",
+            "ok_all": [
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+                "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+                "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+                "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+                "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            ],
+            "partial_any": ["docs/product/PRODUCT_ARCHITECTURE.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "아키텍처, 기능, 프로그램, API, DB, 보안 설계를 Audit 산출물로 확장합니다.",
+        },
+        {
+            "id": "security_mapping",
+            "title": "Security standard mapping",
+            "ok_any": ["docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md"],
+            "partial_any": ["docs/core/SECURITY_BASELINE.md", "docs/core/PRODUCT_PROFILE_BASELINE.md"],
+            "recommendation": "KISA/SR, 고객/공공 기준, OWASP/CWE를 SEC-ID와 테스트 증적에 연결합니다.",
+        },
+        {
+            "id": "data_standard",
+            "title": "Data standard mapping",
+            "ok_all": [
+                "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+            ],
+            "partial_any": ["docs/core/DATA_STANDARD_RULES.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "단어사전, 데이터 도메인, 공공데이터 공통표준 준용/변형/신규 사유를 정리합니다.",
+        },
+        {
+            "id": "test_qa",
+            "title": "Test plan and QA evidence",
+            "ok_all": [
+                "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+                "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+                "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            ],
+            "partial_any": ["docs/product/REGRESSION_AND_RELEASE_REPORT.md", "docs/poc/POC_TEST_REPORT.md"],
+            "recommendation": "Gate 3 테스트 계획과 Gate 4 결과/증적/FIND를 분리해 정리합니다.",
+        },
+        {
+            "id": "release_control",
+            "title": "Change and release records",
+            "ok_any": [
+                "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+                "docs/product/RELEASE_SCOPE.md",
+            ],
+            "partial_any": ["docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"],
+            "recommendation": "FIND/CR/ISSUE, 릴리즈 승인, known issue, 잔여 리스크를 정리합니다.",
+        },
+    ],
 }
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
@@ -1277,6 +1427,24 @@ def install_poc_artifacts(target_dir, variables, overwrite=False, source_root=No
     """Install PoC profile integrated working documents into docs/poc/."""
     source_root = source_root or VULCAN_DIR
     for src_rel, dst_rel in POC_ARTIFACT_TEMPLATES:
+        src = os.path.join(source_root, src_rel)
+        dst = os.path.join(target_dir, dst_rel)
+        if not os.path.isfile(src):
+            continue
+        if os.path.exists(dst) and not overwrite:
+            continue
+        with open(src, encoding="utf-8") as fp:
+            content = render(fp.read(), variables)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as fp:
+            fp.write(content)
+        print(f"  install/update: {dst_rel}")
+
+
+def install_product_artifacts(target_dir, variables, overwrite=False, source_root=None):
+    """Install Product profile working documents into docs/product/."""
+    source_root = source_root or VULCAN_DIR
+    for src_rel, dst_rel in PRODUCT_ARTIFACT_TEMPLATES:
         src = os.path.join(source_root, src_rel)
         dst = os.path.join(target_dir, dst_rel)
         if not os.path.isfile(src):
@@ -8496,12 +8664,14 @@ def cmd_upgrade(project_dir="."):
     profile = load_delivery_profile(project_dir)
     if profile == "poc":
         install_poc_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
+    elif profile == "product":
+        install_product_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     else:
         install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
     for db_ignore in ("*.db", "*.sqlite", "*.sqlite3"):
         ensure_gitignore_entry(project_dir, db_ignore)
-    create_vulcan_config(project_dir)
+    create_vulcan_config(project_dir, profile=profile, primary=load_primary_runner(project_dir))
     if migrate_vulcan_config_models(project_dir):
         print(f"  마이그레이션: vulcan.config.json unsupported Codex model → gpt-5.5")
     if migrate_vulcan_config_qa_workspace_policy(project_dir):
@@ -13715,6 +13885,116 @@ def cmd_profile_status(project_dir="."):
         print("  note: non-audit profiles are recorded as overlay policy first; most checks still share audit-safe defaults until profile-specific strictness is implemented.")
 
 
+def _project_rel_exists(project_dir, rel_path):
+    return os.path.exists(os.path.join(os.path.abspath(project_dir), rel_path))
+
+
+def _profile_gap_rule_status(project_dir, rule):
+    ok_any = rule.get("ok_any") or []
+    ok_all = rule.get("ok_all") or []
+    partial_any = rule.get("partial_any") or []
+    partial_all = rule.get("partial_all") or []
+
+    matched = []
+    if ok_any:
+        matched = [path for path in ok_any if _project_rel_exists(project_dir, path)]
+        if matched:
+            return "ok", matched
+    if ok_all:
+        all_matched = [path for path in ok_all if _project_rel_exists(project_dir, path)]
+        if len(all_matched) == len(ok_all):
+            return "ok", all_matched
+        if all_matched:
+            matched.extend(all_matched)
+    if partial_any:
+        partial_matched = [path for path in partial_any if _project_rel_exists(project_dir, path)]
+        if partial_matched:
+            return "partial", partial_matched
+    if partial_all:
+        partial_all_matched = [path for path in partial_all if _project_rel_exists(project_dir, path)]
+        if len(partial_all_matched) == len(partial_all):
+            return "partial", partial_all_matched
+        if partial_all_matched:
+            matched.extend(partial_all_matched)
+    if matched:
+        return "partial", matched
+    return "missing", []
+
+
+def collect_profile_gap(project_dir=".", target_profile="product"):
+    project_abs = os.path.abspath(project_dir)
+    current_profile = load_delivery_profile(project_abs)
+    target = normalize_delivery_profile(target_profile)
+    if target == "poc":
+        items = [{
+            "id": "poc_target",
+            "title": "PoC target",
+            "status": "review",
+            "matched": [],
+            "recommendation": "PoC는 승격 대상이라기보다 경량 실험 profile입니다. 필요하면 새 PoC 목적과 성공 기준을 정리하세요.",
+        }]
+    else:
+        rules = PROFILE_GAP_RULES.get(target)
+        if not rules:
+            rules = []
+        items = []
+        for rule in rules:
+            status, matched = _profile_gap_rule_status(project_abs, rule)
+            items.append({
+                "id": rule.get("id") or "",
+                "title": rule.get("title") or "",
+                "status": status,
+                "matched": matched,
+                "recommendation": rule.get("recommendation") or "",
+            })
+
+    summary = {"ok": 0, "partial": 0, "missing": 0, "review": 0}
+    for item in items:
+        summary[item["status"]] = summary.get(item["status"], 0) + 1
+    return {
+        "project": os.path.basename(project_abs),
+        "current_profile": current_profile,
+        "target_profile": target,
+        "items": items,
+        "summary": summary,
+        "note": "profile-gap is read-only; it does not change session.json or vulcan.config.json.",
+    }
+
+
+def cmd_profile_gap(target_profile="product", emit_json=False, project_dir="."):
+    gap = collect_profile_gap(project_dir=project_dir, target_profile=target_profile)
+    if emit_json:
+        print(json.dumps(gap, ensure_ascii=False, indent=2))
+        return
+
+    print("==================================================")
+    print(" [profile-gap] Delivery Profile gap check")
+    print("==================================================")
+    print(f" project: {gap['project']}")
+    print(f" current_profile: {gap['current_profile']}")
+    print(f" target_profile: {gap['target_profile']}")
+    print(" read_only: true")
+    print()
+    print(" summary")
+    for key in ("ok", "partial", "missing", "review"):
+        print(f"  {key}: {gap['summary'].get(key, 0)}")
+    print()
+    print(" items")
+    for item in gap["items"]:
+        matched = ", ".join(item.get("matched") or []) or "-"
+        print(f"  - [{item['status']}] {item['id']} - {item['title']}")
+        print(f"    matched: {matched}")
+        print(f"    recommendation: {item.get('recommendation') or '-'}")
+    print()
+    if gap["summary"].get("missing", 0) or gap["summary"].get("partial", 0):
+        print(" next:")
+        print("  부족 항목은 profile 변경 차단 조건이 아니라 backlog 또는 다음 Gate 작업 후보입니다.")
+        print("  profile 값을 바꾸려면 사용자 승인 후 session/config 갱신을 별도 수행하세요.")
+    else:
+        print(" next:")
+        print("  목표 profile로 운영 강도를 바꿀 수 있는 기본 근거가 있습니다. 최종 변경은 사용자 승인 후 수행하세요.")
+
+
 def collect_status_summary(project_dir="."):
     project_abs = os.path.abspath(project_dir)
     session = {}
@@ -14627,6 +14907,8 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     install_project_doc_framework(target_dir, variables, overwrite=True)
     if profile == "poc":
         install_poc_artifacts(target_dir, variables, overwrite=False)
+    elif profile == "product":
+        install_product_artifacts(target_dir, variables, overwrite=False)
     else:
         install_project_artifacts(target_dir, variables, overwrite=False)
 
@@ -14724,6 +15006,7 @@ def main():
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
   profile-status Delivery Profile과 profile_rules 확인
+  profile-gap  목표 Delivery Profile 기준 부족 항목 진단
   release-pr   Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
@@ -14746,6 +15029,7 @@ def main():
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py sync-session
   python vulcan.py profile-status
+  python vulcan.py profile-gap --to product
   python vulcan.py branch-status
   python vulcan.py branch-start impl
   python vulcan.py release-pr --dry-run
@@ -14777,6 +15061,9 @@ def main():
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
     subparsers.add_parser("prepare-transition", help="Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사하고 결과를 요약")
     subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
+    p_profile_gap = subparsers.add_parser("profile-gap", help="목표 Delivery Profile 기준 부족 항목 진단")
+    p_profile_gap.add_argument("--to", default="product", choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="목표 Delivery Profile")
+    p_profile_gap.add_argument("--json", action="store_true", help="JSON으로 출력")
 
     p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
     p_check_contract.add_argument("--program-design", default="", help="프로그램 설계서 경로")
@@ -14991,6 +15278,8 @@ def main():
         cmd_prepare_transition()
     elif args.command == "profile-status":
         cmd_profile_status()
+    elif args.command == "profile-gap":
+        cmd_profile_gap(target_profile=args.to, emit_json=args.json)
     elif args.command == "check-contract":
         sys.exit(cmd_check_contract(
             program_design=args.program_design,

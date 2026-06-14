@@ -31,6 +31,9 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 | 제품/업무 앱 개발과 반복 릴리즈 | `--profile product` |
 | 감리, 고객 검수, 인수인계, 강한 QA 증적 | 기본값 `audit` |
 
+Product profile은 `docs/product/`에 6종 문서를 생성합니다.
+Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`와 섹션을 Gate 진행에 맞춰 갱신합니다.
+
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
 ```powershell

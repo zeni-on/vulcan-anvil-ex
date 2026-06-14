@@ -19,6 +19,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 표면 | 용도 |
 | --- | --- |
 | `status` | 현재 Gate/profile/branch/Run/Wave/다음 행동 확인 |
+| `profile-gap` | 현재 산출물을 목표 profile 기준으로 볼 때 부족한 항목 진단 |
 | `metrics` | git/Run/증적 기반 진행 시간, 파일 수, 라인 수, 위임 기록 요약 |
 | `gate-start`, `session`, `sync-session` | Gate 라이프사이클 갱신 |
 | `orchestrator-plan`, `run-new`, `run-check`, `run-preflight` | Run 생성과 검증 |
@@ -36,6 +37,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | JSON 출력 | `python vulcan.py status --json` |
 | 추적성 상세 진단 포함 | `python vulcan.py status --trace-detail` |
 | 브랜치만 상세 확인 | `python vulcan.py branch-status` |
+| Profile 전환 gap 확인 | `python vulcan.py profile-gap --to product` 또는 `python vulcan.py profile-gap --to audit` |
 | 회고/성능 통계 | `python vulcan.py metrics` 또는 `python vulcan.py metrics --json` |
 
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
@@ -53,6 +55,9 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 `gate-start`는 해당 Gate의 기본 Orchestrator Plan Run 초안을 자동 생성할 수 있다. 이미 Draft 또는 InProgress Run이 있으면 중복 생성하지 않는다.
 
 Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때만 수행한다.
+
+Product profile은 Gate별 폴더를 늘리기보다 `docs/product/` 문서 세트의 `gate_scope`와 본문 섹션을 갱신한다.
+Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하지 않는다.
 
 ## 5. Run 생성과 검증
 

@@ -96,6 +96,9 @@ Ex 프로젝트가 끝나면 단순히 코드만 남지 않습니다. Profile에
 
 샘플 기준의 소요 시간과 산출물 차이는 [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md)를 참고합니다.
 
+Product profile은 `docs/product/`에 Product Brief, Architecture, ADR Log, Contracts, Traceability, Regression/Release Report를 생성합니다.
+이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
+
 ## Codex에서 사용할 때
 
 Codex를 메인 Orchestrator로 사용할 때는 프로젝트 루트의 `AGENTS.md`가 진입 문서입니다.
@@ -178,6 +181,7 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
 | [Product Profile Baseline](docs/core/PRODUCT_PROFILE_BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |
+| [Profile Gap Check](docs/core/PROFILE_GAP_CHECK.md) | PoC -> Product -> Audit 전환 전 부족 항목 진단 기준 |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |

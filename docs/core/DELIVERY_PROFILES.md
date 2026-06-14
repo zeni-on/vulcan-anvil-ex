@@ -171,9 +171,10 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 | 항목 | 현재 상태 |
 | --- | --- |
 | `audit` | 기본 Profile이며 가장 강하게 문서화/검증된다. |
-| `product` | `init --profile product`으로 선택할 수 있고, 선택한 Overlay가 config에 기록된다. Run preset은 아직 audit-safe 기본을 일부 공유한다. |
+| `product` | `init --profile product`으로 선택할 수 있고, `docs/product/` 6종 산출물과 Product Overlay가 생성된다. |
 | `poc` | `init --profile poc`으로 선택할 수 있고, `docs/poc/` 3종 산출물과 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
 | `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
+| `profile-gap` | 현재 산출물을 목표 Profile 기준으로 볼 때 부족한 항목을 읽기 전용으로 진단한다. |
 | `profile_rules` | `vulcan.config.json`에 명시적으로 기록되는 Profile Overlay 기준이다. PoC는 일부 추적성/placeholder 검사를 경고 중심으로 조정한다. |
 
 예상 설정 예:
@@ -199,11 +200,26 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 1. Profile별 의미와 Overlay 기준을 문서로 먼저 고정한다.
 2. `vulcan.config.json` 또는 `session.json`에 선택된 Profile과 `profile_rules` 기본값을 기록한다. (완료)
 3. `profile-status`로 현재 Profile과 Overlay를 확인한다. (완료)
+3-1. `profile-gap --to product|audit`로 profile 전환 전 부족 항목을 읽기 전용으로 확인한다. (1차 완료)
 4. PoC Profile의 Run 입력 계약은 가설, 성공 기준, smoke/demo 검증, 제품화 전환 보강 항목 중심으로 얇게 생성한다. (완료)
 5. `run-check`, `run-preflight`의 차단/경고 심각도를 Profile별로 조절한다. (PoC TBD 경고화 1차 완료)
 6. `check-trace`의 누락/OPEN/Planned 판단을 Profile별 엄격도로 조절한다. (PoC 3종 산출물 원장 기반 1차 완료)
 7. Dashboard에 Profile badge, 필수 산출물 범위, 검사 엄격도를 표시한다.
 8. `product`, `poc`용 fixture smoke를 추가해 audit 규칙이 과하게 적용되지 않는지 검증한다.
+
+Product Profile의 기본 산출물 세트는 다음 6종이다.
+
+```text
+docs/product/PRODUCT_BRIEF.md
+docs/product/PRODUCT_ARCHITECTURE.md
+docs/product/ADR_LOG.md
+docs/product/PRODUCT_CONTRACTS.md
+docs/product/PRODUCT_TRACEABILITY.md
+docs/product/REGRESSION_AND_RELEASE_REPORT.md
+```
+
+이 문서들은 Gate별 제출 폴더가 아니라 제품 운영 문서 세트다.
+각 문서의 `gate_scope`와 본문 섹션이 Gate 1~5 역할에 대응한다.
 
 `run-new`는 Profile과 Gate, skill 조합을 보고 가능한 경우 Run 입력 계약을 자동 확장한다.
 
@@ -231,6 +247,7 @@ python vulcan.py status --check
 
 PoC 산출물 세트와 승격 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`와 `docs/reference/POC-PRODUCT-LIFECYCLE-INTEGRATION-DESIGN-AGY.md`를 참고한다.
 Fast PoC와 Environment Readiness Track 기준은 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 참고한다.
+Profile 전환은 무거운 승격 프로세스가 아니라 `docs/core/PROFILE_GAP_CHECK.md`의 gap 진단을 먼저 따른다.
 
 Audit Profile에서는 Phase 0부터 Gate 5까지 빈 Run 껍데기를 만들지 않고 다음 항목을 포함한다.
 
