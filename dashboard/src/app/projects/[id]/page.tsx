@@ -15,7 +15,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { AlertTriangle, ArrowLeft, CheckCircle2, GitBranch } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, GitBranch } from 'lucide-react'
 import AnvilIcon from '@/components/AnvilIcon'
 import DocDrawer from '@/components/DocDrawer'
 import RefreshButton from '@/components/RefreshButton'
@@ -97,6 +97,68 @@ function BranchWorkspaceBanner({
           작업공간 확인됨
         </span>
       ) : null}
+    </div>
+  )
+}
+
+const PRODUCT_PROFILE_DOCS = [
+  'docs/product/PRODUCT_BRIEF.md',
+  'docs/product/PRODUCT_ARCHITECTURE.md',
+  'docs/product/ADR_LOG.md',
+  'docs/product/PRODUCT_CONTRACTS.md',
+  'docs/product/PRODUCT_TRACEABILITY.md',
+  'docs/product/REGRESSION_AND_RELEASE_REPORT.md',
+]
+
+function normalizeDocPath(path: string): string {
+  return path.replace(/\\/g, '/')
+}
+
+function ProfileArtifactBanner({
+  session,
+  docs,
+  docsLoading,
+}: {
+  session: SessionData | null | undefined
+  docs: DocEntry[]
+  docsLoading?: boolean
+}) {
+  const profile = session?.profile ?? 'audit'
+  const docPaths = new Set(docs.map((doc) => normalizeDocPath(doc.path)))
+  const missingProductDocs = PRODUCT_PROFILE_DOCS.filter((path) => !docPaths.has(path))
+  const productDocCount = PRODUCT_PROFILE_DOCS.length - missingProductDocs.length
+
+  if (!session) return null
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 text-slate-300">
+        <FileText className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+        profile: <span className="font-medium text-slate-100">{profile}</span>
+      </span>
+
+      {profile === 'product' && (
+        <span
+          className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 ${
+            missingProductDocs.length
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+          }`}
+        >
+          {missingProductDocs.length ? (
+            <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+          )}
+          <span className="shrink-0">Product docs {docsLoading ? '-' : `${productDocCount}/${PRODUCT_PROFILE_DOCS.length}`}</span>
+          {missingProductDocs.length > 0 && (
+            <span className="min-w-0 truncate text-amber-100">
+              missing {missingProductDocs.slice(0, 2).map((path) => path.split('/').pop()).join(', ')}
+              {missingProductDocs.length > 2 ? ` +${missingProductDocs.length - 2}` : ''}
+            </span>
+          )}
+        </span>
+      )}
     </div>
   )
 }
@@ -246,6 +308,11 @@ export default function ProjectDetailPage() {
                 session={session}
                 runtime={runtime}
                 isLoading={runtimeLoading}
+              />
+              <ProfileArtifactBanner
+                session={session}
+                docs={docs}
+                docsLoading={docsLoading}
               />
             </>
           ) : !sessionLoading && (

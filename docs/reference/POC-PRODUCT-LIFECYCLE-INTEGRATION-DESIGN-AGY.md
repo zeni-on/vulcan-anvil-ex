@@ -1,8 +1,8 @@
-# PoC & Solution Lifecycle Integration Design (AGY-PROPOSAL)
+# PoC & Product Lifecycle Integration Design (AGY-PROPOSAL)
 
 > **상태**: v1.1 (설계 제안서, Codex review 반영)
 > **오케스트레이터**: AGY (Antigravity) 초안, Codex 검토 보정
-> **목적**: Vulcan-Anvil Ex 프레임워크에 PoC 및 Solution 프로필을 유기적으로 융합하고, 제품 요구사항 추적성, 아키텍처 결정 기록(ADR), 단계별 승격(Promotion)을 처리하기 위한 상세 스펙을 정의하여 에이전트 및 팀과의 설계를 싱크한다.
+> **목적**: Vulcan-Anvil Ex 프레임워크에 PoC 및 Product 프로필을 유기적으로 융합하고, 제품 요구사항 추적성, 아키텍처 결정 기록(ADR), 단계별 승격(Promotion)을 처리하기 위한 상세 스펙을 정의하여 에이전트 및 팀과의 설계를 싱크한다.
 
 ---
 
@@ -12,21 +12,21 @@
 현재 Vulcan-Anvil Ex 프레임워크의 기본 `audit`(감리) 프로필은 20여 종이 넘는 무거운 설계/QA 산출물과 엄격한 추적성 매트릭스(`REQ -> AC -> FUNC -> SCR -> PGM -> API -> DB -> SEC -> UT -> IT -> UI -> EV`)를 강제합니다.
 이는 공공 감리나 높은 컴플라이언스가 요구되는 프로젝트에는 필수적이지만, 다음과 같은 심각한 오버헤드를 발생시킵니다.
 * **개발 초기(PoC)의 병목**: 가설을 검증하고 빠른 프로토타입을 만들어야 하는 단계에서 관료적 문서 작업 때문에 AI 워커와 오케스트레이터의 동력이 상실됩니다.
-* **제품화 단계(Solution)의 부적합**: 대다수의 SaaS나 상용 서비스는 감리(Audit)를 받지 않지만, 그렇다고 PoC의 불안정한 코드를 그대로 런칭할 수는 없습니다. 제품의 운영 아키텍처, 핵심 DTO/API 계약, 회귀 테스트 수준의 실질적 엔지니어링 건전성(Solution)이 필요하지만 기존 프레임워크에는 이에 맞는 적절한 타협점이 없었습니다.
+* **제품화 단계(Product)의 부적합**: 대다수의 SaaS나 상용 서비스는 감리(Audit)를 받지 않지만, 그렇다고 PoC의 불안정한 코드를 그대로 런칭할 수는 없습니다. 제품의 운영 아키텍처, 핵심 DTO/API 계약, 회귀 테스트 수준의 실질적 엔지니어링 건전성(Product)이 필요하지만 기존 프레임워크에는 이에 맞는 적절한 타협점이 없었습니다.
 
 ### 1-2. 핵심 설계 철학
 1. **감리의 본질은 존중하되, 비효율은 걷어낸다**: 감리는 프로젝트 참여자 간의 용어 불일치, 설계 오차, 테스트 누락을 기계적으로 잡아내는 훌륭한 장치입니다. 이를 포기하지 않고, 프로필 수준에 맞추어 검사 규칙을 지능적으로 완화합니다.
-2. **Solution은 제품화/운영 가능 기준선이다**: Solution은 audit의 가벼운 버전이 아니라, 제품 백로그와 핵심 요구사항이 구현 위치, 테스트, 릴리즈 버전으로 이어지는 운영 가능한 제품 개발 레이어입니다.
-3. **ADR (Architecture Decision Record)의 필수화**: Solution 프로필의 정수는 쓸데없는 문서 작업의 배제가 아니라, **"왜 이 기술 스택을 선택했고, 왜 이 설계 패턴을 적용했는가"**에 대한 의사결정의 이력을 관리하는 것입니다. 이를 위해 표준 ADR 작성을 기본값으로 둡니다.
-4. **가설-검증 및 승격(Promotion)의 흐름화**: PoC에서 검증된 팩트를 기반으로 다음 단계의 문서와 계약 후보를 생성하되, 자동 덮어쓰기는 하지 않습니다. Gap Report와 후보 초안을 통해 Solution과 Audit으로 점진 보강합니다.
+2. **Product는 제품화/운영 가능 기준선이다**: Product는 audit의 가벼운 버전이 아니라, 제품 백로그와 핵심 요구사항이 구현 위치, 테스트, 릴리즈 버전으로 이어지는 운영 가능한 제품 개발 레이어입니다.
+3. **ADR (Architecture Decision Record)의 필수화**: Product 프로필의 정수는 쓸데없는 문서 작업의 배제가 아니라, **"왜 이 기술 스택을 선택했고, 왜 이 설계 패턴을 적용했는가"**에 대한 의사결정의 이력을 관리하는 것입니다. 이를 위해 표준 ADR 작성을 기본값으로 둡니다.
+4. **가설-검증 및 승격(Promotion)의 흐름화**: PoC에서 검증된 팩트를 기반으로 다음 단계의 문서와 계약 후보를 생성하되, 자동 덮어쓰기는 하지 않습니다. Gap Report와 후보 초안을 통해 Product와 Audit으로 점진 보강합니다.
 
 ---
 
 ## 2. 하려고 하는 범위 (Scope)
 
 * **PoC 3종 통합 산출물 연동**: 가설 수립부터 최종 의사결정(Decision)까지를 3개 문서로 압축 관리.
-* **Solution 핵심 산출물 & ADR 운영**: 제품 요구사항/백로그, 운영 아키텍처, API/DB/UI 계약, 회귀 테스트, 릴리즈/운영 기록, `docs/adr/` 이력 관리 기준 정의.
-* **vulcan.py 검사기 개조**: `status --check`, `check-trace`, `check-contract`가 각 프로필(PoC, Solution)에서 동작할 때의 세부 검증 완화 및 분기 처리.
+* **Product 핵심 산출물 & ADR 운영**: 제품 요구사항/백로그, 운영 아키텍처, API/DB/UI 계약, 회귀 테스트, 릴리즈/운영 기록, `docs/adr/` 이력 관리 기준 정의.
+* **vulcan.py 검사기 개조**: `status --check`, `check-trace`, `check-contract`가 각 프로필(PoC, Product)에서 동작할 때의 세부 검증 완화 및 분기 처리.
 * **승격(Promotion) 매커니즘**: 프로필 간 전환 시 누락 요소를 진단해 주는 Gap Report 생성 및 CLI 스위칭 기능.
 
 ---
@@ -38,12 +38,12 @@
 * **필수 3종 산출물**:
   1. `docs/poc/POC_REQUIREMENTS.md` (Phase 0 ~ Gate 1 통합): 핵심 가설, 검증 성공 기준(Metrics), 배제할 스코프 정의.
   2. `docs/poc/POC_SYSTEM_DESIGN.md` (Gate 2 통합): 개념 아키텍처, 기술 선택(ADR 초안), 핵심 진입점(API/Schema).
-  3. `docs/poc/POC_TEST_REPORT.md` (Gate 3 ~ Gate 5 통합): 테스트 방법, 실행 로그/화면 캡처 증적, 그리고 최종 의사결정(`Continue`, `Pivot`, `Stop`, `Promote to solution/audit`).
+  3. `docs/poc/POC_TEST_REPORT.md` (Gate 3 ~ Gate 5 통합): 테스트 방법, 실행 로그/화면 캡처 증적, 그리고 최종 의사결정(`Continue`, `Pivot`, `Stop`, `Promote to product/audit`).
 * **검사 완화 및 TBD 허용**:
   * PoC 진행 중 미결 사항(TBD)이 남아 있더라도 **"사유와 후속 판단 시점"**이 함께 기재되어 있으면 에러 대신 경고(Warning)만 주고 빌드/통합을 통과시킵니다.
-  * Playwright E2E 검증 시 공식 `@playwright/test` 러너 대신 수동 실행 캡처나 커스텀 스크립트 로그(`smoke-demo-log`)를 PoC smoke/demo 증적으로 인정할 수 있습니다. 단, audit/solution의 공식 UI Pass 증적으로 승격하려면 `@playwright/test` 실행 결과와 report/trace/screenshot을 보강해야 합니다.
+  * Playwright E2E 검증 시 공식 `@playwright/test` 러너 대신 수동 실행 캡처나 커스텀 스크립트 로그(`smoke-demo-log`)를 PoC smoke/demo 증적으로 인정할 수 있습니다. 단, audit/product의 공식 UI Pass 증적으로 승격하려면 `@playwright/test` 실행 결과와 report/trace/screenshot을 보강해야 합니다.
 
-### 3-2. Solution 프로필 (제품화-운영 중심)
+### 3-2. Product 프로필 (제품화-운영 중심)
 * **목표**: 감리 문서는 배제하고 실제 배포/운영 가능한 제품 수준의 베이스라인 확립.
 * **필수 산출물 묶음 및 ADR**:
   1. **Product Backlog / Feature Requirements**: 제품 기능, 핵심 사용자 시나리오, 릴리즈 범위, 인수 기준을 관리합니다.
@@ -78,7 +78,7 @@ DELIVERY_PROFILE_RULES = {
         "run_preflight_strictness": "blocking",
         "release_control": "gate5-release-approval-pr",
     },
-    "solution": {
+    "product": {
         "gate_approval": "major-gates-and-release",
         "required_artifacts": "product-backlog-feature-trace-architecture-contracts-ops-release-and-adr",
         "traceability_level": "feature-to-api-ui-module-test-release",
@@ -104,15 +104,15 @@ DELIVERY_PROFILE_RULES = {
 ### 4-2. validate_artifacts_presence() 수정
 현재 프로젝트의 프로필을 로드하고 필수 문서가 존재하는지 판단할 때, 아래 분기 처리를 구현합니다:
 * `poc` 프로필: `docs/poc/` 폴더 내 3종 통합 문서 존재 여부만 체크.
-* `solution` 프로필: 제품 요구사항/백로그, feature trace, architecture/ADR, API/DB/UI contract, security/ops, release/backlog 산출물 존재 여부를 체크. 물리 경로는 Ex artifact registry 또는 profile별 template registry에서 정한다.
+* `product` 프로필: 제품 요구사항/백로그, feature trace, architecture/ADR, API/DB/UI contract, security/ops, release/backlog 산출물 존재 여부를 체크. 물리 경로는 Ex artifact registry 또는 profile별 template registry에서 정한다.
 
 ### 4-3. check_trace() 및 check_contract() 분기 처리
 * **check_trace**:
   * `poc`: 기존 풀 체인 검증을 건너뛰고, 가설에서 테스트 결과 및 최종 의사결정으로의 단선 링크 정합성만 검증.
-  * `solution`: `Feature/REQ -> API/UI/Module -> Regression Test -> Release` 핵심 운영 맵핑 매트릭스만 추출 및 누락 체크.
+  * `product`: `Feature/REQ -> API/UI/Module -> Regression Test -> Release` 핵심 운영 맵핑 매트릭스만 추출 및 누락 체크.
 * **check_contract**:
   * `poc`: 주 진입점의 존재 여부만 검증.
-  * `solution`: Public API 및 Service DTO 수준까지만 컴파일 시그니처 대조 검사 적용.
+  * `product`: Public API 및 Service DTO 수준까지만 컴파일 시그니처 대조 검사 적용.
 
 ---
 
@@ -121,18 +121,18 @@ DELIVERY_PROFILE_RULES = {
 승격은 이전 단계의 산출물 및 코드를 입력 재료(Seed)로 삼아, 다음 단계의 필수 문서 뼈대 후보를 생성하고 누락된 요소를 보고하는 **Gap-driven** 방식으로 수행합니다.
 자동 생성 결과는 공식 산출물을 덮어쓰지 않습니다. Orchestrator가 Gap Report를 검토하고 사용자 승인 후 보강 Run 또는 수정 작업을 분리합니다.
 
-### 5-1. PoC -> Solution 승격
-1. **의사결정 확인**: `POC_TEST_REPORT.md` 내 `Decision` 항목이 `Promote to solution/audit`인지 검사.
+### 5-1. PoC -> Product 승격
+1. **의사결정 확인**: `POC_TEST_REPORT.md` 내 `Decision` 항목이 `Promote to product/audit`인지 검사.
 2. **후보 뼈대 생성 (Scaffolding Candidate)**:
    * `POC_REQUIREMENTS.md`의 가설과 핵심 시나리오를 제품 백로그/Feature 후보로 변환.
    * `POC_SYSTEM_DESIGN.md`에 정의된 핵심 API와 스키마 정보를 파싱하여 API/DB/UI contract 후보 초안을 생성.
    * `docs/adr/` 후보 폴더와 `ADR-001-stack-selection.md` 초안을 생성하되, 공식 반영은 Orchestrator 승인 후 수행.
-3. **Gap 분석 및 리포팅**: Solution에 필요한 제품 추적성, 아키텍처, 보안/운영, 회귀 테스트, 릴리즈 문서 누락 사항을 콘솔과 마크다운 Gap Report로 요약 안내.
-4. **프로필 스위칭 후보**: 사용자가 수긍하면 `promote-profile --to solution --dry-run` 같은 후보 명령의 결과를 기준으로 `vulcan.config.json` 및 `session.json` 전환을 제안한다. 현재 CLI에 없는 전환 명령은 현재 기능처럼 문서화하지 않고 후속 후보로 둔다.
+3. **Gap 분석 및 리포팅**: Product에 필요한 제품 추적성, 아키텍처, 보안/운영, 회귀 테스트, 릴리즈 문서 누락 사항을 콘솔과 마크다운 Gap Report로 요약 안내.
+4. **프로필 스위칭 후보**: 사용자가 수긍하면 `promote-profile --to product --dry-run` 같은 후보 명령의 결과를 기준으로 `vulcan.config.json` 및 `session.json` 전환을 제안한다. 현재 CLI에 없는 전환 명령은 현재 기능처럼 문서화하지 않고 후속 후보로 둔다.
 
-### 5-2. Solution -> Audit 승격
+### 5-2. Product -> Audit 승격
 1. **감리 산출물 후보 생성**:
-   * Solution 문서와 실제 코드의 라우터/서비스/DTO/데이터 모델을 정적 분석하여 감리용 `PROGRAM_SPEC.md`, 상세 `DATABASE_SPEC.md`, API/보안/테스트 문서에 들어갈 후보 목록을 생성한다.
+   * Product 문서와 실제 코드의 라우터/서비스/DTO/데이터 모델을 정적 분석하여 감리용 `PROGRAM_SPEC.md`, 상세 `DATABASE_SPEC.md`, API/보안/테스트 문서에 들어갈 후보 목록을 생성한다.
    * 후보 목록은 drift/gap report이며 공식 산출물에 자동 반영하지 않는다.
 2. **추적성 Gap Report 생성**:
    * 기존 기능 명세와 코드 진입점 관계를 기반으로 `TRACEABILITY_MATRIX_TEMPLATE.md`에 들어갈 후보 매핑을 만들고, 끊어지는 연결 고리(Gap)를 찾아낸다.
@@ -145,9 +145,9 @@ DELIVERY_PROFILE_RULES = {
 
 ## 6. 결론 및 향후 계획
 
-본 설계 제안은 Vulcan-Anvil Ex 프레임워크가 실무적인 속도(PoC)와 엔지니어링 안정성(Solution), 그리고 엄격한 절차(Audit)를 모두 충족하도록 돕는 유연한 진화 체계를 제공합니다.
+본 설계 제안은 Vulcan-Anvil Ex 프레임워크가 실무적인 속도(PoC)와 엔지니어링 안정성(Product), 그리고 엄격한 절차(Audit)를 모두 충족하도록 돕는 유연한 진화 체계를 제공합니다.
 
 * **1단계**: PoC 3종 통합 템플릿 제작 및 `docs/templates/poc/` 배치.
 * **2단계**: `vulcan.py` 내 프로필 규칙에 따른 `status --check`, `check-trace` 등 우회/필터링 코드 작성.
 * **3단계**: `promote-profile` CLI 추가 및 Gap 분석 리포터 구현.
-* **4단계**: PoC 및 Solution 통합 리그레션 테스트를 통한 무결성 입증.
+* **4단계**: PoC 및 Product 통합 리그레션 테스트를 통한 무결성 입증.

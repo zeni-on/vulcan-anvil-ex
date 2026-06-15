@@ -19,6 +19,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 표면 | 용도 |
 | --- | --- |
 | `status` | 현재 Gate/profile/branch/Run/Wave/다음 행동 확인 |
+| `profile-gap` | 현재 산출물을 목표 profile 기준으로 볼 때 부족한 문서와 내용 보완 항목 진단 |
 | `metrics` | git/Run/증적 기반 진행 시간, 파일 수, 라인 수, 위임 기록 요약 |
 | `gate-start`, `session`, `sync-session` | Gate 라이프사이클 갱신 |
 | `orchestrator-plan`, `run-new`, `run-check`, `run-preflight` | Run 생성과 검증 |
@@ -36,9 +37,14 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | JSON 출력 | `python vulcan.py status --json` |
 | 추적성 상세 진단 포함 | `python vulcan.py status --trace-detail` |
 | 브랜치만 상세 확인 | `python vulcan.py branch-status` |
+| Profile 전환 gap 확인 | `python vulcan.py profile-gap --to product` 또는 `python vulcan.py profile-gap --to audit` |
 | 회고/성능 통계 | `python vulcan.py metrics` 또는 `python vulcan.py metrics --json` |
 
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
+
+`status`는 선택된 profile의 gap 요약을 함께 보여준다.
+Product profile에서는 `docs/product/` 6종 문서 존재 여부와 현재 Gate의 핵심 `TBD` 항목 수를 먼저 확인한다.
+상세 목록이 필요하면 `profile-gap --to product` 또는 `profile-gap --to audit`을 실행한다.
 
 대시보드에서 문서에 남긴 코멘트는 원본 Markdown이 아니라 `.vulcan/comments/comments.jsonl`에 저장된다. `status`는 이 파일을 읽어 `dashboard_comments` 섹션에 Open 코멘트를 요약한다. Orchestrator는 Gate 판단, Run 보완, QA/FIND/CR/ISSUE 후보 정리 전에 이 섹션을 먼저 확인한다. 코멘트 상태는 단순히 `open` 또는 `closed`만 사용하며, 에이전트가 코멘트를 반영하거나 답변했으면 `closed`로 닫는다.
 
@@ -51,8 +57,13 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 상태 재계산/동기화 | `python vulcan.py sync-session` |
 
 `gate-start`는 해당 Gate의 기본 Orchestrator Plan Run 초안을 자동 생성할 수 있다. 이미 Draft 또는 InProgress Run이 있으면 중복 생성하지 않는다.
+PoC와 Product profile에서는 Gate별 Orchestrator Plan Run 자동 생성을 생략한다.
+이 두 profile은 각각 `docs/poc/`, `docs/product/` 원장과 `status --check`를 우선 사용하고, 위임/재현/검수 기록이 필요할 때만 Run을 만든다.
 
 Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때만 수행한다.
+
+Product profile은 Gate별 폴더를 늘리기보다 `docs/product/` 문서 세트의 `gate_scope`와 본문 섹션을 갱신한다.
+Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하지 않는다.
 
 ## 5. Run 생성과 검증
 
@@ -77,6 +88,8 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 
 구현은 기본적으로 통합 브랜치에서 수행한다. Orchestrator는 기능 구현의 주 작성자가 아니라 worker 결과를 통합하고 검증하는 역할이다.
 
+Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 `docs/product/PRODUCT_BRIEF.md`, `PRODUCT_CONTRACTS.md`, `PRODUCT_TRACEABILITY.md`, `REGRESSION_AND_RELEASE_REPORT.md`를 기준으로 관련 `REQ/API/DATA/UI/REG`를 추천한다. 생성된 Product Build Wave Run은 audit 산출물 대신 `docs/product/` 문서 세트를 worker 입력으로 사용한다.
+
 `BW-000 implementation-scaffold`는 skeleton/build smoke만 검증한다. 업무 요구사항, 테스트, UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다.
 
 ## 7. QA와 릴리즈
@@ -93,6 +106,11 @@ Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다
 결함 수정은 승인된 설계 범위 안에서만 `qa-fix-loop` Run으로 진행한다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
 
 릴리즈 준비는 `python vulcan.py release-pr --dry-run`으로 먼저 확인한다.
+`product` profile의 release PR body는 audit 제출 산출물이 아니라
+`docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md`,
+`docs/product/PRODUCT_TRACEABILITY.md`,
+`docs/product/REGRESSION_AND_RELEASE_REPORT.md`,
+`docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`를 중심으로 evidence를 표시한다.
 
 ## 8. 직접 실행보다 상태 표면을 우선하는 이유
 

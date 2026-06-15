@@ -23,7 +23,7 @@ updated_at: {{GENERATED_DATE}}
 | --- | --- |
 | 목표 | TBD: PoC로 확인할 제품/기술/업무 가설을 작성한다. |
 | 성공 기준 | TBD: 성공으로 볼 최소 관찰 결과를 작성한다. |
-| 종료 판단 | Continue / Pivot / Stop / Promote to solution/audit |
+| 종료 판단 | Continue / Pivot / Stop / Promote to product/audit |
 
 ## 2. Hypotheses
 

@@ -48,6 +48,8 @@
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
 - PoC profile의 compact Run 완충과, 별도 PoC 템플릿 세트 설계 초안
 - Upgrade와 Dashboard 운영 흐름
+- 사용자용 profile 선택 가이드와 샘플/benchmark 요약 문서
+- Dashboard 문서 코멘트와 `status.dashboard_comments` 기반 Orchestrator 가시성
 
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
@@ -78,7 +80,7 @@
 3. **Gate 4 QA 안정화**
    - 신규 프로젝트 기본 `.gitignore`는 공식 QA 로그를 막지 않고 `playwright-report/`, `test-results/`를 보조 로컬 산출물로 제외한다.
    - 공식 증적은 `docs/artifacts/04-review/evidence/logs/*`와 `docs/artifacts/04-review/evidence/ui/*.png`에 둔다.
-   - Audit/Solution의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
+   - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
    - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
 
@@ -94,7 +96,13 @@
    - 이번 주 샘플에서 `init --profile poc` 기준으로 3개 산출물만으로 Phase 0~Gate 5를 끝까지 진행해 보고, `status --check`, `run-check`, `check-trace`, Dashboard가 audit 문서 누락으로 과하게 막히는 지점을 기록한다.
    - 상세 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
 
-6. **전환 진단 정리**
+6. **사용자 온보딩과 샘플 증거 정리**
+   - README 첫 화면에서 Ex를 "빠른 앱 빌더"가 아니라 AI-generated work Trust/Governance Layer로 설명한다.
+   - `docs/WHICH_PROFILE_SHOULD_I_USE.md`로 PoC/Product/Audit 선택 기준을 분리한다.
+   - `docs/EXAMPLES_AND_BENCHMARKS.md`로 샘플 소요 시간, 산출물, profile별 차이를 공개 요약한다.
+   - 다음 단계는 fixture/metrics 기반으로 샘플 수치를 더 재현 가능하게 만드는 것이다.
+
+7. **전환 진단 정리**
    - Gate 전환 판단은 `prepare-transition`을 기본으로 사용한다.
    - `check-trace`는 traceability 상세 디버깅과 회귀 검증용으로 남긴다.
    - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
@@ -116,9 +124,11 @@
    - 상세 기준은 `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md`를 따른다.
 
 3. **Delivery Profile 구체화**
-   - Audit/SI, Solution/Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
+   - Audit/SI, Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
+   - Product profile은 OWASP/CWE 기반 보안 기준선과 프로젝트 단어사전/데이터 매핑을 기본으로 삼고, KISA/공공데이터 공통표준은 Audit 전환 gap으로 정리한다.
    - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
    - PoC 산출물 세트 분리 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
+   - Product 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`를 따른다.
 
 4. **Dashboard 증적/추적 polish**
    - Trace Explorer는 MVP가 들어갔으므로, 샘플 사용 결과를 보고 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어를 보강한다.
@@ -156,7 +166,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | Profile | 목적 | 문서/Gate 강도 |
 | --- | --- | --- |
 | Audit/SI | 감리, 인수인계, 장기 유지보수 대응 | 가장 강함 |
-| Solution/Product | 제품 로드맵, 릴리즈, 품질 기준 중심 | 중간 |
+| Product | 제품 로드맵, 릴리즈, 품질 기준 중심 | 중간 |
 | PoC | 빠른 가능성 검증 | 낮음 |
 자세한 기준 초안은 `docs/core/DELIVERY_PROFILES.md`를 따릅니다.
 현재 CLI는 `init --profile`과 `profile-status`를 제공하며, 검사 엄격도와 Dashboard 표시는 후속 단계에서 Profile Overlay와 연결합니다.
@@ -191,6 +201,9 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/RUN_FIRST_MULTI_AGENT_DISPATCHER.md` | dispatcher 장기 구상 | 일부는 이미 구현됨. 자동 큐/PR 교차검증 검토 시 참고 |
 | `docs/core/REFACTORING_PROCESS.md` | 리팩토링 분류 기준 초안 | DEBT/FIND/CR 판단과 문서 영향 분석 기준. 자동화는 향후 보강 |
 | `docs/core/DELIVERY_PROFILES.md` | Delivery Profile 기준 | `init --profile`, `profile-status`, profile_rules 기반 Overlay. 검사 엄격도/Dashboard 연동은 후속 보강 |
+| `docs/WHICH_PROFILE_SHOULD_I_USE.md` | 사용자용 Profile 선택 가이드 | PoC/Product/Audit을 처음 고르는 기준과 시작 메시지 예시 |
+| `docs/EXAMPLES_AND_BENCHMARKS.md` | 샘플/benchmark 요약 | 샘플 실행 결과, profile별 산출물과 시간 차이를 사용자 관점으로 요약 |
+| `docs/core/PRODUCT_PROFILE_BASELINE.md` | Product Profile 기준 | 제품/업무 앱 기본 레이어의 보안, 데이터, Gate, Audit 전환 gap 기준 |
 | `docs/core/CODEX_MODEL_POLICY.md` | Codex model/effort 정책 | Codex runner의 역할별 모델 선택, 실행 기록, 성능 측정 기준 |
 | `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md` | 회귀 하네스 fixture 전략 | 기존 샘플 프로젝트 문서를 정규화해 테스트 입력으로 사용하는 방향 |
 | `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md` | 추적성 그래프 전략 | 추적표를 그래프 원장으로 사용해 Run 입력과 Dashboard ID 탐색을 자동 추천하는 방향 |

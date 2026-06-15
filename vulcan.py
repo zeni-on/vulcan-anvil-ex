@@ -47,7 +47,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.4.6"
+VULCAN_VERSION = "0.4.8"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -214,6 +214,14 @@ POC_ARTIFACT_TEMPLATES = [
     ("docs/templates/poc/POC_SYSTEM_DESIGN_TEMPLATE.md", "docs/poc/POC_SYSTEM_DESIGN.md"),
     ("docs/templates/poc/POC_TEST_REPORT_TEMPLATE.md", "docs/poc/POC_TEST_REPORT.md"),
 ]
+PRODUCT_ARTIFACT_TEMPLATES = [
+    ("docs/templates/product/PRODUCT_BRIEF_TEMPLATE.md", "docs/product/PRODUCT_BRIEF.md"),
+    ("docs/templates/product/PRODUCT_ARCHITECTURE_TEMPLATE.md", "docs/product/PRODUCT_ARCHITECTURE.md"),
+    ("docs/templates/product/ADR_LOG_TEMPLATE.md", "docs/product/ADR_LOG.md"),
+    ("docs/templates/product/PRODUCT_CONTRACTS_TEMPLATE.md", "docs/product/PRODUCT_CONTRACTS.md"),
+    ("docs/templates/product/PRODUCT_TRACEABILITY_TEMPLATE.md", "docs/product/PRODUCT_TRACEABILITY.md"),
+    ("docs/templates/product/REGRESSION_AND_RELEASE_REPORT_TEMPLATE.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"),
+]
 POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "phase0": ["docs/poc/POC_REQUIREMENTS.md"],
     "gate1": ["docs/poc/POC_REQUIREMENTS.md"],
@@ -223,6 +231,198 @@ POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "gate4": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
     "gate5": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
     "completed": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
+}
+PRODUCT_REQUIRED_ARTIFACTS_BY_GATE = {
+    "phase0": ["docs/product/PRODUCT_BRIEF.md"],
+    "gate1": ["docs/product/PRODUCT_BRIEF.md"],
+    "gate2": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+    ],
+    "gate3": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "impl": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "gate4": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "gate5": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+    "completed": [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ],
+}
+PROFILE_GAP_RULES = {
+    "product": [
+        {
+            "id": "product_brief",
+            "title": "Product brief",
+            "ok_any": [
+                "docs/product/PRODUCT_BRIEF.md",
+                "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_REQUIREMENTS.md"],
+            "recommendation": "목표, 사용자, 핵심 시나리오, 비목표, 성공 기준을 Product 관점으로 정리합니다.",
+        },
+        {
+            "id": "product_architecture",
+            "title": "Product architecture",
+            "ok_any": [
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "주요 컴포넌트, 런타임, 배포/운영 경계, 품질속성을 정리합니다.",
+        },
+        {
+            "id": "adr",
+            "title": "ADR log",
+            "ok_any": [
+                "docs/product/ADR_LOG.md",
+                "docs/artifacts/02-design/architecture/ADR_LOG.md",
+                "docs/artifacts/02-design/architecture/adr/README.md",
+            ],
+            "partial_any": [
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+                "docs/poc/POC_SYSTEM_DESIGN.md",
+            ],
+            "recommendation": "기술/구조 선택 이유와 대안을 ADR로 남깁니다.",
+        },
+        {
+            "id": "product_contracts",
+            "title": "Product contracts",
+            "ok_any": ["docs/product/PRODUCT_CONTRACTS.md"],
+            "ok_all": [
+                "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+                "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            ],
+            "partial_any": [
+                "docs/poc/POC_SYSTEM_DESIGN.md",
+                "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+                "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
+            ],
+            "recommendation": "API/DB/UI/Security/Data 계약의 진입점 또는 상세 설계 링크를 정리합니다.",
+        },
+        {
+            "id": "regression_release",
+            "title": "Regression and release report",
+            "ok_any": [
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            ],
+            "partial_any": [
+                "docs/poc/POC_TEST_REPORT.md",
+                "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+            ],
+            "recommendation": "반복 실행할 회귀 테스트와 릴리즈 판단 근거를 정리합니다.",
+        },
+        {
+            "id": "traceability",
+            "title": "Release traceability",
+            "ok_any": [
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            ],
+            "partial_any": ["docs/poc/POC_TEST_REPORT.md"],
+            "recommendation": "핵심 시나리오 -> 계약 -> 구현 -> 테스트 -> 릴리즈 근거를 연결합니다.",
+        },
+    ],
+    "audit": [
+        {
+            "id": "requirements",
+            "title": "Requirements and traceability",
+            "ok_all": [
+                "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
+                "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
+            ],
+            "partial_any": ["docs/product/PRODUCT_BRIEF.md", "docs/poc/POC_REQUIREMENTS.md"],
+            "recommendation": "REQ/NREQ/AC와 추적표를 공식 산출물로 분리합니다.",
+        },
+        {
+            "id": "design",
+            "title": "Full design artifacts",
+            "ok_all": [
+                "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
+                "docs/artifacts/02-design/function/DOC-CORE-G2-001_Function-Spec_v0.1.md",
+                "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
+                "docs/artifacts/02-design/api/DOC-API-G2-001_API-Spec_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+                "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
+            ],
+            "partial_any": ["docs/product/PRODUCT_ARCHITECTURE.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "아키텍처, 기능, 프로그램, API, DB, 보안 설계를 Audit 산출물로 확장합니다.",
+        },
+        {
+            "id": "security_mapping",
+            "title": "Security standard mapping",
+            "ok_any": ["docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md"],
+            "partial_any": ["docs/core/SECURITY_BASELINE.md", "docs/core/PRODUCT_PROFILE_BASELINE.md"],
+            "recommendation": "KISA/SR, 고객/공공 기준, OWASP/CWE를 SEC-ID와 테스트 증적에 연결합니다.",
+        },
+        {
+            "id": "data_standard",
+            "title": "Data standard mapping",
+            "ok_all": [
+                "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md",
+                "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
+            ],
+            "partial_any": ["docs/core/DATA_STANDARD_RULES.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "recommendation": "단어사전, 데이터 도메인, 공공데이터 공통표준 준용/변형/신규 사유를 정리합니다.",
+        },
+        {
+            "id": "test_qa",
+            "title": "Test plan and QA evidence",
+            "ok_all": [
+                "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
+                "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
+                "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
+            ],
+            "partial_any": ["docs/product/REGRESSION_AND_RELEASE_REPORT.md", "docs/poc/POC_TEST_REPORT.md"],
+            "recommendation": "Gate 3 테스트 계획과 Gate 4 결과/증적/FIND를 분리해 정리합니다.",
+        },
+        {
+            "id": "release_control",
+            "title": "Change and release records",
+            "ok_any": [
+                "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+                "docs/product/RELEASE_SCOPE.md",
+            ],
+            "partial_any": ["docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"],
+            "recommendation": "FIND/CR/ISSUE, 릴리즈 승인, known issue, 잔여 리스크를 정리합니다.",
+        },
+    ],
 }
 PROJECT_ROOT_FILES = [
     "AGENTS.md",
@@ -320,23 +520,30 @@ GATE_LABELS = {
 
 GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 DEFAULT_DELIVERY_PROFILE = "audit"
-SUPPORTED_DELIVERY_PROFILES = ("audit", "solution", "poc")
+SUPPORTED_DELIVERY_PROFILES = ("audit", "product", "poc")
+DELIVERY_PROFILE_ALIASES = {
+    "solution": "product",
+}
 DELIVERY_PROFILE_RULES = {
     "audit": {
         "gate_approval": "all-gates-explicit",
         "required_artifacts": "full-audit-set",
         "traceability_level": "full",
         "program_contract_level": "class-interface-public-method",
+        "security_standard_level": "kisa-public-customer-plus-owasp-cwe",
+        "data_standard_level": "public-data-standard-plus-project-glossary",
         "qa_evidence_level": "qa-000-to-qa-003-command-ui-log-finding",
         "independent_review_level": "gate2-gate4-pr-as-needed",
         "run_preflight_strictness": "blocking",
         "release_control": "gate5-release-approval-pr",
     },
-    "solution": {
+    "product": {
         "gate_approval": "major-gates-and-release",
         "required_artifacts": "architecture-api-db-security-release-core",
         "traceability_level": "core-requirement-api-db-security-regression",
         "program_contract_level": "public-api-service-dto",
+        "security_standard_level": "owasp-asvs-top10-api-top10-cwe",
+        "data_standard_level": "project-glossary-field-domain-security-classification",
         "qa_evidence_level": "release-regression-major-ui-api",
         "independent_review_level": "release-candidate-or-large-change",
         "run_preflight_strictness": "scope-contract-blocking-other-warning",
@@ -347,6 +554,8 @@ DELIVERY_PROFILE_RULES = {
         "required_artifacts": "poc-requirements-system-design-test-report",
         "traceability_level": "hypothesis-to-implementation-to-result",
         "program_contract_level": "main-interface-entrypoint",
+        "security_standard_level": "risk-identification-and-productization-gap",
+        "data_standard_level": "core-fields-and-sensitive-data-identification",
         "qa_evidence_level": "smoke-demo-log",
         "independent_review_level": "optional",
         "run_preflight_strictness": "warning-first",
@@ -488,7 +697,7 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "capture_tool": "Playwright",
     "official_runner": "@playwright/test",
     "official_runner_command": "npx playwright test",
-    "official_runner_required_profiles": ["audit", "solution"],
+    "official_runner_required_profiles": ["audit", "product"],
     "poc_fallback_allowed": True,
     "install_if_missing": [
         "npx playwright --version",
@@ -503,9 +712,9 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "forbidden_as_pass_evidence": [
         "CDP-only capture",
         "browser manual screenshot without Playwright run",
-        "custom Playwright library script without @playwright/test runner in audit/solution profile",
+        "custom Playwright library script without @playwright/test runner in audit/product profile",
     ],
-    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
+    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
     "minimum_fields": [
         "UI-ID",
         "관련 SCR",
@@ -1282,6 +1491,24 @@ def install_poc_artifacts(target_dir, variables, overwrite=False, source_root=No
         print(f"  install/update: {dst_rel}")
 
 
+def install_product_artifacts(target_dir, variables, overwrite=False, source_root=None):
+    """Install Product profile working documents into docs/product/."""
+    source_root = source_root or VULCAN_DIR
+    for src_rel, dst_rel in PRODUCT_ARTIFACT_TEMPLATES:
+        src = os.path.join(source_root, src_rel)
+        dst = os.path.join(target_dir, dst_rel)
+        if not os.path.isfile(src):
+            continue
+        if os.path.exists(dst) and not overwrite:
+            continue
+        with open(src, encoding="utf-8") as fp:
+            content = render(fp.read(), variables)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as fp:
+            fp.write(content)
+        print(f"  install/update: {dst_rel}")
+
+
 def ensure_gitignore_entry(project_dir, entry):
     path = os.path.join(project_dir, ".gitignore")
     existing = ""
@@ -1610,6 +1837,7 @@ def split_working_and_reference(paths):
 
 def normalize_delivery_profile(profile):
     normalized = str(profile or DEFAULT_DELIVERY_PROFILE).strip().lower()
+    normalized = DELIVERY_PROFILE_ALIASES.get(normalized, normalized)
     if normalized not in SUPPORTED_DELIVERY_PROFILES:
         return DEFAULT_DELIVERY_PROFILE
     return normalized
@@ -2220,9 +2448,9 @@ ui_evidence_policy:
   id_pattern: {format_yaml_scalar(ui_evidence["id_pattern"])}
   official_runner: {format_yaml_scalar(ui_evidence.get("official_runner", "@playwright/test"))}
   official_runner_command: {format_yaml_scalar(ui_evidence.get("official_runner_command", "npx playwright test"))}
-  official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "solution"]))}
+  official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "product"]))}
   poc_fallback_allowed: {str(ui_evidence.get("poc_fallback_allowed", True)).lower()}
-  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/solution의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
+  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
   required_artifacts:
 {format_yaml_sequence(ui_evidence.get("required_artifacts", []), 4)}
   minimum_fields:
@@ -2853,6 +3081,13 @@ WAVE_STATUS_RANK = {
     "Rolled Back": 4,
 }
 
+BUILD_WAVE_RELATED_ID_RE = re.compile(
+    r"\b(?:"
+    r"SCN|REQ|AC|FUNC|SCR|UIREF|UICON|PGM|API|DB|DATA|SEC|UT|IT|PT|UI|REG"
+    r")-\d{3}(?:-\d{2})?\b",
+    re.IGNORECASE,
+)
+
 
 def find_run_files(project_dir="."):
     runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
@@ -2986,10 +3221,7 @@ def collect_build_wave_records(project_dir="."):
                     record["status"] = status
                     record["run"] = rel_path
 
-            related = re.findall(
-                r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
-                content,
-            )
+            related = [item.upper() for item in BUILD_WAVE_RELATED_ID_RE.findall(content)]
             record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
 
         for line in content.splitlines():
@@ -3013,11 +3245,9 @@ def collect_build_wave_records(project_dir="."):
             related = [
                 item
                 for col in cols
-                for item in re.findall(
-                    r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
-                    col,
-                )
+                for item in BUILD_WAVE_RELATED_ID_RE.findall(col)
             ]
+            related = [item.upper() for item in related]
             record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
 
     return [records[key] for key in sorted(records)]
@@ -4265,6 +4495,10 @@ def poc_required_artifacts_for_gate(gate):
     return POC_REQUIRED_ARTIFACTS_BY_GATE.get(gate, POC_REQUIRED_ARTIFACTS_BY_GATE["phase0"])
 
 
+def product_required_artifacts_for_gate(gate):
+    return PRODUCT_REQUIRED_ARTIFACTS_BY_GATE.get(gate, PRODUCT_REQUIRED_ARTIFACTS_BY_GATE["phase0"])
+
+
 def read_project_text(project_dir, rel_path):
     path = os.path.join(project_dir, rel_path)
     try:
@@ -4351,6 +4585,77 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
     return issues, warnings
 
 
+def collect_product_profile_findings(project_dir=".", gate=None):
+    if load_delivery_profile(project_dir) != "product":
+        return [], []
+
+    session = load_session(project_dir)
+    gate = gate or session.get("current_gate", "phase0")
+    issues = []
+    warnings = []
+    required = product_required_artifacts_for_gate(gate)
+
+    for rel_path in required:
+        abs_path = os.path.join(project_dir, rel_path)
+        if not os.path.isfile(abs_path):
+            issues.append(f"Product 필수 산출물 없음: {rel_path}")
+            continue
+        content = read_project_text(project_dir, rel_path)
+        if HARD_TEMPLATE_PLACEHOLDER_RE.search(content):
+            issues.append(f"{rel_path}에 치환되지 않은 템플릿 값이 남아 있습니다.")
+        elif SOFT_TBD_PLACEHOLDER_RE.search(content):
+            warnings.append(f"{rel_path}에 TBD/확정필요 항목이 남아 있습니다. Product 판단에 필요한 항목인지 확인하세요.")
+
+    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
+    if "docs/product/PRODUCT_BRIEF.md" in required and brief_content:
+        for label in ("목표", "주요 사용자", "성공 기준"):
+            if table_value_is_tbd(brief_content, label):
+                issues.append(f"docs/product/PRODUCT_BRIEF.md의 {label} 항목이 TBD입니다.")
+        if mostly_placeholder_row(brief_content, r"SCN-\d{3}"):
+            warnings.append("docs/product/PRODUCT_BRIEF.md에 placeholder 중심의 Scenario 행이 남아 있습니다.")
+
+    architecture_content = read_project_text(project_dir, "docs/product/PRODUCT_ARCHITECTURE.md")
+    if "docs/product/PRODUCT_ARCHITECTURE.md" in required and architecture_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
+            for label in ("Runtime", "Data Store"):
+                if table_value_is_tbd(architecture_content, label):
+                    issues.append(f"docs/product/PRODUCT_ARCHITECTURE.md의 {label}가 TBD입니다.")
+        if mostly_placeholder_row(architecture_content, r"CMP-\d{3}") or mostly_placeholder_row(architecture_content, r"GAP-\d{3}"):
+            warnings.append("docs/product/PRODUCT_ARCHITECTURE.md에 placeholder 중심의 Component/Gap 행이 남아 있습니다.")
+
+    adr_content = read_project_text(project_dir, "docs/product/ADR_LOG.md")
+    if "docs/product/ADR_LOG.md" in required and adr_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(adr_content, r"ADR-\d{3}"):
+            warnings.append("docs/product/ADR_LOG.md에 placeholder 중심의 ADR 행이 남아 있습니다.")
+
+    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
+    if "docs/product/PRODUCT_CONTRACTS.md" in required and contracts_content:
+        if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
+            if mostly_placeholder_row(contracts_content, r"API-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:DATA|DB)-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:UI|SCR)-\d{3}"):
+                issues.append("docs/product/PRODUCT_CONTRACTS.md의 API/Data/UI 계약 행이 모두 placeholder입니다.")
+        if mostly_placeholder_row(contracts_content, r"GAP-\d{3}"):
+            warnings.append("docs/product/PRODUCT_CONTRACTS.md에 placeholder 중심의 Contract Gap 행이 남아 있습니다.")
+
+    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
+    if "docs/product/PRODUCT_TRACEABILITY.md" in required and trace_content:
+        if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
+            if mostly_placeholder_row(trace_content, r"SCN-\d{3}"):
+                issues.append("docs/product/PRODUCT_TRACEABILITY.md의 Scenario Trace가 placeholder입니다.")
+            if re.search(r"\|\s*SCN-\d{3}\s*\|[^\n]*\|\s*Planned\s*\|", trace_content, re.IGNORECASE) and gate in ("gate4", "gate5", "completed"):
+                warnings.append("docs/product/PRODUCT_TRACEABILITY.md에 Gate 4 이후에도 Planned 추적 상태가 남아 있습니다.")
+
+    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+    if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
+        if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
+            issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
+        if gate in ("gate5", "completed"):
+            for label in ("포함 범위", "남은 리스크"):
+                if table_value_is_tbd(release_content, label):
+                    issues.append(f"docs/product/REGRESSION_AND_RELEASE_REPORT.md의 {label}가 TBD입니다.")
+
+    return issues, warnings
+
+
 def validate_poc_trace(project_dir=".", gate=None):
     issues, warnings = collect_poc_profile_findings(project_dir, gate=gate)
     if load_delivery_profile(project_dir) != "poc":
@@ -4369,6 +4674,39 @@ def validate_poc_trace(project_dir=".", gate=None):
     for hyp_id in sorted(hyp_ids):
         if test_content and hyp_id not in test_content:
             warnings.append(f"PoC trace warning: {hyp_id}가 테스트 결과서에 연결되지 않았습니다.")
+    return issues, warnings
+
+
+def validate_product_trace(project_dir=".", gate=None):
+    issues, warnings = collect_product_profile_findings(project_dir, gate=gate)
+    if load_delivery_profile(project_dir) != "product":
+        return issues, warnings
+
+    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
+    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
+    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
+    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+
+    scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", brief_content))
+    req_ids = set(re.findall(r"\bREQ-\d{3}(?:-\d{2})?\b", brief_content))
+    downstream_scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", "\n".join([contracts_content, trace_content, release_content])))
+
+    if gate in ("phase0", "gate1") and not scenario_ids:
+        issues.append("docs/product/PRODUCT_BRIEF.md에 SCN-ID가 없습니다.")
+    if gate in ("phase0", "gate1") and not req_ids:
+        warnings.append("docs/product/PRODUCT_BRIEF.md에 REQ-ID가 없습니다. Product에서는 허용되지만 이후 계약/회귀 연결 전에 보강하세요.")
+
+    if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
+        linked_text = "\n".join([contracts_content, trace_content, release_content])
+        for scenario_id in sorted(downstream_scenario_ids - scenario_ids):
+            warnings.append(f"Product trace warning: {scenario_id}가 downstream 문서에는 있지만 PRODUCT_BRIEF.md 시나리오에 없습니다.")
+        for scenario_id in sorted(scenario_ids):
+            if linked_text and scenario_id not in linked_text:
+                warnings.append(f"Product trace warning: {scenario_id}가 계약/회귀/릴리즈 문서에 연결되지 않았습니다.")
+        for req_id in sorted(req_ids):
+            if trace_content and req_id not in trace_content:
+                warnings.append(f"Product trace warning: {req_id}가 PRODUCT_TRACEABILITY.md에 연결되지 않았습니다.")
+
     return issues, warnings
 
 
@@ -5713,6 +6051,8 @@ def check_trace(project_dir=".", exit_on_error=True):
     if profile == "poc":
         print("  Profile: poc (누락/TBD 일부는 가설 검증 경고로 처리)")
         warnings.extend(collect_poc_tbd_warnings(project_dir))
+    elif profile == "product":
+        print("  Profile: product (docs/product 원장 기준으로 핵심 시나리오와 릴리즈 추적을 확인)")
 
     progression_issues = validate_gate_progression(project_dir, current_gate)
     if progression_issues:
@@ -5732,6 +6072,41 @@ def check_trace(project_dir=".", exit_on_error=True):
             print(f"  PoC profile 검사: 경고 {len(poc_warnings)}건")
         else:
             print("  PoC profile 검사: OK")
+
+        try:
+            stats = compute_stats(project_dir)
+            session["stats"] = stats
+            save_session(session, project_dir)
+        except Exception as e:
+            print(f"  [경고] stats 계산 실패: {e}")
+
+        print()
+        if warnings:
+            print(f"경고 {len(warnings)}건:\n")
+            for warning in warnings:
+                print(f"  {warning}")
+            print()
+        if issues:
+            print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
+            for issue in issues:
+                print(f"  {issue}")
+            if exit_on_error:
+                sys.exit(1)
+        else:
+            print("이슈 0건 - Gate 완료 가능합니다.")
+        return issues, warnings
+
+    if profile == "product":
+        print("  Product profile 검사: Product 문서 세트와 핵심 trace 연결 확인")
+        product_issues, product_warnings = validate_product_trace(project_dir, gate=current_gate)
+        issues.extend(product_issues)
+        warnings.extend(product_warnings)
+        if product_issues:
+            print(f"  Product profile 검사: 이슈 {len(product_issues)}건")
+        elif product_warnings:
+            print(f"  Product profile 검사: 경고 {len(product_warnings)}건")
+        else:
+            print("  Product profile 검사: OK")
 
         try:
             stats = compute_stats(project_dir)
@@ -6488,6 +6863,8 @@ def cmd_prepare_transition(project_dir="."):
     print("[4] 산출물 내용 완성도 검사")
     if profile == "poc":
         artifact_issues, artifact_warnings = collect_poc_profile_findings(project_dir, gate=current_gate)
+    elif profile == "product":
+        artifact_issues, artifact_warnings = collect_product_profile_findings(project_dir, gate=current_gate)
     else:
         artifact_issues, artifact_warnings = collect_artifact_completion_findings(project_dir)
     if artifact_issues:
@@ -6516,6 +6893,19 @@ def cmd_prepare_transition(project_dir="."):
         missing_poc_docs = [rel_path for rel_path in required_poc_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
         for rel_path in missing_poc_docs:
             transition_issues.append(f"PoC 필수 산출물 없음: {rel_path}")
+
+        if current_gate == "impl":
+            wave_records = collect_build_wave_records(project_dir)
+            active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
+            for w in active_waves:
+                run_file_str = f" ({w['run']})" if w['run'] else ""
+                transition_issues.append(f"진행 중인 Build Wave 존재: 완료되지 않은 Build Wave {w['id']} ({w['status']}){run_file_str}가 있습니다.")
+
+    elif profile == "product":
+        required_product_docs = product_required_artifacts_for_gate(current_gate)
+        missing_product_docs = [rel_path for rel_path in required_product_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
+        for rel_path in missing_product_docs:
+            transition_issues.append(f"Product 필수 산출물 없음: {rel_path}")
 
         if current_gate == "impl":
             wave_records = collect_build_wave_records(project_dir)
@@ -7755,6 +8145,10 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
         print("  PoC profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
         print("  다음 단계: docs/poc/ 문서를 갱신하고 필요할 때만 compact Run 또는 worker Run을 생성하세요.")
         return
+    if profile == "product":
+        print("  Product profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
+        print("  다음 단계: docs/product/ 문서를 갱신하고 구현/검수 위임이 필요할 때만 Run을 생성하세요.")
+        return
 
     goal = f"{GATE_LABELS[gate]} 시작 계획"
     if feature_label:
@@ -7780,6 +8174,83 @@ def cmd_sync_session(project_dir="."):
     print(f"  Build Wave: {waves.get('completed', 0)}/{waves.get('total', 0)} 완료")
     if waves.get("current"):
         print(f"  현재 Wave: {waves.get('current')}")
+
+
+def product_related_ids_for_seeds(project_dir, seeds, base_ids=None):
+    ids = list(base_ids or [])
+    seed_set = {str(seed).strip().upper() for seed in seeds or [] if str(seed).strip()}
+    if not seed_set:
+        return ids
+
+    product_docs = [
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+    ]
+    for rel_path in product_docs:
+        path = os.path.join(project_dir, rel_path)
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        for _headers, rows in parse_markdown_tables(content):
+            for row in rows:
+                row_text = " ".join(str(value) for key, value in row.items() if not key.startswith("__"))
+                row_ids = product_trace_find_ids(row_text)
+                if seed_set.intersection(row_ids):
+                    ids = merge_unique(ids, row_ids)
+    return ids
+
+
+def product_trace_find_ids(value):
+    product_id_pattern = re.compile(
+        r"\b(?:"
+        r"SCN-\d{3}|REQ-\d{3}(?:-\d{2})?|API-\d{3}|DATA-\d{3}|UI-\d{3}(?:-\d{2})?|"
+        r"REG-\d{3}|EV-[A-Z0-9-]+|ISSUE-[A-Z0-9-]+|FIND-\d{3}|CR-\d{3}"
+        r")\b",
+        re.IGNORECASE,
+    )
+    ids = []
+    for match in product_id_pattern.finditer(value or ""):
+        if match.start() > 0 and value[match.start() - 1] == "~":
+            continue
+        if match.end() < len(value) and value[match.end()] == "~":
+            continue
+        item = match.group(0).upper()
+        if item not in ids:
+            ids.append(item)
+    return ids
+
+
+def classify_product_target_contracts(ids):
+    groups = classify_related_ids(ids)
+    product_groups = {
+        "scenario": [],
+        "req": groups.get("req", []),
+        "api": groups.get("api", []),
+        "data": [],
+        "ui": groups.get("ui", []),
+        "regression": [],
+        "test": groups.get("test", []),
+        "other": [],
+    }
+    for item in ids or []:
+        value = str(item).strip().upper()
+        if not value:
+            continue
+        if value.startswith("SCN-"):
+            product_groups["scenario"].append(value)
+        elif value.startswith("DATA-"):
+            product_groups["data"].append(value)
+        elif value.startswith("REG-"):
+            product_groups["regression"].append(value)
+        elif value.startswith(("REQ-", "API-", "UI-", "UT-", "IT-", "PT-", "TST-")):
+            continue
+        else:
+            product_groups["other"].append(value)
+    return {key: merge_unique(values) for key, values in product_groups.items()}
 
 
 def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=None, project_dir="."):
@@ -7817,18 +8288,23 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
         direction="both",
     )
     ids = trace_info.get("related_ids", split_csv(related_ids))
+    if profile == "product":
+        ids = product_related_ids_for_seeds(project_dir, trace_info.get("seeds", []), ids)
+        trace_info["related_ids"] = ids
+        trace_info["target_contracts"] = classify_product_target_contracts(ids)
     run_path = find_wave_run_file(project_dir, bw_id)
     if not run_path:
         run_id = next_run_id(project_dir)
         run_title = title or f"Build Wave {bw_id}"
         rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_build-wave-{bw_id}_{slugify(run_title)}_v0.1.md")
+        rel_path_posix = rel_path.replace("\\", "/")
         is_scaffold_wave = bw_id == "BW-000"
         wave_skill = "implementation-scaffold" if is_scaffold_wave else "build-wave"
         skill_path = RUN_SKILLS[wave_skill]
         wave_read_first = [
             "AGENTS.md",
             "session.json",
-            rel_path.replace("\\", "/"),
+            rel_path_posix,
             skill_path,
         ]
         wave_working_documents = [
@@ -7868,11 +8344,215 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
             "docs/core/RUN_OUTPUT_CONTRACT.md",
         ]
         wave_writable = [
-            rel_path.replace("\\", "/"),
+            rel_path_posix,
             "docs/artifacts/04-review/evidence/",
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
-        if profile == "poc":
+        if profile == "product":
+            product_contracts = classify_product_target_contracts(ids)
+            product_read_first = [
+                "AGENTS.md",
+                "session.json",
+                rel_path_posix,
+                ".agents/skills/vulcan-impl-wave/SKILL.md",
+            ]
+            product_working_documents = [
+                "docs/product/PRODUCT_BRIEF.md",
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/product/PRODUCT_CONTRACTS.md",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            ]
+            product_reference_documents = [
+                "docs/core/DELIVERY_PROFILES.md",
+                "docs/core/TECH_STACK_BASELINES.md",
+            ]
+            product_writable = [
+                rel_path_posix,
+                "app/",
+                "src/",
+                "backend/",
+                "frontend/",
+                "static/",
+                "tests/",
+                "requirements.txt",
+                "pyproject.toml",
+                "package.json",
+                "package-lock.json",
+                "README.md",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/evidence/",
+            ]
+            content = f"""# {run_id} Build Wave {bw_id} - {run_title}
+
+```yaml
+run_id: {run_id}
+gate: impl
+persona: build
+adapter: codex-gpt
+skill: {wave_skill}
+skill_path: .agents/skills/vulcan-impl-wave/SKILL.md
+profile: product
+bw_id: {bw_id}
+run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
+status: InProgress
+created_at: {date.today()}
+related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
+target_contracts:
+{format_yaml_mapping_sequences(product_contracts, 2)}
+  interface_contract:
+    language: "Product profile stack/runtime is defined in PRODUCT_ARCHITECTURE and PRODUCT_CONTRACTS."
+    signatures:
+      - "Implement only the scenarios in target_contracts.scenario using the API/UI/DATA contracts listed in target_contracts."
+    schemas:
+      - "Use PRODUCT_CONTRACTS API/data tables as the public request, response, and persistence shape."
+    error_contracts:
+      - "Use PRODUCT_CONTRACTS accepted error/validation behavior; if missing, report an open issue instead of inventing a new public contract."
+runner_role: worker-runner
+source_documents:
+  read_first:
+{format_yaml_sequence(product_read_first, 4)}
+  working_documents:
+{format_yaml_sequence(product_working_documents, 4)}
+  reference_on_demand:
+{format_yaml_sequence(product_reference_documents, 4)}
+orchestrator_reference:
+  - "docs/core/AGENT_RUN_PROTOCOL.md"
+  - "docs/core/RUN_INPUT_CONTRACT.md"
+  - "docs/core/RUN_OUTPUT_CONTRACT.md"
+scope:
+  writable:
+{format_yaml_sequence(product_writable, 4)}
+  readonly:
+    - "docs/core/"
+    - "docs/templates/"
+    - "docs/product/PRODUCT_BRIEF.md"
+    - "docs/product/PRODUCT_ARCHITECTURE.md"
+    - "docs/product/PRODUCT_CONTRACTS.md"
+    - "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+  excluded:
+    - "docs/ref-docs/"
+    - "**/*.db"
+    - "**/__pycache__/"
+    - "**/.ruff_cache/"
+    - "**/node_modules/"
+    - "**/.next/"
+worker_execution_policy:
+  forbidden_actions:
+    - "Gate 전환을 수행하지 않는다."
+    - "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다."
+    - "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다."
+    - "scope.writable 밖 파일을 수정하지 않는다."
+  required_outputs:
+    - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
+    - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
+  completion_rules:
+    - "이 Run의 target_contracts.scenario만 완결한다."
+    - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
+dependency_install_policy:
+  worker_cache_required: true
+  npm_cache_env: "npm_config_cache"
+  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
+  if_install_blocked: "dependency install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
+development_standards_applied:
+  - standard_id: "PRODUCT-LOG-001"
+    source: "docs/product/PRODUCT_CONTRACTS.md"
+    rule: "사용자 입력, 내부 오류, 저장소 경로, stack trace를 화면이나 공개 응답에 노출하지 않는다."
+  - standard_id: "PRODUCT-TEST-001"
+    source: "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+    rule: "테스트는 어떤 시나리오와 기대 결과를 검증하는지 사람이 읽을 수 있게 남긴다."
+development_standard_checklist:
+  logging:
+    required: true
+    targets:
+      - "API handler"
+      - "Service or state handler"
+    rule: "표준 logger 또는 최소 오류 처리 흐름을 사용하고 민감정보를 로그/화면에 남기지 않는다."
+  comments:
+    required: true
+    targets:
+      - "public API handler"
+      - "core state mutation function"
+    rule: "핵심 책임과 관련 scenario/API/DATA ID를 짧은 주석 또는 docstring으로 남긴다."
+  tests:
+    required: true
+    targets:
+      - "scenario smoke"
+      - "unit or integration test"
+    rule: "테스트 이름이나 설명에 입력값, 기대값, 관련 SCN/REG ID를 남긴다."
+verification:
+  commands:
+    - "python -m compileall app backend src"
+    - "python -m pytest"
+    - "npm test"
+    - "npm run build"
+    - "python vulcan.py run-check {rel_path_posix}"
+    - "python vulcan.py run-preflight {rel_path_posix}"
+  evidence:
+    required: true
+    target_documents:
+      - "docs/product/PRODUCT_TRACEABILITY.md"
+      - "docs/product/evidence/"
+verification_results: []
+evidence: []
+delegation_records: []
+traceability_updates: []
+findings: []
+change_requests: []
+open_issues: []
+```
+
+## 1. Wave 목표
+
+{run_title}
+
+## 2. Product 구현 범위
+
+- 기준 시나리오: {format_yaml_list(product_contracts.get("scenario", []))}
+- 관련 요구/계약: {format_yaml_list(ids)}
+- Product profile은 audit 산출물 대신 `docs/product/` 문서 세트를 기준으로 구현한다.
+
+## 3. 작업자 입력 계약
+
+- 먼저 `source_documents.read_first`를 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
+- `source_documents.working_documents`의 Product Brief, Architecture, Contracts, Traceability, Regression 문서를 구현 기준으로 삼는다.
+- `target_contracts.scenario`, `api`, `data`, `ui`, `regression`에 없는 기능은 추가하지 않는다.
+- `target_contracts.interface_contract`는 세부 class 설계가 아니라 Product 계약 경계다. public API/data/UI shape가 충돌하면 임의 변경하지 말고 `open_issues`로 보고한다.
+- `scope.writable` 안에서만 코드, 테스트, 자기 Run, Product Trace/evidence를 수정한다.
+- 전체 QA Pass, 릴리즈 가능 여부, Gate 전환은 Orchestrator가 판단한다.
+
+## 4. Orchestrator 지시
+
+- 실제 구현은 native worker(subagent/thread/native branch agent)가 수행한다.
+- Orchestrator는 worker 결과의 diff/scope를 확인하고, 관련 테스트를 재실행한 뒤 `wave-complete {bw_id}` 여부를 판단한다.
+- `agent-run`/`run-exec`는 외부 CLI 실행 증적이나 worktree/watchdog이 필요할 때만 선택한다.
+
+## 5. 검증 계획
+
+- worker는 가능한 self-check만 실행하고, 실패/미실행 명령은 이유를 남긴다.
+- Orchestrator는 worker가 작성한 테스트와 가능한 build/smoke를 재실행한다.
+- Gate 4의 공식 UI/E2E 증적과 릴리즈 판정은 이 Run 완료 조건이 아니다.
+
+## 6. 결과 기록
+
+### 변경 파일
+
+작성 예정
+
+### 검증 결과
+
+작성 예정
+
+### 위임 기록
+
+작성 예정
+
+### 후속 조치
+
+작성 예정
+"""
+        elif profile == "poc":
             poc_preset = build_poc_run_input_preset("impl", wave_skill, skill_path, rel_path)
             poc_preset["source_documents"]["reference_on_demand"] = compact_reference_documents_for_profile(
                 "poc",
@@ -8486,12 +9166,14 @@ def cmd_upgrade(project_dir="."):
     profile = load_delivery_profile(project_dir)
     if profile == "poc":
         install_poc_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
+    elif profile == "product":
+        install_product_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     else:
         install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     ensure_gitignore_entry(project_dir, "docs/ref-docs/")
     for db_ignore in ("*.db", "*.sqlite", "*.sqlite3"):
         ensure_gitignore_entry(project_dir, db_ignore)
-    create_vulcan_config(project_dir)
+    create_vulcan_config(project_dir, profile=profile, primary=load_primary_runner(project_dir))
     if migrate_vulcan_config_models(project_dir):
         print(f"  마이그레이션: vulcan.config.json unsupported Codex model → gpt-5.5")
     if migrate_vulcan_config_qa_workspace_policy(project_dir):
@@ -12904,14 +13586,14 @@ def check_run_file(path):
                 re.IGNORECASE,
             ))
             looks_like_official_gate4_ui_pass = bool(re.search(
-                r"\b(gate4|qa-execution|QA-002|DOC-QA-G4|Audit Profile|Solution Profile|profile\s*:\s*(audit|solution))\b",
+                r"\b(gate4|qa-execution|QA-002|DOC-QA-G4|Audit Profile|Product Profile|Solution Profile|profile\s*:\s*(audit|product|solution))\b",
                 content,
                 re.IGNORECASE,
             ))
             if has_ui_pass_evidence and looks_like_official_gate4_ui_pass and not has_official_playwright_runner:
                 issues.append("Gate 4 공식 UI Pass는 @playwright/test 러너 실행 결과가 필요합니다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 기록하세요.")
             if has_ui_pass_evidence and has_custom_playwright_script and not has_official_playwright_runner:
-                issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/solution에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
+                issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/product에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
 
     # JSON Schema 기반 구조화 출력(Run metadata & Output) 정합성 검증
     yaml_meta = parse_simple_yaml_block(content)
@@ -13174,7 +13856,7 @@ def run_preflight_file(path):
         all_ids_text = " ".join(related_ids + req_ids)
         has_parent_req = bool(re.search(r"\bREQ-\d{3}\b", all_ids_text))
         has_detail_req = bool(re.search(r"\bREQ-\d{3}-\d{2}\b", all_ids_text))
-        if has_parent_req and not has_detail_req and profile != "poc":
+        if has_parent_req and not has_detail_req and profile not in ("poc", "product"):
             warnings.append("target_contracts/related_ids가 parent REQ 중심입니다. 상세 REQ-NNN-NN 단위 매핑을 추가하세요.")
 
         ui_ids = set(re.findall(r"\bUI-\d{3}-\d{2}\b", content))
@@ -13684,12 +14366,17 @@ def cmd_profile_status(project_dir="."):
     if config_profile != profile:
         print("  warning: session profile and config delivery_profile differ; session wins for Run preset selection")
     print("  supported_profiles: " + ", ".join(SUPPORTED_DELIVERY_PROFILES))
+    if DELIVERY_PROFILE_ALIASES:
+        aliases = ", ".join(f"{alias}->{target}" for alias, target in DELIVERY_PROFILE_ALIASES.items())
+        print(f"  aliases: {aliases}")
     print("  profile_rules:")
     for key in (
         "gate_approval",
         "required_artifacts",
         "traceability_level",
         "program_contract_level",
+        "security_standard_level",
+        "data_standard_level",
         "qa_evidence_level",
         "independent_review_level",
         "run_preflight_strictness",
@@ -13698,6 +14385,149 @@ def cmd_profile_status(project_dir="."):
         print(f"    {key}: {merged_rules.get(key) or '-'}")
     if profile != "audit":
         print("  note: non-audit profiles are recorded as overlay policy first; most checks still share audit-safe defaults until profile-specific strictness is implemented.")
+
+
+def _project_rel_exists(project_dir, rel_path):
+    return os.path.exists(os.path.join(os.path.abspath(project_dir), rel_path))
+
+
+def _profile_gap_rule_status(project_dir, rule):
+    ok_any = rule.get("ok_any") or []
+    ok_all = rule.get("ok_all") or []
+    partial_any = rule.get("partial_any") or []
+    partial_all = rule.get("partial_all") or []
+
+    matched = []
+    if ok_any:
+        matched = [path for path in ok_any if _project_rel_exists(project_dir, path)]
+        if matched:
+            return "ok", matched
+    if ok_all:
+        all_matched = [path for path in ok_all if _project_rel_exists(project_dir, path)]
+        if len(all_matched) == len(ok_all):
+            return "ok", all_matched
+        if all_matched:
+            matched.extend(all_matched)
+    if partial_any:
+        partial_matched = [path for path in partial_any if _project_rel_exists(project_dir, path)]
+        if partial_matched:
+            return "partial", partial_matched
+    if partial_all:
+        partial_all_matched = [path for path in partial_all if _project_rel_exists(project_dir, path)]
+        if len(partial_all_matched) == len(partial_all):
+            return "partial", partial_all_matched
+        if partial_all_matched:
+            matched.extend(partial_all_matched)
+    if matched:
+        return "partial", matched
+    return "missing", []
+
+
+def collect_profile_gap(project_dir=".", target_profile="product"):
+    project_abs = os.path.abspath(project_dir)
+    current_profile = load_delivery_profile(project_abs)
+    session = load_session(project_abs)
+    current_gate = session.get("current_gate", "phase0") if isinstance(session, dict) else "phase0"
+    target = normalize_delivery_profile(target_profile)
+    content_issues = []
+    content_warnings = []
+    if target == "poc":
+        items = [{
+            "id": "poc_target",
+            "title": "PoC target",
+            "status": "review",
+            "matched": [],
+            "recommendation": "PoC는 승격 대상이라기보다 경량 실험 profile입니다. 필요하면 새 PoC 목적과 성공 기준을 정리하세요.",
+        }]
+    else:
+        rules = PROFILE_GAP_RULES.get(target)
+        if not rules:
+            rules = []
+        items = []
+        for rule in rules:
+            status, matched = _profile_gap_rule_status(project_abs, rule)
+            items.append({
+                "id": rule.get("id") or "",
+                "title": rule.get("title") or "",
+                "status": status,
+                "matched": matched,
+                "recommendation": rule.get("recommendation") or "",
+            })
+
+    if target == "product":
+        content_issues, content_warnings = collect_product_profile_findings(project_abs, gate=current_gate)
+    elif target == "audit":
+        content_issues, content_warnings = collect_artifact_completion_findings(project_abs)
+
+    summary = {"ok": 0, "partial": 0, "missing": 0, "review": 0}
+    for item in items:
+        summary[item["status"]] = summary.get(item["status"], 0) + 1
+    summary["content_issues"] = len(content_issues)
+    summary["content_warnings"] = len(content_warnings)
+    return {
+        "project": os.path.basename(project_abs),
+        "current_profile": current_profile,
+        "target_profile": target,
+        "current_gate": current_gate,
+        "items": items,
+        "summary": summary,
+        "content_issues": content_issues,
+        "content_warnings": content_warnings,
+        "note": "profile-gap is read-only; it does not change session.json or vulcan.config.json.",
+    }
+
+
+def cmd_profile_gap(target_profile="product", emit_json=False, project_dir="."):
+    gap = collect_profile_gap(project_dir=project_dir, target_profile=target_profile)
+    if emit_json:
+        print(json.dumps(gap, ensure_ascii=False, indent=2))
+        return
+
+    print("==================================================")
+    print(" [profile-gap] Delivery Profile gap check")
+    print("==================================================")
+    print(f" project: {gap['project']}")
+    print(f" current_profile: {gap['current_profile']}")
+    print(f" target_profile: {gap['target_profile']}")
+    print(f" current_gate: {gap['current_gate']}")
+    print(" read_only: true")
+    print()
+    print(" summary")
+    for key in ("ok", "partial", "missing", "review", "content_issues", "content_warnings"):
+        print(f"  {key}: {gap['summary'].get(key, 0)}")
+    print()
+    print(" items")
+    for item in gap["items"]:
+        matched = ", ".join(item.get("matched") or []) or "-"
+        print(f"  - [{item['status']}] {item['id']} - {item['title']}")
+        print(f"    matched: {matched}")
+        print(f"    recommendation: {item.get('recommendation') or '-'}")
+    print()
+    if gap.get("content_issues"):
+        print(" content issues")
+        for issue in gap["content_issues"][:20]:
+            print(f"  - {issue}")
+        if len(gap["content_issues"]) > 20:
+            print(f"  ... 외 {len(gap['content_issues']) - 20}건")
+        print()
+    if gap.get("content_warnings"):
+        print(" content warnings")
+        for warning in gap["content_warnings"][:20]:
+            print(f"  - {warning}")
+        if len(gap["content_warnings"]) > 20:
+            print(f"  ... 외 {len(gap['content_warnings']) - 20}건")
+        print()
+    if gap["summary"].get("missing", 0) or gap["summary"].get("partial", 0):
+        print(" next:")
+        print("  부족 항목은 profile 변경 차단 조건이 아니라 backlog 또는 다음 Gate 작업 후보입니다.")
+        print("  profile 값을 바꾸려면 사용자 승인 후 session/config 갱신을 별도 수행하세요.")
+    elif gap["summary"].get("content_issues", 0) or gap["summary"].get("content_warnings", 0):
+        print(" next:")
+        print("  목표 profile 문서 세트는 있지만 현재 Gate 판단에 필요한 내용 보완이 남아 있습니다.")
+        print("  status --check로 전환 차단 여부를 확인하세요.")
+    else:
+        print(" next:")
+        print("  목표 profile로 운영 강도를 바꿀 수 있는 기본 근거가 있습니다. 최종 변경은 사용자 승인 후 수행하세요.")
 
 
 def collect_status_summary(project_dir="."):
@@ -13772,6 +14602,29 @@ def collect_status_summary(project_dir="."):
         next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
 
     dashboard_comments = collect_dashboard_comments(project_abs)
+    profile_gap = None
+    if session and profile in ("poc", "product", "audit"):
+        gap_target = "product" if profile == "poc" else profile
+        try:
+            profile_gap = collect_profile_gap(project_abs, target_profile=gap_target)
+        except Exception as exc:
+            profile_gap = {
+                "target_profile": gap_target,
+                "summary": {"ok": 0, "partial": 0, "missing": 0, "review": 0, "content_issues": 0, "content_warnings": 0},
+                "read_error": str(exc),
+            }
+        gap_summary = profile_gap.get("summary", {}) if isinstance(profile_gap, dict) else {}
+        if current_gate in GATE_ORDER and (
+            gap_summary.get("content_issues", 0) > 0 or gap_summary.get("missing", 0) > 0
+        ):
+            preferred_actions = [
+                "python vulcan.py status --check",
+                f"python vulcan.py profile-gap --to {gap_target}",
+            ]
+            next_actions = preferred_actions + [
+                action for action in next_actions
+                if action not in preferred_actions and not action.startswith("python vulcan.py session --gate")
+            ]
 
     return {
         "project": session.get("project") or os.path.basename(project_abs),
@@ -13790,6 +14643,7 @@ def collect_status_summary(project_dir="."):
         "implementation": implementation,
         "active_runs": active_runs,
         "active_waves": active_waves,
+        "profile_gap": profile_gap,
         "dashboard_comments": dashboard_comments,
         "next_actions": next_actions[:3],
     }
@@ -13901,6 +14755,26 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
     if len(active_waves) > 5:
         print(f"  ... 외 {len(active_waves) - 5}건")
     print()
+
+    profile_gap = summary.get("profile_gap") or {}
+    if profile_gap:
+        gap_summary = profile_gap.get("summary") or {}
+        print(" profile_gap")
+        print(f"  target_profile: {profile_gap.get('target_profile') or '-'}")
+        print(
+            "  docs: "
+            f"ok {gap_summary.get('ok', 0)}, "
+            f"partial {gap_summary.get('partial', 0)}, "
+            f"missing {gap_summary.get('missing', 0)}"
+        )
+        print(
+            "  content: "
+            f"issues {gap_summary.get('content_issues', 0)}, "
+            f"warnings {gap_summary.get('content_warnings', 0)}"
+        )
+        if profile_gap.get("read_error"):
+            print(f"  read_error: {profile_gap.get('read_error')}")
+        print()
 
     comments = summary.get("dashboard_comments") or {}
     if comments.get("total"):
@@ -14268,6 +15142,24 @@ def release_pr_body(project_dir, base_branch, head_branch, title):
             "PoC continue/pivot/stop decision reviewed",
             "Independent review completed or explicitly waived",
         ]
+    elif profile == "product":
+        release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+        evidence_documents = [
+            release_doc,
+            "docs/product/PRODUCT_BRIEF.md",
+            "docs/product/PRODUCT_CONTRACTS.md",
+            "docs/product/PRODUCT_TRACEABILITY.md",
+            "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
+        ]
+        verification_checklist = [
+            "`python vulcan.py status --check`",
+            "Product regression result and release scope reviewed",
+            "Product traceability and backlog/deferred items reviewed",
+            "Gate 4 UI/API evidence reviewed",
+            "Release approval document reviewed",
+            "Independent PR review completed or explicitly waived",
+        ]
     else:
         release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
         evidence_documents = [
@@ -14512,7 +15404,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     if not profile_was_explicit and sys.stdin.isatty():
         profile_options = [
             ("audit", "감리/공식 제출 수준 문서와 강한 추적성"),
-            ("solution", "제품화/운영 가능한 솔루션 기준"),
+            ("product", "실사용/릴리즈 가능한 제품 기준"),
             ("poc", "가설 검증과 빠른 실험 중심"),
         ]
         print("프로젝트 Delivery Profile을 선택해 주세요:")
@@ -14612,6 +15504,8 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
     install_project_doc_framework(target_dir, variables, overwrite=True)
     if profile == "poc":
         install_poc_artifacts(target_dir, variables, overwrite=False)
+    elif profile == "product":
+        install_product_artifacts(target_dir, variables, overwrite=False)
     else:
         install_project_artifacts(target_dir, variables, overwrite=False)
 
@@ -14709,6 +15603,7 @@ def main():
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
   sync-session session.json 대시보드 상태 캐시 동기화
   profile-status Delivery Profile과 profile_rules 확인
+  profile-gap  목표 Delivery Profile 기준 부족 항목 진단
   release-pr   Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
@@ -14731,6 +15626,7 @@ def main():
   python vulcan.py session --gate gate1 --status done --approved --approval-evidence "사용자 승인"
   python vulcan.py sync-session
   python vulcan.py profile-status
+  python vulcan.py profile-gap --to product
   python vulcan.py branch-status
   python vulcan.py branch-start impl
   python vulcan.py release-pr --dry-run
@@ -14748,7 +15644,7 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
-    p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit)")
+    p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit; solution은 product alias)")
     p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
 
     p_status = subparsers.add_parser("status", help="현재 Gate/Profile/Branch/Run 상태 요약")
@@ -14762,6 +15658,9 @@ def main():
     subparsers.add_parser("check-trace", help="현재 Gate 정합성 검사")
     subparsers.add_parser("prepare-transition", help="Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사하고 결과를 요약")
     subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
+    p_profile_gap = subparsers.add_parser("profile-gap", help="목표 Delivery Profile 기준 부족 항목 진단")
+    p_profile_gap.add_argument("--to", default="product", choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="목표 Delivery Profile")
+    p_profile_gap.add_argument("--json", action="store_true", help="JSON으로 출력")
 
     p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
     p_check_contract.add_argument("--program-design", default="", help="프로그램 설계서 경로")
@@ -14976,6 +15875,8 @@ def main():
         cmd_prepare_transition()
     elif args.command == "profile-status":
         cmd_profile_status()
+    elif args.command == "profile-gap":
+        cmd_profile_gap(target_profile=args.to, emit_json=args.json)
     elif args.command == "check-contract":
         sys.exit(cmd_check_contract(
             program_design=args.program_design,

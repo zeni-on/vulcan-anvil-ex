@@ -23,8 +23,12 @@ Vulcan-Anvil Ex 산출물은 프로젝트 내부 ID만 사용하지 않고, 필�
 | `KISA-SD-2021` | 소프트웨어 개발보안 가이드(2021.12.29) | 분석, 설계, 구현, 테스트 단계의 개발보안 활동과 보안설계 기준 참고 |
 | `KISA-SWVD-2021` | 소프트웨어 보안약점 진단가이드(2021) | 보안약점 진단 절차, 설계단계 보안항목 진단, 구현단계 보안약점 제거 기준 참고 |
 | `PUBLIC-DATA-STD-2025-11` | 공공데이터 공통표준(2025.11월) | 용어, 단어, 도메인, 데이터 항목명 검토 |
+| `OWASP-ASVS` | OWASP Application Security Verification Standard | 제품/업무 앱의 보안 요구사항과 검증 기준 |
 | `OWASP-T10-2021` | OWASP Top 10:2021 | 웹 애플리케이션 위험 분류와 누락 보안항목 점검 |
+| `OWASP-API-T10-2023` | OWASP API Security Top 10:2023 | API 보안 위험 분류와 누락 보안항목 점검 |
 | `CWE` | Common Weakness Enumeration | 구현/리뷰 단계 코드 약점 유형 분류 |
+| `ISO-IEC-11179` | ISO/IEC 11179 Metadata Registry | 데이터 요소, 값 도메인, metadata registry 개념 참고 |
+| `DAMA-DICTIONARY` | DAMA Dictionary/DMBOK | 데이터 관리 용어와 조직 데이터 표준 논의 참고 |
 
 표준 원문 위치:
 
@@ -32,6 +36,16 @@ Vulcan-Anvil Ex 산출물은 프로젝트 내부 ID만 사용하지 않고, 필�
 | --- | --- | --- |
 | 프로젝트 주입 표준 | `docs/seed-docs/reference-standards/` | `vulcan.py init` 또는 설계 Run에서 읽기 전용으로 참조 |
 | 민감 참고문서 | `docs/ref-docs/` | 기본 제외. 사용자가 명시적으로 허용한 경우에만 참조 |
+
+Profile별 기본 기준:
+
+| Profile | 보안 기준 | 데이터 기준 |
+| --- | --- | --- |
+| `poc` | 주요 위험 식별과 제품화 전환 gap | 핵심 데이터 항목과 민감정보 식별 |
+| `product` | `OWASP-ASVS`, `OWASP-T10-2021`, `OWASP-API-T10-2023`, `CWE` | 프로젝트 단어사전, 화면/API/DB 매핑, 도메인/보안분류, 필요 시 `ISO-IEC-11179`/`DAMA-DICTIONARY` 참고 |
+| `audit` | Product 기준 + `KISA-SD-2021`, `KISA-SWVD-2021`, 고객/공공 기준 공식 매핑 | Product 기준 + `PUBLIC-DATA-STD-2025-11` 준용/변형/신규 사유 |
+
+Product profile의 기본 운영 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`를 우선 확인한다.
 
 ## 3. 보안 가이드 문서 관계
 

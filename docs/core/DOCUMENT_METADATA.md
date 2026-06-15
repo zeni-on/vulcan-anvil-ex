@@ -89,7 +89,7 @@ Core 문서에서는 직책명이 아니라 책임 기반 역할명을 사용한
 | --- | --- |
 | `Requirements Lead` | 요구사항, 범위, 인수기준 |
 | `Business Analyst` | 업무 맥락과 사용자 흐름 |
-| `Solution Architect` | Phase 0 수준의 솔루션 방향 |
+| `Product Architect` | Phase 0 수준의 솔루션 방향 |
 | `Technical Architect` | 기술 설계 |
 | `Data Architect` | 데이터 모델과 DB 설계 |
 | `UX/UI Designer` | 화면 흐름과 사용자 경험 설계 |

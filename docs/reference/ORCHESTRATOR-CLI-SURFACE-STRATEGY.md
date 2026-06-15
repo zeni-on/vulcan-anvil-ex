@@ -253,14 +253,14 @@ Internal atomic commands
 
 ### 5.3 profile별 엄격도는 facade가 읽는다
 
-`audit`, `solution`, `poc` profile이 다르면 같은 `execute`라도 Run 문서 무게와 검사 강도가 달라진다.
+`audit`, `product`, `poc` profile이 다르면 같은 `execute`라도 Run 문서 무게와 검사 강도가 달라진다.
 
 예:
 
 | Profile | `plan` | `execute` | `transition` |
 | --- | --- | --- | --- |
 | audit | Run/Wave/추적성 강함 | preflight/check-contract 엄격 | prepare-transition 차단 강함 |
-| solution | 핵심 계약 중심 | 테스트/빌드 중심 | 릴리즈 기준 중심 |
+| product | 핵심 계약 중심 | 테스트/빌드 중심 | 릴리즈 기준 중심 |
 | poc | compact Run 또는 summary | subagent 중심, 외부 CLI 선택 | 최소 산출물과 실행 결과 중심 |
 
 즉, profile별로 명령을 나누지 않고 상위 명령이 profile을 읽어 동작 강도를 조절한다.

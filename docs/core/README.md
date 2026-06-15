@@ -21,7 +21,7 @@
 - `CODEX_MODEL_POLICY.md`: Codex runner의 역할별 model/effort 선택 정책과 실행 기록 기준
 - `GATE2_DESIGN_SEQUENCE.md`: Gate 2 설계 산출 순서와 SW 아키텍처 반복 갱신 기준
 - `CHANGE_CONTROL_PROCESS.md`: QA 발견사항, 변경요청, 백로그, 승인된 CR의 Gate 진행 프로세스
-- `DELIVERY_PROFILES.md`: Audit, Solution, PoC 프로젝트별 문서 깊이와 Gate 강도 조절 기준
+- `DELIVERY_PROFILES.md`: Audit, Product, PoC 프로젝트별 문서 깊이와 Gate 강도 조절 기준
 - `TECH_STACK_BASELINES.md`: Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기술스택별 코딩/주석/테스트 기본 규칙
 - `REFACTORING_PROCESS.md`: 리팩토링의 DEBT/FIND/CR 분류, 문서 영향 판단, 검증 기록 기준
 
@@ -43,6 +43,6 @@
 - 기술스택 선택 시 개발표준정의서가 참조할 Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 베이스라인을 추가했다.
 - 리팩토링을 추적 가능한 개선 작업으로 다루기 위해 DEBT/FIND/CR 분기와 문서 영향 판단 기준을 정의했다.
 - 작업용 Markdown 산출물과 제출용 DOCX/XLSX/HWPX 합본의 관계는 `../reference/SUBMISSION-DOCUMENT-STRATEGY.md`를 기준으로 한다.
-- 감리 대응, 솔루션 개발, PoC를 같은 문서/증적 밀도로 다루지 않기 위해 Delivery Profile을 도입 방향으로 정의했다.
+- 감리 대응, 제품/업무 앱 개발, PoC를 같은 문서/증적 밀도로 다루지 않기 위해 Delivery Profile을 도입 방향으로 정의했다.
 - Gate 2와 Gate 4에서 작성 세션과 분리된 독립 검수를 기본 권장 절차로 사용할 수 있도록 절차를 추가했다.
 - 교차검증, PR 검증, Build Wave를 같은 독립 실행 모델로 다루기 위해 Independent Execution 개념을 추가했다.

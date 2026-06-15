@@ -276,6 +276,79 @@ def assert_release_pr_body(result: StepResult) -> None:
         raise FixtureSmokeFailure(f"release-pr body missing required text: {missing}\n{body}")
 
 
+def assert_product_build_wave_related_ids(project_dir: Path, vulcan_py: Path) -> None:
+    run_dir = project_dir / "docs" / "runs"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    run_path = run_dir / "RUN-001_build-wave-BW-001_product-scenario-smoke_v0.1.md"
+    expected_ids = {"SCN-001", "REQ-001", "API-001", "API-002", "DATA-001", "UI-001", "REG-001"}
+    run_path.write_text(
+        """# Product Build Wave Smoke
+
+```yaml
+---
+run_id: RUN-001
+gate: impl
+persona: build
+skill: build-wave
+bw_id: BW-001
+status: Verified
+related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
+---
+```
+
+| BW ID | Scope | Status | Related IDs |
+| --- | --- | --- | --- |
+| BW-001 | Product SCN-001 add/list | Verified | SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001 |
+""",
+        encoding="utf-8",
+    )
+
+    import importlib.util
+
+    vulcan_root = str(vulcan_py.parent)
+    if vulcan_root not in sys.path:
+        sys.path.insert(0, vulcan_root)
+    spec = importlib.util.spec_from_file_location("vulcan_product_wave_smoke", vulcan_py)
+    if spec is None or spec.loader is None:
+        raise FixtureSmokeFailure(f"could not import vulcan.py from {vulcan_py}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    records = module.collect_build_wave_records(str(project_dir))
+    matching = [record for record in records if record.get("id") == "BW-001"]
+    if not matching:
+        raise FixtureSmokeFailure("Product Build Wave smoke did not find BW-001 record")
+    actual_ids = set(matching[0].get("related_ids") or [])
+    missing = sorted(expected_ids - actual_ids)
+    if missing:
+        raise FixtureSmokeFailure(
+            f"Product Build Wave related IDs were not preserved: missing {missing}, actual {sorted(actual_ids)}"
+        )
+
+
+def assert_product_adr_template_policy(project_dir: Path) -> None:
+    adr_path = project_dir / "docs" / "product" / "ADR_LOG.md"
+    if not adr_path.exists():
+        raise FixtureSmokeFailure(f"Product ADR log was not generated: {adr_path}")
+    content = adr_path.read_text(encoding="utf-8")
+    required = [
+        "ADR-NONE",
+        "현재 기록된 ADR 없음",
+        "ADR-001",
+        "첫 실제 의사결정",
+    ]
+    missing = [text for text in required if text not in content]
+    if missing:
+        raise FixtureSmokeFailure(f"Product ADR log missing no-decision policy text: {missing}\n{content[:2000]}")
+    forbidden_patterns = [
+        r"\|\s*ADR-001\s*\|\s*TBD\b",
+        r"\|\s*Context\s*\|\s*TBD\s*\|",
+        r"\|\s*Decision\s*\|\s*TBD\s*\|",
+    ]
+    matched = [pattern for pattern in forbidden_patterns if re.search(pattern, content, re.IGNORECASE)]
+    if matched:
+        raise FixtureSmokeFailure(f"Product ADR log still contains placeholder ADR content: {matched}\n{content[:2000]}")
+
+
 def assert_gitignore_evidence_policy(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     official_log = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "logs" / "QA-CMD-999_fixture.log"
     official_log.parent.mkdir(parents=True, exist_ok=True)
@@ -462,6 +535,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
 
     project_dir = base_dir / "regression-simple-hello"
     profile_solution_dir = base_dir / "profile-solution-smoke"
+    profile_product_dir = base_dir / "profile-product-smoke"
     profile_poc_dir = base_dir / "profile-poc-smoke"
     py = sys.executable
     steps: list[StepResult] = []
@@ -481,9 +555,65 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 [py, "vulcan.py", "profile-status"],
                 cwd=profile_solution_dir,
                 required_text=[
-                    "effective_profile: solution",
+                    "effective_profile: product",
                     "run_preflight_strictness: scope-contract-blocking-other-warning",
                 ],
+            )
+        )
+        steps.append(
+            run_step(
+                "init-profile-product",
+                [py, str(vulcan_py), "init", str(profile_product_dir), "profile-product-smoke", "--profile", "product"],
+                cwd=root,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        assert_product_adr_template_policy(profile_product_dir)
+        steps.append(
+            StepResult(
+                name="product-adr-template-policy",
+                returncode=0,
+                stdout="Product ADR template uses ADR-NONE instead of placeholder ADR-001",
+                stderr="",
+            )
+        )
+        release_dir = profile_product_dir / "docs" / "artifacts" / "07-release"
+        release_dir.mkdir(parents=True, exist_ok=True)
+        (release_dir / "DOC-PM-G5-001_Release-Approval_v0.1.md").write_text(
+            "# 릴리즈 승인서\n\nProduct release smoke approval.\n",
+            encoding="utf-8",
+        )
+        product_release_body = run_step(
+            "product-release-body-profile-aware",
+            [
+                py,
+                "-c",
+                (
+                    "import importlib.util, pathlib; "
+                    f"spec=importlib.util.spec_from_file_location('v', r'{vulcan_py}'); "
+                    "m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+                    f"print(m.release_pr_body(r'{profile_product_dir}', 'main', 'dev', 'Product smoke release'))"
+                ),
+            ],
+            cwd=root,
+            required_text=[
+                "Profile: `product`",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
+            ],
+            timeout_seconds=args.timeout_seconds,
+        )
+        if "DOC-QA-G4-001_QA-Finding" in product_release_body.combined_output or "DOC-QA-G4-002_Test-Result" in product_release_body.combined_output:
+            raise FixtureSmokeFailure("Product release body included audit QA artifact requirements")
+        steps.append(product_release_body)
+        assert_product_build_wave_related_ids(profile_product_dir, vulcan_py)
+        steps.append(
+            StepResult(
+                name="product-build-wave-related-ids",
+                returncode=0,
+                stdout="Product Build Wave related IDs preserved",
+                stderr="",
             )
         )
         steps.append(

@@ -56,6 +56,23 @@ flowchart LR
 
 Gate는 사람을 묶어두기 위한 절차가 아니라, 에이전트가 문서와 코드와 검증을 같은 맥락으로 유지하기 위한 작업 기준입니다.
 
+## Delivery Profile
+
+Vulcan-Anvil Ex는 모든 프로젝트를 같은 무게로 운영하지 않습니다. `Delivery Profile`은 프로젝트 목적에 맞춰 문서 깊이, 증적 밀도, 승인 지점, 변경관리 방식을 조절하는 기본값입니다.
+
+| Profile | 목적 | 핵심 질문 |
+| --- | --- | --- |
+| `poc` | 빠른 가능성 검증 | 이 아이디어나 기술이 실제로 동작하는가? |
+| `product` | 제품/업무 앱 개발 | 계속 운영하고 릴리즈할 수 있는 품질 기준이 있는가? |
+| `audit` | 감리/검수/인수인계 | 요구사항부터 증적까지 설명 가능하게 연결되어 있는가? |
+
+Profile은 품질 등급이 아닙니다. PoC도 실패와 미실행을 정직하게 기록해야 하고, Audit도 불필요한 문서 작업을 늘리는 것이 목적은 아닙니다. 차이는 **얼마나 깊게 설명하고 얼마나 강하게 증적을 남길 것인가**입니다.
+
+Product profile은 일반 제품 개발에서 납득 가능한 기준을 기본값으로 둡니다. 보안은 OWASP/CWE 기반 제품 보안 기준선, 데이터는 프로젝트 단어사전과 화면/API/DB 항목 매핑을 중심으로 운영합니다. KISA/공공데이터 공통표준은 Audit 또는 공공/SI 전환 시 공식 매핑으로 보강합니다.
+Product profile의 ADR Log는 의사결정이 있을 때 채웁니다. 아직 결정이 없다면 `ADR-NONE` empty-state가 정상이며, placeholder ADR을 채우는 것보다 릴리즈 범위, 회귀 결과, backlog 연결을 선명하게 유지하는 것이 우선입니다.
+
+처음 선택할 때는 [Which Profile Should I Use?](WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
+
 ## Branch Workflow
 
 Audit profile은 문서 기준선과 구현 통합선을 분리합니다. 브랜치 이름 자체를 강제하지는 않지만, 구현과 QA의 기준이 되는 통합 브랜치 역할은 반드시 있어야 합니다.
@@ -86,6 +103,7 @@ flowchart LR
 Gate 5에서는 `python vulcan.py release-pr`로 통합 브랜치에서 기준 브랜치로 가는 Release PR을 만들 수 있습니다.
 Release PR은 릴리즈 후보를 검토하기 위한 단위이며, runner 결과만으로 자동 merge하지 않습니다.
 `release-pr --dry-run`도 동일한 PR body를 `.vulcan/release/release-pr-body.md`에 만들며, 현재 브랜치가 통합 브랜치인지, base/head 브랜치가 존재하는지, 미커밋 변경이 없는지 먼저 확인합니다.
+Product profile의 release PR body는 audit 제출 문서가 아니라 Product 원장(`docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`)과 backlog, Gate 5 승인서를 evidence로 표시합니다.
 merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤에 수행합니다.
 
 ## Gate Transition Readiness

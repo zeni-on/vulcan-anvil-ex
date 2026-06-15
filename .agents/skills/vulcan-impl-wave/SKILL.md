@@ -20,7 +20,7 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 1. Create or review an implementation plan Run when scope is more than a tiny change.
 2. If buildable skeleton is missing, check the delivery profile before starting `BW-000`.
    - In `poc`, do not create `BW-000` by default. Let the first native worker create the environment, hello/build smoke, and the core feature together unless the user asks for stricter separation.
-   - In `solution` or `audit`, prefer an earlier Environment Readiness Track when possible; use `BW-000 implementation-scaffold` when official contract skeleton or build smoke must be isolated.
+   - In `product` or `audit`, prefer an earlier Environment Readiness Track when possible; use `BW-000 implementation-scaffold` when official contract skeleton or build smoke must be isolated.
 3. Create one active Build Wave at a time.
 4. Prefer `wave-start <BW-ID> --trace-seed <detailed-id>` or `run-new ... --trace-seed <id>`.
 5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.

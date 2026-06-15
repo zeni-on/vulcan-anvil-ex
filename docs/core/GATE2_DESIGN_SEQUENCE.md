@@ -49,6 +49,10 @@ health check, TLS 종료 위치, WAS/DB 이중화, 파일 저장소, 로그/백�
 보안, 데이터, 개발표준은 마지막에 한 번만 검토하지 않는다.
 다음 지점에서 교차 확인한다.
 
+`product` profile에서는 Gate 2 초기에 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`를 먼저 확인한다.
+`audit` profile에서는 위 기준에 더해 `docs/core/REFERENCE_STANDARDS.md`, `docs/core/KISA_SECURITY_RULES.md`, `docs/seed-docs/reference-standards/`를 필요한 만큼 참조한다.
+`poc` profile에서는 보안/데이터를 상세 제출 기준이 아니라 위험 식별과 제품화 전환 gap 중심으로 기록한다.
+
 | 지점 | 확인 |
 | --- | --- |
 | 화면 설계 후 | 입력값, 메시지, 인증/권한 상태, UI Implementation Contract, UI 테스트 후보 |

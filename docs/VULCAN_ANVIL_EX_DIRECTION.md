@@ -98,7 +98,7 @@ Ex에서 역할은 반드시 사람에게만 배정되지 않는다. 기본적�
 | --- | --- | --- |
 | PM | Requirements Lead | Gate 1 요구사항, 인수 기준, 범위 정의 책임 |
 | BA | Business Analyst | 업무 흐름, 사용자 관점, 비즈니스 요구 분석 |
-| SA | Solution Architect | Phase 0 수준의 솔루션 방향과 기술 전략 |
+| SA | Product Architect | Phase 0 수준의 솔루션 방향과 기술 전략 |
 | Architect | Technical Architect | Gate 2 기술 설계와 구조 판단 |
 | DBA | Data Architect | 데이터 모델, 스키마, 마이그레이션 관점 설계 |
 | UI Designer | UX/UI Designer | 화면 흐름, 정보 구조, 사용자 경험 설계 |

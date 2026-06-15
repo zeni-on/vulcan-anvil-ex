@@ -29,7 +29,7 @@ Fast PoC는 결과 품질을 낮추는 모드가 아니다.
 | 필수 문서 | `docs/poc/` 3종 |
 | Run 문서 | 기본 생략, 긴 위임/외부 runner/재현 필요 시만 compact Run |
 | UI 증적 | smoke/demo 캡처, console log, build log |
-| 공식 QA | solution/audit 승격 시 보강 |
+| 공식 QA | product/audit 승격 시 보강 |
 
 ## 3. Fast PoC 흐름
 
@@ -52,7 +52,7 @@ Fast PoC에서는 Phase 0, Gate 1, Gate 2, Gate 3 이름을 유지할 수 있지
 
 ## 4. Environment Readiness Track
 
-현재 audit/solution 흐름에서는 구현 단계에 들어간 뒤 `BW-000 implementation-scaffold`로 개발환경과 skeleton을 만든다.
+현재 audit/product 흐름에서는 구현 단계에 들어간 뒤 `BW-000 implementation-scaffold`로 개발환경과 skeleton을 만든다.
 하지만 개발환경은 기능 구현이 아니라 작업대 준비에 가깝다.
 따라서 모든 profile에서 설계가 진행되는 동안 별도 Track으로 병렬 준비할 수 있다.
 
@@ -105,7 +105,7 @@ Environment Readiness Track의 결과는 기능 구현이 아니므로 main 기�
 | Profile | 기본 방향 |
 | --- | --- |
 | `poc` | BW-000 기본 생략. 첫 구현 worker가 환경 생성 + 핵심 기능 + smoke를 함께 수행한다. |
-| `solution` | Environment Readiness Track을 먼저 시도하고, 환경이 불완전할 때만 BW-000 사용. |
+| `product` | Environment Readiness Track을 먼저 시도하고, 환경이 불완전할 때만 BW-000 사용. |
 | `audit` | 설계 중 Environment Readiness Track을 허용하되, 공식 계약 skeleton이 필요한 경우 BW-000 유지. |
 
 즉 구현 단계의 첫 질문은 "BW-000을 만들까?"가 아니라 다음이어야 한다.
@@ -114,7 +114,7 @@ Environment Readiness Track의 결과는 기능 구현이 아니므로 main 기�
 환경 준비 상태가 충분한가?
 - 충분함: BW-001 feature 구현 시작
 - 부족하지만 PoC임: 첫 구현 worker가 환경과 기능을 함께 만든다
-- 부족하고 audit/solution 공식 계약 필요: BW-000 또는 Environment Readiness Run으로 분리
+- 부족하고 audit/product 공식 계약 필요: BW-000 또는 Environment Readiness Run으로 분리
 ```
 
 ## 6. Fast PoC 산출물 기준
@@ -167,4 +167,4 @@ Fast PoC 개선은 다음 조건을 만족해야 한다.
 - audit 문서 누락 때문에 막히지 않는다.
 - BW-000을 기본 생성하지 않는다.
 - 환경 준비와 업무 기능 구현의 책임 경계가 문서에 남는다.
-- PoC 결과를 solution/audit으로 승격할 때 필요한 gap이 식별된다.
+- PoC 결과를 product/audit으로 승격할 때 필요한 gap이 식별된다.
