@@ -33,6 +33,8 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 
 Product profile은 `docs/product/`에 6종 문서를 생성합니다.
 Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`와 섹션을 Gate 진행에 맞춰 갱신합니다.
+중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
+Gate 5에서 `release-pr --dry-run`을 실행하면 Product profile은 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다.
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
@@ -100,6 +102,8 @@ Product Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다
 이 프로젝트는 Product profile이야.
 일반 제품/업무 앱 수준으로 요구사항, 주요 설계, API/DB/UI 계약, 릴리즈 회귀 기준을 남겨줘.
 감리 제출 수준의 과도한 증적보다는 제품 품질과 유지보수성을 우선해줘.
+아직 아키텍처 의사결정이 없다면 ADR은 ADR-NONE으로 두고, 실제 결정이 생길 때 ADR-001부터 작성해줘.
+구현 Run은 가능하면 Product 시나리오 ID, 예를 들어 SCN-001을 trace seed로 사용해서 관련 REQ/API/DATA/UI/REG를 연결해줘.
 ```
 
 Audit Profile은 기본값입니다. 감리, 고객 검수, 인수인계가 필요하다면 다음처럼 명확히 말합니다.

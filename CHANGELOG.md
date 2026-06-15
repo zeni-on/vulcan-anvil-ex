@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.4.8 - 2026-06-15
+
+`0.4.8`은 Product profile 안정화 패치 릴리즈다. Product 프로젝트에서 release PR, Build Wave trace, ADR empty-state가 audit profile 기준과 섞여 보이던 부분을 정리했다.
+
+Release notes: [docs/releases/v0.4.8.md](docs/releases/v0.4.8.md)
+
+- Product profile의 `release-pr --dry-run`이 audit용 QA Finding/Test Result/Traceability Matrix 대신 `docs/product/` 원장 문서, backlog, Gate 5 승인서를 evidence로 표시하도록 했다.
+- Product Build Wave record 수집이 `SCN`, `API`, `DATA`, `REG` ID를 보존하도록 보강했다. `status --check`나 session refresh 뒤 관련 ID가 `REQ/UI` 중심으로 축소되는 문제를 막는다.
+- Product ADR Log 템플릿을 `ADR-NONE` empty-state로 바꿨다. 실제 의사결정이 없을 때 `ADR-001 | TBD` placeholder를 남기지 않는다.
+- fixture smoke regression에 Product release body, Product Build Wave related IDs, Product ADR empty-state 검증을 추가했다.
+- `solution` 입력은 `product` alias라는 현재 정책에 맞춰 regression 기대값을 정리했다.
+
 ## 0.4.7 - 2026-06-14
 
 `0.4.7`은 Dashboard 문서 코멘트 기능과 Orchestrator 가시성을 추가한 패치 릴리즈다. 사용자는 Dashboard에서 Markdown 산출물을 읽으면서 문서 블록 단위로 코멘트를 남길 수 있고, Orchestrator는 `vulcan.py status`의 `dashboard_comments` 요약을 통해 코멘트가 있는지 먼저 확인할 수 있다.

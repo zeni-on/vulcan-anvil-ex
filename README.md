@@ -98,6 +98,8 @@ Ex 프로젝트가 끝나면 단순히 코드만 남지 않습니다. Profile에
 
 Product profile은 `docs/product/`에 Product Brief, Architecture, ADR Log, Contracts, Traceability, Regression/Release Report를 생성합니다.
 이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
+중요한 아키텍처 의사결정이 아직 없다면 ADR Log는 `ADR-NONE`을 유지합니다.
+Gate 5의 `release-pr --dry-run`도 Product profile에서는 audit 산출물 대신 `docs/product/` 원장과 backlog, Gate 5 승인서를 evidence 기준으로 사용합니다.
 
 ## Codex에서 사용할 때
 
@@ -162,9 +164,11 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.7**
+**Experimental - v0.4.8**
 
-`0.4.7`은 Dashboard 문서 코멘트와 Orchestrator 가시성을 보강한 패치입니다. Dashboard에서 Markdown 산출물에 코멘트를 남기면 원본 문서를 수정하지 않고 `.vulcan/comments/comments.jsonl`에 sidecar로 저장하며, Orchestrator는 `python vulcan.py status`의 `dashboard_comments` 요약을 통해 코멘트와 사용자 판단 요청을 먼저 확인할 수 있습니다.
+`0.4.8`은 Product profile 안정화 패치입니다. Product Build Wave의 `SCN/API/DATA/UI/REG` 관련 ID를 보존하고, Product Gate 5 release PR body가 `docs/product/` 원장 문서를 evidence로 표시하며, ADR이 없을 때는 `ADR-NONE` empty-state를 사용합니다.
+
+`0.4.7`은 Dashboard 문서 코멘트와 Orchestrator 가시성을 보강한 패치였습니다. Dashboard에서 Markdown 산출물에 코멘트를 남기면 원본 문서를 수정하지 않고 `.vulcan/comments/comments.jsonl`에 sidecar로 저장하며, Orchestrator는 `python vulcan.py status`의 `dashboard_comments` 요약을 통해 코멘트와 사용자 판단 요청을 먼저 확인할 수 있습니다.
 
 `0.4.6`은 Codex custom agent, PoC profile 완충, Agy native main orchestration, `Workspace: branch` 위임 기록, Run preflight guard, `prepare-transition` 완성도 검사를 묶은 패치였습니다.
 
