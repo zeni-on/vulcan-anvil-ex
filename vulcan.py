@@ -4648,6 +4648,12 @@ def collect_product_profile_findings(project_dir=".", gate=None):
     if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
         if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
             issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
+        if gate in ("gate4", "gate5", "completed") and re.search(
+            r"\|\s*REG-\d{3}\s*\|\s*(?:TBD|Gate\s*4\s*예정|Gate\s*4\s*planned|예정)[^|]*\|\s*(?:Planned|TBD)\b",
+            release_content,
+            re.IGNORECASE,
+        ):
+            issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md에 Gate 4 이후에도 Planned/TBD 회귀 실행 결과가 남아 있습니다.")
         if gate in ("gate5", "completed"):
             for label in ("포함 범위", "남은 리스크"):
                 if table_value_is_tbd(release_content, label):

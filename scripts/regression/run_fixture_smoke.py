@@ -9,6 +9,7 @@ that core document/check commands still accept the real artifact shape.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import shutil
@@ -349,6 +350,40 @@ def assert_product_adr_template_policy(project_dir: Path) -> None:
         raise FixtureSmokeFailure(f"Product ADR log still contains placeholder ADR content: {matched}\n{content[:2000]}")
 
 
+def assert_product_gate4_blocks_planned_regression(project_dir: Path, vulcan_py: Path, py: str) -> None:
+    script = (
+        "import importlib.util, json; "
+        f"spec=importlib.util.spec_from_file_location('v', r'{vulcan_py}'); "
+        "m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+        f"issues,warnings=m.collect_product_profile_findings(r'{project_dir}', gate='gate4'); "
+        "print(json.dumps({'issues': issues, 'warnings': warnings}, ensure_ascii=False))"
+    )
+    completed = subprocess.run(
+        [py, "-c", script],
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=60,
+    )
+    if completed.returncode != 0:
+        raise FixtureSmokeFailure(
+            "Product Gate4 planned regression smoke failed to execute\n"
+            f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+        )
+    try:
+        payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    except Exception as exc:  # pragma: no cover - defensive diagnostic
+        raise FixtureSmokeFailure(f"could not parse Product Gate4 planned regression smoke output: {completed.stdout}") from exc
+    issues = payload.get("issues") or []
+    expected = "Planned/TBD 회귀 실행 결과"
+    if not any(expected in issue for issue in issues):
+        raise FixtureSmokeFailure(
+            "Product Gate4 should block planned regression execution results, "
+            f"but did not find '{expected}' in issues: {issues}"
+        )
+
+
 def assert_gitignore_evidence_policy(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     official_log = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "logs" / "QA-CMD-999_fixture.log"
     official_log.parent.mkdir(parents=True, exist_ok=True)
@@ -574,6 +609,15 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 name="product-adr-template-policy",
                 returncode=0,
                 stdout="Product ADR template uses ADR-NONE instead of placeholder ADR-001",
+                stderr="",
+            )
+        )
+        assert_product_gate4_blocks_planned_regression(profile_product_dir, vulcan_py, py)
+        steps.append(
+            StepResult(
+                name="product-gate4-blocks-planned-regression",
+                returncode=0,
+                stdout="Product Gate4 blocks Planned/TBD regression execution results",
                 stderr="",
             )
         )
