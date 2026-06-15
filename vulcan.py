@@ -3081,6 +3081,13 @@ WAVE_STATUS_RANK = {
     "Rolled Back": 4,
 }
 
+BUILD_WAVE_RELATED_ID_RE = re.compile(
+    r"\b(?:"
+    r"SCN|REQ|AC|FUNC|SCR|UIREF|UICON|PGM|API|DB|DATA|SEC|UT|IT|PT|UI|REG"
+    r")-\d{3}(?:-\d{2})?\b",
+    re.IGNORECASE,
+)
+
 
 def find_run_files(project_dir="."):
     runs_dir = os.path.join(project_dir, runs_rel_dir(project_dir))
@@ -3214,10 +3221,7 @@ def collect_build_wave_records(project_dir="."):
                     record["status"] = status
                     record["run"] = rel_path
 
-            related = re.findall(
-                r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
-                content,
-            )
+            related = [item.upper() for item in BUILD_WAVE_RELATED_ID_RE.findall(content)]
             record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
 
         for line in content.splitlines():
@@ -3241,11 +3245,9 @@ def collect_build_wave_records(project_dir="."):
             related = [
                 item
                 for col in cols
-                for item in re.findall(
-                    r"\b(?:REQ|AC|FUNC|SCR|UIREF|UICON|PGM|DB|SEC|UT|IT|PT|UI)-\d{3}(?:-\d{2})?\b",
-                    col,
-                )
+                for item in BUILD_WAVE_RELATED_ID_RE.findall(col)
             ]
+            related = [item.upper() for item in related]
             record["related_ids"] = sorted(set(record.get("related_ids", []) + related))
 
     return [records[key] for key in sorted(records)]
@@ -15139,6 +15141,24 @@ def release_pr_body(project_dir, base_branch, head_branch, title):
             "Open ISSUE/Backlog/promotion candidates reviewed",
             "PoC continue/pivot/stop decision reviewed",
             "Independent review completed or explicitly waived",
+        ]
+    elif profile == "product":
+        release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+        evidence_documents = [
+            release_doc,
+            "docs/product/PRODUCT_BRIEF.md",
+            "docs/product/PRODUCT_CONTRACTS.md",
+            "docs/product/PRODUCT_TRACEABILITY.md",
+            "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
+        ]
+        verification_checklist = [
+            "`python vulcan.py status --check`",
+            "Product regression result and release scope reviewed",
+            "Product traceability and backlog/deferred items reviewed",
+            "Gate 4 UI/API evidence reviewed",
+            "Release approval document reviewed",
+            "Independent PR review completed or explicitly waived",
         ]
     else:
         release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"

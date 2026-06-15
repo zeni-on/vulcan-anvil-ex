@@ -106,6 +106,11 @@ Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다
 결함 수정은 승인된 설계 범위 안에서만 `qa-fix-loop` Run으로 진행한다. 새 API, 새 메소드, 요구사항/설계 변경이 필요하면 `CR` 후보로 승격한다.
 
 릴리즈 준비는 `python vulcan.py release-pr --dry-run`으로 먼저 확인한다.
+`product` profile의 release PR body는 audit 제출 산출물이 아니라
+`docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md`,
+`docs/product/PRODUCT_TRACEABILITY.md`,
+`docs/product/REGRESSION_AND_RELEASE_REPORT.md`,
+`docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`를 중심으로 evidence를 표시한다.
 
 ## 8. 직접 실행보다 상태 표면을 우선하는 이유
 

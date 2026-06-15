@@ -105,6 +105,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - QA는 릴리즈 후보 기준의 회귀 테스트, 주요 화면/API 증적, release note와 backlog 연결을 우선한다.
 - UI Pass는 기본적으로 `@playwright/test` runner 증적을 사용한다. 단, 프로젝트가 UI 자동화 대상이 아니거나 환경 차단이 승인되면 `Not Run`, `Skipped`, `environment_blocked`로 정직하게 기록한다.
 - Product 구현 Run은 `wave-start --trace-seed SCN-001`처럼 Product Scenario ID를 seed로 만들 수 있다. 이때 Run은 `docs/product/` 문서 세트를 기준으로 `SCN -> REQ/API/DATA/UI/REG` 연결을 추천하고, audit용 `docs/artifacts/` 산출물을 worker 입력 문서로 끌고 오지 않는다.
+- Product Gate 5의 `release-pr --dry-run`은 Product 원장 문서와 Gate 5 승인서를 evidence 기준으로 삼는다. audit용 QA Finding/Test Result/Traceability Matrix가 없다는 이유만으로 Product release candidate를 누락으로 표시하지 않는다.
 
 ### 4.3 PoC Profile
 

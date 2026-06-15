@@ -462,6 +462,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
 
     project_dir = base_dir / "regression-simple-hello"
     profile_solution_dir = base_dir / "profile-solution-smoke"
+    profile_product_dir = base_dir / "profile-product-smoke"
     profile_poc_dir = base_dir / "profile-poc-smoke"
     py = sys.executable
     steps: list[StepResult] = []
@@ -481,11 +482,49 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 [py, "vulcan.py", "profile-status"],
                 cwd=profile_solution_dir,
                 required_text=[
-                    "effective_profile: solution",
+                    "effective_profile: product",
                     "run_preflight_strictness: scope-contract-blocking-other-warning",
                 ],
             )
         )
+        steps.append(
+            run_step(
+                "init-profile-product",
+                [py, str(vulcan_py), "init", str(profile_product_dir), "profile-product-smoke", "--profile", "product"],
+                cwd=root,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        release_dir = profile_product_dir / "docs" / "artifacts" / "07-release"
+        release_dir.mkdir(parents=True, exist_ok=True)
+        (release_dir / "DOC-PM-G5-001_Release-Approval_v0.1.md").write_text(
+            "# 릴리즈 승인서\n\nProduct release smoke approval.\n",
+            encoding="utf-8",
+        )
+        product_release_body = run_step(
+            "product-release-body-profile-aware",
+            [
+                py,
+                "-c",
+                (
+                    "import importlib.util, pathlib; "
+                    f"spec=importlib.util.spec_from_file_location('v', r'{vulcan_py}'); "
+                    "m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+                    f"print(m.release_pr_body(r'{profile_product_dir}', 'main', 'dev', 'Product smoke release'))"
+                ),
+            ],
+            cwd=root,
+            required_text=[
+                "Profile: `product`",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
+            ],
+            timeout_seconds=args.timeout_seconds,
+        )
+        if "DOC-QA-G4-001_QA-Finding" in product_release_body.combined_output or "DOC-QA-G4-002_Test-Result" in product_release_body.combined_output:
+            raise FixtureSmokeFailure("Product release body included audit QA artifact requirements")
+        steps.append(product_release_body)
         steps.append(
             run_step(
                 "init-profile-poc",
