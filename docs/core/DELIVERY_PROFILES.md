@@ -95,6 +95,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 설계 문서는 SW Architecture, ADR, API/DB 계약, 보안/개발표준 중심으로 유지한다.
 - 보안 기준은 KISA/공공 제출 근거가 아니라 OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE를 기본 기준선으로 사용한다.
 - 설계자가 우선 읽을 기준선은 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`다.
+- ADR은 중요한 제품/아키텍처 의사결정이 있을 때 작성한다. 아직 결정이 없다면 `docs/product/ADR_LOG.md`에 `ADR-NONE` 행을 유지하고, `ADR-001 | TBD` 같은 placeholder 행은 남기지 않는다.
 - KISA, 공공, 고객사 보안 기준은 Product에서 선택 참고로 둘 수 있으며, Audit 전환 시 공식 매핑과 증적으로 보강한다.
 - 데이터 표준은 프로젝트 단어사전, 화면/API/DB 항목 매핑, 데이터 도메인, 개인정보/인증정보/민감정보 분류를 기본으로 한다.
 - 공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이지만, Product에서는 조직/도메인 표준이 없을 때 참고 표준으로 사용할 수 있다.

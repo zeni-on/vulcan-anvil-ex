@@ -325,6 +325,30 @@ related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
         )
 
 
+def assert_product_adr_template_policy(project_dir: Path) -> None:
+    adr_path = project_dir / "docs" / "product" / "ADR_LOG.md"
+    if not adr_path.exists():
+        raise FixtureSmokeFailure(f"Product ADR log was not generated: {adr_path}")
+    content = adr_path.read_text(encoding="utf-8")
+    required = [
+        "ADR-NONE",
+        "현재 기록된 ADR 없음",
+        "ADR-001",
+        "첫 실제 의사결정",
+    ]
+    missing = [text for text in required if text not in content]
+    if missing:
+        raise FixtureSmokeFailure(f"Product ADR log missing no-decision policy text: {missing}\n{content[:2000]}")
+    forbidden_patterns = [
+        r"\|\s*ADR-001\s*\|\s*TBD\b",
+        r"\|\s*Context\s*\|\s*TBD\s*\|",
+        r"\|\s*Decision\s*\|\s*TBD\s*\|",
+    ]
+    matched = [pattern for pattern in forbidden_patterns if re.search(pattern, content, re.IGNORECASE)]
+    if matched:
+        raise FixtureSmokeFailure(f"Product ADR log still contains placeholder ADR content: {matched}\n{content[:2000]}")
+
+
 def assert_gitignore_evidence_policy(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     official_log = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "logs" / "QA-CMD-999_fixture.log"
     official_log.parent.mkdir(parents=True, exist_ok=True)
@@ -542,6 +566,15 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 [py, str(vulcan_py), "init", str(profile_product_dir), "profile-product-smoke", "--profile", "product"],
                 cwd=root,
                 timeout_seconds=args.timeout_seconds,
+            )
+        )
+        assert_product_adr_template_policy(profile_product_dir)
+        steps.append(
+            StepResult(
+                name="product-adr-template-policy",
+                returncode=0,
+                stdout="Product ADR template uses ADR-NONE instead of placeholder ADR-001",
+                stderr="",
             )
         )
         release_dir = profile_product_dir / "docs" / "artifacts" / "07-release"
