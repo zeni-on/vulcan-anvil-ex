@@ -110,13 +110,13 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 
 ### 4.3 PoC Profile
 
-기술 검증, 고객 데모, 빠른 가능성 확인에 사용한다.
+기술 검증, 고객 데모, 기능 가설 확인에 사용한다.
 
 - Phase 0, Gate 1, Gate 2를 짧게 묶어 목표, 가설, 성공 기준, 주요 제약을 먼저 정한다.
 - 모든 산출물을 완성하려고 하지 않고 핵심 요구사항, 핵심 설계, 핵심 테스트만 작성한다.
 - PoC profile의 기본 산출물 세트는 `docs/poc/POC_REQUIREMENTS.md`, `docs/poc/POC_SYSTEM_DESIGN.md`, `docs/poc/POC_TEST_REPORT.md` 3종이다.
 - 새 PoC 프로젝트는 이 3종을 공식 작업 문서로 생성한다. Audit 산출물 템플릿 파일은 기본 생성하지 않으며, 필요 시 Product/Audit 승격 후보로 만든다.
-- 이 3종 산출물은 audit 문서를 대체하는 최종 제출본이 아니라, 가설-설계-검증-판단을 빠르게 연결하는 PoC 원장이다.
+- 이 3종 산출물은 audit 문서를 대체하는 최종 제출본이 아니라, 가설-설계-검증-판단과 반복별 기능 변화를 연결하는 PoC 원장이다.
 - 추적성은 최소한 `가설/요구사항 -> 구현 -> 검증 결과`를 연결하는 수준으로 유지한다.
 - 보안/데이터/운영 기준은 실제 배포가 아니라 위험 식별과 향후 전환 조건 중심으로 작성한다.
 - PoC 결과가 제품화 또는 SI 프로젝트로 전환되면 Audit 또는 Product Profile로 승격한다.
@@ -132,7 +132,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 가능하면 `delegation_records`에 `started_at`, `completed_at`, `duration_seconds`, `heartbeat_count`, `status_probe_count`, `self_check`를 함께 남긴다. PoC 병목은 기능 정합성보다 worker 대기/검증 시간이 원인인 경우가 많다.
 - 파일 변경 완료 후 최종 응답이 늦어지는지 보려면 `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`를 선택적으로 남긴다.
 - Agy `Workspace: branch` 같은 native branch worker가 Run 문서를 직접 수정하지 못해도 실패로 보지 않는다. worker는 변경 파일, self-check, 요약을 반환하고, Orchestrator가 부모 workspace에서 Run 문서와 `delegation_records`를 정규화하는 흐름을 기본값으로 둔다.
-- worker/subagent 실행은 빠른 실험을 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
+- worker/subagent 실행은 실험 범위를 분리하고 반복 기록을 남기기 위해 허용하되, 산출물 제출 품질보다 재현 가능한 명령과 결과 로그를 우선한다.
 - PoC worker는 비차단 경고를 모두 제거하려고 반복하지 않는다. 구현 테스트와 `run-check`가 통과하고 `run-preflight`가 경고만 남긴 상태라면, 경고 내용과 후속 판단자를 기록한 뒤 Orchestrator에게 반환한다.
 - UI 검증은 빠른 커스텀 Playwright script나 데모 캡처를 Gate 4 smoke/demo로 사용할 수 있다. Impl worker의 완료 조건은 HTTP/API smoke 또는 빠른 단위 테스트까지만 두고, 브라우저 screenshot은 Gate 4에서 판단한다. PoC 결과를 audit/product로 승격할 때는 `@playwright/test` 기반 공식 UI 증적으로 보강한다.
 - PoC 정합성 평가는 "설계와 100% 일치" 같은 audit식 단정 대신 "PoC 목표 검증에 충분히 일치"와 "product/audit 승격 시 보강할 gap"을 함께 기록한다.
@@ -150,7 +150,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 | 외부 감리, 고객 검수, 공식 산출물 제출이 필요한가? | `Audit Profile` |
 | 일반 제품/업무 앱 개발이며 품질은 유지하되 감리 수준 산출물 밀도는 줄이고 싶은가? | `Product Profile` |
 | 반복 릴리즈와 제품 로드맵, 품질 기준이 중요한가? | `Product Profile` |
-| 핵심 가설이나 기술 가능성을 빠르게 검증하려는가? | `PoC Profile` |
+| 핵심 가설이나 기술 가능성을 실험으로 확인하려는가? | `PoC Profile` |
 
 ## 6. 도구 적용 기준
 
@@ -242,7 +242,7 @@ PoC Profile에서는 Phase 0부터 Gate 5까지 다음 원칙으로 Run 입력 �
 모든 Profile에서 Impl 단계의 `check-trace`는 Gate 3 테스트케이스의 `Planned`/미실행 항목을 Gate 4 실행 대기 항목으로 취급한다.
 실제 Pass/Fail/Not Run 판정은 Gate 4 QA 결과서와 증적으로 확정한다.
 
-PoC 빠른 시작 예:
+PoC 시작 예:
 
 ```powershell
 python vulcan.py init ../my-poc "My PoC" --profile poc
@@ -253,7 +253,7 @@ python vulcan.py status --check
 ```
 
 PoC 산출물 세트와 승격 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`와 `docs/reference/POC-PRODUCT-LIFECYCLE-INTEGRATION-DESIGN-AGY.md`를 참고한다.
-Fast PoC와 Environment Readiness Track 기준은 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 참고한다.
+PoC 실험 기록과 Environment Readiness Track 기준은 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 참고한다.
 Profile 전환은 무거운 승격 프로세스가 아니라 `docs/core/PROFILE_GAP_CHECK.md`의 gap 진단을 먼저 따른다.
 
 Audit Profile에서는 Phase 0부터 Gate 5까지 빈 Run 껍데기를 만들지 않고 다음 항목을 포함한다.

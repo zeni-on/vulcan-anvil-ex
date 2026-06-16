@@ -21,8 +21,8 @@ Phase0 -> Gate1 -> Gate2 -> Gate3 -> Impl -> Gate4 -> Gate5
 흐름은 유지, 산출물은 통합, 검사는 smoke/demo 중심
 ```
 
-다만 실제 샘플에서 Gate 4까지 약 30분이 걸린 사례는 PoC profile이 아직 "빠른 실험"이라기보다 "경량 governance"에 가깝다는 신호다.
-단순 화면/API PoC는 5~10분 안에 동작 결과를 확인하는 fast-track을 목표로 한다.
+다만 실제 샘플에서 PoC profile이 아직 "가설 검증과 반복 기록"이라기보다 "경량 governance"에 가깝게 동작하는 사례가 있었다.
+PoC는 동작 결과뿐 아니라 반복별 기능 추가/변경, 실행 증거, 다음 판단을 남기는 것을 목표로 한다.
 상세 전략은 `FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 따른다.
 
 ## 2. 제안 산출물 세트
@@ -136,7 +136,7 @@ PoC 전용 템플릿 세트를 도입하면 CLI도 profile별 필수 산출물 �
 
 ## 6.1 구현환경 Runway와 BW-000
 
-PoC에서 `BW-000 implementation-scaffold`를 기본 생성하면 빠른 실험의 장점이 줄어든다.
+PoC에서 `BW-000 implementation-scaffold`를 기본 생성하면 실험 기록과 기능 변화 확인 흐름이 무거워진다.
 따라서 PoC는 기본적으로 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행한다.
 
 모든 profile에서 개발환경 준비는 업무 기능 구현과 분리된 Environment Readiness Track으로 앞당길 수 있다.

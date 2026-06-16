@@ -6,7 +6,7 @@ Vulcan-Anvil Ex는 프로젝트마다 같은 무게의 문서와 검증을 강�
 
 | 질문 | 추천 profile |
 | --- | --- |
-| "일단 되는지 빨리 보고 싶다" | `poc` |
+| "기능/기술 가설을 실험하고 결과를 기록하고 싶다" | `poc` |
 | "제품/업무 앱을 만들고 릴리즈 품질을 유지하고 싶다" | `product` |
 | "감리, 고객 검수, 인수인계, 보안/QA 증적이 필요하다" | `audit` |
 
@@ -14,7 +14,7 @@ Vulcan-Anvil Ex는 프로젝트마다 같은 무게의 문서와 검증을 강�
 
 ### PoC
 
-PoC는 가능성 검증입니다. 목표, 가설, 성공 기준, 핵심 설계, smoke/demo 결과만 빠르게 남깁니다.
+PoC는 가능성 검증입니다. 목표, 가설, 성공 기준, 핵심 설계, smoke/demo 결과와 반복별 기능 변화를 남깁니다.
 
 ```powershell
 python vulcan.py init ../my-poc "My PoC" --profile poc

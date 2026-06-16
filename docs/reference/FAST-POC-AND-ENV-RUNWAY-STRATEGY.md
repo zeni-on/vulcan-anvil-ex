@@ -1,6 +1,6 @@
-# Fast PoC and Environment Readiness Runway Strategy
+# PoC and Environment Readiness Runway Strategy
 
-> 목적: PoC profile을 실제 빠른 실험에 맞게 줄이고, 구현 단계에서 처음 개발환경을 만드는 병목을 줄이기 위해 Environment Readiness Track을 정의한다.
+> 목적: PoC profile을 실제 실험 기록에 맞게 줄이고, 구현 단계에서 처음 개발환경을 만드는 병목을 줄이기 위해 Environment Readiness Track을 정의한다.
 
 ## 1. 배경
 
@@ -8,30 +8,28 @@
 `sample-ex-poc-codex-0609-1`의 PoC 실행도 Gate 4까지 약 35분이 걸렸고, subagent 없이 Gate별 Orchestrator Plan Run 7개가 생성되었다.
 반면 같은 수준의 화면 프로토타입을 프레임워크 없이 만들면 약 4~5분 수준으로 관찰되었다.
 
-이 차이는 PoC profile이 아직 "빠른 실험"이라기보다 "경량 governance"로 동작하고 있음을 보여준다.
+이 차이는 PoC profile이 아직 "가설 검증 기록"이라기보다 "경량 governance"로 동작하고 있음을 보여준다.
 PoC가 유용하려면 다음 두 조건을 만족해야 한다.
 
-- 단순 프로토타입은 5~10분 안에 동작 결과를 볼 수 있어야 한다.
+- 무엇을 확인하려 했고, 반복별로 어떤 기능을 추가/변경했으며, 어떤 결과와 판단이 남았는지 복원할 수 있어야 한다.
 - 실패, 미실행, 환경 차단은 정직하게 남기되 audit 수준 산출물과 Build Wave 절차를 강제하지 않아야 한다.
 - Gate별 계획 Run을 습관적으로 만들지 않고, `docs/poc` 3종과 `status --check`를 기본 운영 표면으로 삼아야 한다.
 
-## 2. Fast PoC 목표
+## 2. PoC 목표
 
-Fast PoC는 결과 품질을 낮추는 모드가 아니다.
-문서와 승인 비용을 줄이고, 가설 검증에 필요한 최소 기준만 유지하는 모드다.
+PoC는 결과 품질을 낮추는 모드가 아니다.
+문서와 승인 비용을 줄이고, 가설 검증과 반복별 기능 변화 기록에 필요한 최소 기준만 유지하는 모드다.
 
-권장 목표:
+권장 기준:
 
-| 항목 | 목표 |
+| 항목 | 기준 |
 | --- | --- |
-| 단순 UI/API 프로토타입 Gate 4 도달 | 5~10분 |
-| PoC 전체 종료 판단 | 10~15분 |
 | 필수 문서 | `docs/poc/` 3종 |
 | Run 문서 | 기본 생략, 긴 위임/외부 runner/재현 필요 시만 compact Run |
 | UI 증적 | smoke/demo 캡처, console log, build log |
 | 공식 QA | product/audit 승격 시 보강 |
 
-## 3. Fast PoC 흐름
+## 3. PoC 흐름
 
 ```text
 init --profile poc
@@ -41,7 +39,7 @@ init --profile poc
 → POC_TEST_REPORT: smoke/demo 결과, 증적, Continue/Pivot/Stop/Promote 판단
 ```
 
-Fast PoC에서는 Phase 0, Gate 1, Gate 2, Gate 3 이름을 유지할 수 있지만, 각 Gate를 무거운 문서 작성 단계로 운영하지 않는다.
+PoC에서는 Phase 0, Gate 1, Gate 2, Gate 3 이름을 유지할 수 있지만, 각 Gate를 무거운 문서 작성 단계로 운영하지 않는다.
 사용자 승인도 모든 Gate마다 길게 받기보다 다음 세 지점으로 압축한다.
 
 | 승인 지점 | 의미 |
@@ -117,7 +115,7 @@ Environment Readiness Track의 결과는 기능 구현이 아니므로 main 기�
 - 부족하고 audit/product 공식 계약 필요: BW-000 또는 Environment Readiness Run으로 분리
 ```
 
-## 6. Fast PoC 산출물 기준
+## 6. PoC 산출물 기준
 
 `POC_REQUIREMENTS.md`:
 
@@ -161,9 +159,9 @@ Environment Readiness Track의 결과는 기능 구현이 아니므로 main 기�
 
 ## 8. 성공 기준
 
-Fast PoC 개선은 다음 조건을 만족해야 한다.
+PoC 개선은 다음 조건을 만족해야 한다.
 
-- 단순 Todo/Counter/Hello API PoC가 Gate 4 smoke까지 5~10분 목표에 가까워진다.
+- PoC 수행 후 사용자가 각 반복에서 무엇을 만들고, 무엇을 추가/변경했으며, 어떤 증거로 판단했는지 복원할 수 있다.
 - audit 문서 누락 때문에 막히지 않는다.
 - BW-000을 기본 생성하지 않는다.
 - 환경 준비와 업무 기능 구현의 책임 경계가 문서에 남는다.
