@@ -8194,6 +8194,7 @@ def product_related_ids_for_seeds(project_dir, seeds, base_ids=None):
         "docs/product/PRODUCT_TRACEABILITY.md",
         "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
     ]
+    product_rows = []
     for rel_path in product_docs:
         path = os.path.join(project_dir, rel_path)
         try:
@@ -8205,8 +8206,18 @@ def product_related_ids_for_seeds(project_dir, seeds, base_ids=None):
             for row in rows:
                 row_text = " ".join(str(value) for key, value in row.items() if not key.startswith("__"))
                 row_ids = product_trace_find_ids(row_text)
-                if seed_set.intersection(row_ids):
-                    ids = merge_unique(ids, row_ids)
+                if row_ids:
+                    product_rows.append(row_ids)
+
+    closure = merge_unique(ids, list(seed_set))
+    while True:
+        before = set(closure)
+        for row_ids in product_rows:
+            if before.intersection(row_ids):
+                closure = merge_unique(closure, row_ids)
+        if set(closure) == before:
+            break
+    ids = merge_unique(ids, closure)
     return ids
 
 

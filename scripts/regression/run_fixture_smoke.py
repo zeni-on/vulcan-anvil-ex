@@ -384,6 +384,127 @@ def assert_product_gate4_blocks_planned_regression(project_dir: Path, vulcan_py:
         )
 
 
+def assert_product_multi_scenario_seed_expansion(project_dir: Path, vulcan_py: Path, py: str) -> None:
+    product_dir = project_dir / "docs" / "product"
+    product_dir.mkdir(parents=True, exist_ok=True)
+    (product_dir / "PRODUCT_BRIEF.md").write_text(
+        """# Product Brief
+
+## Core Scenarios
+
+| Scenario ID | 시나리오 | 사용자 가치 | 우선순위 | 관련 REQ |
+| --- | --- | --- | --- | --- |
+| SCN-001 | Add Todo | record item | Must | REQ-001 |
+| SCN-002 | Toggle Todo | update state | Must | REQ-002 |
+| SCN-003 | Delete Todo | remove item | Should | REQ-003 |
+
+## Release Scope
+
+| 구분 | 내용 |
+| --- | --- |
+| 이번 릴리즈 포함 | SCN-001, SCN-002, SCN-003 |
+""",
+        encoding="utf-8",
+    )
+    (product_dir / "PRODUCT_CONTRACTS.md").write_text(
+        """# Product Contracts
+
+## API Contracts
+
+| API ID | Method | Path / Entry | Request | Response | 관련 Scenario | 상세 문서 |
+| --- | --- | --- | --- | --- | --- | --- |
+| API-001 | GET | /api/todos | none | data | SCN-001, SCN-002, SCN-003 | this |
+| API-002 | POST | /api/todos | text | Todo | SCN-001 | this |
+| API-003 | PATCH | /api/todos/{todoId} | completed | Todo | SCN-002 | this |
+| API-004 | DELETE | /api/todos/{todoId} | none | deleted | SCN-003 | this |
+
+## Data Contracts
+
+| DATA/DB ID | 이름 | 주요 필드 | 보안 분류 | 관련 API/Scenario | 상세 문서 |
+| --- | --- | --- | --- | --- | --- |
+| DATA-001 | Todo | id,text,completed | 일반 | API-001, API-002, API-003, API-004, SCN-001, SCN-002, SCN-003 | this |
+
+## UI Contracts
+
+| UI/SCR ID | 화면/상호작용 | 주요 상태 | 관련 Scenario | 검증 |
+| --- | --- | --- | --- | --- |
+| UI-001 | Todo screen | Empty/List/Error | SCN-001, SCN-002, SCN-003 | REG-001 |
+""",
+        encoding="utf-8",
+    )
+    (product_dir / "PRODUCT_TRACEABILITY.md").write_text(
+        """# Product Traceability
+
+| Scenario ID | 관련 REQ | 시나리오 | Contract | Implementation | Regression | Release Evidence | 상태 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| SCN-001 | REQ-001 | Add Todo | API-001, API-002, DATA-001, UI-001 | TBD | REG-001, REG-002 | EV-001 | Planned |
+| SCN-002 | REQ-002 | Toggle Todo | API-001, API-003, DATA-001, UI-001 | TBD | REG-001, REG-002 | EV-002 | Planned |
+| SCN-003 | REQ-003 | Delete Todo | API-001, API-004, DATA-001, UI-001 | TBD | REG-001, REG-002 | EV-003 | Planned |
+""",
+        encoding="utf-8",
+    )
+    (product_dir / "REGRESSION_AND_RELEASE_REPORT.md").write_text(
+        """# Regression And Release Report
+
+| REG ID | 검증 대상 | 명령/방법 | 성공 기준 | 관련 Scenario |
+| --- | --- | --- | --- | --- |
+| REG-001 | API CRUD | pytest | pass | SCN-001, SCN-002, SCN-003 |
+| REG-002 | UI smoke | browser | pass | SCN-001, SCN-002, SCN-003 |
+""",
+        encoding="utf-8",
+    )
+
+    script = (
+        "import importlib.util, json; "
+        f"spec=importlib.util.spec_from_file_location('v', r'{vulcan_py}'); "
+        "m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+        f"ids=m.product_related_ids_for_seeds(r'{project_dir}', ['SCN-001'], ['SCN-001']); "
+        "print(json.dumps(ids, ensure_ascii=False))"
+    )
+    completed = subprocess.run(
+        [py, "-c", script],
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=60,
+    )
+    if completed.returncode != 0:
+        raise FixtureSmokeFailure(
+            "Product multi-scenario seed expansion smoke failed to execute\n"
+            f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+        )
+    try:
+        actual_ids = set(json.loads(completed.stdout.strip().splitlines()[-1]))
+    except Exception as exc:  # pragma: no cover - defensive diagnostic
+        raise FixtureSmokeFailure(f"could not parse Product multi-scenario expansion output: {completed.stdout}") from exc
+    expected_ids = {
+        "SCN-001",
+        "SCN-002",
+        "SCN-003",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "API-001",
+        "API-002",
+        "API-003",
+        "API-004",
+        "DATA-001",
+        "UI-001",
+        "REG-001",
+        "REG-002",
+        "EV-001",
+        "EV-002",
+        "EV-003",
+    }
+    missing = sorted(expected_ids - actual_ids)
+    if missing:
+        raise FixtureSmokeFailure(
+            "Product multi-scenario seed expansion missed related IDs: "
+            f"missing {missing}, actual {sorted(actual_ids)}"
+        )
+
+
 def assert_gitignore_evidence_policy(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     official_log = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "logs" / "QA-CMD-999_fixture.log"
     official_log.parent.mkdir(parents=True, exist_ok=True)
@@ -618,6 +739,15 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 name="product-gate4-blocks-planned-regression",
                 returncode=0,
                 stdout="Product Gate4 blocks Planned/TBD regression execution results",
+                stderr="",
+            )
+        )
+        assert_product_multi_scenario_seed_expansion(profile_product_dir, vulcan_py, py)
+        steps.append(
+            StepResult(
+                name="product-multi-scenario-seed-expansion",
+                returncode=0,
+                stdout="Product SCN-001 seed expands to sibling scenarios and their contracts",
                 stderr="",
             )
         )
