@@ -1,6 +1,7 @@
 # Upgrade And Dashboard
 
 이 문서는 기존 Vulcan-Anvil Ex 프로젝트를 최신 규칙으로 갱신하는 방법과 Dashboard를 통해 진행 상태를 확인하는 방법을 정리합니다.
+Dashboard 화면 자체를 처음 읽는다면 먼저 [Dashboard Guide](DASHBOARD_GUIDE.md)를 참고합니다.
 
 ## 기존 프로젝트 업그레이드
 

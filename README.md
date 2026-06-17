@@ -22,6 +22,13 @@ PoC는 품질이 낮은 모드가 아니라 문서와 증적의 깊이를 줄여
 
 Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
 
+처음이라면 다음 순서로 읽는 것이 가장 쉽습니다.
+
+1. [Quickstart](docs/QUICKSTART.md): 처음 프로젝트를 만들고 Orchestrator에게 무엇을 말할지 확인
+2. [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md): PoC/Product/Audit 중 어떤 강도로 시작할지 결정
+3. [Dashboard Guide](docs/DASHBOARD_GUIDE.md): Gate, 문서, Run, 증적, 코멘트를 화면에서 어떻게 읽는지 확인
+4. [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md): 실제 샘플에서 어느 정도 시간이 걸리고 무엇이 남는지 확인
+
 ## 한눈에 보기
 
 - **사람/사용자**: 목표, 제약, 승인, 판단이 필요한 결정을 제공한다.
@@ -82,6 +89,7 @@ python vulcan.py init ../my-project "My Project" --remote https://github.com/<ow
 ```
 
 자세한 시작 방법은 [Getting Started](docs/GETTING_STARTED.md)를 참고합니다.
+처음 보는 사용자는 더 짧은 [Quickstart](docs/QUICKSTART.md)를 먼저 읽어도 됩니다.
 
 ## 무엇이 남나
 
@@ -141,8 +149,10 @@ npm run dev
 브라우저에서 `http://localhost:3001`로 접속한 뒤 로컬 프로젝트 경로 또는 GitHub 저장소 URL을 등록합니다.
 
 Dashboard는 `session.json`, `docs/artifacts/`, `docs/runs/`, Git 커밋을 읽어 프로젝트 상태를 보여줍니다.
+주로 현재 Gate, 산출문서, Run/worker 기록, QA 증적, 추적 그래프, 문서 코멘트를 확인하는 데 사용합니다.
 
-업그레이드와 Dashboard 운영 방법은 [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md)를 참고합니다.
+Dashboard 화면을 어떻게 읽는지는 [Dashboard Guide](docs/DASHBOARD_GUIDE.md)를 참고합니다.
+업그레이드와 운영 세부사항은 [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md)를 참고합니다.
 
 ## 핵심 흐름
 
@@ -180,8 +190,10 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 | 문서 | 내용 |
 | --- | --- |
+| [Quickstart](docs/QUICKSTART.md) | 처음 프로젝트를 만들고 Orchestrator/Dashboard를 시작하는 가장 짧은 안내 |
 | [Getting Started](docs/GETTING_STARTED.md) | 초기화, 원격 저장소, 프로젝트 시작, 주요 명령 |
 | [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Product, Audit 선택 기준 |
+| [Dashboard Guide](docs/DASHBOARD_GUIDE.md) | Dashboard에서 Gate, 문서, Run, 증적, 코멘트를 읽는 방법 |
 | [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
 | [Product Profile Baseline](docs/core/PRODUCT_PROFILE_BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |

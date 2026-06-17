@@ -2,6 +2,9 @@
 
 Vulcan-Anvil Ex는 사용자가 명령어를 하나씩 넣어 산출물을 수동 생성하는 도구가 아닙니다. 사용자는 만들고 싶은 것과 중요한 제약을 말하고, Orchestrator가 Gate에 맞게 요구사항, 설계, 구현, 테스트, 증적을 조율합니다.
 
+처음 보는 사용자는 이 문서보다 짧은 [Quickstart](QUICKSTART.md)를 먼저 읽어도 됩니다.
+Dashboard 화면에서 무엇을 봐야 하는지는 [Dashboard Guide](DASHBOARD_GUIDE.md)를 참고합니다.
+
 ## 1. 새 프로젝트 초기화
 
 ```powershell
