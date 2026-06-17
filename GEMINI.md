@@ -76,7 +76,7 @@
 
 * **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Antigravity 런타임의 서브에이전트 제어 도구인 `define_subagent` 및 `invoke_subagent`를 사용하여 동적으로 하부 작업자를 기동한다.
 * **가상 격리 워크스페이스 (`Workspace: branch`)**: 워커 위임 호출 시 `Workspace` 파라미터는 반드시 `'branch'` 모드로 설정하여 CoW 기반의 초고속 격리 빌드/테스트 환경을 활용한다.
-* **환경 준비 위임**: `Workspace: branch`는 PoC/solution/audit 모두에서 Environment Readiness Track에 사용할 수 있다. 부모 workspace에 반영되는 결과는 환경 기준선 후보이며, 오케스트레이터가 scope와 smoke 검증을 재실행한 뒤에만 확정한다.
+* **환경 준비 위임**: `Workspace: branch`는 PoC/product/audit 모두에서 Environment Readiness Track에 사용할 수 있다. 부모 workspace에 반영되는 결과는 환경 기준선 후보이며, 오케스트레이터가 scope와 smoke 검증을 재실행한 뒤에만 확정한다.
 * **PoC 구현 위임 축소**: Agy `Workspace: branch`가 빠르더라도 PoC Impl worker에게 browser evidence, README, 최종 결과서, release/backlog 정리를 한꺼번에 맡기지 않는다. 구현이 끝나고 비차단 `run-preflight`/`run-check` 경고만 남으면 경고를 기록하고 Orchestrator에게 반환한다.
 * **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Antigravity 런타임의 메시징 도구인 `send_message`로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
 
