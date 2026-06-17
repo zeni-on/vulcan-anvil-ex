@@ -86,6 +86,7 @@
 
 4. **PoC 실험 기록과 Environment Readiness Track**
    - PoC profile은 "경량 audit"이 아니라 확인하려는 가설, 반복별 기능 변화, 실행 결과, 다음 판단을 남기는 실험 기록 중심으로 재정의한다.
+   - `sample-ex-poc-record-0616-1` 재실행에서 `docs/poc` 3종만으로 Phase 0~Gate 4를 진행할 수 있고, Phase 0에서 구현/테스트 파일을 먼저 만들면 `status --check`가 차단하는 것을 확인했다.
    - 구현 단계에서 `BW-000`으로 처음 개발환경을 만들지 않고, Phase 0~Gate 3 동안 SA/AA 성격의 subagent가 Environment Readiness Track으로 병렬 준비할 수 있게 한다.
    - Environment Readiness Track은 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke까지만 허용하고 업무 요구사항 구현/Pass 확정은 금지한다.
    - 상세 설계는 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 따른다.
@@ -93,7 +94,7 @@
 5. **PoC template set 1차 검증**
    - PoC를 audit 템플릿의 느슨한 검사 모드로만 다루지 않고, 별도 `docs/templates/poc/` 산출물 세트로 분리하는 방향을 검증한다.
    - 1차 후보는 PoC 요구사항/가설, PoC 시스템 통합 설계, PoC 테스트/결과/판정의 3개 템플릿이다.
-   - 이번 주 샘플에서 `init --profile poc` 기준으로 3개 산출물만으로 Phase 0~Gate 5를 끝까지 진행해 보고, `status --check`, `run-check`, `check-trace`, Dashboard가 audit 문서 누락으로 과하게 막히는 지점을 기록한다.
+   - 1차 재실행 결과 현재 템플릿으로도 PoC는 가능하므로, 템플릿 대수정은 보류한다. 다음 검증은 여러 번 기능을 추가하는 반복형 PoC에서 `Fix Log / Experiment Iterations`가 충분히 복원 가능한지 확인한다.
    - 상세 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
 
 6. **사용자 온보딩과 샘플 증거 정리**
@@ -126,6 +127,7 @@
 3. **Delivery Profile 구체화**
    - Audit/SI, Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
    - Product profile은 OWASP/CWE 기반 보안 기준선과 프로젝트 단어사전/데이터 매핑을 기본으로 삼고, KISA/공공데이터 공통표준은 Audit 전환 gap으로 정리한다.
+   - Product profile은 현재 문서 세트, Gate별 필수 산출물, trace 검사, `release-pr --dry-run` evidence 기준이 1차 구현되어 있다. 다음 작업은 새 기능보다 Product fixture smoke와 실제 샘플 재실행으로 회귀를 고정하는 것이다.
    - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
    - PoC 산출물 세트 분리 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
    - Product 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`를 따른다.
@@ -167,7 +169,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | --- | --- | --- |
 | Audit/SI | 감리, 인수인계, 장기 유지보수 대응 | 가장 강함 |
 | Product | 제품 로드맵, 릴리즈, 품질 기준 중심 | 중간 |
-| PoC | 빠른 가능성 검증 | 낮음 |
+| PoC | 기능/기술 가설 실험과 반복 기록 | 낮음 |
 자세한 기준 초안은 `docs/core/DELIVERY_PROFILES.md`를 따릅니다.
 현재 CLI는 `init --profile`과 `profile-status`를 제공하며, 검사 엄격도와 Dashboard 표시는 후속 단계에서 Profile Overlay와 연결합니다.
 

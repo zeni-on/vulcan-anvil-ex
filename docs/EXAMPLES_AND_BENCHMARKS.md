@@ -19,6 +19,17 @@
 | 테스트 | smoke, 빠른 self-check, 필요 시 데모 캡처 | unit/integration/UI/QA 결과서와 증적 |
 | 적합한 경우 | 아이디어 검증, 내부 데모, 기술 가능성 확인 | 고객 검수, 장기 유지보수, 공식 인수인계 |
 
+### PoC record replay 관찰
+
+`sample-ex-poc-record-0616-1`에서는 PoC profile을 시간 목표가 아니라 실험 기록 관점으로 재실행했다.
+
+- `docs/poc/POC_REQUIREMENTS.md`, `POC_SYSTEM_DESIGN.md`, `POC_TEST_REPORT.md` 3종만으로 Phase 0~Gate 4 진행이 가능했다.
+- Phase 0 상태에서 구현/테스트 파일을 먼저 만들면 `status --check`가 프로세스 위반으로 차단했다.
+- Gate 4에서는 `node --check static/app.js`, `node tests/todo_store_test.js`를 실행하고 결과를 `POC_TEST_REPORT.md`에 반영했다.
+- 반복별 기능 추가/변경은 `Fix Log / Experiment Iterations`에 `ITER-001`, `ITER-002`처럼 남겼다.
+
+이 관찰 기준으로 PoC는 "정해진 시간 안에 끝나는 모드"가 아니라, 기능 가설과 반복별 변경, 실행 증거, 다음 판단을 복원 가능하게 남기는 모드로 본다.
+
 ## Profile별 결과물 예시
 
 ### PoC
