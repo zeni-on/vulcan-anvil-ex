@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Product TODO</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">Product TODO</p>
+        <h1>오늘 할 일</h1>
+      </header>
+      <form id="todo-form" class="todo-form">
+        <input id="todo-input" maxlength="140" placeholder="할 일을 입력하세요" />
+        <button type="submit">추가</button>
+      </form>
+      <p id="message" class="message"></p>
+      <ul id="todo-list" class="todo-list"></ul>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

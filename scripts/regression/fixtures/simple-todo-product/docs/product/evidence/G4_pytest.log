@@ -1,0 +1,46 @@
+C:\Users\user\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.....                                                                    [100%]
+============================== warnings summary ===============================
+tests/test_todos.py: 54 warnings
+tests/test_ui_smoke.py: 11 warnings
+  C:\Users\user\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py:39: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj) or (callable(obj) and asyncio.iscoroutinefunction(obj.__call__))
+
+tests/test_todos.py::test_scn_001_create_and_list_todo
+tests/test_todos.py::test_scn_001_create_and_list_todo
+tests/test_todos.py::test_scn_002_toggle_completed
+tests/test_todos.py::test_scn_003_delete_todo
+tests/test_todos.py::test_validation_rejects_blank_text
+tests/test_ui_smoke.py::test_reg_002_ui_shell_and_static_assets_load
+  C:\Users\user\Documents\antig-workspace\sample-ex-product-0616-1\app\main.py:68: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+tests/test_todos.py::test_scn_001_create_and_list_todo
+tests/test_todos.py::test_scn_001_create_and_list_todo
+tests/test_todos.py::test_scn_002_toggle_completed
+tests/test_todos.py::test_scn_003_delete_todo
+tests/test_todos.py::test_validation_rejects_blank_text
+tests/test_ui_smoke.py::test_reg_002_ui_shell_and_static_assets_load
+  C:\Users\user\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\applications.py:4495: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+tests/test_todos.py: 25 warnings
+tests/test_ui_smoke.py: 5 warnings
+  C:\Users\user\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5 passed, 107 warnings in 0.61s

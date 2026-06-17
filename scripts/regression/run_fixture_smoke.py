@@ -21,6 +21,7 @@ from pathlib import Path
 
 
 DEFAULT_FIXTURE = "simple-hello-audit"
+DEFAULT_PRODUCT_FIXTURE = "simple-todo-product"
 
 REPRESENTATIVE_RUNS = [
     "RUN-010_python-hello-api-implementation-plan_v0.1.md",
@@ -124,6 +125,22 @@ def apply_fixture(fixture_dir: Path, project_dir: Path) -> None:
     shutil.copy2(fixture_dir / "vulcan.config.fixture.json", project_dir / "vulcan.config.json")
 
 
+def apply_product_fixture(fixture_dir: Path, project_dir: Path) -> None:
+    if not fixture_dir.exists():
+        raise FixtureSmokeFailure(f"product fixture not found: {fixture_dir}")
+
+    for dirname in ["app", "static", "tests"]:
+        copy_dir(fixture_dir / dirname, project_dir / dirname)
+
+    for dirname in ["product", "backlog", "runs"]:
+        copy_dir(fixture_dir / "docs" / dirname, project_dir / "docs" / dirname)
+
+    copy_dir(fixture_dir / "docs" / "artifacts" / "07-release", project_dir / "docs" / "artifacts" / "07-release")
+    shutil.copy2(fixture_dir / "requirements.txt", project_dir / "requirements.txt")
+    shutil.copy2(fixture_dir / "session.fixture.json", project_dir / "session.json")
+    shutil.copy2(fixture_dir / "vulcan.config.fixture.json", project_dir / "vulcan.config.json")
+
+
 def validate_fixture_inputs(project_dir: Path) -> None:
     missing = []
     for run_name in REPRESENTATIVE_RUNS + PREFLIGHT_RUNS + QA_PREFLIGHT_RUNS:
@@ -138,6 +155,31 @@ def validate_fixture_inputs(project_dir: Path) -> None:
             missing.append(str(path.relative_to(project_dir)))
     if missing:
         raise FixtureSmokeFailure("fixture missing required files:\n" + "\n".join(f"  - {item}" for item in missing))
+
+
+def validate_product_fixture_inputs(project_dir: Path) -> None:
+    required = [
+        "app/main.py",
+        "static/index.html",
+        "static/app.js",
+        "tests/test_todos.py",
+        "tests/test_ui_smoke.py",
+        "requirements.txt",
+        "docs/product/PRODUCT_BRIEF.md",
+        "docs/product/PRODUCT_ARCHITECTURE.md",
+        "docs/product/ADR_LOG.md",
+        "docs/product/PRODUCT_CONTRACTS.md",
+        "docs/product/PRODUCT_TRACEABILITY.md",
+        "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+        "docs/product/evidence/G4_status_check.log",
+        "docs/product/evidence/G4_pytest.log",
+        "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
+        "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
+        "docs/runs/RUN-001_build-wave-BW-001_scn-001-003-todo-product-slice-implementation_v0.1.md",
+    ]
+    missing = [rel for rel in required if not (project_dir / rel).exists()]
+    if missing:
+        raise FixtureSmokeFailure("product fixture missing required files:\n" + "\n".join(f"  - {item}" for item in missing))
 
 
 def assert_trace_context_json(result: StepResult) -> None:
@@ -275,6 +317,59 @@ def assert_release_pr_body(result: StepResult) -> None:
     missing = [text for text in required if text not in body]
     if missing:
         raise FixtureSmokeFailure(f"release-pr body missing required text: {missing}\n{body}")
+
+
+def assert_product_completed_release_pr_body(result: StepResult) -> None:
+    body_path = release_pr_body_path_from_output(result.combined_output)
+    if not body_path.exists():
+        raise FixtureSmokeFailure(f"Product release-pr body file was not created: {body_path}")
+    body = body_path.read_text(encoding="utf-8")
+    required = [
+        "Profile: `product`",
+        "- [OK] `docs/product/PRODUCT_BRIEF.md`",
+        "- [OK] `docs/product/PRODUCT_CONTRACTS.md`",
+        "- [OK] `docs/product/PRODUCT_TRACEABILITY.md`",
+        "- [OK] `docs/product/REGRESSION_AND_RELEASE_REPORT.md`",
+        "- [OK] `docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`",
+        "Product regression result and release scope reviewed",
+    ]
+    missing = [text for text in required if text not in body]
+    if missing:
+        raise FixtureSmokeFailure(f"Product completed release-pr body missing required text: {missing}\n{body}")
+    forbidden = [
+        "DOC-QA-G4-001_QA-Finding",
+        "DOC-QA-G4-002_Test-Result",
+        "DOC-CORE-G4-001_Traceability-Matrix",
+    ]
+    present = [text for text in forbidden if text in body]
+    if present:
+        raise FixtureSmokeFailure(f"Product completed release-pr body included audit-only evidence: {present}\n{body}")
+
+
+def assert_product_completed_fixture_text(project_dir: Path) -> None:
+    trace = (project_dir / "docs" / "product" / "PRODUCT_TRACEABILITY.md").read_text(encoding="utf-8")
+    release = (project_dir / "docs" / "product" / "REGRESSION_AND_RELEASE_REPORT.md").read_text(encoding="utf-8")
+    run = (
+        project_dir
+        / "docs"
+        / "runs"
+        / "RUN-001_build-wave-BW-001_scn-001-003-todo-product-slice-implementation_v0.1.md"
+    ).read_text(encoding="utf-8")
+
+    required_trace = ["SCN-001", "SCN-002", "SCN-003", "Verified", "REG-001", "REG-002"]
+    missing_trace = [text for text in required_trace if text not in trace]
+    if missing_trace:
+        raise FixtureSmokeFailure(f"Product fixture traceability missing required text: {missing_trace}")
+
+    required_release = ["REG-001", "REG-002", "Pass", "ISSUE-G4-001", "Conditional"]
+    missing_release = [text for text in required_release if text not in release]
+    if missing_release:
+        raise FixtureSmokeFailure(f"Product fixture release report missing required text: {missing_release}")
+
+    required_run = ["delegation_records", "status: Verified", "SCN-001", "SCN-002", "SCN-003"]
+    missing_run = [text for text in required_run if text not in run]
+    if missing_run:
+        raise FixtureSmokeFailure(f"Product fixture Run missing required text: {missing_run}")
 
 
 def assert_product_build_wave_related_ids(project_dir: Path, vulcan_py: Path) -> None:
@@ -675,6 +770,7 @@ def assert_run_integrate_config_hotfix_candidate(project_dir: Path, py: str, ste
 def run_fixture_smoke(args: argparse.Namespace) -> int:
     root = repo_root()
     fixture_dir = root / "scripts" / "regression" / "fixtures" / args.fixture
+    product_fixture_dir = root / "scripts" / "regression" / "fixtures" / args.product_fixture
     vulcan_py = root / "vulcan.py"
     if not vulcan_py.exists():
         raise FixtureSmokeFailure(f"vulcan.py not found at {vulcan_py}")
@@ -692,6 +788,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
     project_dir = base_dir / "regression-simple-hello"
     profile_solution_dir = base_dir / "profile-solution-smoke"
     profile_product_dir = base_dir / "profile-product-smoke"
+    profile_product_completed_dir = base_dir / "profile-product-completed-fixture-smoke"
     profile_poc_dir = base_dir / "profile-poc-smoke"
     py = sys.executable
     steps: list[StepResult] = []
@@ -790,6 +887,87 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 stderr="",
             )
         )
+        steps.append(
+            run_step(
+                "init-profile-product-completed-fixture",
+                [
+                    py,
+                    str(vulcan_py),
+                    "init",
+                    str(profile_product_completed_dir),
+                    "profile-product-completed-fixture-smoke",
+                    "--profile",
+                    "product",
+                ],
+                cwd=root,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        apply_product_fixture(product_fixture_dir, profile_product_completed_dir)
+        validate_product_fixture_inputs(profile_product_completed_dir)
+        assert_product_completed_fixture_text(profile_product_completed_dir)
+        steps.append(
+            StepResult(
+                name="product-completed-fixture-files",
+                returncode=0,
+                stdout="Product completed fixture files and trace text validated",
+                stderr="",
+            )
+        )
+        steps.append(
+            run_step(
+                "product-completed-fixture:compileall",
+                [py, "-m", "compileall", "app"],
+                cwd=profile_product_completed_dir,
+                timeout_seconds=args.timeout_seconds,
+            )
+        )
+        steps.append(
+            run_step(
+                "product-completed-fixture:configure-git-user-email",
+                ["git", "config", "user.email", "vulcan-regression@example.invalid"],
+                cwd=profile_product_completed_dir,
+            )
+        )
+        steps.append(
+            run_step(
+                "product-completed-fixture:configure-git-user-name",
+                ["git", "config", "user.name", "Vulcan Regression"],
+                cwd=profile_product_completed_dir,
+            )
+        )
+        steps.append(run_step("product-completed-fixture:add", ["git", "add", "-A"], cwd=profile_product_completed_dir))
+        steps.append(
+            run_step(
+                "product-completed-fixture:commit",
+                ["git", "commit", "-m", "test: apply completed product fixture"],
+                cwd=profile_product_completed_dir,
+            )
+        )
+        steps.append(run_step("product-completed-fixture:checkout-dev", ["git", "checkout", "-B", "dev"], cwd=profile_product_completed_dir))
+        steps.append(
+            run_step(
+                "product-completed-fixture:status-check",
+                [py, "vulcan.py", "status", "--check"],
+                cwd=profile_product_completed_dir,
+                required_text=[
+                    "현재 프로젝트는 모든 Gate를 마쳤습니다",
+                    "Completed",
+                ],
+            )
+        )
+        completed_release_pr = run_step(
+            "product-completed-fixture:release-pr-dry-run",
+            [py, "vulcan.py", "release-pr", "--dry-run"],
+            cwd=profile_product_completed_dir,
+            required_text=[
+                "Profile: `product`",
+                "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            ],
+        )
+        assert_product_completed_release_pr_body(completed_release_pr)
+        steps.append(completed_release_pr)
         steps.append(
             run_step(
                 "init-profile-poc",
@@ -1134,6 +1312,11 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run fixture-based Vulcan regression smoke checks.")
     parser.add_argument("--fixture", default=DEFAULT_FIXTURE, help=f"Fixture name under scripts/regression/fixtures (default: {DEFAULT_FIXTURE}).")
+    parser.add_argument(
+        "--product-fixture",
+        default=DEFAULT_PRODUCT_FIXTURE,
+        help=f"Completed Product fixture name under scripts/regression/fixtures (default: {DEFAULT_PRODUCT_FIXTURE}).",
+    )
     parser.add_argument("--output-dir", help="Optional empty directory where the smoke project should be created.")
     parser.add_argument("--keep", action="store_true", help="Keep the generated fixture smoke project after the run.")
     parser.add_argument("--timeout-seconds", type=int, default=180, help="Timeout for individual subprocess steps.")

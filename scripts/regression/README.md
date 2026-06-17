@@ -28,6 +28,9 @@ python scripts/regression/run_fixture_smoke.py
 
 이 스크립트는 `scripts/regression/fixtures/simple-hello-audit/` fixture를 임시 프로젝트에 적용하고 다음 항목을 확인한다.
 
+- `init --profile product`가 Product 문서 세트와 profile rules를 생성한다.
+- `scripts/regression/fixtures/simple-todo-product/` completed Product fixture를 적용한 뒤 `status --check`와 `release-pr --dry-run`이 통과한다.
+- Product release body는 `docs/product/` 원장과 backlog/release approval을 evidence로 사용하고, audit 전용 QA Finding/Test Result/Traceability Matrix를 요구하지 않는다.
 - 완료된 문서 세트에서 `check-trace`가 통과한다.
 - 완료된 fixture 프로젝트에서 `status`가 Gate/Profile/브랜치 상태를 요약한다.
 - 설계 산출물에서 `check-architecture --level baseline`이 통과한다.

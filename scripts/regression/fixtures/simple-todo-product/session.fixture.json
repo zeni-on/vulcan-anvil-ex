@@ -1,0 +1,193 @@
+{
+  "project": "Product TODO v0.4.8 Replay",
+  "vulcan_src": "C:\\Users\\user\\Documents\\antig-workspace\\vulcan-anvil-ex",
+  "vulcan_version": "0.4.8",
+  "profile": "product",
+  "current_gate": "completed",
+  "gate_status": {
+    "phase0": "done",
+    "gate1": "done",
+    "gate2": "done",
+    "gate3": "done",
+    "impl": "done",
+    "gate4": "done",
+    "gate5": "done"
+  },
+  "feature": "",
+  "started": "2026-06-16",
+  "completed": [
+    "Phase 0 Discovery - ",
+    "Gate 1 요구사항 - ",
+    "Gate 2 설계 - ",
+    "Gate 3 테스트 플랜 - ",
+    "구현 - ",
+    "Gate 4 QA 검토 - ",
+    "Gate 5 최종 승인 - "
+  ],
+  "pending": [],
+  "blocked": [],
+  "stats": {
+    "requirements": {
+      "groups": 0,
+      "total": 0,
+      "implemented": 0,
+      "pending": 0,
+      "ac_defined": 0,
+      "ac_missing": 0
+    },
+    "implementation": {
+      "requirements": {
+        "total": 0,
+        "implemented": 0,
+        "pending": 0,
+        "completed_ids": []
+      },
+      "waves": {
+        "total": 1,
+        "completed": 1,
+        "current": "",
+        "items": [
+          {
+            "id": "BW-001",
+            "status": "Verified",
+            "run": "docs\\runs\\RUN-001_build-wave-BW-001_scn-001-003-todo-product-slice-implementation_v0.1.md",
+            "related_ids": [
+              "API-001",
+              "API-002",
+              "API-003",
+              "API-004",
+              "DATA-001",
+              "EV-001",
+              "REG-001",
+              "REG-002",
+              "REQ-001",
+              "REQ-002",
+              "REQ-003",
+              "SCN-001",
+              "SCN-002",
+              "SCN-003",
+              "UI-001"
+            ]
+          }
+        ]
+      }
+    },
+    "tests": {
+      "total": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "pending": 0
+    },
+    "docs": {
+      "discovery": 0,
+      "requirements": 0,
+      "design": 0,
+      "test_plan": 0,
+      "review": 0,
+      "release": 1,
+      "backlog": 0,
+      "runs": 1,
+      "total": 2
+    },
+    "backlog": {
+      "active": 0,
+      "done": 0,
+      "rejected": 0,
+      "by_type": {
+        "idea": 0,
+        "find": 0,
+        "cr": 0,
+        "issue": 0,
+        "debt": 0
+      },
+      "by_level": {
+        "trivial": 0,
+        "small": 0,
+        "major": 0
+      },
+      "by_priority": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      }
+    },
+    "updated_at": "2026-06-16"
+  },
+  "approvals": {
+    "phase0": {
+      "approved_at": "2026-06-16T08:22:19",
+      "approval_evidence": "Product brief 최소 목표/사용자/성공 기준 작성 및 status --check 통과"
+    },
+    "gate1": {
+      "approved_at": "2026-06-16T08:22:42",
+      "approval_evidence": "Product brief에 SCN-001~003 및 REQ 연결 작성, status --check 통과"
+    },
+    "gate2": {
+      "approved_at": "2026-06-16T08:24:28",
+      "approval_evidence": "Product architecture/contracts 최소 설계 작성 및 status --check 통과"
+    },
+    "gate3": {
+      "approved_at": "2026-06-16T08:25:30",
+      "approval_evidence": "Product regression plan과 SCN-001~003 trace 작성 및 status --check 통과"
+    },
+    "impl": {
+      "approved_at": "2026-06-16T08:29:58",
+      "approval_evidence": "BW-001 Verified, compileall/pytest/run-check/run-preflight 통과"
+    },
+    "gate4": {
+      "approved_at": "2026-06-16T08:31:26",
+      "approval_evidence": "REG-001/REG-002 Gate4 실행, pytest 5 passed, Product trace Verified"
+    },
+    "gate5": {
+      "approved_at": "2026-06-16T08:32:43",
+      "approval_evidence": "Gate5 release approval 문서 작성, Product trace/release report/backlog 확인"
+    }
+  },
+  "implementation": {
+    "requirements": {
+      "total": 0,
+      "implemented": 0,
+      "pending": 0,
+      "completed_ids": []
+    },
+    "waves": {
+      "total": 1,
+      "completed": 1,
+      "current": "",
+      "items": [
+        {
+          "id": "BW-001",
+          "status": "Verified",
+          "run": "docs\\runs\\RUN-001_build-wave-BW-001_scn-001-003-todo-product-slice-implementation_v0.1.md",
+          "related_ids": [
+            "API-001",
+            "API-002",
+            "API-003",
+            "API-004",
+            "DATA-001",
+            "EV-001",
+            "REG-001",
+            "REG-002",
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "SCN-001",
+            "SCN-002",
+            "SCN-003",
+            "UI-001"
+          ]
+        }
+      ]
+    }
+  },
+  "branch_state": {
+    "main_branch": "main",
+    "integration_branch": "dev",
+    "current_role": "integration",
+    "current_branch": "dev",
+    "started_at": "2026-06-16T08:25:34",
+    "stage": "impl"
+  }
+}
