@@ -146,6 +146,7 @@ export class LocalDataSource implements DataSource {
         workflow: result.data.workflow ?? runtime.workflow ?? null,
         active_executions: activeExecutions,
         worktrees: this.readRuntimeWorktrees(activeExecutions),
+        delegations: this.readRunDelegations(),
       }
     } catch (err) {
       console.warn('[LocalDataSource] vulcan.config.json 읽기 실패:', err)
@@ -332,6 +333,151 @@ export class LocalDataSource implements DataSource {
     } catch {
       return null
     }
+  }
+
+  private readRunDelegations(): ProjectRuntime['delegations'] {
+    const runsPath = path.join(this.resolvedBasePath, 'docs', 'runs')
+    this.assertSafePath(runsPath)
+
+    if (!fs.existsSync(runsPath)) return []
+
+    try {
+      return fs.readdirSync(runsPath)
+        .filter((name) => name.toLowerCase().endsWith('.md'))
+        .flatMap((name) => {
+          const filePath = path.join(runsPath, name)
+          this.assertSafePath(filePath)
+          if (!fs.statSync(filePath).isFile()) return []
+          const content = fs.readFileSync(filePath, 'utf-8')
+          return this.parseRunDelegations(name, content)
+        })
+        .slice(0, 12)
+    } catch (err) {
+      console.warn('[LocalDataSource] Run 위임 기록 읽기 실패:', err)
+      return []
+    }
+  }
+
+  private parseRunDelegations(fileName: string, content: string): NonNullable<ProjectRuntime['delegations']> {
+    const runId = this.extractRunId(fileName, content)
+    const runFile = `docs/runs/${fileName}`
+    const records = this.parseDelegationRecordsBlock(content, runId, runFile)
+    if (records.length > 0) return records
+
+    if (/^#{2,4}\s*Run Execution Record\b/m.test(content)) {
+      return [{
+        run_id: runId,
+        run_file: runFile,
+        mode: 'external-runner',
+        delegate: this.extractScalar(content, 'runner') ?? undefined,
+        task: this.extractScalar(content, 'task') ?? this.extractScalar(content, 'goal') ?? undefined,
+        status: this.extractScalar(content, 'status') ?? undefined,
+        source: 'run_execution_record',
+      }]
+    }
+
+    if (/orchestrator_direct_edit_reason\s*:/i.test(content)) {
+      return [{
+        run_id: runId,
+        run_file: runFile,
+        mode: 'manual',
+        delegate: 'orchestrator',
+        task: this.extractScalar(content, 'goal') ?? undefined,
+        status: this.extractScalar(content, 'status') ?? undefined,
+        source: 'direct_edit',
+      }]
+    }
+
+    return []
+  }
+
+  private parseDelegationRecordsBlock(
+    content: string,
+    runId: string,
+    runFile: string,
+  ): NonNullable<ProjectRuntime['delegations']> {
+    const lines = content.split(/\r?\n/)
+    const start = lines.findIndex((line) => /^delegation_records\s*:/i.test(line.trim()))
+    if (start < 0) return []
+    if (/\[\s*\]\s*$/.test(lines[start] ?? '')) return []
+
+    const block: string[] = []
+    for (let index = start + 1; index < lines.length; index += 1) {
+      const line = lines[index] ?? ''
+      if (line.trim() === '') {
+        block.push(line)
+        continue
+      }
+      if (/^\S/.test(line)) break
+      block.push(line)
+    }
+
+    const records: NonNullable<ProjectRuntime['delegations']> = []
+    let current: Record<string, string> | null = null
+    let inChangedFiles = false
+    let changedCount = 0
+
+    const pushCurrent = () => {
+      if (!current) return
+      const mode = current.mode || current.runner || current.delegate || 'unknown'
+      records.push({
+        run_id: runId,
+        run_file: runFile,
+        mode: this.cleanYamlScalar(mode),
+        delegate: current.delegate ? this.cleanYamlScalar(current.delegate) : undefined,
+        task: current.task ? this.cleanYamlScalar(current.task) : undefined,
+        status: current.status ? this.cleanYamlScalar(current.status) : undefined,
+        result_summary: current.result_summary ? this.cleanYamlScalar(current.result_summary) : undefined,
+        changed_count: changedCount || undefined,
+        source: 'delegation_records',
+      })
+    }
+
+    for (const rawLine of block) {
+      const itemMatch = rawLine.match(/^\s*-\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/)
+      if (itemMatch) {
+        pushCurrent()
+        current = { [itemMatch[1] ?? 'mode']: itemMatch[2] ?? '' }
+        inChangedFiles = false
+        changedCount = 0
+        continue
+      }
+      if (!current) continue
+
+      const keyValueMatch = rawLine.match(/^\s+([A-Za-z_][\w-]*)\s*:\s*(.*)$/)
+      if (keyValueMatch) {
+        const key = keyValueMatch[1] ?? ''
+        const value = keyValueMatch[2] ?? ''
+        current[key] = value
+        inChangedFiles = key === 'changed_files'
+        continue
+      }
+
+      if (inChangedFiles && /^\s+-\s+/.test(rawLine)) {
+        changedCount += 1
+      }
+    }
+    pushCurrent()
+
+    return records
+  }
+
+  private extractRunId(fileName: string, content: string): string {
+    const fromContent = content.match(/^run_id\s*:\s*["']?([A-Z]+-\d+)/im)?.[1]
+    if (fromContent) return fromContent
+    return fileName.match(/(?:RUN|RV|QA)-\d+/i)?.[0]?.toUpperCase() ?? fileName.replace(/\.md$/i, '')
+  }
+
+  private extractScalar(content: string, key: string): string | null {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = content.match(new RegExp(`^\\s*${escaped}\\s*:\\s*(.+)$`, 'im'))
+    return match?.[1] ? this.cleanYamlScalar(match[1]) : null
+  }
+
+  private cleanYamlScalar(value: string): string {
+    const trimmed = value.trim()
+    if (trimmed === '[]' || trimmed === '{}' || trimmed === 'null') return ''
+    return trimmed.replace(/^["']|["']$/g, '')
   }
 
   /**

@@ -245,6 +245,18 @@ export const RuntimeWorktreeSchema = z.object({
   stale: z.boolean().optional(),
 })
 
+export const RuntimeDelegationRecordSchema = z.object({
+  run_id: z.string().min(1),
+  run_file: z.string().min(1),
+  mode: z.string().min(1),
+  delegate: z.string().optional(),
+  task: z.string().optional(),
+  status: z.string().optional(),
+  result_summary: z.string().optional(),
+  changed_count: z.number().nonnegative().optional(),
+  source: z.enum(['delegation_records', 'run_execution_record', 'direct_edit']),
+})
+
 export const WorkflowPolicySchema = z.object({
   branch_mode: z.string().optional(),
   main_branch: z.string().optional(),
@@ -263,6 +275,7 @@ export const ProjectRuntimeSchema = z.object({
   available_runners: z.array(RuntimeRunnerSchema).default([]),
   active_executions: z.array(RuntimeActivitySchema).default([]),
   worktrees: z.array(RuntimeWorktreeSchema).default([]),
+  delegations: z.array(RuntimeDelegationRecordSchema).default([]),
 }).transform((runtime) => {
   const names = runtime.available_runners.map((runner) => runner.name)
   const hasRunner = names.length > 0

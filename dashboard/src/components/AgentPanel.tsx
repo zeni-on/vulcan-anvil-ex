@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, RefreshCw, X, XCircle, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FolderGit2, GitBranch, Loader2, RefreshCw, UsersRound, X, XCircle, type LucideIcon } from 'lucide-react'
 import RunnerStatusPanel from '@/components/RunnerStatusPanel'
-import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeWatchdog, RuntimeWorktree } from '@/lib/types'
+import { ProjectRuntime, RuntimeActivity, RuntimeActivityEvent, RuntimeDelegationRecord, RuntimeWatchdog, RuntimeWorktree } from '@/lib/types'
 
 function worktreeTone(status: string): {
   label: string
@@ -66,6 +66,22 @@ function formatAge(seconds?: number): string {
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes}분 전`
   return `${Math.floor(minutes / 60)}시간 전`
+}
+
+function delegationModeLabel(mode: string): string {
+  if (mode === 'codex-subagent') return 'Codex subagent'
+  if (mode === 'codex-thread') return 'Codex thread'
+  if (mode === 'claude-subagent') return 'Claude subagent'
+  if (mode === 'agy-branch-agent') return 'Agy branch'
+  if (mode === 'external-runner') return 'External CLI'
+  if (mode === 'manual') return 'Direct edit'
+  return mode || '기록 없음'
+}
+
+function delegationSourceLabel(source: RuntimeDelegationRecord['source']): string {
+  if (source === 'delegation_records') return 'delegation_records'
+  if (source === 'run_execution_record') return 'Run Execution Record'
+  return 'direct edit reason'
 }
 
 function formatSeconds(seconds?: number): string {
@@ -463,6 +479,43 @@ function WorktreeRow({ worktree }: { worktree: RuntimeWorktree }) {
   )
 }
 
+function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
+  const tooltip = [
+    record.run_file,
+    record.delegate ? `delegate: ${record.delegate}` : '',
+    record.task ? `task: ${record.task}` : '',
+    record.result_summary ? `summary: ${record.result_summary}` : '',
+  ].filter(Boolean).join('\n')
+
+  return (
+    <li className="rounded-md border border-slate-800 bg-slate-900/45 px-2 py-1.5" title={tooltip}>
+      <div className="flex min-w-0 items-center gap-2">
+        <UsersRound className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-xs font-semibold text-slate-100">{record.run_id}</span>
+            <span className="min-w-0 truncate text-[11px] text-slate-400">
+              {delegationModeLabel(record.mode)}
+            </span>
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500">
+            {record.delegate && <span className="shrink-0">{record.delegate}</span>}
+            {record.task && (
+              <>
+                <span className="shrink-0 text-slate-700">/</span>
+                <span className="min-w-0 truncate">{record.task}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <span className="shrink-0 rounded border border-slate-700 bg-slate-800/60 px-1.5 py-0.5 text-[10px] text-slate-300">
+          {record.status || delegationSourceLabel(record.source)}
+        </span>
+      </div>
+    </li>
+  )
+}
+
 function WorkspaceSummary({ runtime }: { runtime: ProjectRuntime | null }) {
   const branch = runtime?.current_branch
   const workflow = runtime?.workflow
@@ -512,6 +565,7 @@ export default function AgentPanel({
   const [selectedActivityKey, setSelectedActivityKey] = useState<string | null>(null)
   const activities = runtime?.active_executions ?? []
   const worktrees = runtime?.worktrees ?? []
+  const delegations = runtime?.delegations ?? []
   const selectedActivity = selectedActivityKey
     ? activities.find((activity) => activityKey(activity) === selectedActivityKey) ?? null
     : null
@@ -524,6 +578,23 @@ export default function AgentPanel({
       <WorkspaceSummary runtime={runtime} />
       <RunnerStatusPanel runtime={runtime} isLoading={isLoading} error={error} onActivitySelect={(activity) => setSelectedActivityKey(activityKey(activity))} />
       <ActivityDrawer activity={selectedActivity} onClose={() => setSelectedActivityKey(null)} onRefresh={refreshDashboard} />
+
+      <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          위임 기록
+        </h3>
+        {delegations.length === 0 ? (
+          <p className="text-xs leading-5 text-slate-500">
+            Run에 기록된 위임 경로가 없습니다. 짧은 PoC 작업에서는 정상일 수 있습니다.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {delegations.slice(0, 5).map((record, index) => (
+              <DelegationRow key={`${record.run_file}-${record.mode}-${record.delegate ?? 'delegate'}-${index}`} record={record} />
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2.5">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">

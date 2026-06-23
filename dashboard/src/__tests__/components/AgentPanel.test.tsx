@@ -101,4 +101,33 @@ describe('AgentPanel worker activity drawer', () => {
     expect(screen.queryByTestId('agent-worker-line')).not.toBeInTheDocument()
     expect(screen.getByText('실행 중인 worker가 없습니다.')).toBeInTheDocument()
   })
+
+  it('Run 위임 기록이 있으면 실행 경로를 표시한다', () => {
+    render(<AgentPanel runtime={{
+      ...runtime,
+      active_executions: [],
+      delegations: [
+        {
+          run_id: 'RUN-014',
+          run_file: 'docs/runs/RUN-014_build.md',
+          mode: 'codex-subagent',
+          delegate: 'build',
+          task: 'Todo API 구현',
+          status: 'completed',
+          source: 'delegation_records',
+        },
+      ],
+    }} />)
+
+    expect(screen.getByText('위임 기록')).toBeInTheDocument()
+    expect(screen.getByText('RUN-014')).toBeInTheDocument()
+    expect(screen.getByText('Codex subagent')).toBeInTheDocument()
+    expect(screen.getByText('Todo API 구현')).toBeInTheDocument()
+  })
+
+  it('Run 위임 기록이 없어도 오류 대신 미기록 안내를 표시한다', () => {
+    render(<AgentPanel runtime={{ ...runtime, active_executions: [], delegations: [] }} />)
+
+    expect(screen.getByText('Run에 기록된 위임 경로가 없습니다. 짧은 PoC 작업에서는 정상일 수 있습니다.')).toBeInTheDocument()
+  })
 })

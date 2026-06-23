@@ -127,6 +127,67 @@ describe('LocalDataSource.getRuntime() — worker status heartbeat', () => {
       ]),
     }))
   })
+
+  it('Run 문서의 delegation_records와 Run Execution Record를 runtime 위임 기록으로 반환한다', async () => {
+    fs.mkdirSync(path.join(tmpDir, 'docs', 'runs'), { recursive: true })
+    fs.writeFileSync(
+      path.join(tmpDir, 'vulcan.config.json'),
+      JSON.stringify({
+        runtime: {
+          available_runners: [{ name: 'codex-cli', model: 'gpt-5.5', effort: 'high' }],
+        },
+      }),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', 'runs', 'RUN-001_build_v0.1.md'),
+      [
+        'run_id: RUN-001',
+        'status: Completed',
+        'delegation_records:',
+        '  - mode: codex-subagent',
+        '    delegate: build',
+        '    task: "Todo API 구현"',
+        '    status: completed',
+        '    changed_files:',
+        '      - backend/app/main.py',
+        '      - backend/tests/test_main.py',
+        '    result_summary: "구현 완료"',
+      ].join('\n'),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', 'runs', 'RUN-002_external_v0.1.md'),
+      [
+        'run_id: RUN-002',
+        'status: Completed',
+        'runner: codex-cli',
+        '## Run Execution Record',
+        '- log: docs/runs/_exec/RUN-002_codex-summary.json',
+      ].join('\n'),
+      'utf-8',
+    )
+
+    const ds = new LocalDataSource({ path: tmpDir })
+    const runtime = await ds.getRuntime()
+
+    expect(runtime?.delegations).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        run_id: 'RUN-001',
+        mode: 'codex-subagent',
+        delegate: 'build',
+        task: 'Todo API 구현',
+        changed_count: 2,
+        source: 'delegation_records',
+      }),
+      expect.objectContaining({
+        run_id: 'RUN-002',
+        mode: 'external-runner',
+        delegate: 'codex-cli',
+        source: 'run_execution_record',
+      }),
+    ]))
+  })
 })
 
 // ── UT-002-05: 파일 부재 시 기본값 Session 반환 ───────────────────────────────

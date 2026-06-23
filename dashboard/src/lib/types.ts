@@ -269,6 +269,18 @@ export interface RuntimeWorktree {
   stale?: boolean
 }
 
+export interface RuntimeDelegationRecord {
+  run_id: string
+  run_file: string
+  mode: string
+  delegate?: string
+  task?: string
+  status?: string
+  result_summary?: string
+  changed_count?: number
+  source: 'delegation_records' | 'run_execution_record' | 'direct_edit'
+}
+
 export interface RuntimeCapabilities {
   same_runner_independent_review: boolean
   cross_model_validation: boolean
@@ -293,6 +305,7 @@ export interface ProjectRuntime {
   available_runners: RuntimeRunner[]
   active_executions: RuntimeActivity[]
   worktrees: RuntimeWorktree[]
+  delegations?: RuntimeDelegationRecord[]
   capabilities: RuntimeCapabilities
 }
 

@@ -61,6 +61,23 @@ Dashboard는 현재 등록한 물리 폴더의 Git checkout을 읽습니다.
 Worktree 목록은 "현재 작업 중"만 의미하지 않습니다.
 worker가 끝난 뒤에도 검토, 삭제, 증적 확인을 위해 남아 있을 수 있습니다.
 
+## 위임 기록
+
+Dashboard는 Run 문서에 남은 `delegation_records`와 외부 CLI의 `Run Execution Record`를 읽어 위임 경로를 표시합니다.
+
+| 표시 | 의미 |
+| --- | --- |
+| `Codex subagent` | Codex native subagent가 작업하고 Orchestrator가 재검증한 기록 |
+| `Codex thread` | 별도 Codex thread/session에 위임한 기록 |
+| `Agy branch` | Antigravity/Agy Workspace branch 또는 native branch agent 기록 |
+| `External CLI` | `agent-run`/`run-exec` 같은 외부 CLI runner 실행 기록 |
+| `Direct edit` | Orchestrator 직접 수정 사유가 기록된 작업 |
+| `위임 경로 없음` | Run 또는 PoC 결과 문서에 실행 경로가 아직 기록되지 않은 상태 |
+
+위임 기록이 없다고 해서 항상 오류는 아닙니다.
+짧은 PoC 실험이나 사람이 직접 정리한 문서는 기록이 없을 수 있습니다.
+다만 Product/Audit의 완료된 Build/QA Run에서 실행 경로가 비어 있다면, Orchestrator에게 위임 기록 또는 직접 수정 사유를 정리하도록 요청하는 것이 좋습니다.
+
 ## 문서 코멘트
 
 Markdown 문서를 읽다가 수정 요청이나 질문이 있으면 문서 블록의 `+` 버튼으로 코멘트를 남깁니다.
