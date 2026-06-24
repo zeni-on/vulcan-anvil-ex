@@ -109,6 +109,11 @@
    - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
    - Orchestrator가 직접 기억해야 하는 CLI 표면은 먼저 `status` 하나로 줄인다. `status --check`가 `prepare-transition` 진단을 요약하고, 원자 명령은 고급/호환 명령으로 유지한다. 상세 전략은 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
+8. **Runtime harness UX 흡수**
+   - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
+   - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령 후보로 흡수한다.
+   - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
+
 ### Next: 0.5 후보
 
 `0.4.x` 안정화 뒤 제품성이나 생산성을 키우는 항목이다.
@@ -141,6 +146,11 @@
    - `transition check` 같은 유사 진단 명령은 만들지 않는다. 진단 표면은 `status --check`로 모은다.
    - 이후 필요성이 검증되면 `plan`, `execute`, `transition`은 후보로 다시 검토한다.
    - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
+
+6. **Delegation sidecar와 worker completion state**
+   - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` 같은 sidecar로 남기는 MVP를 검토한다.
+   - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
+   - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Later: 장기 확장 후보
 
@@ -216,6 +226,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/reference/CODEX-REPO-LOCAL-SKILL-STRATEGY.md` | Codex repo-local skill 전략 | 전역 skill을 건드리지 않고 `.agents/skills`로 Vulcan 절차 카드를 제공하는 기준 |
 | `docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md` | Codex custom agent 전략 | `.codex/agents`로 메인 Orchestrator의 읽기 중심 보조 에이전트를 정의하는 기준 |
 | `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md` | Orchestrator CLI 표면 축소 전략 | 원자 명령은 유지하고 `status` MVP부터 운영 표면을 줄이는 방향 |
+| `docs/reference/RUNTIME-HARNESS-LESSONS.md` | 외부 runtime harness 참고 기능 정리 | delegation sidecar, execute facade, verified completion, doctor, model routing 등 Ex 고도화 후보 |
 | `docs/reference/GIT-LOG-PROGRESS-HISTORY.md` | 날짜별 진행 이력 구상 | 별도 통계 저장소 없이 Git log 기반으로 파생 |
 | `docs/reference/SESSION-COORDINATION-IDEAL.md` | 세션 협업 이상형 | 실시간 통신은 Core 전제 조건 아님 |
 | `docs/reference/SUBMISSION-DOCUMENT-STRATEGY.md` | 제출용 문서 생성 전략 | DOCX/XLSX/HWPX 기능 구현 전 전략 기준 |
