@@ -664,6 +664,7 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 `QA-000`은 Gate 4 전체에서 재사용할 QA workspace를 준비하는 Run이다. 기본값은 `workflow.integration_branch`의 현재 작업공간이다.
 별도 QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다.
 `QA-000` Run 결과에는 `qa_workspace_path`, 기준 브랜치/커밋, 의존성 설치 상태, 서버/포트/DB 준비 상태를 남긴다.
+로컬 환경 상태가 불확실하거나 이전 Run이 `environment_blocked`/`Not Run`을 보고했다면 `python vulcan.py doctor` 결과 요약을 QA-000 입력 또는 결과에 연결한다.
 `QA-001`, `QA-002`, `QA-003` Run 입력 계약에는 `QA-000`이 기록한 같은 `qa_workspace_path`를 포함해야 한다.
 후속 QA Run은 새 workspace를 임의로 만들지 않고 같은 workspace에서 실행한다.
 

@@ -27,14 +27,15 @@ Use this for `impl` Gate execution and follow-up implementation iterations.
 6. If related IDs/source documents are unclear, use `trace-scout` before finalizing the Run.
 7. If the Run is important, newly generated, or previously problematic, use `run-drafter` before worker handoff.
 8. Run `python vulcan.py run-preflight <run-file>` before native worker delegation. `run-exec` and `agent-run --mode work` auto-run preflight, but native subagent/thread/Agy Workspace branch delegation does not.
-9. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
-10. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
-11. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
-12. Integrate worker output only after diff/scope verification.
-13. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
-14. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
-15. In `poc`, do not let workers chase non-blocking `run-preflight` or `run-check` warnings. If implementation tests pass and only non-blocking warnings remain, the worker records them and returns for Orchestrator judgment.
-16. In `poc`, keep Build Worker scope to code, requirements/dependency files, and fast self-checks. README, final test report, browser screenshots, release/backlog, and evidence normalization belong to Gate 4/5 or a separate Evidence/Normalization Worker.
+9. Run `python vulcan.py doctor` before retrying a worker when failure looks like local runtime readiness, for example unsupported runner, missing npm/Node, missing Playwright browser cache, locked port, or Dashboard/runtime confusion.
+10. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
+11. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
+12. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
+13. Integrate worker output only after diff/scope verification.
+14. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
+15. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
+16. In `poc`, do not let workers chase non-blocking `run-preflight` or `run-check` warnings. If implementation tests pass and only non-blocking warnings remain, the worker records them and returns for Orchestrator judgment.
+17. In `poc`, keep Build Worker scope to code, requirements/dependency files, and fast self-checks. README, final test report, browser screenshots, release/backlog, and evidence normalization belong to Gate 4/5 or a separate Evidence/Normalization Worker.
 
 ## Guardrails
 

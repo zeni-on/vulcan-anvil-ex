@@ -19,6 +19,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
    - In `poc`, allow `TBD` only with reason and next decision timing. Do not leave goals, success criteria, or actual execution results as `TBD`.
 6. If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.
 7. Use `docs/core/ORCHESTRATOR_CLI_GUIDE.md` for CLI usage; use `python vulcan.py branch-status` only when branch detail is needed beyond `status`.
+8. Run `python vulcan.py doctor` only when local runtime readiness matters: after init/upgrade on an unfamiliar machine, before first worker if toolchain state is unknown, before Gate 4 QA-000/UI evidence, or after npm/Playwright/runner/Dashboard/environment-blocked failures.
 
 ## Route
 
@@ -42,6 +43,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Gate transitions require explicit user approval or an explicit proceed instruction.
 - Gate status is changed through `vulcan.py` commands, not by editing `session.json` directly.
 - Use `python vulcan.py status --check` for Gate transition readiness summary. Use `prepare-transition` only when detailed/compatibility transition diagnostics are needed. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
+- Use `doctor` as a local environment diagnostic, not as a Gate readiness substitute. `doctor fail/warn` should be reported as environment readiness, `environment_blocked`, or an ISSUE candidate unless a product defect is separately reproduced.
 - Use `run-check`, `run-preflight`, and `check-contract` as applicable.
 - Before native subagent/thread/native branch worker delegation, run `python vulcan.py run-preflight <run-file>` explicitly. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
 - Treat `prepare-transition` preflight findings as a safety net for completed current-Gate worker Runs, not as a substitute for pre-worker handoff preflight.

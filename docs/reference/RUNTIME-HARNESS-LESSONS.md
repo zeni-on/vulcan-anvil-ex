@@ -309,6 +309,13 @@ python vulcan.py doctor
 `status`는 프로젝트 진행 상태이고, `doctor`는 로컬 실행 환경 건강검진이다.
 두 명령은 역할이 다르다.
 
+Orchestrator 사용 기준:
+
+- `status`/`status --check`는 현재 프로젝트와 Gate 전환 가능성을 확인한다.
+- `doctor`는 로컬 실행환경 때문에 worker, npm, Playwright, Dashboard, runner가 실패했는지 확인한다.
+- `doctor`는 매 단계 자동 실행하지 않는다. 새 환경, QA-000, UI/E2E 증적, runner 실패, `environment_blocked`/`Not Run` 보고처럼 환경 차단 가능성이 있을 때 실행한다.
+- `doctor fail/warn`은 제품 결함이 아니라 환경 readiness 신호다. 실제 제품 결함은 별도 테스트 재현과 Orchestrator 재검증으로 확정한다.
+
 ### 2.12 Existing Codebase Adoption
 
 외부 runtime harness의 `$init-deep`은 큰 repo에 계층적 `AGENTS.md` context를 생성하는 패턴이다.
@@ -440,15 +447,17 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 - `python vulcan.py doctor` MVP가 들어갔다.
 - Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
 - `--project-dir`와 `--json`을 지원한다.
+- `AGENTS.md`, repo-local skill, Core CLI/Run/QA 문서에 실행 시점과 해석 규칙을 연결한다.
 
 작업:
 
 - profile별 최소 환경 점검을 더 세분화한다.
-- QA-000 결과서와 doctor 출력을 연결할지 검토한다.
+- QA-000 결과서와 doctor JSON 출력을 자동 연결할지 검토한다.
 
 성공 기준:
 
 - Gate 4에서 Playwright browser cache, npm install, runner 미감지 같은 문제를 늦게 발견하지 않는다.
+- Orchestrator가 `doctor` 경고를 제품 결함과 섞지 않고 `environment_blocked`/`ISSUE` 후보로 분리한다.
 
 ### P4. Role-based Model Routing Fallback
 

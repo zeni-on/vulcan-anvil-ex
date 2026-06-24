@@ -253,6 +253,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 `Implementation Scaffold`와 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona의 native worker(subagent/thread/native branch agent)가 수행한다.
 
 `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, cross-runner 검증, worktree/timeout/watchdog 증적이 필요할 때 선택하는 옵션이다.
+worker 실패가 unsupported model, runner 미감지, npm/Playwright/cache, 포트, Dashboard 같은 로컬 실행 환경 문제로 보이면 재시도나 FIND 확정 전에 `python vulcan.py doctor`를 실행한다. `doctor`는 환경 차단 여부를 분류하기 위한 보조 진단이며, 구현 계약 위반 여부는 별도 테스트와 Orchestrator 재검증으로 판단한다.
 
 신규 개발 또는 빌드 가능한 골격이 없는 프로젝트는 feature 구현 전에 `BW-000 Implementation Scaffold`를 먼저 수행한다. 고도화 프로젝트도 기존 코드가 Program Design의 `PGM/IF/MTH/DTO` 계약과 맞는지 확인하는 scaffold/alignment Run을 둘 수 있다. Implementation Plan은 scaffold 필요 여부를 반드시 기록하며, 생략할 때는 `contract_skeleton.mode: not-required`와 확인 근거를 남긴다.
 
@@ -324,6 +325,8 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이�
 - backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)가 사용 가능한가
 - SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는가
 - 필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리가 준비되어 있는가
+
+QA-000 전 또는 QA-000 중 로컬 환경 차단이 의심되면 `python vulcan.py doctor`를 실행하고 결과 요약을 QA-000 로그 또는 Run 결과에 연결한다. `doctor`의 `fail`/`warn`은 QA 명령 실행 결과가 아니므로 UI/통합 테스트를 Pass/Fail로 대신 판정하지 않는다.
 
 `QA-000`이 `environment_blocked` 또는 `Fail`이면 `QA-001`/`QA-002`를 억지로 진행하지 않는다. `QA-003`은 QA Pass를 확정하지 않고 Orchestrator가 사용자와 협의할 판정 후보만 정리한다.
 

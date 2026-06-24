@@ -52,6 +52,25 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 
 `doctor`는 `status`와 다르다. `status`는 프로젝트 진행 상태를 보고, `doctor`는 실행 환경을 본다. QA-000, Playwright, npm install, runner 실행, Dashboard 확인에서 환경 차단이 의심될 때 먼저 실행한다. `doctor`는 의존성을 설치하거나 브라우저를 다운로드하지 않는다.
 
+권장 실행 시점:
+
+| 시점 | 이유 | 후속 조치 |
+| --- | --- | --- |
+| `init`/`upgrade` 직후 새 프로젝트를 처음 맡을 때 | Python/Node/npm/Git/runner/Dashboard 기본 환경을 빨리 확인 | `fail`이면 환경 준비를 먼저 해결하고, `warn`은 Run/QA-000 입력으로 남긴다. |
+| 첫 worker/subagent/thread 또는 외부 runner 실행 전 환경이 불확실할 때 | worker 실패를 제품 결함으로 오해하지 않기 위함 | runner 미감지, npm cache, Playwright cache 같은 항목을 미리 분리한다. |
+| Gate 4 `QA-000` 전 또는 UI/E2E 증적 수집 전 | Playwright package/browser cache, 포트, DB, frontend/backend 실행 가능성을 빠르게 확인 | 차단 항목은 `environment_blocked` 또는 `ISSUE` 후보로 기록하고 QA-001/QA-002 강행 여부를 묻는다. |
+| `npm install`, `npm run build`, `npx playwright test`, runner 실행이 실패했을 때 | 로컬 환경 문제와 제품 결함을 분리 | 같은 제품 동작 실패가 재현되기 전까지 `FIND`로 확정하지 않는다. |
+| Dashboard가 뜨지 않거나 포트가 애매할 때 | Dashboard package/port 상태를 확인 | Dashboard 문제는 산출물 품질 문제가 아니라 운영 환경 문제로 분리한다. |
+
+해석 규칙:
+
+- `pass`: 해당 환경 항목은 현재 확인 기준에서 사용 가능하다.
+- `warn`: 지금 당장 차단은 아닐 수 있지만 Run/QA-000/ISSUE 후보에 남긴다.
+- `fail`: 해당 작업은 환경 준비 없이는 신뢰 있게 실행하기 어렵다. 제품 결함이 아니라 환경 차단으로 먼저 분류한다.
+- `info`: 판정 근거로 쓰기보다 실행 환경 설명에 사용한다.
+
+`doctor` 결과만으로 테스트를 `Pass` 또는 `Fail`로 기록하지 않는다. 실제 테스트/빌드/QA 판정은 해당 명령의 실행 결과와 증적으로 남긴다. 자동화나 대시보드가 필요하면 `python vulcan.py doctor --json`을 사용한다.
+
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
 
 `status`는 선택된 profile의 gap 요약을 함께 보여준다.

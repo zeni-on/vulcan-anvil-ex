@@ -14,6 +14,7 @@ Use this for Gate 4 QA and QA iterations.
 3. Run `python vulcan.py status` to confirm Gate, profile, branch, QA workspace, active Run, and dirty state.
 4. Apply profile-specific QA evidence and review strictness from `docs/core/DELIVERY_PROFILES.md`.
 5. Read the current QA Run and Gate 3 test cases.
+6. Run `python vulcan.py doctor` before QA-000 when the machine/project has not been checked in this session, or when npm, Playwright, browser cache, runner, port, DB, or Dashboard readiness is uncertain.
 
 ## Staged QA
 
@@ -30,6 +31,7 @@ Use this for Gate 4 QA and QA iterations.
 - If QA is delegated to a native subagent/thread, record the result in `delegation_records` with delegate, scope, evidence/log paths, result summary, and Orchestrator rerun commands.
 - If QA is delegated to an external CLI runner, keep the full Run Execution Record, `_exec` logs, watchdog/timeout status, and any recovered transcript.
 - If logs, screenshots, transcripts, or previous failures are mixed, use `qa-reader` to classify evidence before deciding a fix path.
+- If a QA command is `Not Run` or `environment_blocked` because of local tooling, run `doctor` before retrying or classifying it as a product failure.
 - If QA failure appears related to Program/API/DB/UI contract drift, use `contract-reviewer` before creating a `qa-fix-loop`.
 - Classify failures as `FIND`, `CR`, `ISSUE`, or `environment_blocked`.
 - Start `qa-fix-loop` only after Orchestrator/user decision.

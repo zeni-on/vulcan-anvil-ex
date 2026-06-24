@@ -156,7 +156,8 @@
 
 7. **Doctor command**
    - `python vulcan.py doctor` MVP는 Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
-   - 다음 단계는 profile별 최소 환경 기준과 QA-000 결과서 연결 여부를 샘플로 확인하는 것이다.
+   - `AGENTS.md`, repo-local skill, Core CLI/Run/QA 문서에 사용 시점과 결과 해석 규칙을 연결했다.
+   - 다음 단계는 profile별 최소 환경 기준과 QA-000 결과서/doctor JSON 자동 연결 여부를 샘플로 확인하는 것이다.
 
 ### Later: 장기 확장 후보
 
