@@ -23,7 +23,7 @@ Product fixture smoke는 다음을 보장해야 한다.
 | Product Build Wave | `wave-start --trace-seed` 또는 Run 문서 해석에서 Product 관련 ID가 누락되지 않는다. |
 | ADR empty-state | 의사결정이 없으면 `ADR-NONE`이 정상이다. placeholder ADR을 억지로 채우지 않는다. |
 | Regression report | 주요 회귀 테스트와 known issue가 Product 릴리즈 판단에 필요한 수준으로 남는다. |
-| QA/doctor 경계 | 환경 진단은 `doctor` 또는 QA-000 입력으로 분리하고, 제품 테스트 Pass/Fail을 대신하지 않는다. |
+| QA/doctor 경계 | 환경 진단은 `doctor` 또는 QA-000 입력으로 분리하고, 제품 테스트 Pass/Fail을 대신하지 않는다. `doctor --json`은 구조화된 환경 입력으로 읽을 수 있어야 한다. |
 
 ## 3. 실행 명령
 
@@ -46,10 +46,12 @@ python vulcan.py status --check
 python vulcan.py release-pr --dry-run
 python vulcan.py profile-gap --to audit
 python vulcan.py doctor
+python vulcan.py doctor --json
 ```
 
 `doctor`는 환경 진단이다.
 `doctor`의 `warn`/`fail`은 Product 결함으로 바로 확정하지 않고, QA-000 또는 ISSUE 후보로 분리한다.
+fixture smoke는 completed Product fixture에서 `doctor --json`을 실행해 JSON 구조, `summary.fail == 0`, `session.json`/`vulcan.config.json`/기본 toolchain pass를 확인한다.
 
 ## 4. 실제 샘플 재실행 기준
 
@@ -81,7 +83,7 @@ Product fixture 또는 실제 샘플에서 실패가 나오면 다음처럼 분�
 
 다음 fixture 확장은 실제 Product 샘플 재실행에서 나온 반복 실패를 기준으로 추가한다.
 
-- Product `doctor --json` 결과를 QA-000 결과서에 자동 연결할지 여부
+- Product `doctor --json` 결과를 QA-000 결과서에 자동 연결할지 여부. 현재는 fixture smoke에서 JSON 구조와 기본 pass 조건만 고정한다.
 - Product `profile-gap --to audit`이 Audit 전환 gap만 보여주고 현재 Product 완료를 훼손하지 않는지
 - Product Dashboard에서 `SCN/API/DATA/UI/REG` 추적이 충분히 읽히는지
 - Product release body가 known issue/backlog를 지나치게 관대하게 처리하지 않는지

@@ -372,6 +372,50 @@ def assert_product_completed_fixture_text(project_dir: Path) -> None:
         raise FixtureSmokeFailure(f"Product fixture Run missing required text: {missing_run}")
 
 
+def assert_doctor_json(result: StepResult, project_dir: Path, expected_profile: str | None = None) -> None:
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"doctor JSON output is invalid: {exc}\n{result.combined_output}") from exc
+
+    if Path(payload.get("project_dir") or "") != project_dir:
+        raise FixtureSmokeFailure(f"doctor JSON project_dir mismatch: {payload.get('project_dir')} != {project_dir}")
+
+    summary = payload.get("summary") or {}
+    checks = payload.get("checks") or []
+    if not isinstance(checks, list) or not checks:
+        raise FixtureSmokeFailure(f"doctor JSON checks were empty\n{payload}")
+    if int(summary.get("fail") or 0) != 0:
+        raise FixtureSmokeFailure(f"doctor JSON reported failing environment checks\n{json.dumps(payload, ensure_ascii=False, indent=2)}")
+
+    by_name = {check.get("name"): check for check in checks if isinstance(check, dict)}
+    required_names = [
+        "project_dir",
+        "session.json",
+        "vulcan.config.json",
+        "python",
+        "git",
+        "node",
+        "npm",
+        "browser_cache",
+        "npm_cache",
+        "available_runners",
+        "dashboard",
+    ]
+    missing_names = [name for name in required_names if name not in by_name]
+    if missing_names:
+        raise FixtureSmokeFailure(f"doctor JSON missing required checks: {missing_names}")
+
+    for name in ["session.json", "vulcan.config.json", "python", "git"]:
+        if by_name[name].get("status") != "pass":
+            raise FixtureSmokeFailure(f"doctor JSON expected {name} to pass, got {by_name[name]}")
+
+    if expected_profile:
+        config_detail = by_name["vulcan.config.json"].get("detail") or ""
+        if f"profile={expected_profile}" not in config_detail:
+            raise FixtureSmokeFailure(f"doctor JSON did not report profile={expected_profile}: {config_detail}")
+
+
 def assert_product_build_wave_related_ids(project_dir: Path, vulcan_py: Path) -> None:
     run_dir = project_dir / "docs" / "runs"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -945,6 +989,13 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
             )
         )
         steps.append(run_step("product-completed-fixture:checkout-dev", ["git", "checkout", "-B", "dev"], cwd=profile_product_completed_dir))
+        product_doctor_json = run_step(
+            "product-completed-fixture:doctor-json",
+            [py, "vulcan.py", "doctor", "--json"],
+            cwd=profile_product_completed_dir,
+        )
+        assert_doctor_json(product_doctor_json, profile_product_completed_dir, expected_profile="product")
+        steps.append(product_doctor_json)
         steps.append(
             run_step(
                 "product-completed-fixture:status-check",

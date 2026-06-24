@@ -30,6 +30,7 @@ python scripts/regression/run_fixture_smoke.py
 
 - `init --profile product`가 Product 문서 세트와 profile rules를 생성한다.
 - `scripts/regression/fixtures/simple-todo-product/` completed Product fixture를 적용한 뒤 `status --check`와 `release-pr --dry-run`이 통과한다.
+- completed Product fixture에서 `doctor --json`이 구조화된 환경 진단을 반환하고, `session.json`/`vulcan.config.json`/기본 toolchain이 pass로 해석된다.
 - Product release body는 `docs/product/` 원장과 backlog/release approval을 evidence로 사용하고, audit 전용 QA Finding/Test Result/Traceability Matrix를 요구하지 않는다.
 - 완료된 문서 세트에서 `check-trace`가 통과한다.
 - 완료된 fixture 프로젝트에서 `status`가 Gate/Profile/브랜치 상태를 요약한다.
