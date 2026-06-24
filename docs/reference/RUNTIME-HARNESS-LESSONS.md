@@ -385,11 +385,17 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 - `run-preflight`, native 위임, scope check, run-check, delegation 정규화 후보를 하나의 흐름으로 묶는다.
 
+현재 상태:
+
+- `python vulcan.py execute --run-id <RUN> --runner native --dry-run` MVP가 들어갔다.
+- 실제 worker를 호출하지 않고 `run-check`, `run-preflight`, 위임 sidecar 후보, scope, 검증 명령, Orchestrator 재검증 흐름을 출력한다.
+- run-check issue 또는 preflight blocker가 있으면 dry-run도 실패 코드로 종료한다.
+
 작업:
 
-- `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`의 `execute` 후보를 구체화
-- `python vulcan.py execute --run-id <RUN> --runner native --dry-run` 설계
-- 실제 worker 호출은 초기에는 안내/체크리스트 출력까지만 허용
+- external CLI 실행과 `run-integrate --dry-run`까지 자동 연결할지 검토
+- native sidecar 초안 생성/갱신은 실제 샘플 검증 뒤 검토
+- 실제 worker 호출은 초기에는 안내/체크리스트 출력까지만 허용한다.
 
 성공 기준:
 

@@ -72,10 +72,13 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | Orchestrator Plan 생성 | `python vulcan.py orchestrator-plan --goal "<goal>" --gate <gate>` |
 | 새 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"` |
 | trace seed 기반 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --trace-seed <ID>` |
+| Run 실행 계획 dry-run | `python vulcan.py execute --run-id <RUN-ID> --runner native --dry-run` |
 | worker handoff 전 사전검사 | `python vulcan.py run-preflight <run-file>` |
 | Run 완료/형식 검사 | `python vulcan.py run-check <run-file>` |
 
 native subagent, thread, native branch agent에게 넘기기 전에는 Orchestrator가 `run-preflight`를 직접 실행한다. `run-exec`와 `agent-run --mode work`는 preflight 자동 실행 경로가 있지만, native 위임은 자동 차단되지 않는다.
+
+`execute --dry-run`은 실제 worker를 실행하지 않는다. Run 문서를 기준으로 `run-check`, `run-preflight`, 위임 sidecar 후보, `scope.writable`, 검증 명령, 외부 runner 연결 명령을 한 번에 요약한다. native subagent/thread/Agy branch agent에게 일을 넘기기 전에는 이 출력으로 누락된 handoff 조건을 먼저 확인한다.
 
 ## 6. 구현과 Build Wave
 

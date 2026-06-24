@@ -12099,6 +12099,141 @@ def infer_execution_role(run_content, metadata):
     return "build"
 
 
+def _execute_verification_commands(run_content):
+    commands = extract_nested_yaml_list(run_content, "verification", "commands")
+    if commands:
+        return commands
+
+    matches = re.findall(r"(?im)^\s*command\s*:\s*(.+?)\s*$", run_content)
+    return [match.strip().strip('"').strip("'") for match in matches if match.strip()]
+
+
+def _print_execute_items(label, items, max_items=8):
+    print(f"  {label}: {len(items)}")
+    for item in items[:max_items]:
+        print(f"    - {item}")
+    if len(items) > max_items:
+        print(f"    - ... 외 {len(items) - max_items}건")
+
+
+def cmd_execute(run_id, runner="native", dry_run=False, project_dir="."):
+    project_abs = os.path.abspath(project_dir)
+    config = load_vulcan_config(project_abs)
+    run_path = find_run_file(project_abs, run_id)
+    if not run_path:
+        print(f"오류: {run_id}에 해당하는 Run 문서를 찾을 수 없습니다.")
+        print(f"  검색 위치: {runs_rel_dir(project_abs)}")
+        sys.exit(1)
+
+    run_abs = os.path.abspath(run_path)
+    run_rel_path = os.path.relpath(run_abs, project_abs)
+    current_abs = os.path.abspath(".")
+    run_command_path = run_rel_path if current_abs == project_abs else run_abs
+    with open(run_abs, encoding="utf-8") as f:
+        run_content = f.read()
+    run_meta = parse_simple_yaml_block(run_content)
+    workflow_branch_guard(project_abs, run_meta.get("gate") or "", "execute", strict=False)
+
+    run_check_issues, run_check_warnings = check_run_file(run_abs)
+    preflight_blockers, preflight_warnings = run_preflight_file(run_abs)
+    role = infer_execution_role(run_content, run_meta)
+
+    selected_runner = runner or "native"
+    runner_normalized = normalize_exec_runner(selected_runner)
+    is_external_cli = runner_normalized in [normalize_exec_runner(name) for name in EXEC_RUNNERS]
+    if selected_runner in {"native", "subagent", "thread", "native-branch", "agy-branch-agent"}:
+        runner_mode = "native-delegation"
+        runner_detail = selected_runner
+    elif is_external_cli:
+        runner_mode = "external-cli"
+        runner_detail = runner_normalized
+    else:
+        runner_mode = "custom-native"
+        runner_detail = selected_runner
+
+    sidecar_rel_path = normalize_repo_path(os.path.join(".vulcan", "delegations", f"{run_id}.json"))
+    writable_scope = extract_nested_yaml_list(run_content, "scope", "writable")
+    readonly_scope = extract_nested_yaml_list(run_content, "scope", "readonly")
+    verification_commands = _execute_verification_commands(run_content)
+
+    runner_config = runtime_runner_config(config, runner_detail) if runner_mode == "external-cli" else {}
+    model = runner_config.get("model") or "-"
+    effort = runner_config.get("effort") or runner_config.get("reasoning_effort") or "-"
+    sandbox = runner_config.get("sandbox") or "-"
+
+    print("Vulcan execute dry-run")
+    print(f"  run_id: {run_id}")
+    print(f"  project_dir: {project_abs}")
+    print(f"  run_file: {run_rel_path}")
+    print(f"  gate: {run_meta.get('gate') or '-'}")
+    print(f"  profile: {run_meta.get('profile') or load_delivery_profile(project_abs)}")
+    print(f"  skill: {run_meta.get('skill') or '-'}")
+    print(f"  inferred_role: {role}")
+    print(f"  runner_mode: {runner_mode}")
+    print(f"  selected_runner: {runner_detail}")
+    if runner_mode == "external-cli":
+        print(f"  runner_model: {model}")
+        print(f"  runner_effort: {effort}")
+        print(f"  runner_sandbox: {sandbox}")
+    print(f"  delegation_sidecar: {sidecar_rel_path}")
+
+    if run_check_issues:
+        print("  run_check: fail")
+    elif run_check_warnings:
+        print("  run_check: warn")
+    else:
+        print("  run_check: pass")
+
+    if preflight_blockers:
+        print("  preflight: block")
+    elif preflight_warnings:
+        print("  preflight: warn")
+    else:
+        print("  preflight: pass")
+
+    _print_execute_items("scope.writable", writable_scope)
+    _print_execute_items("scope.readonly", readonly_scope, max_items=5)
+    _print_execute_items("verification.commands", verification_commands)
+
+    if run_check_warnings:
+        print("\nRun-check warnings:")
+        for warning in run_check_warnings:
+            print(f"  - {warning}")
+    if run_check_issues:
+        print("\nRun-check blockers:")
+        for issue in run_check_issues:
+            print(f"  - {issue}")
+    if preflight_warnings:
+        print("\nPreflight warnings:")
+        for warning in preflight_warnings:
+            print(f"  - {warning}")
+    if preflight_blockers:
+        print("\nPreflight blockers:")
+        for blocker in preflight_blockers:
+            print(f"  - {blocker}")
+
+    print("\nPlanned flow:")
+    print(f"  1. python vulcan.py run-preflight \"{run_command_path}\"")
+    print(f"  2. record delegation sidecar candidate: {sidecar_rel_path}")
+    if runner_mode == "external-cli":
+        print(f"  3. from project_dir, execute external runner: python vulcan.py run-exec --run-id {run_id} --runner {runner_detail}")
+        print(f"  4. from project_dir, inspect worker diff: python vulcan.py run-integrate --run-id {run_id} --runner {runner_detail} --dry-run")
+    else:
+        print(f"  3. delegate to {runner_detail} and require delegation_records or sidecar update")
+        print("  4. collect changed_files/self_check from worker result")
+    print("  5. Orchestrator reruns the Run-specific verification commands")
+    print(f"  6. python vulcan.py run-check \"{run_command_path}\"")
+    print("  7. update delegation status to verified/needs_review/blocked after Orchestrator verification")
+
+    if not dry_run:
+        print("\n오류: execute MVP는 현재 --dry-run만 지원합니다.")
+        print("  실제 실행은 native 위임을 수동 수행하거나 run-exec/agent-run 원자 명령을 사용하세요.")
+        sys.exit(1)
+
+    if run_check_issues or preflight_blockers:
+        sys.exit(1)
+
+
 def cmd_run_exec(
     run_id,
     runner=None,
@@ -15624,6 +15759,7 @@ def main():
   release-pr   Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신
   wave-start   Build Wave 시작 및 작업지시 Run 생성
   wave-complete Build Wave 완료/상태 갱신
+  execute      Run 실행 전 preflight/위임/검증 계획 dry-run
   export       snapshot.json 생성 (프로젝트 디렉토리에서 실행)
   upgrade      프레임워크 파일 최신화 (프로젝트 디렉토리에서 실행)
   version      현재 프레임워크 버전 확인
@@ -15649,6 +15785,7 @@ def main():
   python vulcan.py release-pr --dry-run
   python vulcan.py wave-start BW-001 --title "인증 기반 구현" --related-ids REQ-001-01,PGM-001
   python vulcan.py wave-complete BW-001 --status Verified --req REQ-001-01,REQ-002-01
+  python vulcan.py execute --run-id RUN-012 --runner native --dry-run
   python vulcan.py export
   python vulcan.py upgrade
         """
@@ -15754,6 +15891,12 @@ def main():
 
     p_run_preflight = subparsers.add_parser("run-preflight", help="worker 실행 전 Build Wave Run 작업지시서 사전 검사")
     p_run_preflight.add_argument("run_file", help="사전 검사할 Run 문서 경로")
+
+    p_execute = subparsers.add_parser("execute", help="Run 실행 전 preflight/위임/검증 계획 dry-run")
+    p_execute.add_argument("--run-id", required=True, help="실행 계획을 확인할 Run ID (예: RUN-010)")
+    p_execute.add_argument("--runner", default="native", help="native, subagent, thread, agy-branch-agent 또는 codex-cli/claude-cli/antigravity-cli")
+    p_execute.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
+    p_execute.add_argument("--dry-run", action="store_true", help="실제 worker 호출 없이 실행 계획만 출력")
 
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
     p_orchestrator_plan = subparsers.add_parser("orchestrator-plan", help="Orchestrator 실행 계획 Run 생성")
@@ -15968,6 +16111,13 @@ def main():
         cmd_run_check(args.run_file)
     elif args.command == "run-preflight":
         cmd_run_preflight(args.run_file)
+    elif args.command == "execute":
+        cmd_execute(
+            run_id=args.run_id,
+            runner=args.runner,
+            dry_run=args.dry_run,
+            project_dir=args.project_dir,
+        )
     elif args.command == "orchestrator-plan":
         cmd_orchestrator_plan(
             goal=args.goal,

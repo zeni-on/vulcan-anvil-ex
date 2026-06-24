@@ -176,11 +176,18 @@ python vulcan.py plan wave BW-001 --trace-seed REQ-001-01
 
 기존 `run-preflight`, native subagent/thread/Agy branch 위임, 선택적 `run-exec`/`agent-run`, `run-integrate`, `wave-complete`, `run-check`를 한 흐름 안에서 다룬다.
 
-예상 사용:
+현재 구현된 MVP는 dry-run 전용이다. 실제 worker 실행, 통합 적용, Wave 완료는 수행하지 않고 실행 전 계약/위임/검증 계획만 출력한다.
+
+현재 사용:
 
 ```text
-python vulcan.py execute --run-id RUN-012 --runner native
-python vulcan.py execute --run-id RUN-012 --runner cli --agent codex-cli
+python vulcan.py execute --run-id RUN-012 --runner native --dry-run
+python vulcan.py execute --run-id RUN-012 --runner codex-cli --dry-run
+```
+
+장기 후보:
+
+```text
 python vulcan.py execute integrate --run-id RUN-012 --dry-run
 python vulcan.py execute complete-wave BW-001 --status Verified
 ```
@@ -188,6 +195,7 @@ python vulcan.py execute complete-wave BW-001 --status Verified
 중요 원칙:
 
 - native subagent/thread/Agy branch 위임 전에도 내부적으로 `run-preflight`를 먼저 수행한다.
+- dry-run 단계에서는 `run-check`, `run-preflight`, `scope.writable`, 검증 명령, delegation sidecar 후보만 요약한다.
 - 외부 CLI runner가 필요한 경우에만 `run-exec`/`agent-run` 경로를 선택한다.
 - `execute`가 결과를 자동 승인하지 않는다.
 - scope 밖 변경은 `Config Hotfix Candidate`, `qa-fix-loop`, `CR`, `reject` 중 하나로 명시 분기한다.
@@ -313,10 +321,10 @@ worker 실행 전후 흐름을 묶는다.
 
 초기 범위:
 
-- Run preflight 자동 실행
-- runner 선택 안내
-- native delegation이면 `delegation_records` reminder
-- external CLI runner면 기존 `run-exec`/`agent-run`으로 위임
+- Run preflight와 run-check dry-run 자동 실행
+- runner 선택 안내와 delegation sidecar 후보 출력
+- native delegation이면 `delegation_records`/sidecar reminder
+- external CLI runner면 기존 `run-exec`/`agent-run`으로 이어질 명령 안내
 - 통합은 먼저 `run-integrate --dry-run`
 - 통합 적용 전 dirty worktree와 scope violation을 확인
 - ignored/cache 파일 오탐을 줄이되 공식 QA 로그와 증적은 유지

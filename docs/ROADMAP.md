@@ -144,7 +144,8 @@
 5. **Orchestrator CLI facade**
    - `status` MVP부터 시작해 `branch-status`, `profile-status`, `prepare-transition` 진단을 한 화면으로 요약한다.
    - `transition check` 같은 유사 진단 명령은 만들지 않는다. 진단 표면은 `status --check`로 모은다.
-   - 이후 필요성이 검증되면 `plan`, `execute`, `transition`은 후보로 다시 검토한다.
+   - `execute --dry-run` MVP는 Run 실행 전 `run-check`, `run-preflight`, sidecar 후보, scope, 검증 명령을 한 번에 확인하는 수준으로 들어갔다.
+   - 이후 필요성이 검증되면 `plan`, 실제 `execute`, `transition`은 후보로 다시 검토한다.
    - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
 6. **Delegation sidecar와 worker completion state**
