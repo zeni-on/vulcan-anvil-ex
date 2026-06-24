@@ -151,6 +151,7 @@
 6. **Delegation sidecar와 worker completion state**
    - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` sidecar로 읽어 Dashboard에 표시하는 MVP가 들어갔다.
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
+   - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Later: 장기 확장 후보

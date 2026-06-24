@@ -392,6 +392,8 @@ Codex desktop의 `spawn_agent`, Codex thread, Claude subagent, Agy workspace bra
 
 subagent/thread가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 `delegation_records`로 정규화한다.
 이 기록은 `Run Execution Record`보다 얇다. stderr, jsonl, cache, timeout policy 같은 외부 프로세스 메타는 필요 없지만, 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령은 남긴다.
+
+`delegation_records.status`는 worker lifecycle과 Orchestrator 검증 lifecycle을 분리해서 쓴다. `worker_completed` 또는 `completed`는 worker가 결과를 반환했다는 뜻이고, `verified`는 Orchestrator가 테스트/증적/계약을 재검증한 뒤에만 쓴다. worker 완료만 기록된 Run은 `run-check`/`run-preflight`에서 경고가 날 수 있으므로, Orchestrator는 `orchestrator_verification` 또는 `needs_review`/`blocked` 같은 판정 후보를 남긴다.
 PoC 병목 분석이 필요하면 `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`를 함께 남겨 코드 변경 시간과 최종 응답 지연을 구분한다. 알 수 없는 값은 추정하지 않고 비워두거나 notes에 근거를 남긴다.
 변경 파일은 `scope.writable` 안에 있는지 확인하고, worker/subagent가 만든 테스트케이스와 관련 회귀 검증을 Orchestrator가 재실행한다.
 

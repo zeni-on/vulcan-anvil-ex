@@ -13447,6 +13447,41 @@ def delegation_record_shape_warnings(content, prefix="delegation_records"):
     return warnings
 
 
+def delegation_record_verification_warnings(content, prefix="delegation_records"):
+    if "delegation_records" not in content:
+        return []
+    match = re.search(
+        r"(?ms)^\s*delegation_records\s*:\s*\n((?:[ \t]+.*(?:\n|$)|\s*\n)*)",
+        content,
+    )
+    if not match:
+        return []
+
+    block_text = match.group(1)
+    status_values = [
+        value.strip().strip('"').strip("'").lower()
+        for value in re.findall(r"(?im)^\s*status\s*:\s*(.*?)\s*$", block_text)
+    ]
+    if not status_values:
+        return []
+
+    worker_complete_statuses = {"completed", "worker_completed", "completed_no_result_change"}
+    final_statuses = {"verified", "needs_review", "blocked", "failed", "environment_blocked"}
+    has_worker_completed_only = any(status in worker_complete_statuses for status in status_values)
+    has_final_status = any(status in final_statuses for status in status_values)
+    has_orchestrator_verification = bool(
+        re.search(r"(?im)^\s*orchestrator_verification\s*:\s*(?!\[\]\s*$).+", block_text)
+        or re.search(r"(?ims)^\s*orchestrator_verification\s*:\s*\n\s*-\s+", block_text)
+    )
+
+    if has_worker_completed_only and not has_final_status and not has_orchestrator_verification:
+        return [
+            f"{prefix}가 worker 완료 상태만 기록하고 Orchestrator 재검증 기록이 없습니다. "
+            "worker_completed/completed는 검증 완료가 아니므로 orchestrator_verification을 남기거나 status를 verified/needs_review/blocked로 정리하세요."
+        ]
+    return []
+
+
 def impl_code_result_claim(body):
     if re.search(r"구현\s*완료|implementation-complete|직접\s*구현\s*완료", body, re.IGNORECASE):
         return True
@@ -13666,6 +13701,7 @@ def check_run_file(path):
             warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 어떤 실행 경로였는지 추적 기록을 남기세요.")
         elif is_worker_result_run and has_delegation_records:
             warnings.extend(delegation_record_shape_warnings(content))
+            warnings.extend(delegation_record_verification_warnings(content))
             missing_timing = [
                 field for field in ("started_at", "completed_at", "duration_seconds")
                 if not re.search(rf"(?im)^\s*{field}\s*:", content)
@@ -14049,6 +14085,7 @@ def run_preflight_file(path):
             warnings.append("완료된 worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. native 위임/외부 runner/직접 수정 중 실행 경로를 기록하세요.")
         elif status in {"Completed", "Verified", "CompletedWithIssues"} and has_delegation_records:
             warnings.extend(delegation_record_shape_warnings(content))
+            warnings.extend(delegation_record_verification_warnings(content))
 
     if skill == "qa-execution":
         qa_stage = qa_stage_from_run(content, metadata)
@@ -14080,6 +14117,7 @@ def run_preflight_file(path):
                 warnings.append("완료된 QA worker Run이지만 delegation_records 또는 Run Execution Record가 없습니다. QA 실행 경로를 추적할 수 있게 기록하세요.")
             elif has_delegation_records:
                 warnings.extend(delegation_record_shape_warnings(content, prefix="QA delegation_records"))
+                warnings.extend(delegation_record_verification_warnings(content, prefix="QA delegation_records"))
                 missing_timing = [
                     field for field in ("started_at", "completed_at", "duration_seconds")
                     if not re.search(rf"(?im)^\s*{field}\s*:", content)

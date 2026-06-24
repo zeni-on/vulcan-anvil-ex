@@ -208,6 +208,19 @@ delegation_records:
 | `external-runner` | `agent-run`/`run-exec` 같은 외부 CLI runner 실행 |
 | `manual` | 사람이 명시 수행한 보조 작업 |
 
+권장 `status` 값:
+
+| 값 | 의미 |
+| --- | --- |
+| `worker_running` | worker가 실행 중 |
+| `worker_completed` 또는 `completed` | worker가 결과를 반환했지만 Orchestrator 재검증 전 |
+| `orchestrator_verifying` | Orchestrator가 worker 결과를 재검증 중 |
+| `verified` | Orchestrator가 테스트/증적/계약을 재검증해 통과로 정리 |
+| `needs_review` | 결과는 있으나 보정, 사용자 판단, FIND/CR/ISSUE 분류 필요 |
+| `blocked`, `failed`, `environment_blocked`, `timeout` | 진행 불가, 실패, 환경 차단, 시간 초과 |
+
+`worker_completed`/`completed`는 완료 신호이지 검증 완료가 아니다. 완료된 Build/QA Run에 `delegation_records.status: worker_completed`만 남기고 `orchestrator_verification` 또는 최종 `verified/needs_review/blocked` 정리가 없으면 `run-check`와 `run-preflight`는 경고한다.
+
 최소 필드:
 
 - `mode`
