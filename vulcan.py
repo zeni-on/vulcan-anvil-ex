@@ -108,6 +108,13 @@ CODEX_MODEL_POLICY_DEFAULTS = {
     },
 }
 
+CODEX_MODEL_FALLBACKS = {
+    "gpt-5.3-codex": {
+        "model": "gpt-5.5",
+        "reason": "gpt-5.3-codex is not supported by the current Codex CLI account; using gpt-5.5",
+    },
+}
+
 
 def _bootstrap_vulcan_core():
     local_core = os.path.join(VULCAN_DIR, "vulcan_core")
@@ -11817,6 +11824,8 @@ Rules:
         print(f"  effort_source: {model_resolution.get('effort_source')}")
         if model_resolution.get("policy_role"):
             print(f"  model_policy_role: {model_resolution.get('policy_role')}")
+        if model_resolution.get("model_fallback_reason"):
+            print(f"  model_fallback_reason: {model_resolution.get('model_fallback_reason')}")
         if runner_normalized == "antigravity-cli":
             print("  model_source: agy-config-inherited")
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
@@ -11842,6 +11851,7 @@ Rules:
         "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
         "effort_source": model_resolution.get("effort_source") or "",
         "model_policy_role": model_resolution.get("policy_role") or "",
+        "model_fallback_reason": model_resolution.get("model_fallback_reason") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "started_at": started_at,
@@ -12019,6 +12029,7 @@ reasoning_effort: {reasoning_effort}
 model_source: {model_resolution.get("model_source") or runner_model_source(runner_normalized)}
 effort_source: {model_resolution.get("effort_source") or ""}
 model_policy_role: {model_resolution.get("policy_role") or ""}
+model_fallback_reason: {model_resolution.get("model_fallback_reason") or ""}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 exit_code: {exit_code}
@@ -12501,6 +12512,8 @@ Worker dependency cache:
         print(f"  effort_source: {model_resolution.get('effort_source')}")
         if model_resolution.get("policy_role"):
             print(f"  model_policy_role: {model_resolution.get('policy_role')}")
+        if model_resolution.get("model_fallback_reason"):
+            print(f"  model_fallback_reason: {model_resolution.get('model_fallback_reason')}")
         if runner_normalized == "antigravity-cli":
             print("  model_source: agy-config-inherited")
             print("  note: Antigravity CLI의 현재 모델/effort 설정을 상속합니다.")
@@ -12598,6 +12611,7 @@ Worker dependency cache:
         "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
         "effort_source": model_resolution.get("effort_source") or "",
         "model_policy_role": model_resolution.get("policy_role") or "",
+        "model_fallback_reason": model_resolution.get("model_fallback_reason") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
@@ -12818,6 +12832,7 @@ Worker dependency cache:
         "model_source": model_resolution.get("model_source") or runner_model_source(runner_normalized),
         "effort_source": model_resolution.get("effort_source") or "",
         "model_policy_role": model_resolution.get("policy_role") or "",
+        "model_fallback_reason": model_resolution.get("model_fallback_reason") or "",
         "sandbox": sandbox,
         "exec_dir": exec_dir,
         "worktree_path": worktree_path or None,
@@ -12864,6 +12879,7 @@ reasoning_effort: {reasoning_effort}
 model_source: {model_resolution.get("model_source") or runner_model_source(runner_normalized)}
 effort_source: {model_resolution.get("effort_source") or ""}
 model_policy_role: {model_resolution.get("policy_role") or ""}
+model_fallback_reason: {model_resolution.get("model_fallback_reason") or ""}
 sandbox: {sandbox}
 exec_dir: {exec_dir}
 worktree_path: {worktree_path or ""}
@@ -14286,10 +14302,18 @@ def resolve_codex_model_effort(config, role, explicit_model=None, explicit_effor
             if runner_config.get("reasoning_effort") or runner_config.get("effort")
             else "codex-model-policy:fallback"
         )
+    model_fallback_reason = ""
+    fallback_target = CODEX_MODEL_FALLBACKS.get(model)
+    if fallback_target:
+        original_model = model
+        model = fallback_target.get("model") or model
+        model_fallback_reason = fallback_target.get("reason") or f"{original_model} -> {model}"
+        model_source = f"{model_source}|compat-fallback:{original_model}"
     return model, reasoning_effort, {
         "model_source": model_source,
         "effort_source": effort_source,
         "policy_role": role if role_config else "fallback",
+        "model_fallback_reason": model_fallback_reason,
     }
 
 
@@ -14356,8 +14380,8 @@ def replace_unsupported_codex_models(value):
         return {k: replace_unsupported_codex_models(v) for k, v in value.items()}
     if isinstance(value, list):
         return [replace_unsupported_codex_models(v) for v in value]
-    if value == "gpt-5.3-codex":
-        return "gpt-5.5"
+    if value in CODEX_MODEL_FALLBACKS:
+        return CODEX_MODEL_FALLBACKS[value].get("model") or value
     return value
 
 

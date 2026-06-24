@@ -465,6 +465,13 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 - 모델 미지원 오류를 작업 실패가 아니라 정책 fallback으로 처리한다.
 
+현재 상태:
+
+- `resolve_codex_model_effort()`가 Codex role policy와 CLI 명시 모델을 해석한 뒤 compatibility fallback을 적용한다.
+- `gpt-5.3-codex`는 현재 `gpt-5.5`로 정규화한다.
+- 실행 activity/summary/Run Execution Record에는 `model_source`와 `model_fallback_reason`을 남긴다.
+- `scripts/regression/run_fixture_smoke.py`가 role policy와 CLI 명시 옵션 양쪽의 fallback을 smoke로 검증한다.
+
 작업:
 
 - `runtime.model_policy`에 recommended/fallback 분리
@@ -474,6 +481,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 성공 기준:
 
 - `gpt-5.3-codex` 미지원 같은 문제가 worker 실행 시간을 낭비하지 않는다.
+- 남은 작업은 Dashboard/status에서 실제 모델과 fallback reason을 더 잘 드러내는 것이다.
 
 ### P5. Existing Codebase Adoption
 

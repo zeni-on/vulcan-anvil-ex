@@ -523,6 +523,60 @@ def assert_product_gate4_blocks_planned_regression(project_dir: Path, vulcan_py:
         )
 
 
+def assert_codex_model_policy_fallback(vulcan_py: Path, py: str) -> StepResult:
+    script = (
+        "import importlib.util, json; "
+        f"spec=importlib.util.spec_from_file_location('v', r'{vulcan_py}'); "
+        "m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+        "config=m.default_vulcan_config(profile='product', primary='codex-cli'); "
+        "config['runtime']['model_policy']['codex-cli']['roles']['build']['model']='gpt-5.3-codex'; "
+        "policy_model, policy_effort, policy_resolution=m.resolve_codex_model_effort(config, 'build'); "
+        "explicit_model, explicit_effort, explicit_resolution=m.resolve_codex_model_effort("
+        "config, 'build', explicit_model='gpt-5.3-codex', explicit_effort='medium'); "
+        "print(json.dumps({"
+        "'policy': {'model': policy_model, 'effort': policy_effort, 'resolution': policy_resolution}, "
+        "'explicit': {'model': explicit_model, 'effort': explicit_effort, 'resolution': explicit_resolution}"
+        "}, ensure_ascii=False))"
+    )
+    completed = subprocess.run(
+        [py, "-c", script],
+        cwd=vulcan_py.parent,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=60,
+    )
+    if completed.returncode != 0:
+        raise FixtureSmokeFailure(
+            "Codex model policy fallback smoke failed to execute\n"
+            f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+        )
+    try:
+        payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    except Exception as exc:  # pragma: no cover - defensive diagnostic
+        raise FixtureSmokeFailure(f"could not parse Codex model fallback smoke output: {completed.stdout}") from exc
+
+    for bucket in ["policy", "explicit"]:
+        item = payload.get(bucket) or {}
+        resolution = item.get("resolution") or {}
+        if item.get("model") != "gpt-5.5":
+            raise FixtureSmokeFailure(f"{bucket} fallback expected gpt-5.5, got {item}")
+        if "compat-fallback:gpt-5.3-codex" not in (resolution.get("model_source") or ""):
+            raise FixtureSmokeFailure(f"{bucket} fallback did not record compat fallback source: {item}")
+        if not resolution.get("model_fallback_reason"):
+            raise FixtureSmokeFailure(f"{bucket} fallback did not record fallback reason: {item}")
+    if payload["explicit"].get("effort") != "medium":
+        raise FixtureSmokeFailure(f"explicit effort should remain cli-argument medium: {payload['explicit']}")
+
+    return StepResult(
+        name="codex-model-policy-fallback",
+        returncode=0,
+        stdout=json.dumps(payload, ensure_ascii=False),
+        stderr="",
+    )
+
+
 def assert_product_multi_scenario_seed_expansion(project_dir: Path, vulcan_py: Path, py: str) -> None:
     product_dir = project_dir / "docs" / "product"
     product_dir.mkdir(parents=True, exist_ok=True)
@@ -838,6 +892,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
     steps: list[StepResult] = []
 
     try:
+        steps.append(assert_codex_model_policy_fallback(vulcan_py, py))
         steps.append(
             run_step(
                 "init-profile-solution",

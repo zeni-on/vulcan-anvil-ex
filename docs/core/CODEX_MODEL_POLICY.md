@@ -21,7 +21,8 @@ Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니
 - 명시 옵션이 없으면 `vulcan.config.json.runtime.model_policy.codex-cli.roles`를 따른다.
 - 역할별 정책이 없으면 `runtime.model_policy.codex-cli.fallback`을 따른다.
 - fallback도 없으면 runner 기본값 `gpt-5.5` + `high`를 사용한다.
-- 최종 실행 기록에는 실제 model, reasoning effort, model source, effort source, model policy role을 남긴다.
+- 지원되지 않는 Codex model alias는 worker 실행 전에 compatibility fallback으로 정규화한다.
+- 최종 실행 기록에는 실제 model, reasoning effort, model source, effort source, model policy role, model fallback reason을 남긴다.
 - 품질 판단이 필요한 작업은 계속 강한 모델/높은 effort를 사용한다.
 - 로그 요약, 증적 index, Run 초안 같은 정리 작업은 낮은 모델/effort를 우선 사용한다.
 
@@ -103,6 +104,7 @@ reasoning_effort: high
 model_source: codex-model-policy:build-backend
 effort_source: codex-model-policy:build-backend
 model_policy_role: build-backend
+model_fallback_reason: ""
 ```
 
 명시 옵션을 사용하면 source는 `cli-argument`가 된다.
@@ -110,6 +112,32 @@ model_policy_role: build-backend
 ```powershell
 python vulcan.py agent-run --mode work --run-id RUN-012 --runner codex-cli --model gpt-5.5 --reasoning-effort high
 ```
+
+## 5.1 Compatibility fallback
+
+역할 정책이나 CLI 명시 옵션이 현재 Codex CLI 계정에서 지원되지 않는 model alias를 가리키면, Ex는 실행 전에 지원되는 fallback model로 바꾼다.
+
+현재 compatibility fallback:
+
+| Requested model | Actual model | 사유 |
+| --- | --- | --- |
+| `gpt-5.3-codex` | `gpt-5.5` | 현재 Codex CLI 계정에서 지원되지 않는 경우가 있어 실행 전 호환 모델로 정규화 |
+
+fallback이 발생하면 실행 기록의 `model_source`에는 `compat-fallback:<requested-model>`이 붙고, `model_fallback_reason`에 사람이 읽을 수 있는 이유가 남는다.
+
+예:
+
+```yaml
+model: gpt-5.5
+reasoning_effort: high
+model_source: codex-model-policy:build|compat-fallback:gpt-5.3-codex
+effort_source: codex-model-policy:build
+model_policy_role: build
+model_fallback_reason: gpt-5.3-codex is not supported by the current Codex CLI account; using gpt-5.5
+```
+
+이 fallback은 품질 downgrade 정책이 아니라 실행 호환성 회복 장치다.
+모델 정책 자체를 조정하려면 `vulcan.config.json.runtime.model_policy` 또는 이 문서의 권장 역할 정책을 변경한다.
 
 ## 6. 성능 측정 방향
 

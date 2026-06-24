@@ -202,6 +202,7 @@ my-project/
 
 독립 검수와 교차검증의 기본 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`와 `runtime.model_policy`에서 정한다.
 Codex runner는 기본적으로 역할별 model/effort 정책을 사용한다.
+현재 Codex CLI 계정에서 지원되지 않는 model alias가 들어오면 실행 전에 호환 fallback으로 정규화하고, 실행 기록에 fallback 사유를 남긴다.
 감리/QA 목적의 Gate 2, Gate 4 검수는 Codex 기준 `gpt-5.5` + `high`를 권장하고, QA 실행/로그 정리 같은 작업은 더 가벼운 정책을 사용할 수 있다.
 자세한 기준은 `docs/core/CODEX_MODEL_POLICY.md`를 따른다.
 Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude CLI는 `claude -p` 기반 비대화형 실행을 사용하며 기본값은 `claude-opus-4-7` + `high` effort다.

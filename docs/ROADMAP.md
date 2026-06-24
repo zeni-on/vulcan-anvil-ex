@@ -29,6 +29,7 @@
 - worker progress watchdog과 hard timeout cap 기반 장시간 실행 관제
 - subagent/thread/native branch agent 위임 결과를 `delegation_records`로 남기는 얇은 책임 추적 기준
 - Codex runner 역할별 model/effort 정책과 실행 기록
+- Codex runner 미지원 model alias compatibility fallback과 회귀 smoke
 - `init --profile`과 `profile-status` 기반 Delivery Profile 선택/확인
 - `BW-000 implementation-scaffold`를 통한 구현 전 빌드 가능한 skeleton 생성 기준
 - Program Design 기반 `check-contract` 1차 검사(Python/Java class/interface/public method 존재 확인)
@@ -112,6 +113,7 @@
 8. **Runtime harness UX 흡수**
    - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
    - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령으로 흡수한다.
+   - Codex role-based model fallback은 1차 구현되어 `gpt-5.3-codex` 같은 미지원 alias를 실행 전 `gpt-5.5`로 정규화한다. 남은 작업은 Dashboard/status에 actual model과 fallback reason을 더 잘 보여주는 것이다.
    - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Next: 0.5 후보
