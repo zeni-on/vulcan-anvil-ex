@@ -55,6 +55,7 @@ Do not run `python vulcan.py --help` repeatedly to discover routine commands. Us
 
 - Current overview: `python vulcan.py status`
 - Transition readiness summary: `python vulcan.py status --check`
+- Local environment check: `python vulcan.py doctor`
 - Retrospective/performance summary: `python vulcan.py metrics`
 
 ## Report

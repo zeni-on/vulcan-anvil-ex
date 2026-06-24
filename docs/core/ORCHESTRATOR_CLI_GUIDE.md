@@ -8,6 +8,7 @@
 
 - 첫 명령은 가능하면 `python vulcan.py status`다.
 - Gate 전환 전에는 `python vulcan.py status --check`로 전환 가능성, Run 상태, 추적성, branch 상태를 한 번에 확인한다.
+- 로컬 실행 환경이 의심되면 `python vulcan.py doctor`를 먼저 실행한다. `doctor`는 Gate 상태가 아니라 Git/Node/npm/Playwright/runner/cache/Dashboard 환경을 확인한다.
 - `prepare-transition`은 `status --check`가 호출하는 상세 전환 진단의 원자 명령이다. 사람이 원인 분석, 호환성 확인, 레거시 스크립트 연동을 위해 직접 실행할 수 있지만 기본 진입점은 아니다.
 - `check-trace`는 추적성만 상세 디버깅하거나 trace-only 회귀 검증이 필요할 때 직접 실행한다. Gate 전환 전마다 `status --check` 뒤에 기계적으로 이어서 실행하지 않는다.
 - 상세 원자 명령은 남겨둔다. 다만 Orchestrator prompt와 skill은 먼저 `status` 표면을 사용하고, 필요한 경우에만 원자 명령으로 내려간다.
@@ -19,6 +20,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 표면 | 용도 |
 | --- | --- |
 | `status` | 현재 Gate/profile/branch/Run/Wave/다음 행동 확인 |
+| `doctor` | 로컬 Git/Node/npm/Playwright/runner/cache/Dashboard 환경 점검 |
 | `profile-gap` | 현재 산출물을 목표 profile 기준으로 볼 때 부족한 문서와 내용 보완 항목 진단 |
 | `metrics` | git/Run/증적 기반 진행 시간, 파일 수, 라인 수, 위임 기록 요약 |
 | `gate-start`, `session`, `sync-session` | Gate 라이프사이클 갱신 |
@@ -39,6 +41,16 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 브랜치만 상세 확인 | `python vulcan.py branch-status` |
 | Profile 전환 gap 확인 | `python vulcan.py profile-gap --to product` 또는 `python vulcan.py profile-gap --to audit` |
 | 회고/성능 통계 | `python vulcan.py metrics` 또는 `python vulcan.py metrics --json` |
+
+## 3.1 로컬 환경 점검
+
+| 목적 | 명령 |
+| --- | --- |
+| 환경 점검 | `python vulcan.py doctor` |
+| 다른 프로젝트 점검 | `python vulcan.py doctor --project-dir <project-root>` |
+| JSON 출력 | `python vulcan.py doctor --json` |
+
+`doctor`는 `status`와 다르다. `status`는 프로젝트 진행 상태를 보고, `doctor`는 실행 환경을 본다. QA-000, Playwright, npm install, runner 실행, Dashboard 확인에서 환경 차단이 의심될 때 먼저 실행한다. `doctor`는 의존성을 설치하거나 브라우저를 다운로드하지 않는다.
 
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
 

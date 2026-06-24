@@ -174,7 +174,7 @@ delegation_records:
     scope:
       writable:
         - app/api/work_items.py
-    status: completed
+    status: worker_completed
     changed_files:
       - app/api/work_items.py
     result_summary: "API 구현 완료"

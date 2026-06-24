@@ -435,11 +435,16 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 - 새 사용자와 샘플 테스트에서 환경 차단을 빨리 식별한다.
 
+현재 상태:
+
+- `python vulcan.py doctor` MVP가 들어갔다.
+- Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
+- `--project-dir`와 `--json`을 지원한다.
+
 작업:
 
-- `python vulcan.py doctor` 명령 추가
-- Node/npm/Playwright/Git/runner/Dashboard/cache 점검
-- profile별 최소 환경 점검
+- profile별 최소 환경 점검을 더 세분화한다.
+- QA-000 결과서와 doctor 출력을 연결할지 검토한다.
 
 성공 기준:
 
@@ -491,11 +496,11 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 따라서 Ex의 다음 고도화는 다음 순서가 가장 자연스럽다.
 
-1. `delegation sidecar`
-2. `execute` facade dry-run
-3. worker completion state 분리
-4. `doctor`
-5. role-based model fallback
-6. existing codebase adoption
+1. `delegation sidecar` - MVP 완료
+2. `execute` facade dry-run - MVP 완료
+3. worker completion state 분리 - MVP 완료
+4. `doctor` - MVP 완료
+5. role-based model fallback - 다음 후보
+6. existing codebase adoption - 장기 후보
 
 이 순서는 외부 runtime harness의 장점을 흡수하되, Ex를 Codex 전용 harness가 아니라 runtime-agnostic governance layer로 유지한다.

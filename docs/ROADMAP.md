@@ -111,7 +111,7 @@
 
 8. **Runtime harness UX 흡수**
    - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
-   - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령 후보로 흡수한다.
+   - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령으로 흡수한다.
    - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Next: 0.5 후보
@@ -153,6 +153,10 @@
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
    - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
+
+7. **Doctor command**
+   - `python vulcan.py doctor` MVP는 Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
+   - 다음 단계는 profile별 최소 환경 기준과 QA-000 결과서 연결 여부를 샘플로 확인하는 것이다.
 
 ### Later: 장기 확장 후보
 

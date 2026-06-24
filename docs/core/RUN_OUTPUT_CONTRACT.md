@@ -76,7 +76,7 @@ delegation_records:
         - tests/test_posts.py
     started_at: "2026-06-07T10:00:00+09:00"
     completed_at: "2026-06-07T10:12:00+09:00"
-    status: completed
+    status: worker_completed
     changed_files:
       - src/api/posts.py
       - tests/test_posts.py
@@ -185,7 +185,7 @@ delegation_records:
     final_response_lag_seconds: 80
     heartbeat_count: 2
     status_probe_count: 1
-    status: completed
+    status: worker_completed
     changed_files:
       - backend/app/todos/service.py
       - backend/tests/unit/test_todo_service.py
