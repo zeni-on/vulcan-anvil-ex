@@ -100,6 +100,21 @@ Run 문서의 `delegation_records`는 Orchestrator가 재검증 후 정리하는
 }
 ```
 
+위임 상태는 다음처럼 읽습니다.
+
+| 상태 | Dashboard 표시 | 의미 |
+| --- | --- | --- |
+| `delegated` | `위임됨` | worker/subagent/thread에 작업을 맡긴 직후 |
+| `worker_running` 또는 `running` | `worker 실행중` | worker가 아직 결과를 만들고 있는 중 |
+| `worker_completed` 또는 `completed` | `worker 완료` | worker가 결과를 반환했지만 Orchestrator 검증 전 |
+| `orchestrator_verifying` | `검증 중` | Orchestrator가 변경 범위, 테스트, 증적을 재검증 중 |
+| `verified` | `검증 완료` | Orchestrator 재검증까지 통과 |
+| `needs_review` | `검토 필요` | 결과는 있으나 보정, 사용자 판단, FIND/CR 분류가 필요 |
+| `blocked`, `failed`, `timeout`, `environment_blocked` | `차단` 또는 `환경 차단` | 계약, 환경, 실행 실패로 다음 판단이 필요 |
+
+`worker 완료`는 `검증 완료`가 아닙니다.
+Dashboard에서 이 둘을 나누는 이유는 worker 결과가 후보 산출물이고, 최종 판단은 Orchestrator 재검증 뒤에만 가능하기 때문입니다.
+
 ## 문서 코멘트
 
 Markdown 문서를 읽다가 수정 요청이나 질문이 있으면 문서 블록의 `+` 버튼으로 코멘트를 남깁니다.

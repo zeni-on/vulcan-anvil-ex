@@ -85,6 +85,57 @@ function delegationSourceLabel(source: RuntimeDelegationRecord['source']): strin
   return 'direct edit reason'
 }
 
+function delegationStatusTone(status?: string): {
+  label: string
+  className: string
+  Icon: LucideIcon
+  spin?: boolean
+} {
+  const normalized = (status ?? '').toLowerCase()
+  if (['delegated', 'worker_running', 'running'].includes(normalized)) {
+    return {
+      label: normalized === 'delegated' ? '위임됨' : 'worker 실행중',
+      className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+      Icon: Loader2,
+      spin: normalized !== 'delegated',
+    }
+  }
+  if (normalized === 'orchestrator_verifying') {
+    return {
+      label: '검증 중',
+      className: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
+      Icon: Loader2,
+      spin: true,
+    }
+  }
+  if (['verified', 'orchestrator_verified'].includes(normalized)) {
+    return {
+      label: '검증 완료',
+      className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+      Icon: CheckCircle2,
+    }
+  }
+  if (['needs_review', 'worker_completed', 'completed', 'completed_no_result_change'].includes(normalized)) {
+    return {
+      label: normalized === 'needs_review' ? '검토 필요' : 'worker 완료',
+      className: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+      Icon: AlertTriangle,
+    }
+  }
+  if (['blocked', 'failed', 'timeout', 'environment_blocked'].includes(normalized)) {
+    return {
+      label: normalized === 'environment_blocked' ? '환경 차단' : '차단',
+      className: 'border-rose-500/40 bg-rose-500/10 text-rose-200',
+      Icon: XCircle,
+    }
+  }
+  return {
+    label: status || '상태 미기록',
+    className: 'border-slate-700 bg-slate-800/60 text-slate-300',
+    Icon: CheckCircle2,
+  }
+}
+
 function formatSeconds(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds)) return ''
   if (seconds < 60) return `${Math.max(0, Math.floor(seconds))}s`
@@ -481,12 +532,15 @@ function WorktreeRow({ worktree }: { worktree: RuntimeWorktree }) {
 }
 
 function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
+  const statusTone = delegationStatusTone(record.status)
+  const StatusIcon = statusTone.Icon
   const tooltip = [
     record.run_file,
     record.sidecar_path,
     record.delegate ? `delegate: ${record.delegate}` : '',
     record.task ? `task: ${record.task}` : '',
     record.result_summary ? `summary: ${record.result_summary}` : '',
+    record.verification_status ? `verification: ${record.verification_status}` : '',
   ].filter(Boolean).join('\n')
 
   return (
@@ -509,9 +563,19 @@ function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
               </>
             )}
           </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-600">
+            <span className="shrink-0">{delegationSourceLabel(record.source)}</span>
+            {record.verification_status && (
+              <>
+                <span className="shrink-0 text-slate-700">/</span>
+                <span className="min-w-0 truncate">{record.verification_status}</span>
+              </>
+            )}
+          </div>
         </div>
-        <span className="shrink-0 rounded border border-slate-700 bg-slate-800/60 px-1.5 py-0.5 text-[10px] text-slate-300">
-          {record.status || delegationSourceLabel(record.source)}
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${statusTone.className}`}>
+          <StatusIcon className={`h-3 w-3 ${statusTone.spin ? 'animate-spin' : ''}`} />
+          {statusTone.label}
         </span>
       </div>
     </li>

@@ -123,6 +123,39 @@ describe('AgentPanel worker activity drawer', () => {
     expect(screen.getByText('RUN-014')).toBeInTheDocument()
     expect(screen.getByText('Codex subagent')).toBeInTheDocument()
     expect(screen.getByText('Todo API 구현')).toBeInTheDocument()
+    expect(screen.getByText('worker 완료')).toBeInTheDocument()
+  })
+
+  it('위임 상태에서 worker 완료와 Orchestrator 검증 완료를 구분해 표시한다', () => {
+    render(<AgentPanel runtime={{
+      ...runtime,
+      active_executions: [],
+      delegations: [
+        {
+          run_id: 'RUN-014',
+          sidecar_path: '.vulcan/delegations/RUN-014.json',
+          mode: 'codex-thread',
+          delegate: 'build',
+          task: 'Todo API 구현',
+          status: 'worker_completed',
+          source: 'delegation_sidecar',
+        },
+        {
+          run_id: 'RUN-015',
+          sidecar_path: '.vulcan/delegations/RUN-015.json',
+          mode: 'codex-thread',
+          delegate: 'qa',
+          task: 'QA 증적 확인',
+          status: 'verified',
+          verification_status: 'orchestrator verified',
+          source: 'delegation_sidecar',
+        },
+      ],
+    }} />)
+
+    expect(screen.getByText('worker 완료')).toBeInTheDocument()
+    expect(screen.getByText('검증 완료')).toBeInTheDocument()
+    expect(screen.getByText('orchestrator verified')).toBeInTheDocument()
   })
 
   it('Run 위임 기록이 없어도 오류 대신 미기록 안내를 표시한다', () => {

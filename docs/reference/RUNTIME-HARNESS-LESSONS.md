@@ -402,6 +402,12 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 - worker 완료와 Orchestrator 검증 완료를 명확히 나눈다.
 
+현재 상태:
+
+- Dashboard 위임 기록은 raw `status` 대신 해석된 상태 배지를 표시한다.
+- `worker_completed`/`completed`는 `worker 완료`로 표시하고, `verified`만 `검증 완료`로 표시한다.
+- `orchestrator_verifying`, `needs_review`, `blocked`/`failed`/`timeout`/`environment_blocked`를 별도 의미로 분리한다.
+
 작업:
 
 - sidecar/Run/Dashboard 상태명 정리
@@ -411,6 +417,11 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 성공 기준:
 
 - `completed_no_result_change`, `worker completed`, `verified`, `needs review`가 사용자에게 덜 헷갈린다.
+
+남은 후보:
+
+- `run-check` 또는 `prepare-transition`에서 완료된 Build/QA Run에 `worker_completed`만 있고 `verified` 또는 Orchestrator 검증 기록이 없으면 안내한다.
+- Run 문서 생성 지침에서 `completed` 대신 `worker_completed`/`verified`를 명시적으로 쓰게 유도한다.
 
 ### P3. Doctor Command
 
