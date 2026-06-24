@@ -247,14 +247,23 @@ export const RuntimeWorktreeSchema = z.object({
 
 export const RuntimeDelegationRecordSchema = z.object({
   run_id: z.string().min(1),
-  run_file: z.string().min(1),
+  run_file: z.string().min(1).optional(),
+  sidecar_path: z.string().min(1).optional(),
   mode: z.string().min(1),
   delegate: z.string().optional(),
   task: z.string().optional(),
   status: z.string().optional(),
   result_summary: z.string().optional(),
   changed_count: z.number().nonnegative().optional(),
-  source: z.enum(['delegation_records', 'run_execution_record', 'direct_edit']),
+  changed_files: z.array(z.string()).optional(),
+  started_at: z.string().optional(),
+  last_activity_at: z.string().optional(),
+  completed_at: z.string().optional(),
+  verified_at: z.string().optional(),
+  verification_status: z.string().optional(),
+  self_check_count: z.number().nonnegative().optional(),
+  orchestrator_verification_count: z.number().nonnegative().optional(),
+  source: z.enum(['delegation_sidecar', 'delegation_records', 'run_execution_record', 'direct_edit']),
 })
 
 export const WorkflowPolicySchema = z.object({

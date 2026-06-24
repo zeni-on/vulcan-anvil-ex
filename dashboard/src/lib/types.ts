@@ -271,14 +271,23 @@ export interface RuntimeWorktree {
 
 export interface RuntimeDelegationRecord {
   run_id: string
-  run_file: string
+  run_file?: string
+  sidecar_path?: string
   mode: string
   delegate?: string
   task?: string
   status?: string
   result_summary?: string
   changed_count?: number
-  source: 'delegation_records' | 'run_execution_record' | 'direct_edit'
+  changed_files?: string[]
+  started_at?: string
+  last_activity_at?: string
+  completed_at?: string
+  verified_at?: string
+  verification_status?: string
+  self_check_count?: number
+  orchestrator_verification_count?: number
+  source: 'delegation_sidecar' | 'delegation_records' | 'run_execution_record' | 'direct_edit'
 }
 
 export interface RuntimeCapabilities {

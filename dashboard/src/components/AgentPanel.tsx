@@ -79,6 +79,7 @@ function delegationModeLabel(mode: string): string {
 }
 
 function delegationSourceLabel(source: RuntimeDelegationRecord['source']): string {
+  if (source === 'delegation_sidecar') return 'delegation sidecar'
   if (source === 'delegation_records') return 'delegation_records'
   if (source === 'run_execution_record') return 'Run Execution Record'
   return 'direct edit reason'
@@ -482,6 +483,7 @@ function WorktreeRow({ worktree }: { worktree: RuntimeWorktree }) {
 function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
   const tooltip = [
     record.run_file,
+    record.sidecar_path,
     record.delegate ? `delegate: ${record.delegate}` : '',
     record.task ? `task: ${record.task}` : '',
     record.result_summary ? `summary: ${record.result_summary}` : '',
@@ -590,7 +592,7 @@ export default function AgentPanel({
         ) : (
           <ul className="space-y-1.5">
             {delegations.slice(0, 5).map((record, index) => (
-              <DelegationRow key={`${record.run_file}-${record.mode}-${record.delegate ?? 'delegate'}-${index}`} record={record} />
+              <DelegationRow key={`${record.run_file ?? record.sidecar_path ?? record.run_id}-${record.mode}-${record.delegate ?? 'delegate'}-${index}`} record={record} />
             ))}
           </ul>
         )}

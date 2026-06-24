@@ -33,6 +33,7 @@ Dashboard는 주로 다음 파일과 폴더를 읽습니다.
 | `docs/product/` 또는 `docs/poc/` | Product/PoC profile의 핵심 문서 |
 | `docs/runs/` | Run, Build Wave, QA Run, 위임 기록 |
 | `.vulcan/comments/comments.jsonl` | Dashboard 문서 코멘트 |
+| `.vulcan/delegations/*.json` | subagent/thread/native branch agent 위임 sidecar |
 | Git 커밋 | 최근 변경과 브랜치 상태 |
 
 ## 화면 읽는 법
@@ -63,10 +64,14 @@ worker가 끝난 뒤에도 검토, 삭제, 증적 확인을 위해 남아 있을
 
 ## 위임 기록
 
-Dashboard는 Run 문서에 남은 `delegation_records`와 외부 CLI의 `Run Execution Record`를 읽어 위임 경로를 표시합니다.
+Dashboard는 `.vulcan/delegations/*.json` sidecar, Run 문서의 `delegation_records`, 외부 CLI의 `Run Execution Record`를 읽어 위임 경로를 표시합니다.
+
+sidecar는 실행 중 또는 방금 끝난 native 위임 상태를 보여주는 얇은 런타임 기록입니다.
+Run 문서의 `delegation_records`는 Orchestrator가 재검증 후 정리하는 최종 기록에 가깝습니다.
 
 | 표시 | 의미 |
 | --- | --- |
+| `delegation sidecar` | `.vulcan/delegations/*.json`에서 읽은 진행/검증 후보 상태 |
 | `Codex subagent` | Codex native subagent가 작업하고 Orchestrator가 재검증한 기록 |
 | `Codex thread` | 별도 Codex thread/session에 위임한 기록 |
 | `Agy branch` | Antigravity/Agy Workspace branch 또는 native branch agent 기록 |
@@ -77,6 +82,23 @@ Dashboard는 Run 문서에 남은 `delegation_records`와 외부 CLI의 `Run Exe
 위임 기록이 없다고 해서 항상 오류는 아닙니다.
 짧은 PoC 실험이나 사람이 직접 정리한 문서는 기록이 없을 수 있습니다.
 다만 Product/Audit의 완료된 Build/QA Run에서 실행 경로가 비어 있다면, Orchestrator에게 위임 기록 또는 직접 수정 사유를 정리하도록 요청하는 것이 좋습니다.
+
+권장 sidecar 최소 예시는 다음과 같습니다.
+
+```json
+{
+  "run_id": "RUN-014",
+  "mode": "codex-subagent",
+  "delegate": "build",
+  "status": "worker_running",
+  "started_at": "2026-06-24T10:00:00+09:00",
+  "last_activity_at": "2026-06-24T10:03:00+09:00",
+  "task": "BW-001 Todo API 구현",
+  "changed_files": [],
+  "self_check": [],
+  "orchestrator_verification": []
+}
+```
 
 ## 문서 코멘트
 

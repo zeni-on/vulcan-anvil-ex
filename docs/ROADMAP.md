@@ -148,7 +148,7 @@
    - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
 6. **Delegation sidecar와 worker completion state**
-   - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` 같은 sidecar로 남기는 MVP를 검토한다.
+   - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` sidecar로 읽어 Dashboard에 표시하는 MVP가 들어갔다.
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 

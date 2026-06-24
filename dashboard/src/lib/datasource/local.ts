@@ -21,6 +21,7 @@ import {
   DataSource,
   SessionData,
   ProjectRuntime,
+  RuntimeDelegationRecord,
   DocNode,
   CommitEntry,
   PathTraversalError,
@@ -146,7 +147,7 @@ export class LocalDataSource implements DataSource {
         workflow: result.data.workflow ?? runtime.workflow ?? null,
         active_executions: activeExecutions,
         worktrees: this.readRuntimeWorktrees(activeExecutions),
-        delegations: this.readRunDelegations(),
+        delegations: this.readRuntimeDelegations(),
       }
     } catch (err) {
       console.warn('[LocalDataSource] vulcan.config.json 읽기 실패:', err)
@@ -335,7 +336,128 @@ export class LocalDataSource implements DataSource {
     }
   }
 
-  private readRunDelegations(): ProjectRuntime['delegations'] {
+  private readRuntimeDelegations(): NonNullable<ProjectRuntime['delegations']> {
+    return this.mergeRuntimeDelegations([
+      ...this.readDelegationSidecars(),
+      ...this.readRunDelegations(),
+    ]).slice(0, 12)
+  }
+
+  private readDelegationSidecars(): NonNullable<ProjectRuntime['delegations']> {
+    const delegationsPath = path.join(this.resolvedBasePath, '.vulcan', 'delegations')
+    this.assertSafePath(delegationsPath)
+
+    if (!fs.existsSync(delegationsPath)) return []
+
+    try {
+      return fs.readdirSync(delegationsPath)
+        .filter((name) => name.toLowerCase().endsWith('.json'))
+        .flatMap((name) => {
+          const filePath = path.join(delegationsPath, name)
+          this.assertSafePath(filePath)
+          if (!fs.statSync(filePath).isFile()) return []
+
+          try {
+            const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>
+            const record = this.normalizeDelegationSidecar(name, parsed)
+            return record ? [record] : []
+          } catch {
+            return []
+          }
+        })
+    } catch (err) {
+      console.warn('[LocalDataSource] delegation sidecar 읽기 실패:', err)
+      return []
+    }
+  }
+
+  private normalizeDelegationSidecar(
+    fileName: string,
+    payload: Record<string, unknown>,
+  ): RuntimeDelegationRecord | null {
+    const runId = this.stringValue(payload.run_id)
+      ?? this.stringValue(payload.target_id)
+      ?? fileName.match(/(?:RUN|RV|QA)-\d+/i)?.[0]?.toUpperCase()
+    if (!runId) return null
+
+    const changedFiles = this.stringArrayValue(payload.changed_files)
+    const selfCheck = this.arrayValue(payload.self_check) ?? this.arrayValue(payload.self_checks)
+    const orchestratorVerification = this.arrayValue(payload.orchestrator_verification)
+      ?? this.arrayValue(payload.verification)
+
+    return {
+      run_id: runId,
+      run_file: this.stringValue(payload.run_file) ?? undefined,
+      sidecar_path: `.vulcan/delegations/${fileName}`,
+      mode: this.stringValue(payload.mode) ?? this.stringValue(payload.runner) ?? 'unknown',
+      delegate: this.stringValue(payload.delegate) ?? undefined,
+      task: this.stringValue(payload.task) ?? undefined,
+      status: this.stringValue(payload.status) ?? undefined,
+      result_summary: this.stringValue(payload.result_summary) ?? this.stringValue(payload.summary) ?? undefined,
+      changed_count: changedFiles.length > 0 ? changedFiles.length : undefined,
+      changed_files: changedFiles.length > 0 ? changedFiles : undefined,
+      started_at: this.stringValue(payload.started_at) ?? undefined,
+      last_activity_at: this.stringValue(payload.last_activity_at) ?? this.stringValue(payload.last_update) ?? undefined,
+      completed_at: this.stringValue(payload.completed_at) ?? undefined,
+      verified_at: this.stringValue(payload.verified_at) ?? undefined,
+      verification_status: this.stringValue(payload.verification_status) ?? undefined,
+      self_check_count: selfCheck?.length,
+      orchestrator_verification_count: orchestratorVerification?.length,
+      source: 'delegation_sidecar',
+    }
+  }
+
+  private mergeRuntimeDelegations(records: RuntimeDelegationRecord[]): RuntimeDelegationRecord[] {
+    const byKey = new Map<string, RuntimeDelegationRecord>()
+
+    for (const record of records) {
+      const key = [
+        record.run_id,
+        record.mode,
+        record.delegate ?? '',
+      ].join('|')
+      if (!byKey.has(key)) {
+        byKey.set(key, record)
+      }
+    }
+
+    return Array.from(byKey.values()).sort((a, b) => {
+      const aRank = this.delegationStatusRank(a.status)
+      const bRank = this.delegationStatusRank(b.status)
+      if (aRank !== bRank) return aRank - bRank
+      return this.delegationTimeValue(b) - this.delegationTimeValue(a)
+    })
+  }
+
+  private delegationStatusRank(status?: string): number {
+    const normalized = (status ?? '').toLowerCase()
+    if (['running', 'worker_running', 'delegated', 'orchestrator_verifying'].includes(normalized)) return 0
+    if (['blocked', 'failed', 'timeout', 'environment_blocked'].includes(normalized)) return 1
+    if (['completed_no_result_change', 'completed', 'verified'].includes(normalized)) return 2
+    return 3
+  }
+
+  private delegationTimeValue(record: RuntimeDelegationRecord): number {
+    const value = record.last_activity_at ?? record.completed_at ?? record.started_at ?? record.verified_at
+    if (!value) return 0
+    const parsed = Date.parse(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  private stringValue(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() ? value.trim() : null
+  }
+
+  private stringArrayValue(value: unknown): string[] {
+    if (!Array.isArray(value)) return []
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  }
+
+  private arrayValue(value: unknown): unknown[] | null {
+    return Array.isArray(value) ? value : null
+  }
+
+  private readRunDelegations(): NonNullable<ProjectRuntime['delegations']> {
     const runsPath = path.join(this.resolvedBasePath, 'docs', 'runs')
     this.assertSafePath(runsPath)
 

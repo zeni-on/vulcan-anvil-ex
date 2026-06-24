@@ -188,6 +188,67 @@ describe('LocalDataSource.getRuntime() — worker status heartbeat', () => {
       }),
     ]))
   })
+
+  it('delegation sidecar를 runtime 위임 기록으로 반환하고 Run 문서 기록보다 우선한다', async () => {
+    fs.mkdirSync(path.join(tmpDir, '.vulcan', 'delegations'), { recursive: true })
+    fs.mkdirSync(path.join(tmpDir, 'docs', 'runs'), { recursive: true })
+    fs.writeFileSync(
+      path.join(tmpDir, 'vulcan.config.json'),
+      JSON.stringify({
+        runtime: {
+          available_runners: [{ name: 'codex', model: 'gpt-5.5', effort: 'medium' }],
+        },
+      }),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, '.vulcan', 'delegations', 'RUN-003.json'),
+      JSON.stringify({
+        run_id: 'RUN-003',
+        run_file: 'docs/runs/RUN-003_build_v0.1.md',
+        mode: 'codex-thread',
+        delegate: 'build-worker',
+        task: 'PoC Todo 구현',
+        status: 'worker_running',
+        started_at: '2026-06-24T10:00:00+09:00',
+        last_activity_at: '2026-06-24T10:03:00+09:00',
+        changed_files: ['app/main.py', 'tests/test_main.py'],
+        self_check: ['python -m pytest'],
+        orchestrator_verification: ['python vulcan.py run-check docs/runs/RUN-003_build_v0.1.md'],
+      }),
+      'utf-8',
+    )
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', 'runs', 'RUN-003_build_v0.1.md'),
+      [
+        'run_id: RUN-003',
+        'status: Completed',
+        'delegation_records:',
+        '  - mode: codex-thread',
+        '    delegate: build-worker',
+        '    task: "PoC Todo 구현"',
+        '    status: completed',
+      ].join('\n'),
+      'utf-8',
+    )
+
+    const ds = new LocalDataSource({ path: tmpDir })
+    const runtime = await ds.getRuntime()
+
+    expect(runtime?.delegations?.[0]).toEqual(expect.objectContaining({
+      run_id: 'RUN-003',
+      run_file: 'docs/runs/RUN-003_build_v0.1.md',
+      sidecar_path: '.vulcan/delegations/RUN-003.json',
+      mode: 'codex-thread',
+      delegate: 'build-worker',
+      status: 'worker_running',
+      changed_count: 2,
+      self_check_count: 1,
+      orchestrator_verification_count: 1,
+      source: 'delegation_sidecar',
+    }))
+    expect(runtime?.delegations).toHaveLength(1)
+  })
 })
 
 // ── UT-002-05: 파일 부재 시 기본값 Session 반환 ───────────────────────────────

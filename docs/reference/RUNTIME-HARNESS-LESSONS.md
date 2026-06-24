@@ -358,6 +358,12 @@ Ex 적용 방향:
 
 - native subagent/thread/Agy branch 진행 상태를 Dashboard가 실시간 또는 준실시간으로 읽을 수 있게 한다.
 
+현재 상태:
+
+- Dashboard local datasource가 `.vulcan/delegations/*.json`을 읽어 `runtime.delegations`와 병합한다.
+- sidecar와 Run 문서 기록이 같은 `run_id/mode/delegate`를 가리키면 sidecar를 먼저 표시한다.
+- sidecar가 없어도 기존 Run 문서의 `delegation_records`, `Run Execution Record`, direct edit reason 표시는 유지된다.
+
 작업:
 
 - `.vulcan/delegations/*.json` 스키마 정의
@@ -369,6 +375,9 @@ Ex 적용 방향:
 
 - Run 문서 정규화 전에도 Dashboard에서 `worker_running`, `worker_completed`, `verified/needs_review` 후보를 볼 수 있다.
 - sidecar가 없어도 기존 프로젝트는 깨지지 않는다.
+
+sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 않는다.
+최종 판단은 여전히 Orchestrator 재검증과 Run/QA/Release 산출물에 기록한다.
 
 ### P1. Execute Facade 설계와 Dry-run
 
