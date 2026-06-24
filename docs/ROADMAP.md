@@ -132,7 +132,8 @@
 3. **Delivery Profile 구체화**
    - Audit/SI, Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
    - Product profile은 OWASP/CWE 기반 보안 기준선과 프로젝트 단어사전/데이터 매핑을 기본으로 삼고, KISA/공공데이터 공통표준은 Audit 전환 gap으로 정리한다.
-   - Product profile은 현재 문서 세트, Gate별 필수 산출물, trace 검사, `release-pr --dry-run` evidence 기준이 1차 구현되어 있다. 다음 작업은 새 기능보다 Product fixture smoke와 실제 샘플 재실행으로 회귀를 고정하는 것이다.
+   - Product profile은 현재 문서 세트, Gate별 필수 산출물, trace 검사, `release-pr --dry-run` evidence 기준이 1차 구현되어 있다.
+   - Product fixture smoke 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`에 고정했다. 다음 작업은 실제 Product 샘플 재실행으로 fixture가 놓치는 운영 마찰을 확인하는 것이다.
    - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
    - PoC 산출물 세트 분리 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
    - Product 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`를 따른다.
@@ -229,6 +230,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md` | 성능/병렬화 전략 | 샘플 프로젝트 로그 기준 병목 분석과 perf-report, QA 정합성 자동화, 제한적 병렬화 방향 |
 | `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md` | PoC와 개발환경 runway 전략 | PoC 실험 기록, Environment Readiness Track, BW-000 재정의 방향 |
 | `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md` | PoC 전용 템플릿 세트 전략 | PoC를 audit 템플릿 완충이 아니라 3개 통합 산출물 세트로 검증하는 방향 |
+| `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md` | Product fixture smoke 전략 | Product profile 회귀 fixture와 실제 샘플 재실행의 합격 기준 |
 | `docs/reference/EX-DIRECTION-INVESTMENT-REVIEW.md` | Ex 방향성/투자 판단 기준 | 빠른 AI coding tool이 아니라 AI coding governance framework로 투자할 조건과 축소 신호를 정리 |
 | `docs/reference/CODEX-REPO-LOCAL-SKILL-STRATEGY.md` | Codex repo-local skill 전략 | 전역 skill을 건드리지 않고 `.agents/skills`로 Vulcan 절차 카드를 제공하는 기준 |
 | `docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md` | Codex custom agent 전략 | `.codex/agents`로 메인 Orchestrator의 읽기 중심 보조 에이전트를 정의하는 기준 |

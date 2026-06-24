@@ -46,6 +46,8 @@ python scripts/regression/run_fixture_smoke.py
 - `run-integrate --dry-run`은 scope 밖 `playwright.config.*` 같은 변경을 `Config Hotfix Candidate`로 분류하고 Orchestrator 판단 선택지를 출력한다.
 - native/Agy delegation 흔적이 있는데 `delegation_records`가 비어 있는 완료 Run은 `run-check`와 `run-preflight`에서 차단된다.
 
+Product fixture smoke의 평가 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`를 따른다.
+
 ## 범위
 
 초기 smoke harness는 실제 AI runner, npm, Gradle, Playwright, 전체 샘플 프로젝트 재생을 실행하지 않는다.

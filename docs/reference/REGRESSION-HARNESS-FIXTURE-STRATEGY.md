@@ -133,7 +133,10 @@ fixture 기반 검증은 이 smoke harness 위에 후속으로 추가한다.
 python scripts/regression/run_fixture_smoke.py
 ```
 
-현재 fixture는 `scripts/regression/fixtures/simple-hello-audit/`이며, `sample-ex-branch-1`에서 정규화한 공개 가능한 문서 세트와 `check-contract`용 최소 backend 소스를 포함한다.
+현재 fixture는 `scripts/regression/fixtures/simple-hello-audit/`와 `scripts/regression/fixtures/simple-todo-product/`다.
+Audit fixture는 `sample-ex-branch-1`에서 정규화한 공개 가능한 문서 세트와 `check-contract`용 최소 backend 소스를 포함한다.
+Product fixture는 `docs/product/` 원장, Product release evidence, Product Build Wave related IDs, ADR empty-state, regression/release report 기준을 확인한다.
+Product fixture의 세부 평가 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`를 따른다.
 
 권장 흐름:
 
@@ -167,6 +170,9 @@ python scripts/regression/run_fixture_smoke.py
 - QA-001~QA-003은 QA-000 workspace 없이 진행되지 않는다.
 - check-architecture가 SW Architecture와 Deployment Infrastructure Architecture를 혼동하지 않는다.
 - check-contract가 Python/Java/TS 계약 검사에서 crash 없이 종료한다.
+- Product profile이 Audit 전용 QA Finding/Test Result/Traceability Matrix를 필수 evidence로 요구하지 않는다.
+- Product release body가 `docs/product/` 원장, backlog, Gate 5 승인서를 evidence로 사용한다.
+- Product Build Wave related IDs에서 `SCN/API/DATA/UI/REG` 연결이 보존된다.
 
 ## 10. 하지 않을 것
 
