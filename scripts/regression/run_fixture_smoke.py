@@ -583,6 +583,30 @@ def assert_product_gate4_blocks_planned_regression(project_dir: Path, vulcan_py:
             "Product Gate4 should block planned regression execution results, "
             f"but did not find '{expected}' in issues: {issues}"
         )
+    session_path = project_dir / "session.json"
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    session["current_gate"] = "gate4"
+    session.setdefault("gate_status", {})["gate4"] = "pending"
+    session_path.write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+    status_check = subprocess.run(
+        [py, "vulcan.py", "status", "--json", "--check"],
+        cwd=project_dir,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=90,
+    )
+    if status_check.returncode == 0:
+        raise FixtureSmokeFailure(
+            "Product status --json --check should fail while Gate4 regression rows are Not run yet/Planned\n"
+            f"stdout:\n{status_check.stdout}\nstderr:\n{status_check.stderr}"
+        )
+    if expected not in (status_check.stdout + status_check.stderr):
+        raise FixtureSmokeFailure(
+            "Product status --json --check failed without the planned regression diagnostic\n"
+            f"stdout:\n{status_check.stdout}\nstderr:\n{status_check.stderr}"
+        )
 
 
 def assert_codex_model_policy_fallback(vulcan_py: Path, py: str) -> StepResult:

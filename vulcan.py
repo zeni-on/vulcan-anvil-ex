@@ -4814,7 +4814,7 @@ def collect_product_profile_findings(project_dir=".", gate=None):
         if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
             issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
         if gate in ("gate4", "gate5", "completed") and re.search(
-            r"\|\s*REG-\d{3}\s*\|\s*(?:TBD|Gate\s*4\s*예정|Gate\s*4\s*planned|예정)[^|]*\|\s*(?:Planned|TBD)\b",
+            r"\|\s*REG-\d{3}\s*\|\s*(?:TBD|Not\s+run\s+yet|Gate\s*4\s*예정|Gate\s*4\s*planned|예정)[^|]*\|\s*(?:Planned|TBD|Not\s+Run)\b",
             release_content,
             re.IGNORECASE,
         ):

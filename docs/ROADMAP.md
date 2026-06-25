@@ -91,6 +91,7 @@
    - 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
    - QA-000은 `doctor --json` 환경 증적을 남기고, 제품 결함과 `environment_blocked`를 분리한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않는지, 수정이 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리되는지 샘플에서 확인한다.
+   - 2026-06-25 Product sample Gate 4에서 `doctor`, compileall, pytest, npm test/build, `npx playwright test`와 screenshot 증적까지 확인했다. 동시에 Product 기본 문구 `Not run yet | Planned`가 Gate 4 전환을 막지 못하던 readiness 버그를 fixture에 고정했다.
    - 다음 보강은 새 기능 구현이 아니라 "차단 후 사용자 협의 안내와 qa-fix-loop/ISSUE 후보 분기가 자연스럽게 보이는지"를 확인하는 것이다.
 
 3. **Profile별 실제 샘플 재실행**
