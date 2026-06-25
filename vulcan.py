@@ -2710,9 +2710,11 @@ def save_session(session, project_dir="."):
 
 
 def refresh_session_stats(session, project_dir="."):
-    session["implementation"] = compute_implementation_progress(project_dir, session=session)
-    session["stats"] = compute_stats(project_dir)
-    session["stats"]["implementation"] = session["implementation"]
+    stats = compute_stats(project_dir)
+    implementation = stats.get("implementation") or compute_implementation_progress(project_dir, session=session)
+    session["implementation"] = implementation
+    session["stats"] = stats
+    session["stats"]["implementation"] = implementation
     return session
 
 
@@ -2897,8 +2899,11 @@ def compute_stats(project_dir="."):
     Returns:
         requirements, tests, docs 섹션과 updated_at을 포함한 stats dict.
     """
-    if load_delivery_profile(project_dir) == "poc":
+    profile = load_delivery_profile(project_dir)
+    if profile == "poc":
         return compute_poc_stats(project_dir)
+    if profile in {"product", "solution"}:
+        return compute_product_stats(project_dir)
 
     # requirements 섹션
     try:
@@ -2978,6 +2983,139 @@ def compute_stats(project_dir="."):
 
 def _ids_from_text(pattern, content):
     return sorted(set(re.findall(pattern, content or "")))
+
+
+def parse_product_trace_rows(project_dir="."):
+    path = os.path.join(project_dir, "docs", "product", "PRODUCT_TRACEABILITY.md")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return []
+
+    rows = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "SCN-" not in stripped:
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) < 8 or not re.fullmatch(r"SCN-\d{3}", cells[0]):
+            continue
+        req_ids = sorted(set(re.findall(r"\bREQ-\d{3}\b", cells[1])))
+        rows.append(
+            {
+                "scenario": cells[0],
+                "requirements": req_ids,
+                "implementation": cells[4],
+                "regression": cells[5],
+                "release_evidence": cells[6],
+                "status": cells[7],
+            }
+        )
+    return rows
+
+
+def _product_row_is_implemented(row):
+    implementation = (row.get("implementation") or "").strip()
+    status = (row.get("status") or "").strip()
+    if not implementation or re.fullmatch(r"(?i)(tbd|planned|not run|n/a|-)", implementation):
+        return False
+    implemented_status = re.search(
+        r"(?i)\b(impl self-check passed|implemented|verified|done|pass|passed)\b",
+        status,
+    )
+    return bool(implemented_status or re.search(r"`[^`]+`", implementation))
+
+
+def _product_test_status_counts(project_dir="."):
+    path = os.path.join(project_dir, "docs", "product", "REGRESSION_AND_RELEASE_REPORT.md")
+    if not os.path.exists(path):
+        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        content = ""
+    counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "REG-" not in stripped:
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) < 3 or not re.fullmatch(r"REG-\d{3}", cells[0]):
+            continue
+        counts["total"] += 1
+        result_text = " ".join(cells[1:4]).lower()
+        if re.search(r"\bpass(?:ed)?\b|verified", result_text):
+            counts["passed"] += 1
+        elif re.search(r"\bfail(?:ed)?\b", result_text):
+            counts["failed"] += 1
+        elif re.search(r"\bskip(?:ped)?\b", result_text):
+            counts["skipped"] += 1
+        else:
+            counts["pending"] += 1
+    return counts
+
+
+def compute_product_stats(project_dir="."):
+    rows = parse_product_trace_rows(project_dir)
+    req_ids = sorted({req_id for row in rows for req_id in row.get("requirements", [])})
+    implemented_req_ids = sorted({
+        req_id
+        for row in rows
+        if _product_row_is_implemented(row)
+        for req_id in row.get("requirements", [])
+    })
+    try:
+        docs_stats = count_docs(project_dir)
+    except Exception:
+        docs_stats = {"requirements": 0, "design": 0, "test_plan": 0, "review": 0, "total": 0}
+    try:
+        backlog_stats = compute_backlog_stats(project_dir)
+    except Exception:
+        backlog_stats = {
+            "active": 0,
+            "done": 0,
+            "rejected": 0,
+            "by_level": {"trivial": 0, "small": 0, "major": 0},
+            "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
+        }
+    try:
+        implementation_stats = compute_implementation_progress(project_dir)
+    except Exception:
+        implementation_stats = {
+            "requirements": {"total": 0, "implemented": 0, "pending": 0, "completed_ids": []},
+            "waves": {"total": 0, "completed": 0, "current": "", "items": []},
+        }
+    implementation_stats = dict(implementation_stats)
+    implementation_stats["requirements"] = {
+        "total": len(req_ids),
+        "implemented": len(implemented_req_ids),
+        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
+        "completed_ids": implemented_req_ids,
+    }
+    requirements_stats = {
+        "groups": len(rows),
+        "total": len(req_ids),
+        "implemented": len(implemented_req_ids),
+        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
+        "ac_defined": len(req_ids),
+        "ac_missing": 0,
+    }
+    return {
+        "requirements": requirements_stats,
+        "implementation": implementation_stats,
+        "tests": _product_test_status_counts(project_dir),
+        "docs": docs_stats,
+        "backlog": backlog_stats,
+        "updated_at": date.today().isoformat(),
+        "product": {
+            "scenarios": {"total": len(rows), "ids": [row["scenario"] for row in rows]},
+            "requirements": {"total": len(req_ids), "implemented": len(implemented_req_ids), "ids": req_ids, "implemented_ids": implemented_req_ids},
+        },
+    }
 
 
 def _poc_test_status_counts(test_content):
@@ -8812,9 +8950,8 @@ TBD
         items.append({"id": bw_id, "status": "In Progress", "run": rel_run, "related_ids": ids})
 
     waves["current"] = bw_id
-    session["implementation"] = compute_implementation_progress(project_dir, session=session)
-    session["implementation"]["waves"]["current"] = bw_id
-    session["stats"] = compute_stats(project_dir)
+    refresh_session_stats(session, project_dir)
+    session["implementation"].setdefault("waves", {})["current"] = bw_id
     session["stats"]["implementation"] = session["implementation"]
     save_session(session, project_dir)
     print(f"  Build Wave 시작: {bw_id}")
@@ -8865,10 +9002,9 @@ def cmd_wave_complete(bw_id, status="Verified", req_ids="", project_dir="."):
     if rel_run:
         item["run"] = rel_run
 
-    session["implementation"] = compute_implementation_progress(project_dir, session=session)
+    refresh_session_stats(session, project_dir)
     if waves.get("current") and status not in WAVE_DONE_STATUSES:
         session["implementation"]["waves"]["current"] = waves.get("current")
-    session["stats"] = compute_stats(project_dir)
     session["stats"]["implementation"] = session["implementation"]
     save_session(session, project_dir)
 
@@ -14904,17 +15040,12 @@ def collect_status_summary(project_dir="."):
     current_gate = session.get("current_gate") or "-"
     gate_status = session.get("gate_status", {}) if isinstance(session.get("gate_status"), dict) else {}
     implementation = session.get("implementation", {}) if isinstance(session.get("implementation"), dict) else {}
-    if profile == "poc":
+    if profile in ("poc", "product", "solution"):
         try:
-            poc_stats = compute_poc_stats(project_abs)
-            poc_requirements = poc_stats.get("requirements", {})
-            implementation = dict(implementation)
-            implementation["requirements"] = {
-                "total": poc_requirements.get("total", 0),
-                "implemented": poc_requirements.get("implemented", 0),
-                "pending": poc_requirements.get("pending", 0),
-                "completed_ids": poc_stats.get("poc", {}).get("requirements", {}).get("implemented_ids", []),
-            }
+            profile_stats = compute_stats(project_abs)
+            computed_implementation = profile_stats.get("implementation")
+            if isinstance(computed_implementation, dict):
+                implementation = computed_implementation
         except Exception:
             pass
     branch_state = session.get("branch_state", {}) if isinstance(session.get("branch_state"), dict) else {}

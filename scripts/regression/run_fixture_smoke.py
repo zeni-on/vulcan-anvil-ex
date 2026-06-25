@@ -682,6 +682,31 @@ def assert_status_model_fallback_summary(project_dir: Path, py: str) -> StepResu
     return result
 
 
+def assert_product_status_stats(project_dir: Path, py: str) -> StepResult:
+    result = run_step(
+        "product-status-json-implementation-stats",
+        [py, "vulcan.py", "status", "--json"],
+        cwd=project_dir,
+        timeout_seconds=60,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"Product status --json output is invalid: {exc}\n{result.combined_output}") from exc
+
+    implementation = payload.get("implementation") or {}
+    requirements = implementation.get("requirements") or {}
+    if requirements.get("total") != 3 or requirements.get("implemented") != 3:
+        raise FixtureSmokeFailure(
+            "Completed Product fixture should report 3/3 implemented requirements, "
+            f"got {requirements}"
+        )
+    completed_ids = set(requirements.get("completed_ids") or [])
+    if completed_ids != {"REQ-001", "REQ-002", "REQ-003"}:
+        raise FixtureSmokeFailure(f"Completed Product fixture completed_ids mismatch: {completed_ids}")
+    return result
+
+
 def assert_status_json_check(project_dir: Path, py: str) -> StepResult:
     result = run_step(
         "status-json-check",
@@ -1329,6 +1354,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 ],
             )
         )
+        steps.append(assert_product_status_stats(profile_product_completed_dir, py))
         completed_release_pr = run_step(
             "product-completed-fixture:release-pr-dry-run",
             [py, "vulcan.py", "release-pr", "--dry-run"],
