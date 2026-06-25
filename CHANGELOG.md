@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.4.9 - 2026-06-26
+
+`0.4.9`은 Product/PoC profile과 Orchestrator runtime 표시를 단단하게 만드는 안정화 패치 릴리즈다. Product Gate 5, PoC evidence, QA 환경 차단, delegation sidecar, Dashboard/Jest 검증 경로를 실제 샘플과 fixture smoke 기준으로 고정했다.
+
+Release notes: [docs/releases/v0.4.9.md](docs/releases/v0.4.9.md)
+
+- `doctor` / `doctor --json` 환경 진단을 추가하고, QA-000에서 환경 차단과 제품 결함을 분리할 수 있도록 증적 계약을 보강했다.
+- `execute --dry-run` / `execute --dry-run --json`을 추가해 Run 실행 전 `run-check`, `run-preflight`, scope, verification, delegation sidecar 후보를 한 번에 확인할 수 있게 했다.
+- native subagent/thread/Agy branch 위임 상태를 Dashboard와 `status`에서 읽을 수 있도록 delegation sidecar와 worker verification state 표시를 보강했다.
+- Codex model fallback을 `status`와 실행 기록에 표시하고, 지원되지 않는 `gpt-5.3-codex` alias가 `gpt-5.5`로 호환 fallback되는 경로를 fixture smoke에 고정했다.
+- Product profile의 실제 샘플 재실행 결과를 반영해 Gate 4 Planned regression row, Gate 5 release approval 문서 누락, Product `release-pr --dry-run` evidence 기준을 fixture smoke에 고정했다.
+- PoC 반복형 샘플에서 `Pass` / `Smoke Pass`가 실제 evidence 파일 없이 구현 완료로 집계되지 않도록 PoC evidence guard를 추가했다.
+- Dashboard test 경로가 `.next`, `test-results`, `playwright-report` 같은 생성물을 스캔하지 않도록 Jest 설정을 안정화했다.
+- Roadmap과 reference 문서를 실제 Product/PoC 샘플 재실행 결과 기준으로 현행화했다.
+
 ## 0.4.8 - 2026-06-15
 
 `0.4.8`은 Product profile 안정화 패치 릴리즈다. Product 프로젝트에서 release PR, Build Wave trace, ADR empty-state가 audit profile 기준과 섞여 보이던 부분을 정리했다.
