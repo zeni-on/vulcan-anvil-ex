@@ -467,6 +467,18 @@ skill: build-wave
 bw_id: BW-001
 status: Verified
 related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
+target_contracts:
+  scenario: [SCN-001]
+  req: [REQ-001]
+  api: [API-001, API-002]
+  data: [DATA-001]
+  ui: [UI-001]
+scope:
+  writable:
+    - "backend/"
+    - "frontend/"
+    - "static/"
+    - "tests/"
 ---
 ```
 
@@ -496,6 +508,22 @@ related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
     if missing:
         raise FixtureSmokeFailure(
             f"Product Build Wave related IDs were not preserved: missing {missing}, actual {sorted(actual_ids)}"
+        )
+
+    inferred_role = module.infer_execution_role(
+        run_path.read_text(encoding="utf-8"),
+        {
+            "run_id": "RUN-001",
+            "persona": "build",
+            "skill": "build-wave",
+            "title": "Product scenario smoke",
+            "bw_id": "BW-001",
+        },
+    )
+    if inferred_role != "build":
+        raise FixtureSmokeFailure(
+            "Product full-stack Build Wave should infer generic build role, "
+            f"got {inferred_role}"
         )
 
 
@@ -651,6 +679,31 @@ def assert_status_model_fallback_summary(project_dir: Path, py: str) -> StepResu
         for item in fallbacks
     ):
         raise FixtureSmokeFailure(f"status --json did not report model fallback summary: {fallbacks}")
+    return result
+
+
+def assert_product_status_stats(project_dir: Path, py: str) -> StepResult:
+    result = run_step(
+        "product-status-json-implementation-stats",
+        [py, "vulcan.py", "status", "--json"],
+        cwd=project_dir,
+        timeout_seconds=60,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"Product status --json output is invalid: {exc}\n{result.combined_output}") from exc
+
+    implementation = payload.get("implementation") or {}
+    requirements = implementation.get("requirements") or {}
+    if requirements.get("total") != 3 or requirements.get("implemented") != 3:
+        raise FixtureSmokeFailure(
+            "Completed Product fixture should report 3/3 implemented requirements, "
+            f"got {requirements}"
+        )
+    completed_ids = set(requirements.get("completed_ids") or [])
+    if completed_ids != {"REQ-001", "REQ-002", "REQ-003"}:
+        raise FixtureSmokeFailure(f"Completed Product fixture completed_ids mismatch: {completed_ids}")
     return result
 
 
@@ -1301,6 +1354,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 ],
             )
         )
+        steps.append(assert_product_status_stats(profile_product_completed_dir, py))
         completed_release_pr = run_step(
             "product-completed-fixture:release-pr-dry-run",
             [py, "vulcan.py", "release-pr", "--dry-run"],
