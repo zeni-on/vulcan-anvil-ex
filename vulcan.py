@@ -3152,6 +3152,33 @@ def _poc_test_status_counts(test_content):
     return counts
 
 
+def _poc_existing_pass_evidence_paths(project_dir, test_content):
+    paths = []
+    for line in (test_content or "").splitlines():
+        if "|" not in line or not re.search(r"\bEV-(?:[A-Z]+-)?\d{3}\b", line):
+            continue
+        lowered = line.lower()
+        if not ("pass" in lowered or "통과" in lowered or "observed" in lowered):
+            continue
+        cells = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        candidate = cells[2].strip()
+        if not candidate or re.search(r"(?i)\b(TBD|미정|확정필요|not\s+run|planned)\b", candidate):
+            continue
+        link_match = re.search(r"\]\(([^)]+)\)", candidate)
+        if link_match:
+            candidate = link_match.group(1)
+        candidate = candidate.split("<br>")[0].strip().strip("`")
+        if re.match(r"^[a-zA-Z]+://", candidate):
+            paths.append(candidate)
+            continue
+        abs_path = candidate if os.path.isabs(candidate) else os.path.join(project_dir, candidate)
+        if os.path.exists(abs_path):
+            paths.append(candidate)
+    return paths
+
+
 def compute_poc_stats(project_dir="."):
     req_content = read_project_text(project_dir, "docs/poc/POC_REQUIREMENTS.md")
     design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
@@ -3162,7 +3189,12 @@ def compute_poc_stats(project_dir="."):
     nreq_ids = _ids_from_text(r"\bNREQ-\d{3}\b", req_content)
     ac_ids = _ids_from_text(r"\bAC-(?:NREQ-)?\d{3}-\d{2}\b", req_content)
     test_link_text = test_content or ""
-    implemented_req_ids = [req_id for req_id in req_ids if req_id in test_link_text and re.search(r"\bPass\b", test_link_text, re.IGNORECASE)]
+    has_pass_evidence = bool(_poc_existing_pass_evidence_paths(project_dir, test_content))
+    implemented_req_ids = [
+        req_id
+        for req_id in req_ids
+        if has_pass_evidence and req_id in test_link_text and re.search(r"\bPass\b", test_link_text, re.IGNORECASE)
+    ]
     api_ids = _ids_from_text(r"\bAPI-\d{3}\b", design_content)
     data_ids = _ids_from_text(r"\bDATA-\d{3}\b", design_content)
     scr_ids = _ids_from_text(r"\bSCR-\d{3}\b", design_content)
@@ -4745,6 +4777,10 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
                 issues.append("docs/poc/POC_TEST_REPORT.md의 판단 근거가 TBD입니다.")
             if re.search(r"\|\s*T-(?:[A-Z]+-)?\d{3}\s*\|[^\n]*\|\s*(?:Planned|TBD)\s*\|", test_content, re.IGNORECASE):
                 issues.append("docs/poc/POC_TEST_REPORT.md에 Gate 4 이후에도 Planned/TBD 테스트 결과가 남아 있습니다.")
+        if gate in ("impl", "gate4", "gate5", "completed"):
+            tests_stats = _poc_test_status_counts(test_content)
+            if tests_stats.get("passed", 0) > 0 and not _poc_existing_pass_evidence_paths(project_dir, test_content):
+                issues.append("docs/poc/POC_TEST_REPORT.md에 Pass/Smoke Pass 결과가 있으나 실제 증적 파일을 찾을 수 없습니다.")
         else:
             if mostly_placeholder_row(test_content, r"T-\d{3}"):
                 warnings.append("docs/poc/POC_TEST_REPORT.md에 placeholder 중심의 테스트 계획 행이 남아 있습니다.")
