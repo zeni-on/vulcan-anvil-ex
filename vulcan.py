@@ -13633,6 +13633,34 @@ def effective_run_contract_profile(project_profile, metadata=None, input_contrac
     )
 
 
+def qa_execution_source_mutation_blockers(content):
+    blockers = []
+    writable_block = _extract_yaml_block_text(content, "writable")
+    if re.search(r"(^|\n)\s*-\s*[\"']?(backend|frontend|src|app|packages|server|client)(/|\\|\s*$)", writable_block, re.IGNORECASE):
+        blockers.append("qa-execution Run writable scope에는 소스코드 경로를 포함하지 않습니다. QA worker는 증적과 결과 문서만 작성합니다.")
+    if re.search(r"\bsession\.json\b", writable_block):
+        blockers.append("qa-execution Run writable scope에 session.json을 포함할 수 없습니다.")
+
+    negative_re = re.compile(
+        r"하지\s*않|금지|않고|분리|후보|필요하면|qa-fix-loop|CR\s*후보|worker_can_modify_source\s*:\s*false|modify_source\s*:\s*false|do\s+not|does\s+not|must\s+not|without\s+modifying|not\s+modify",
+        re.IGNORECASE,
+    )
+    positive_re = re.compile(
+        r"(?:새\s*(?:API|메소드|method)|소스(?:코드)?|코드|source|backend|frontend|src|app).*(?:수정하|고치|패치하|추가하|생성하|구현하|변경하|\b(?:fix|modify|patch|add|create|implement|update)\b)"
+        r"|(?:수정하|고치|패치하|추가하|생성하|구현하|변경하|\b(?:fix|modify|patch|add|create|implement|update)\b).*(?:새\s*(?:API|메소드|method)|소스(?:코드)?|코드|source|backend|frontend|src|app)",
+        re.IGNORECASE,
+    )
+    for line in content.splitlines():
+        if re.match(r"^\s*(summary|update|note|result|log_path|document|status)\s*:", line, re.IGNORECASE):
+            continue
+        if negative_re.search(line):
+            continue
+        if positive_re.search(line):
+            blockers.append("qa-execution Run이 소스 수정 지시처럼 보입니다. 실패는 FIND/CR/ISSUE 후보로 보고하고 수정은 승인된 qa-fix-loop로 분리하세요.")
+            break
+    return blockers
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -13696,6 +13724,9 @@ def check_run_file(path):
         persona = persona_match.group(1).strip()
         if persona not in RUN_PERSONAS:
             issues.append(f"알 수 없는 persona 값: {persona}")
+
+    if skill == "qa-execution":
+        issues.extend(qa_execution_source_mutation_blockers(content))
 
     if re.search(r"result\s*:\s*passed", content, re.IGNORECASE) and not re.search(r"command\s*:", content):
         issues.append("passed 결과가 있지만 검증 command가 없습니다.")
@@ -14158,13 +14189,7 @@ def run_preflight_file(path):
         if re.search(r"\bQA-00[1-3]\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
             warnings.append("QA-001~QA-003 Run은 QA-000이 기록한 같은 qa_workspace_path를 입력으로 받아야 합니다.")
         blockers.extend(qa_workspace_preflight_blockers(path, qa_stage))
-        writable_block = _extract_yaml_block_text(content, "writable")
-        if re.search(r"(^|\n)\s*-\s*(backend|frontend|src|app|packages|server|client)(/|\\|\s*$)", writable_block, re.IGNORECASE):
-            blockers.append("qa-execution Run writable scope에는 소스코드 경로를 포함하지 않습니다. QA worker는 증적과 결과 문서만 작성합니다.")
-        if re.search(r"\bsession\.json\b", writable_block):
-            blockers.append("qa-execution Run writable scope에 session.json을 포함할 수 없습니다.")
-        if re.search(r"새\s*(API|메소드|method)|소스.*수정|코드.*수정|fix.*code", content, re.IGNORECASE):
-            warnings.append("qa-execution Run이 수정 지시처럼 보입니다. 실패는 FIND/CR 후보로 보고하고 수정은 qa-fix-loop로 분리하세요.")
+        blockers.extend(qa_execution_source_mutation_blockers(content))
         if status in {"Completed", "Verified", "CompletedWithIssues", "Failed", "Blocked"}:
             has_delegation_records = yaml_field_has_nonempty_items(content, "delegation_records")
             has_run_execution_record = bool(re.search(r"(?im)^#{2,4}\s*Run Execution Record\b", content))

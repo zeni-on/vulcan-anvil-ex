@@ -933,6 +933,53 @@ def assert_run_input_contract_metadata_guardrails(project_dir: Path, py: str, st
     )
 
 
+def write_mutating_qa_execution_run(project_dir: Path) -> Path:
+    source = project_dir / "docs" / "runs" / "RUN-014_qa-000-gate-4-environment-smoke-for-python-hello-api_v0.1.md"
+    target = project_dir / "docs" / "runs" / "RUN-996_qa-execution-source-mutation-pollution_v0.1.md"
+    content = source.read_text(encoding="utf-8")
+    content = re.sub(r"run_id:\s*RUN-\d+", "run_id: RUN-996", content, count=1)
+    content = content.replace(
+        '    - "docs/artifacts/04-review/evidence/"',
+        '    - "docs/artifacts/04-review/evidence/"\n    - "backend/app/main.py"',
+        1,
+    )
+    content += (
+        "\n\n## QA Worker Mutation Pollution Regression Fixture\n\n"
+        "QA worker instruction: modify backend/app/main.py and add a new API method while collecting QA evidence.\n"
+        "run-check and run-preflight must block this and require a separate approved qa-fix-loop or CR candidate.\n"
+    )
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def assert_qa_execution_mutation_guardrails(project_dir: Path, py: str, steps: list[StepResult]) -> None:
+    bad_qa_run = write_mutating_qa_execution_run(project_dir)
+    run_arg = str(bad_qa_run.relative_to(project_dir))
+    required_text = [
+        "qa-execution Run writable scope에는 소스코드 경로를 포함하지 않습니다",
+        "qa-execution Run이 소스 수정 지시처럼 보입니다",
+        "qa-fix-loop",
+    ]
+    steps.append(
+        run_step(
+            "run-check-blocks-qa-execution-source-mutation",
+            [py, "vulcan.py", "run-check", run_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=required_text,
+        )
+    )
+    steps.append(
+        run_step(
+            "run-preflight-blocks-qa-execution-source-mutation",
+            [py, "vulcan.py", "run-preflight", run_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=required_text,
+        )
+    )
+
+
 def assert_run_integrate_config_hotfix_candidate(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     session_path = project_dir / "session.json"
     session_before = json.loads(session_path.read_text(encoding="utf-8"))
@@ -1582,6 +1629,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         assert_gitignore_evidence_policy(project_dir, py, steps)
         assert_native_delegation_guardrails(project_dir, py, steps)
         assert_run_input_contract_metadata_guardrails(project_dir, py, steps)
+        assert_qa_execution_mutation_guardrails(project_dir, py, steps)
 
         print("Vulcan fixture smoke regression: PASS")
         print(f"  fixture: {args.fixture}")
