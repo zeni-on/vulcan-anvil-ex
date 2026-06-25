@@ -75,72 +75,51 @@
 `0.4.x`에서는 기능을 더 많이 넣기보다, 실제 샘플 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중한다.
 세부 아이디어는 reference 문서로 넘기고, 이 문서는 "지금 무엇을 먼저 볼지"를 정하는 큐로 사용한다.
 
-### Now: 0.4.x 안정화
+### Now: testing-first stabilization
 
-지금 바로 반복 검증하거나 보강할 항목이다.
+지금은 새 기능을 늘리기보다, 이미 얻은 운영 규칙이 실제 샘플과 fixture에서 반복 검증되는지 확인하는 구간이다.
+새 CLI나 자동화 후보는 먼저 테스트/샘플에서 효과를 확인하고, 효과가 분명할 때만 main으로 승격한다.
 
-1. **샘플 발견 회귀의 fixture 고정**
-   - 샘플 프로젝트를 매번 처음부터 재실행하는 것이 아니라, 이미 발견한 회귀를 `scripts/regression` fixture smoke로 옮긴다.
-   - 공식 QA 로그 누락, Playwright 보조 report 오인, Config Hotfix scope 후보, native/Agy `delegation_records` 누락, Run 입력 계약 metadata 불일치, QA worker 수정 지시 오염은 fixture smoke에 고정했다.
-   - 다음 고정 후보는 실제 샘플에서 새로 반복 관찰되는 회귀로 제한한다.
-   - 새 샘플 end-to-end 재실행은 큰 프로세스 변경이나 릴리즈 전 확인이 필요할 때만 수행한다.
+1. **Fixture smoke를 기준선으로 유지**
+   - 샘플 프로젝트를 매번 처음부터 재실행하는 대신, 반복 발견된 회귀를 `scripts/regression/run_fixture_smoke.py`에 고정한다.
+   - 공식 QA 로그 누락, Playwright 보조 report 오인, Config Hotfix scope 후보, native/Agy `delegation_records` 누락, Run 입력 계약 metadata 불일치, QA worker 수정 지시 오염, `status --json --check`, `execute --dry-run --json`은 fixture smoke에 고정했다.
+   - 다음 fixture 추가는 실제 샘플에서 두 번 이상 반복되거나, Gate 전환/QA/릴리즈를 실제로 막은 회귀만 대상으로 한다.
    - 회귀 하네스 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
 
-2. **Run/위임 품질 게이트 보강**
+2. **Gate 4 QA 흐름 재검증**
+   - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다.
+   - 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
+   - QA-000은 `doctor --json` 환경 증적을 남기고, 제품 결함과 `environment_blocked`를 분리한다.
+   - QA worker가 테스트 실행자와 수정자 역할을 섞지 않는지, 수정이 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리되는지 샘플에서 확인한다.
+   - 다음 보강은 새 기능 구현이 아니라 "차단 후 사용자 협의 안내와 qa-fix-loop/ISSUE 후보 분기가 자연스럽게 보이는지"를 확인하는 것이다.
+
+3. **Profile별 실제 샘플 재실행**
+   - Product profile은 fixture smoke만으로 끝내지 않고, 실제 Product 샘플 1회를 재실행해 운영 마찰을 확인한다.
+   - PoC profile은 빠른 시간보다 실험 기록 복원성을 기준으로 본다. 여러 번 기능을 추가하는 반복형 PoC에서 `Fix Log / Experiment Iterations`가 충분히 복원 가능한지 확인한다.
+   - Audit profile은 Gate 4/5 전환과 release-pr dry-run까지 큰 흐름이 깨지지 않는지 릴리즈 전 smoke 성격으로만 재실행한다.
+   - Product 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`, PoC 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
+
+4. **Run/위임 품질 게이트는 샘플 기반으로만 보강**
    - `run-check`, `run-preflight`, `trace-context`, `--trace-seed`, native 위임용 `delegation_records`의 MVP는 이미 들어갔다.
-   - 남은 작업은 샘플에서 나온 실제 누락 사례를 기준으로 `scope.writable`, `interface_contract`, `source_documents`, `delegation_records` 진단을 더 정확하게 만드는 것이다.
+   - 추가 규칙은 이론적으로 만들지 않고, 실제 Run/QA/worker 기록에서 반복된 누락만 반영한다.
    - 외부 CLI runner는 `_exec` 로그와 Run Execution Record를 유지하되, subagent/thread/Agy Workspace branch는 얇은 `delegation_records`를 기본 기록으로 정리한다.
    - 추적성 그래프 기준은 `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md`를 따른다.
 
-3. **Gate 4 QA 안정화**
-   - 신규 프로젝트 기본 `.gitignore`는 공식 QA 로그를 막지 않고 `playwright-report/`, `test-results/`를 보조 로컬 산출물로 제외한다.
-   - 공식 증적은 `docs/artifacts/04-review/evidence/logs/*`와 `docs/artifacts/04-review/evidence/ui/*.png`에 둔다.
-   - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
-   - QA-000은 `doctor --json` 환경 증적을 남긴다. `environment_blocked` 상태의 QA-000 workspace가 있으면 후속 QA-001/QA-002 진행은 차단된다.
-   - 다음 보강은 실제 샘플에서 차단 후 사용자 협의 안내와 qa-fix-loop/ISSUE 후보 분기가 자연스럽게 보이는지 확인하는 것이다.
-   - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
-   - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
-
-4. **PoC 실험 기록과 Environment Readiness Track**
-   - PoC profile은 "경량 audit"이 아니라 확인하려는 가설, 반복별 기능 변화, 실행 결과, 다음 판단을 남기는 실험 기록 중심으로 재정의한다.
-   - `sample-ex-poc-record-0616-1` 재실행에서 `docs/poc` 3종만으로 Phase 0~Gate 4를 진행할 수 있고, Phase 0에서 구현/테스트 파일을 먼저 만들면 `status --check`가 차단하는 것을 확인했다.
-   - 구현 단계에서 `BW-000`으로 처음 개발환경을 만들지 않고, Phase 0~Gate 3 동안 SA/AA 성격의 subagent가 Environment Readiness Track으로 병렬 준비할 수 있게 한다.
-   - Environment Readiness Track은 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke까지만 허용하고 업무 요구사항 구현/Pass 확정은 금지한다.
-   - 상세 설계는 `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md`를 따른다.
-
-5. **PoC template set 1차 검증**
-   - PoC를 audit 템플릿의 느슨한 검사 모드로만 다루지 않고, 별도 `docs/templates/poc/` 산출물 세트로 분리하는 방향을 검증한다.
-   - 1차 후보는 PoC 요구사항/가설, PoC 시스템 통합 설계, PoC 테스트/결과/판정의 3개 템플릿이다.
-   - 1차 재실행 결과 현재 템플릿으로도 PoC는 가능하므로, 템플릿 대수정은 보류한다. 다음 검증은 여러 번 기능을 추가하는 반복형 PoC에서 `Fix Log / Experiment Iterations`가 충분히 복원 가능한지 확인한다.
-   - 상세 전략은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
-
-6. **사용자 온보딩과 샘플 증거 정리**
-   - README 첫 화면에서 Ex를 "빠른 앱 빌더"가 아니라 AI-generated work Trust/Governance Layer로 설명한다.
-   - `docs/WHICH_PROFILE_SHOULD_I_USE.md`로 PoC/Product/Audit 선택 기준을 분리한다.
-   - `docs/EXAMPLES_AND_BENCHMARKS.md`로 샘플 소요 시간, 산출물, profile별 차이를 공개 요약한다.
-   - 다음 단계는 fixture/metrics 기반으로 샘플 수치를 더 재현 가능하게 만드는 것이다.
-
-7. **전환 진단 정리**
-   - Gate 전환 판단은 `prepare-transition`을 기본으로 사용한다.
-   - `check-trace`는 traceability 상세 디버깅과 회귀 검증용으로 남긴다.
-   - placeholder, 빈 표, 잘못된 Run 입력 계약, thin delegation record 같은 산출물 완성도 문제는 `prepare-transition`/`run-check` 쪽으로 모은다.
-   - Orchestrator가 직접 기억해야 하는 CLI 표면은 먼저 `status` 하나로 줄인다. `status --check`가 `prepare-transition` 진단을 요약하고, 원자 명령은 고급/호환 명령으로 유지한다. 상세 전략은 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
-
-8. **Runtime harness UX 흡수**
-   - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
-   - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령으로 흡수한다.
-   - `status --json --check`와 `execute --dry-run --json`으로 사람용 출력과 자동화용 구조화 출력을 함께 제공한다.
-   - Codex role-based model fallback은 1차 구현되어 `gpt-5.3-codex` 같은 미지원 alias를 실행 전 `gpt-5.5`로 정규화하고, Dashboard/status에 actual model과 fallback reason을 표시한다.
-   - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
+5. **문서/대시보드 사용자 경로 점검**
+   - README, profile 선택 가이드, 샘플/benchmark 문서는 "빠른 앱 빌더"가 아니라 AI-generated work Trust/Governance Layer 관점으로 유지한다.
+   - Dashboard 문서 코멘트, Trace Explorer, QA evidence 표시가 실제 오케스트레이터 판단에 도움이 되는지 샘플에서 확인한다.
+   - 새 UI 기능은 문서나 CLI가 안정된 뒤에만 추가한다.
 
 ### Next: 0.5 후보
 
 `0.4.x` 안정화 뒤 제품성이나 생산성을 키우는 항목이다.
 
-1. **Spec-to-Scaffold MVP**
+1. **Spec-to-Scaffold MVP 실험 보류**
    - Gate 2 Program Design에서 class/component, public method, DTO/entity, test mapping을 읽어 skeleton 후보를 만든다.
    - 자동 반영이 아니라 `scaffold-plan`, `scaffold-generate --dry-run`, Orchestrator 확인 순서로 둔다.
    - 코드에서 설계로 역투영하는 기능은 자동 수정이 아니라 `drift-report` 후보로 남긴다.
+   - PR #15는 CI 통과 상태지만, 실제 Gate 2 Program Design과 BW-000/Run 작성 시간을 줄이는지 확인하기 전에는 main으로 승격하지 않는다.
+   - 효과가 불분명하면 PR을 닫거나 reference 아이디어로만 남긴다.
 
 2. **Performance & Parallelization**
    - `perf-report`류 CLI로 Gate별 wall-clock, Run별 worker duration, QA-Fix 왕복, timeout/watchdog 이벤트를 산출한다.
@@ -161,20 +140,22 @@
    - Trace Explorer는 MVP가 들어갔으므로, 샘플 사용 결과를 보고 ID 검색, upstream/downstream 전환, 그래프 복잡도 제어를 보강한다.
    - QA evidence 확대 보기, UIREF와 screenshot side-by-side 비교는 실제 Gate 4 사용감 확인 뒤 진행한다.
 
-5. **Orchestrator CLI facade**
+5. **Orchestrator CLI facade 검증**
    - `status` MVP부터 시작해 `branch-status`, `profile-status`, `prepare-transition` 진단을 한 화면으로 요약한다.
    - `transition check` 같은 유사 진단 명령은 만들지 않는다. 진단 표면은 `status --check`로 모은다.
    - `status --json --check`는 전환 진단을 `transition_check` 객체로 제공한다.
    - `execute --dry-run` MVP는 Run 실행 전 `run-check`, `run-preflight`, sidecar 후보, scope, 검증 명령을 한 번에 확인하는 수준으로 들어갔다.
    - `execute --dry-run --json`은 같은 계획을 `delegation_sidecar`, `planned_flow`, `run_check`, `preflight`, `scope`, `verification` 구조로 제공한다.
-   - 이후 필요성이 검증되면 `plan`, 실제 `execute`, `transition`은 후보로 다시 검토한다.
+   - 다음 작업은 새 명령 추가가 아니라 샘플에서 Orchestrator가 `status`와 `execute --dry-run`을 자연스럽게 쓰는지 확인하는 것이다.
+   - 이후 필요성이 샘플로 검증되면 `plan`, 실제 `execute`, `transition`은 후보로 다시 검토한다.
    - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
-6. **Delegation sidecar와 worker completion state**
+6. **Delegation sidecar와 worker completion state 검증**
    - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` sidecar로 읽어 Dashboard에 표시하는 MVP가 들어갔다.
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
    - `execute --dry-run --json`은 native 위임 시작 전에 만들 sidecar 후보를 구조화해 보여준다.
    - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
+   - 다음 작업은 sidecar 스키마 확장이 아니라 샘플에서 실제 위임 기록이 Dashboard/Run/최종 보고에 일관되게 보이는지 확인하는 것이다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Later: 장기 확장 후보
