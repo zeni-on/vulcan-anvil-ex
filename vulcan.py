@@ -27,6 +27,7 @@ Agent-Forge의 5-Gate 프로세스를 Claude Code 네이티브 하네스(.claude
 
 import argparse
 import ast
+import contextlib
 import fnmatch
 import hashlib
 import io
@@ -12148,7 +12149,15 @@ def _print_execute_items(label, items, max_items=8):
         print(f"    - ... 외 {len(items) - max_items}건")
 
 
-def cmd_execute(run_id, runner="native", dry_run=False, project_dir="."):
+def _execute_status_label(blockers, warnings, pass_label="pass", warn_label="warn", block_label="block"):
+    if blockers:
+        return block_label
+    if warnings:
+        return warn_label
+    return pass_label
+
+
+def _execute_plan(run_id, runner="native", project_dir="."):
     project_abs = os.path.abspath(project_dir)
     config = load_vulcan_config(project_abs)
     run_path = find_run_file(project_abs, run_id)
@@ -12193,77 +12202,138 @@ def cmd_execute(run_id, runner="native", dry_run=False, project_dir="."):
     effort = runner_config.get("effort") or runner_config.get("reasoning_effort") or "-"
     sandbox = runner_config.get("sandbox") or "-"
 
-    print("Vulcan execute dry-run")
-    print(f"  run_id: {run_id}")
-    print(f"  project_dir: {project_abs}")
-    print(f"  run_file: {run_rel_path}")
-    print(f"  gate: {run_meta.get('gate') or '-'}")
-    print(f"  profile: {run_meta.get('profile') or load_delivery_profile(project_abs)}")
-    print(f"  skill: {run_meta.get('skill') or '-'}")
-    print(f"  inferred_role: {role}")
-    print(f"  runner_mode: {runner_mode}")
-    print(f"  selected_runner: {runner_detail}")
+    sidecar_candidate = {
+        "path": sidecar_rel_path,
+        "run_id": run_id,
+        "mode": runner_detail,
+        "status": "delegated",
+        "task": run_meta.get("title") or run_meta.get("skill") or "",
+        "changed_files": [],
+        "self_check": [],
+        "orchestrator_verification": [],
+        "note": "candidate only; create/update when native delegation actually starts",
+    }
+
+    planned_flow = [
+        f'python vulcan.py run-preflight "{run_command_path}"',
+        f"record delegation sidecar candidate: {sidecar_rel_path}",
+    ]
     if runner_mode == "external-cli":
-        print(f"  runner_model: {model}")
-        print(f"  runner_effort: {effort}")
-        print(f"  runner_sandbox: {sandbox}")
-    print(f"  delegation_sidecar: {sidecar_rel_path}")
-
-    if run_check_issues:
-        print("  run_check: fail")
-    elif run_check_warnings:
-        print("  run_check: warn")
+        planned_flow.extend([
+            f"from project_dir, execute external runner: python vulcan.py run-exec --run-id {run_id} --runner {runner_detail}",
+            f"from project_dir, inspect worker diff: python vulcan.py run-integrate --run-id {run_id} --runner {runner_detail} --dry-run",
+        ])
     else:
-        print("  run_check: pass")
+        planned_flow.extend([
+            f"delegate to {runner_detail} and require delegation_records or sidecar update",
+            "collect changed_files/self_check from worker result",
+        ])
+    planned_flow.extend([
+        "Orchestrator reruns the Run-specific verification commands",
+        f'python vulcan.py run-check "{run_command_path}"',
+        "update delegation status to verified/needs_review/blocked after Orchestrator verification",
+    ])
 
-    if preflight_blockers:
-        print("  preflight: block")
-    elif preflight_warnings:
-        print("  preflight: warn")
-    else:
-        print("  preflight: pass")
+    return {
+        "run_id": run_id,
+        "project_dir": project_abs,
+        "run_file": normalize_repo_path(run_rel_path),
+        "gate": run_meta.get("gate") or "",
+        "profile": run_meta.get("profile") or load_delivery_profile(project_abs),
+        "skill": run_meta.get("skill") or "",
+        "inferred_role": role,
+        "runner_mode": runner_mode,
+        "selected_runner": runner_detail,
+        "runner": {
+            "model": model if runner_mode == "external-cli" else "",
+            "reasoning_effort": effort if runner_mode == "external-cli" else "",
+            "sandbox": sandbox if runner_mode == "external-cli" else "",
+        },
+        "delegation_sidecar": sidecar_candidate,
+        "run_check": {
+            "status": _execute_status_label(run_check_issues, run_check_warnings, block_label="fail"),
+            "issues": run_check_issues,
+            "warnings": run_check_warnings,
+        },
+        "preflight": {
+            "status": _execute_status_label(preflight_blockers, preflight_warnings),
+            "blockers": preflight_blockers,
+            "warnings": preflight_warnings,
+        },
+        "scope": {
+            "writable": writable_scope,
+            "readonly": readonly_scope,
+        },
+        "verification": {
+            "commands": verification_commands,
+        },
+        "planned_flow": planned_flow,
+        "exit_code": 1 if run_check_issues or preflight_blockers else 0,
+    }
 
-    _print_execute_items("scope.writable", writable_scope)
-    _print_execute_items("scope.readonly", readonly_scope, max_items=5)
-    _print_execute_items("verification.commands", verification_commands)
 
-    if run_check_warnings:
+def cmd_execute(run_id, runner="native", dry_run=False, project_dir=".", emit_json=False):
+    plan = _execute_plan(run_id, runner=runner, project_dir=project_dir)
+
+    if emit_json:
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        if not dry_run:
+            print("오류: execute MVP는 현재 --dry-run만 지원합니다.", file=sys.stderr)
+            sys.exit(1)
+        if plan["exit_code"]:
+            sys.exit(plan["exit_code"])
+        return
+
+    print("Vulcan execute dry-run")
+    print(f"  run_id: {plan['run_id']}")
+    print(f"  project_dir: {plan['project_dir']}")
+    print(f"  run_file: {plan['run_file']}")
+    print(f"  gate: {plan.get('gate') or '-'}")
+    print(f"  profile: {plan.get('profile') or '-'}")
+    print(f"  skill: {plan.get('skill') or '-'}")
+    print(f"  inferred_role: {plan.get('inferred_role') or '-'}")
+    print(f"  runner_mode: {plan['runner_mode']}")
+    print(f"  selected_runner: {plan['selected_runner']}")
+    if plan["runner_mode"] == "external-cli":
+        print(f"  runner_model: {plan['runner']['model'] or '-'}")
+        print(f"  runner_effort: {plan['runner']['reasoning_effort'] or '-'}")
+        print(f"  runner_sandbox: {plan['runner']['sandbox'] or '-'}")
+    print(f"  delegation_sidecar: {plan['delegation_sidecar']['path']}")
+    print(f"  run_check: {plan['run_check']['status']}")
+    print(f"  preflight: {plan['preflight']['status']}")
+
+    _print_execute_items("scope.writable", plan["scope"]["writable"])
+    _print_execute_items("scope.readonly", plan["scope"]["readonly"], max_items=5)
+    _print_execute_items("verification.commands", plan["verification"]["commands"])
+
+    if plan["run_check"]["warnings"]:
         print("\nRun-check warnings:")
-        for warning in run_check_warnings:
+        for warning in plan["run_check"]["warnings"]:
             print(f"  - {warning}")
-    if run_check_issues:
+    if plan["run_check"]["issues"]:
         print("\nRun-check blockers:")
-        for issue in run_check_issues:
+        for issue in plan["run_check"]["issues"]:
             print(f"  - {issue}")
-    if preflight_warnings:
+    if plan["preflight"]["warnings"]:
         print("\nPreflight warnings:")
-        for warning in preflight_warnings:
+        for warning in plan["preflight"]["warnings"]:
             print(f"  - {warning}")
-    if preflight_blockers:
+    if plan["preflight"]["blockers"]:
         print("\nPreflight blockers:")
-        for blocker in preflight_blockers:
+        for blocker in plan["preflight"]["blockers"]:
             print(f"  - {blocker}")
 
     print("\nPlanned flow:")
-    print(f"  1. python vulcan.py run-preflight \"{run_command_path}\"")
-    print(f"  2. record delegation sidecar candidate: {sidecar_rel_path}")
-    if runner_mode == "external-cli":
-        print(f"  3. from project_dir, execute external runner: python vulcan.py run-exec --run-id {run_id} --runner {runner_detail}")
-        print(f"  4. from project_dir, inspect worker diff: python vulcan.py run-integrate --run-id {run_id} --runner {runner_detail} --dry-run")
-    else:
-        print(f"  3. delegate to {runner_detail} and require delegation_records or sidecar update")
-        print("  4. collect changed_files/self_check from worker result")
-    print("  5. Orchestrator reruns the Run-specific verification commands")
-    print(f"  6. python vulcan.py run-check \"{run_command_path}\"")
-    print("  7. update delegation status to verified/needs_review/blocked after Orchestrator verification")
+    for index, item in enumerate(plan["planned_flow"], start=1):
+        print(f"  {index}. {item}")
 
     if not dry_run:
         print("\n오류: execute MVP는 현재 --dry-run만 지원합니다.")
         print("  실제 실행은 native 위임을 수동 수행하거나 run-exec/agent-run 원자 명령을 사용하세요.")
         sys.exit(1)
 
-    if run_check_issues or preflight_blockers:
-        sys.exit(1)
+    if plan["exit_code"]:
+        sys.exit(plan["exit_code"])
 
 
 def cmd_run_exec(
@@ -15316,17 +15386,72 @@ def cmd_doctor(project_dir=".", emit_json=False):
         sys.exit(1)
 
 
+def capture_prepare_transition_summary(project_dir="."):
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    exit_code = 0
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            cmd_prepare_transition(project_dir)
+        except SystemExit as exc:
+            try:
+                exit_code = int(exc.code)
+            except (TypeError, ValueError):
+                exit_code = 1
+    return {
+        "command": "python vulcan.py prepare-transition",
+        "status": "pass" if exit_code == 0 else "fail",
+        "exit_code": exit_code,
+        "stdout_lines": stdout.getvalue().splitlines(),
+        "stderr_lines": stderr.getvalue().splitlines(),
+    }
+
+
+def capture_trace_detail_summary(project_dir="."):
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    exit_code = 0
+    issues = []
+    warnings = []
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            issues, warnings = check_trace(project_dir, exit_on_error=False)
+        except SystemExit as exc:
+            try:
+                exit_code = int(exc.code)
+            except (TypeError, ValueError):
+                exit_code = 1
+    if issues and exit_code == 0:
+        exit_code = 1
+    return {
+        "command": "python vulcan.py check-trace",
+        "status": "pass" if exit_code == 0 else "fail",
+        "exit_code": exit_code,
+        "issue_count": len(issues),
+        "warning_count": len(warnings),
+        "stdout_lines": stdout.getvalue().splitlines(),
+        "stderr_lines": stderr.getvalue().splitlines(),
+    }
+
+
 def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
     summary = collect_status_summary(project_dir)
 
     if emit_json:
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        exit_code = 0
         if check:
-            print("오류: status --json --check는 아직 지원하지 않습니다. `python vulcan.py status --check`를 사용하세요.", file=sys.stderr)
-            sys.exit(2)
+            transition_check = capture_prepare_transition_summary(project_dir)
+            summary["transition_check"] = transition_check
+            if transition_check["exit_code"]:
+                exit_code = transition_check["exit_code"]
         if trace_detail:
-            print("오류: status --json --trace-detail은 아직 지원하지 않습니다. `python vulcan.py status --trace-detail`을 사용하세요.", file=sys.stderr)
-            sys.exit(2)
+            trace_check = capture_trace_detail_summary(project_dir)
+            summary["trace_detail"] = trace_check
+            if trace_check["exit_code"] and exit_code == 0:
+                exit_code = trace_check["exit_code"]
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        if exit_code:
+            sys.exit(exit_code)
         return
 
     print("==================================================")
@@ -16393,6 +16518,7 @@ def main():
     p_execute.add_argument("--runner", default="native", help="native, subagent, thread, agy-branch-agent 또는 codex-cli/claude-cli/antigravity-cli")
     p_execute.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
     p_execute.add_argument("--dry-run", action="store_true", help="실제 worker 호출 없이 실행 계획만 출력")
+    p_execute.add_argument("--json", action="store_true", help="실행 계획 dry-run을 JSON으로 출력")
 
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
     p_orchestrator_plan = subparsers.add_parser("orchestrator-plan", help="Orchestrator 실행 계획 Run 생성")
@@ -16615,6 +16741,7 @@ def main():
             runner=args.runner,
             dry_run=args.dry_run,
             project_dir=args.project_dir,
+            emit_json=args.json,
         )
     elif args.command == "orchestrator-plan":
         cmd_orchestrator_plan(

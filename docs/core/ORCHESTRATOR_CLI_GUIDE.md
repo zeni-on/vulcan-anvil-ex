@@ -37,6 +37,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | 현재 상태 요약 | `python vulcan.py status` |
 | Gate 전환 진단 포함 | `python vulcan.py status --check` |
 | JSON 출력 | `python vulcan.py status --json` |
+| JSON + Gate 전환 진단 | `python vulcan.py status --json --check` |
 | 추적성 상세 진단 포함 | `python vulcan.py status --trace-detail` |
 | 브랜치만 상세 확인 | `python vulcan.py branch-status` |
 | Profile 전환 gap 확인 | `python vulcan.py profile-gap --to product` 또는 `python vulcan.py profile-gap --to audit` |
@@ -104,12 +105,15 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | 새 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"` |
 | trace seed 기반 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --trace-seed <ID>` |
 | Run 실행 계획 dry-run | `python vulcan.py execute --run-id <RUN-ID> --runner native --dry-run` |
+| Run 실행 계획 JSON | `python vulcan.py execute --run-id <RUN-ID> --runner native --dry-run --json` |
 | worker handoff 전 사전검사 | `python vulcan.py run-preflight <run-file>` |
 | Run 완료/형식 검사 | `python vulcan.py run-check <run-file>` |
 
 native subagent, thread, native branch agent에게 넘기기 전에는 Orchestrator가 `run-preflight`를 직접 실행한다. `run-exec`와 `agent-run --mode work`는 preflight 자동 실행 경로가 있지만, native 위임은 자동 차단되지 않는다.
 
 `execute --dry-run`은 실제 worker를 실행하지 않는다. Run 문서를 기준으로 `run-check`, `run-preflight`, 위임 sidecar 후보, `scope.writable`, 검증 명령, 외부 runner 연결 명령을 한 번에 요약한다. native subagent/thread/Agy branch agent에게 일을 넘기기 전에는 이 출력으로 누락된 handoff 조건을 먼저 확인한다.
+
+자동화나 Dashboard 연동처럼 기계가 읽어야 하는 경우에는 `--json`을 붙인다. 이 JSON에는 `delegation_sidecar` 후보, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다. 이 출력도 dry-run 계획일 뿐이며 worker 실행, Gate 승인, Wave 완료를 수행하지 않는다.
 
 ## 6. 구현과 Build Wave
 
