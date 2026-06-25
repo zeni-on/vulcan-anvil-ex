@@ -14807,6 +14807,11 @@ def collect_status_summary(project_dir="."):
     integration_branch = workflow.get("integration_branch") or "dev"
     main_branch = workflow.get("main_branch") or "main"
     qa_state = qa_workspace_state(session)
+    qa_workspace_followup = []
+    qa_status = str(qa_state.get("status") or "").strip().lower()
+    qa_path = str(qa_state.get("path") or "").strip()
+    if qa_status in {"blocked", "failed", "missing", "environment_blocked"} and qa_path:
+        qa_workspace_followup = qa_workspace_blocked_followup_lines("후속 QA", qa_status, qa_path)
 
     open_statuses = {"draft", "inprogress", "in progress", "running"}
     active_runs = []
@@ -14870,6 +14875,16 @@ def collect_status_summary(project_dir="."):
                 action for action in next_actions
                 if action not in preferred_actions and not action.startswith("python vulcan.py session --gate")
             ]
+    if qa_workspace_followup:
+        preferred_actions = [
+            "QA-000 doctor JSON/evidence 확인",
+            "환경 문제는 ISSUE/environment_blocked로 보류",
+            "제품 수정 필요 시 qa-fix-loop 생성",
+        ]
+        next_actions = preferred_actions + [
+            action for action in next_actions
+            if action not in preferred_actions
+        ]
 
     return {
         "project": session.get("project") or os.path.basename(project_abs),
@@ -14883,6 +14898,7 @@ def collect_status_summary(project_dir="."):
         "impl_uses_integration_branch": workflow.get("impl_uses_integration_branch"),
         "session_branch_role": branch_state.get("current_role", "") or "-",
         "qa_workspace": qa_state,
+        "qa_workspace_followup": qa_workspace_followup,
         "dirty_blocking": has_blocking_dirty_status(project_abs),
         "integration_exists": git_branch_exists(integration_branch, project_abs),
         "implementation": implementation,
@@ -15298,6 +15314,11 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
         print(f"  mode: {qa_state.get('mode') or '-'}")
         print(f"  status: {qa_state.get('status') or '-'}")
         print(f"  last_stage: {qa_state.get('last_stage') or '-'}")
+        followup = summary.get("qa_workspace_followup") or []
+        if followup:
+            print("  followup")
+            for item in followup:
+                print(f"   - {item}")
     print()
 
     implementation = summary.get("implementation") or {}

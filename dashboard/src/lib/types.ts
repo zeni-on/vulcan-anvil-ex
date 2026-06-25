@@ -363,8 +363,25 @@ export interface SessionData {
     started_at?: string
     stage?: string
   }
+  qa_execution?: {
+    gate4_workspace?: QaWorkspaceState
+    gate4_worktree?: QaWorkspaceState
+  }
   /** check-trace 실행 시 계산된 프로젝트 통계 (REQ-011-02). 없을 수 있으므로 optional. */
   stats?: ProjectStats
+}
+
+export interface QaWorkspaceState {
+  path?: string
+  mode?: string
+  branch?: string
+  base_commit?: string
+  created_by_run?: string
+  created_at?: string
+  last_stage?: string
+  last_run?: string
+  updated_at?: string
+  status?: string
 }
 
 // ── DataSource 공통 반환 타입 ──────────────────────────────────────────────────

@@ -1415,6 +1415,19 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                     ],
                 )
             )
+            steps.append(
+                run_step(
+                    "status-json-surfaces-qa-workspace-followup",
+                    [py, "vulcan.py", "status", "--json"],
+                    cwd=project_dir,
+                    required_text=[
+                        "qa_workspace_followup",
+                        "doctor JSON",
+                        "ISSUE/environment_blocked",
+                        "qa-fix-loop",
+                    ],
+                )
+            )
         finally:
             session_path.write_text(
                 json.dumps(session_before_qa_guard, ensure_ascii=False, indent=2),

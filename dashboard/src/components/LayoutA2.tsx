@@ -15,6 +15,7 @@ import DocList from '@/components/DocList'
 import CommitList from '@/components/CommitList'
 import OpenFolderButton from '@/components/OpenFolderButton'
 import AgentPanel from '@/components/AgentPanel'
+import QaWorkspaceNotice from '@/components/QaWorkspaceNotice'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
 import { LayoutProps } from '@/components/LayoutA'
 import { CommitEntry, DocEntry, DocNode, ProjectStats } from '@/lib/types'
@@ -577,7 +578,12 @@ export default function LayoutA2({
           {Boolean(sessionError) && !sessionLoading && (
             <SectionError message="Gate 상태를 불러오지 못했습니다." />
           )}
-          {session && !sessionLoading && <GateStatusStepper session={session} />}
+          {session && !sessionLoading && (
+            <div className="space-y-3">
+              <GateStatusStepper session={session} />
+              <QaWorkspaceNotice session={session} />
+            </div>
+          )}
           {!session && !sessionLoading && !sessionError && (
             <p className="text-sm text-[#94A3B8]">session.json을 찾을 수 없습니다.</p>
           )}

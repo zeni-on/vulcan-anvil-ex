@@ -19,6 +19,7 @@ import DocList from '@/components/DocList'
 import CommitList from '@/components/CommitList'
 import StatsCards from '@/components/StatsCards'
 import CurrentGatePanel from '@/components/CurrentGatePanel'
+import QaWorkspaceNotice from '@/components/QaWorkspaceNotice'
 import OpenFolderButton from '@/components/OpenFolderButton'
 import RunnerStatusPanel from '@/components/RunnerStatusPanel'
 import { SectionSkeleton, SectionError, SectionLabel } from '@/components/SectionUI'
@@ -125,7 +126,10 @@ export default function LayoutA({
             <SectionError message="Gate 상태를 불러오지 못했습니다." />
           )}
           {session && !sessionLoading && (
-            <GateStatusStepper session={session} />
+            <div className="space-y-3">
+              <GateStatusStepper session={session} />
+              <QaWorkspaceNotice session={session} />
+            </div>
           )}
           {!session && !sessionLoading && !sessionError && (
             <p className="text-sm text-[#6B7280]">session.json을 찾을 수 없습니다.</p>
