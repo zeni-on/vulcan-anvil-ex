@@ -46,6 +46,7 @@
 - Antigravity/Agy를 메인 Orchestrator로 사용할 때의 `GEMINI.md`, Gemini adapter, native subagent, `Workspace: branch` 활용 기준
 - Gate 5 `release-pr` dry-run/body/branch guard
 - fixture 기반 회귀 smoke harness
+- `doctor` 환경 진단과 `doctor --json` 구조화 출력, Product fixture smoke, QA-000 `QA-000-doctor.json` 환경 증적 연결
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
 - PoC profile의 compact Run 완충과, 별도 PoC 템플릿 세트 설계 초안
 - Upgrade와 Dashboard 운영 흐름
@@ -55,6 +56,15 @@
 아직 제품화된 안정 버전은 아니며, 실제 프로젝트 적용 결과에 따라 문서 체계와 CLI 명령은 계속 조정될 수 있습니다.
 
 릴리즈별 변경사항은 `CHANGELOG.md`를 기준으로 확인합니다.
+
+## 최근 완료
+
+최근 안정화에서 완료된 항목이다. 다음 샘플/릴리즈 전에는 회귀 하네스가 이 기준을 지키는지 확인한다.
+
+- Codex runner 미지원 model alias fallback을 `resolve_codex_model_effort()`에 고정하고, 실행 기록과 status/Dashboard에서 actual model과 fallback reason을 볼 수 있게 했다.
+- Product completed fixture smoke에서 `python vulcan.py doctor --json` 구조와 기본 pass 조건을 검증한다.
+- Gate 4 `QA-000` Run 입력 계약에 `python vulcan.py doctor --json` 실행과 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 증적 경로를 연결했다.
+- simple hello audit fixture에 `QA-000-doctor.json`/`.log` 증적을 추가했고, `scripts/regression/run_fixture_smoke.py`가 QA-000 doctor 증적 계약 누락을 감지한다.
 
 ## 다음 초점
 
@@ -82,6 +92,7 @@
    - 신규 프로젝트 기본 `.gitignore`는 공식 QA 로그를 막지 않고 `playwright-report/`, `test-results/`를 보조 로컬 산출물로 제외한다.
    - 공식 증적은 `docs/artifacts/04-review/evidence/logs/*`와 `docs/artifacts/04-review/evidence/ui/*.png`에 둔다.
    - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
+   - QA-000은 `doctor --json` 환경 증적을 남긴다. 다음 보강은 실제 샘플에서 `environment_blocked`가 발생했을 때 QA-001/QA-002 진행 차단과 사용자 협의 안내가 자연스럽게 보이는지 확인하는 것이다.
    - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
 
@@ -156,12 +167,6 @@
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
    - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
-
-7. **Doctor command**
-   - `python vulcan.py doctor` MVP는 Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
-   - `AGENTS.md`, repo-local skill, Core CLI/Run/QA 문서에 사용 시점과 결과 해석 규칙을 연결했다.
-   - Product fixture smoke에서 `doctor --json` 구조와 기본 pass 조건을 검증한다.
-   - QA-000 Run 입력 계약에 `QA-000-doctor.json` 환경 증적을 연결하고 fixture smoke로 누락을 감지한다.
 
 ### Later: 장기 확장 후보
 
