@@ -1407,7 +1407,12 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                     ],
                     cwd=project_dir,
                     expected_returncodes={1},
-                    required_text=["workspace 상태가 environment_blocked"],
+                    required_text=[
+                        "workspace 상태가 environment_blocked",
+                        "doctor JSON",
+                        "ISSUE/environment_blocked",
+                        "qa-fix-loop",
+                    ],
                 )
             )
         finally:

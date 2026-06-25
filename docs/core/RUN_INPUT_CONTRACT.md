@@ -684,6 +684,7 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 
 하나의 `qa-execution` Run이 Gate 4 전체를 모두 수행한다고 쓰지 않는다.
 `QA-000`이 통과하지 않으면 `QA-001`/`QA-002`를 실행하지 않고 `environment_blocked` 또는 `Not Run`으로 반환한다.
+후속 QA가 차단되면 QA-000의 doctor JSON과 evidence 로그를 근거로 제품 결함과 환경 차단을 분리하고, 환경 문제는 `ISSUE`/`environment_blocked`로 보류하며, 수정이 필요할 때만 승인된 `qa-fix-loop`로 넘긴다.
 
 Audit/Product Profile에서 공식 UI Pass는 `@playwright/test` 러너 실행 결과를 기준으로 한다.
 권장 기준은 `playwright.config.ts` 또는 동등 설정, `tests/e2e/**/*.spec.*`, `npx playwright test`, `playwright-report/`, `test-results/`, 상태별 screenshot을 연결하는 것이다.

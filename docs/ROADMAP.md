@@ -66,6 +66,7 @@
 - Gate 4 `QA-000` Run 입력 계약에 `python vulcan.py doctor --json` 실행과 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 증적 경로를 연결했다.
 - simple hello audit fixture에 `QA-000-doctor.json`/`.log` 증적을 추가했고, `scripts/regression/run_fixture_smoke.py`가 QA-000 doctor 증적 계약 누락을 감지한다.
 - QA-000 workspace가 `environment_blocked`이면 QA-001 후속 Run preflight와 실행 workspace 재사용 경로가 진행을 차단하도록 fixture smoke에 고정했다.
+- 차단 메시지에는 QA-000 doctor JSON/evidence 확인, 제품 결함과 환경 차단 분리, ISSUE/environment_blocked 보류, 필요 시 qa-fix-loop 생성 안내가 포함된다.
 
 ## 다음 초점
 

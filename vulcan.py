@@ -10212,6 +10212,8 @@ def resolve_gate4_qa_workspace(project_dir, *, run_id, run_meta, run_content, cr
     if qa_status in ("blocked", "failed", "missing", "environment_blocked"):
         print(f"오류: QA-000 workspace 상태가 {qa_status}입니다. 후속 QA Run을 진행할 수 없습니다.")
         print(f"  QA workspace: {qa_path}")
+        for line in qa_workspace_blocked_followup_lines(stage, qa_status, qa_path)[1:]:
+            print(f"  {line}")
         sys.exit(1)
     if worktree_dir and os.path.abspath(worktree_dir) != os.path.abspath(qa_path):
         print(f"오류: {stage}는 QA-000 workspace를 재사용해야 합니다.")
@@ -13931,6 +13933,15 @@ def is_placeholder_path(value):
     return bool(text and text.startswith("<") and text.endswith(">"))
 
 
+def qa_workspace_blocked_followup_lines(stage, qa_status, qa_path):
+    return [
+        f"{stage}는 QA-000 workspace 상태가 {qa_status}이면 실행할 수 없습니다: {qa_path}",
+        "다음 조치: QA-000 Run의 doctor JSON과 evidence 로그를 확인하고 제품 결함과 환경 차단을 분리하세요.",
+        "환경 문제이면 ISSUE/environment_blocked로 정리하고 QA-001/QA-002를 보류하세요.",
+        "제품 수정이 필요하면 사용자 또는 Orchestrator 결정 후 qa-fix-loop를 생성하세요.",
+    ]
+
+
 def qa_workspace_preflight_blockers(run_file, stage):
     if stage not in {"QA-001", "QA-002", "QA-003"}:
         return []
@@ -13957,9 +13968,7 @@ def qa_workspace_preflight_blockers(run_file, stage):
         return blockers
 
     if qa_status in {"blocked", "failed", "missing", "environment_blocked"}:
-        blockers.append(
-            f"{stage}는 QA-000 workspace 상태가 {qa_status}이면 실행할 수 없습니다: {qa_path}"
-        )
+        blockers.extend(qa_workspace_blocked_followup_lines(stage, qa_status, qa_path))
 
     qa_abs_path = qa_path if os.path.isabs(qa_path) else os.path.join(project_dir, qa_path)
     if not is_placeholder_path(qa_path) and not os.path.isdir(os.path.abspath(qa_abs_path)):

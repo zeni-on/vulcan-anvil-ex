@@ -330,6 +330,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이�
 QA-000 전 또는 QA-000 중 로컬 환경 차단이 의심되면 `python vulcan.py doctor --json`을 실행하고 결과 요약과 JSON 경로를 QA-000 로그 또는 Run 결과에 연결한다. `doctor`의 `fail`/`warn`은 QA 명령 실행 결과가 아니므로 UI/통합 테스트를 Pass/Fail로 대신 판정하지 않는다.
 
 `QA-000`이 `environment_blocked` 또는 `Fail`이면 `QA-001`/`QA-002`를 억지로 진행하지 않는다. `QA-003`은 QA Pass를 확정하지 않고 Orchestrator가 사용자와 협의할 판정 후보만 정리한다.
+이때 Orchestrator는 QA-000 Run의 doctor JSON과 evidence 로그를 먼저 확인하고, 환경 문제이면 `ISSUE`/`environment_blocked`로 보류하며, 제품 수정이 필요하다고 판단될 때만 사용자 결정 후 `qa-fix-loop`를 만든다.
 
 Implementation Plan이 Wave 4개를 정의했다면, 실행 기록은 보통 다음처럼 1:N 구조가 된다.
 
