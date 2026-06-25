@@ -281,6 +281,7 @@ PRODUCT_REQUIRED_ARTIFACTS_BY_GATE = {
         "docs/product/PRODUCT_CONTRACTS.md",
         "docs/product/PRODUCT_TRACEABILITY.md",
         "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+        "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
     ],
     "completed": [
         "docs/product/PRODUCT_BRIEF.md",
@@ -289,6 +290,7 @@ PRODUCT_REQUIRED_ARTIFACTS_BY_GATE = {
         "docs/product/PRODUCT_CONTRACTS.md",
         "docs/product/PRODUCT_TRACEABILITY.md",
         "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+        "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md",
     ],
 }
 PROFILE_GAP_RULES = {

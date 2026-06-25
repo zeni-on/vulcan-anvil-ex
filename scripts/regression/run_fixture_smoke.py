@@ -753,6 +753,37 @@ def assert_status_json_check(project_dir: Path, py: str) -> StepResult:
     return result
 
 
+def assert_product_gate5_requires_release_approval(project_dir: Path, py: str) -> StepResult:
+    session_path = project_dir / "session.json"
+    release_doc = project_dir / "docs" / "artifacts" / "07-release" / "DOC-PM-G5-001_Release-Approval_v0.1.md"
+    original_session_bytes = session_path.read_bytes()
+    original_release_doc_bytes = release_doc.read_bytes()
+    try:
+        session = json.loads(original_session_bytes.decode("utf-8"))
+        session["current_gate"] = "gate5"
+        session.setdefault("gate_status", {})["gate5"] = "pending"
+        session_path.write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+        release_doc.unlink()
+        result = run_step(
+            "product-gate5-blocks-missing-release-approval",
+            [py, "vulcan.py", "status", "--json", "--check"],
+            cwd=project_dir,
+            expected_returncodes={1},
+            timeout_seconds=90,
+        )
+        expected = "Product 필수 산출물 없음: docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+        if expected not in result.combined_output:
+            raise FixtureSmokeFailure(
+                "Product Gate5 status --check failed without missing release approval diagnostic\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+        return result
+    finally:
+        release_doc.parent.mkdir(parents=True, exist_ok=True)
+        release_doc.write_bytes(original_release_doc_bytes)
+        session_path.write_bytes(original_session_bytes)
+
+
 def assert_execute_json_plan(project_dir: Path, py: str) -> StepResult:
     result = run_step(
         "execute-dry-run-json",
@@ -1367,6 +1398,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         assert_doctor_json(product_doctor_json, profile_product_completed_dir, expected_profile="product")
         steps.append(product_doctor_json)
+        steps.append(assert_product_gate5_requires_release_approval(profile_product_completed_dir, py))
         steps.append(
             run_step(
                 "product-completed-fixture:status-check",
