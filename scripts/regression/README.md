@@ -46,6 +46,7 @@ python scripts/regression/run_fixture_smoke.py
 - 공식 QA 로그는 `.gitignore`에 막히지 않고, Playwright HTML report와 `test-results/`는 보조 로컬 산출물로 ignored 처리된다.
 - `run-integrate --dry-run`은 scope 밖 `playwright.config.*` 같은 변경을 `Config Hotfix Candidate`로 분류하고 Orchestrator 판단 선택지를 출력한다.
 - native/Agy delegation 흔적이 있는데 `delegation_records`가 비어 있는 완료 Run은 `run-check`와 `run-preflight`에서 차단된다.
+- Run 상단 metadata와 `3. Run 입력 계약`의 `gate`/`run_type`이 불일치하면 `run-check`와 `run-preflight`에서 차단된다.
 
 Product fixture smoke의 평가 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`를 따른다.
 

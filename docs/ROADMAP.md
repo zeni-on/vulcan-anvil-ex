@@ -67,6 +67,7 @@
 - simple hello audit fixture에 `QA-000-doctor.json`/`.log` 증적을 추가했고, `scripts/regression/run_fixture_smoke.py`가 QA-000 doctor 증적 계약 누락을 감지한다.
 - QA-000 workspace가 `environment_blocked`이면 QA-001 후속 Run preflight와 실행 workspace 재사용 경로가 진행을 차단하도록 fixture smoke에 고정했다.
 - 차단 메시지에는 QA-000 doctor JSON/evidence 확인, 제품 결함과 환경 차단 분리, ISSUE/environment_blocked 보류, 필요 시 qa-fix-loop 생성 안내가 포함된다.
+- Run 상단 metadata와 `3. Run 입력 계약`의 `gate`/`run_type` 불일치는 `run-check`와 `run-preflight`가 차단하고, fixture smoke가 이 회귀를 고정한다.
 
 ## 다음 초점
 
@@ -79,8 +80,8 @@
 
 1. **샘플 발견 회귀의 fixture 고정**
    - 샘플 프로젝트를 매번 처음부터 재실행하는 것이 아니라, 이미 발견한 회귀를 `scripts/regression` fixture smoke로 옮긴다.
-   - 공식 QA 로그 누락, Playwright 보조 report 오인, Config Hotfix scope 후보, native/Agy `delegation_records` 누락은 fixture smoke에 고정했다.
-   - 다음 고정 후보는 Run 입력 계약 metadata 불일치, QA worker 수정 지시 오염처럼 실제 샘플에서 다시 관찰되는 회귀로 제한한다.
+   - 공식 QA 로그 누락, Playwright 보조 report 오인, Config Hotfix scope 후보, native/Agy `delegation_records` 누락, Run 입력 계약 metadata 불일치는 fixture smoke에 고정했다.
+   - 다음 고정 후보는 QA worker 수정 지시 오염처럼 실제 샘플에서 다시 관찰되는 회귀로 제한한다.
    - 새 샘플 end-to-end 재실행은 큰 프로세스 변경이나 릴리즈 전 확인이 필요할 때만 수행한다.
    - 회귀 하네스 기준은 `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md`를 따른다.
 

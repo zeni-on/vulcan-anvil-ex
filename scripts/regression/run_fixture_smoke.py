@@ -879,6 +879,60 @@ def assert_native_delegation_guardrails(project_dir: Path, py: str, steps: list[
     )
 
 
+def write_mismatched_run_input_contract_run(project_dir: Path) -> Path:
+    source = project_dir / "docs" / "runs" / "RUN-014_qa-000-gate-4-environment-smoke-for-python-hello-api_v0.1.md"
+    target = project_dir / "docs" / "runs" / "RUN-997_run-input-contract-metadata-mismatch_v0.1.md"
+    content = source.read_text(encoding="utf-8")
+
+    def replace_contract(match: re.Match[str]) -> str:
+        prefix, block, suffix = match.groups()
+        block = re.sub(r'(?m)^gate:\s*["\']?gate4["\']?\s*$', 'gate: "gate1"', block, count=1)
+        block = re.sub(r'(?m)^run_type:\s*["\']?Evidence["\']?\s*$', 'run_type: "Requirements"', block, count=1)
+        return f"{prefix}{block}{suffix}"
+
+    content = re.sub(
+        r"(?s)(##\s*3\.\s*Run\s+입력\s+계약.*?```yaml\s*\n)(.*?)(```)",
+        replace_contract,
+        content,
+        count=1,
+    )
+    content += (
+        "\n\n## Run Input Contract Metadata Regression Fixture\n\n"
+        "This fixture intentionally leaves the top metadata as gate4/Evidence while changing "
+        "the embedded Run input contract to gate1/Requirements. run-check and run-preflight "
+        "must block this mismatch.\n"
+    )
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def assert_run_input_contract_metadata_guardrails(project_dir: Path, py: str, steps: list[StepResult]) -> None:
+    mismatched_run = write_mismatched_run_input_contract_run(project_dir)
+    run_arg = str(mismatched_run.relative_to(project_dir))
+    required_text = [
+        "Run 상단 metadata와 3. Run 입력 계약의 gate 값이 다릅니다",
+        "Run 상단 metadata와 3. Run 입력 계약의 run_type 값이 다릅니다",
+    ]
+    steps.append(
+        run_step(
+            "run-check-blocks-run-input-contract-metadata-mismatch",
+            [py, "vulcan.py", "run-check", run_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=required_text,
+        )
+    )
+    steps.append(
+        run_step(
+            "run-preflight-blocks-run-input-contract-metadata-mismatch",
+            [py, "vulcan.py", "run-preflight", run_arg],
+            cwd=project_dir,
+            expected_returncodes={1},
+            required_text=required_text,
+        )
+    )
+
+
 def assert_run_integrate_config_hotfix_candidate(project_dir: Path, py: str, steps: list[StepResult]) -> None:
     session_path = project_dir / "session.json"
     session_before = json.loads(session_path.read_text(encoding="utf-8"))
@@ -1527,6 +1581,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
 
         assert_gitignore_evidence_policy(project_dir, py, steps)
         assert_native_delegation_guardrails(project_dir, py, steps)
+        assert_run_input_contract_metadata_guardrails(project_dir, py, steps)
 
         print("Vulcan fixture smoke regression: PASS")
         print(f"  fixture: {args.fixture}")

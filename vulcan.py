@@ -13623,6 +13623,16 @@ def direct_edit_scope_contract_changed(scope_text):
     return match.group(1).lower() in {"true", "yes"}
 
 
+def effective_run_contract_profile(project_profile, metadata=None, input_contract=None):
+    metadata = metadata or {}
+    input_contract = input_contract or {}
+    return normalize_delivery_profile(
+        metadata.get("profile")
+        or input_contract.get("profile")
+        or project_profile
+    )
+
+
 def check_run_file(path):
     issues = []
     warnings = []
@@ -13644,6 +13654,7 @@ def check_run_file(path):
 
     top_metadata = parse_simple_yaml_block(content)
     input_contract = parse_run_input_contract_yaml(content)
+    run_contract_profile = effective_run_contract_profile(profile, top_metadata, input_contract)
     if input_contract:
         compare_fields = ["profile", "adapter", "run_type", "gate", "persona", "skill"]
         for field in compare_fields:
@@ -13651,7 +13662,7 @@ def check_run_file(path):
             input_value = str(input_contract.get(field, "")).strip()
             if top_value and input_value and top_value != input_value:
                 message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
-                if profile == "poc":
+                if run_contract_profile == "poc":
                     warnings.append(message)
                 else:
                     issues.append(message)
@@ -13997,13 +14008,14 @@ def run_preflight_file(path):
     body_without_yaml = re.sub(r"```yaml.*?```", "", content, flags=re.IGNORECASE | re.DOTALL)
 
     input_contract = parse_run_input_contract_yaml(content)
+    run_contract_profile = effective_run_contract_profile(profile, metadata, input_contract)
     if input_contract:
         for field in ("profile", "adapter", "run_type", "gate", "persona", "skill"):
             top_value = str(metadata.get(field, "")).strip()
             input_value = str(input_contract.get(field, "")).strip()
             if top_value and input_value and top_value != input_value:
                 message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
-                if profile == "poc":
+                if run_contract_profile == "poc":
                     warnings.append(message)
                 else:
                     blockers.append(message)
