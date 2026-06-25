@@ -226,21 +226,50 @@ The fix:
 
 ## Current Sample State
 
-The sample is intentionally left at the Gate 5 boundary:
+The same sample was continued through Gate 5:
 
 - branch: `dev`
-- gate: `gate5`
+- gate: `completed`
 - Build Wave: `BW-001` Verified
 - implementation requirements: `3/3`
 - Gate 4 QA: completed
+- Gate 5 release approval: completed
+- `release-pr --dry-run`: passed
 - active Runs: none
 - active Waves: none
-- next transition: Gate 5 release approval can be tested
 
-This is enough for the roadmap item "Product profile actual sample rerun" to validate Product document flow, worker handoff quality, native implementation, Product implementation stats, and Product Gate 4 QA evidence flow.
+This is enough for the roadmap item "Product profile actual sample rerun" to validate Product document flow, worker handoff quality, native implementation, Product implementation stats, Product Gate 4 QA evidence flow, Gate 5 release approval, and Product `release-pr --dry-run` behavior.
+
+## Gate 5 Release Approval
+
+Commands verified in the sample:
+
+```powershell
+python vulcan.py release-pr --dry-run
+python vulcan.py status --check
+python vulcan.py session --gate gate5 --status done --approved --approval-evidence "release-pr dry-run passed; status --check passed; DOC-PM-G5-001 approved; ISSUE-QA-001 deferred as non-blocking"
+```
+
+Observed results:
+
+- `release-pr --dry-run` generated `.vulcan/release/release-pr-body.md`.
+- The PR body used Product evidence, not Audit-only QA documents.
+- `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md` was required as the release approval source of truth.
+- `ISSUE-QA-001` was accepted as a non-blocking deferred issue in `docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`.
+- Final `status --check` reported the project as completed.
+
+### Gate 5 readiness bug found
+
+Before the release approval document existed, `release-pr --dry-run` correctly failed, but `status --check` still reported transition readiness.
+
+The root cause was that `PRODUCT_REQUIRED_ARTIFACTS_BY_GATE` did not include `docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md` for `gate5` and `completed`.
+
+The fix:
+
+- Product Gate 5 and completed required artifacts now include the release approval document.
+- `scripts/regression/run_fixture_smoke.py` now verifies that Product `status --json --check` fails at Gate 5 when the release approval document is missing.
 
 ## Follow-up
 
-- Continue the same sample with Gate 5 only when testing Product release approval and release-pr behavior is the goal.
 - Keep adding fixture cases only when sample reruns reveal repeated or blocking failures.
 - Do not merge experimental scaffold automation until a sample proves it reduces Product Run drafting or skeleton setup time.
