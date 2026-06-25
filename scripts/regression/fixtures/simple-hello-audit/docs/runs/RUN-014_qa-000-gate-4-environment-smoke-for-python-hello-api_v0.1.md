@@ -157,6 +157,7 @@ qa_execution_policy:
     - "QA-000 workspace가 없거나 차단되면 후속 QA Run은 새 공간을 임의로 만들지 않고 Orchestrator 결정 필요 항목으로 반환한다."
     - "QA 중 결함 수정은 QA workspace에서 직접 수행하지 않고 dev 통합 브랜치의 qa-fix-loop로 분리한다."
   qa000_required_checks:
+    - "`python vulcan.py doctor --json`을 실행하고 JSON 결과를 QA-000 환경 증적으로 저장한다."
     - "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다."
     - "backend 최소 smoke test 또는 test discovery가 실행 가능한지 확인한다."
     - "frontend 의존성이 설치되어 있거나 npm ci/npm install을 실행할 수 있는지 확인한다."
@@ -164,6 +165,14 @@ qa_execution_policy:
     - "backend/frontend 개발 포트(예: 8080, 5173 또는 프로젝트 지정 포트)가 사용 가능한지 확인한다."
     - "SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는지 확인한다."
     - "필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리를 확인한다."
+  qa000_doctor_evidence:
+    command: "python vulcan.py doctor --json"
+    json_evidence_path: "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json"
+    log_evidence_path: "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.log"
+    interpretation:
+      - "summary.fail > 0이면 제품 결함으로 단정하지 않고 environment_blocked 또는 ISSUE 후보로 분리한다."
+      - "summary.warn > 0이면 QA-000 Run 결과에 경고와 후속 판단을 남긴다."
+      - "doctor 결과만으로 테스트 Pass/Fail을 대신 판정하지 않는다."
   stages:
     - "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace/worktree 경로를 기록한다."
     - "QA-001 명령 기반 검증: QA-000 workspace에서 backend/frontend test, lint, build, check-contract, check-trace, run-check를 실행하고 로그 증적을 남긴다."
@@ -215,6 +224,7 @@ output_requirements:
 - QA 실패는 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE로 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
 - Gate 4 전체 QA를 한 Run에서 모두 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run의 범위를 명시한다.
 - QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace/worktree 경로를 남긴다.
+- QA-000은 `python vulcan.py doctor --json` 결과를 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json`에 남기고, 환경 차단과 제품 결함을 분리한다.
 - QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace/worktree에서 실행한다.
 - QA-000 환경 준비가 통과하지 않으면 QA-001/QA-002를 진행하지 않고 environment_blocked 또는 Not Run으로 반환한다.
 
@@ -286,6 +296,17 @@ related_ids:
   test: [UT-001, IT-001, IT-002]
 
 verification_results:
+  - id: QA-000-DOCTOR
+    type: environment
+    cwd: repository root
+    command: "python vulcan.py doctor --json"
+    os: windows
+    exit_code: 0
+    success_criteria: "summary.fail == 0 and JSON checks are readable"
+    result: passed
+    summary: "doctor JSON produced structured environment readiness evidence; warnings are tracked as QA-000 environment readiness, not product defects."
+    log_path: docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.log
+    evidence_path: docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json
   - id: QA-000-GIT
     type: environment
     cwd: repository root
@@ -392,6 +413,8 @@ evidence:
     - docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md
     - docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md
   files:
+    - docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json
+    - docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.log
     - docs/artifacts/04-review/evidence/qa-000/QA-000-git-status.log
     - docs/artifacts/04-review/evidence/qa-000/QA-000-python-version.log
     - docs/artifacts/04-review/evidence/qa-000/QA-000-pip-check.log

@@ -161,7 +161,7 @@
    - `python vulcan.py doctor` MVP는 Git, Python, Node, npm, package.json/node_modules, Playwright package/browser cache, npm cache, runner 감지, Dashboard 포트를 읽기 전용으로 점검한다.
    - `AGENTS.md`, repo-local skill, Core CLI/Run/QA 문서에 사용 시점과 결과 해석 규칙을 연결했다.
    - Product fixture smoke에서 `doctor --json` 구조와 기본 pass 조건을 검증한다.
-   - 다음 단계는 QA-000 결과서/doctor JSON 자동 연결 여부를 실제 샘플에서 확인하는 것이다.
+   - QA-000 Run 입력 계약에 `QA-000-doctor.json` 환경 증적을 연결하고 fixture smoke로 누락을 감지한다.
 
 ### Later: 장기 확장 후보
 

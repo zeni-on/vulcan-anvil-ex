@@ -318,6 +318,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이�
 
 `QA-000`의 최소 체크리스트는 다음이다.
 
+- `python vulcan.py doctor --json` 결과를 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json`에 저장했는가
 - Gradle wrapper 또는 프로젝트 지정 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한가
 - backend 최소 smoke test, test discovery, 또는 컴파일 확인이 가능한가
 - frontend 의존성이 설치되어 있거나 `npm ci`/`npm install`을 실행할 수 있는가
@@ -326,7 +327,7 @@ Gate 3 테스트케이스 문서는 계획과 기대 기준을 담는 문서이�
 - SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는가
 - 필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리가 준비되어 있는가
 
-QA-000 전 또는 QA-000 중 로컬 환경 차단이 의심되면 `python vulcan.py doctor`를 실행하고 결과 요약을 QA-000 로그 또는 Run 결과에 연결한다. `doctor`의 `fail`/`warn`은 QA 명령 실행 결과가 아니므로 UI/통합 테스트를 Pass/Fail로 대신 판정하지 않는다.
+QA-000 전 또는 QA-000 중 로컬 환경 차단이 의심되면 `python vulcan.py doctor --json`을 실행하고 결과 요약과 JSON 경로를 QA-000 로그 또는 Run 결과에 연결한다. `doctor`의 `fail`/`warn`은 QA 명령 실행 결과가 아니므로 UI/통합 테스트를 Pass/Fail로 대신 판정하지 않는다.
 
 `QA-000`이 `environment_blocked` 또는 `Fail`이면 `QA-001`/`QA-002`를 억지로 진행하지 않는다. `QA-003`은 QA Pass를 확정하지 않고 Orchestrator가 사용자와 협의할 판정 후보만 정리한다.
 

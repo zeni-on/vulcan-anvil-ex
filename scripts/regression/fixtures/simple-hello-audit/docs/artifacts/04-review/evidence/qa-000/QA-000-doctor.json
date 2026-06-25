@@ -1,0 +1,50 @@
+{
+  "project_dir": "<QA_WORKSPACE>",
+  "summary": {
+    "pass": 5,
+    "warn": 3,
+    "fail": 0
+  },
+  "checks": [
+    {
+      "name": "project_dir",
+      "status": "pass",
+      "detail": "<QA_WORKSPACE>"
+    },
+    {
+      "name": "session.json",
+      "status": "pass",
+      "detail": "current_gate=gate4"
+    },
+    {
+      "name": "vulcan.config.json",
+      "status": "pass",
+      "detail": "profile=audit"
+    },
+    {
+      "name": "python",
+      "status": "pass",
+      "detail": "Python 3.14.3"
+    },
+    {
+      "name": "git",
+      "status": "pass",
+      "detail": "git available"
+    },
+    {
+      "name": "node",
+      "status": "warn",
+      "detail": "API-only fixture does not require Node"
+    },
+    {
+      "name": "npm",
+      "status": "warn",
+      "detail": "API-only fixture does not require npm"
+    },
+    {
+      "name": "browser_cache",
+      "status": "warn",
+      "detail": "UI/E2E is skipped for API-only fixture"
+    }
+  ]
+}

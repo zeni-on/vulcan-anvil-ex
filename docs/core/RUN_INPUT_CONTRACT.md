@@ -652,7 +652,7 @@ Gate 4 QA 실행은 다음 QA Run 순서로 쪼갠다.
 
 | QA Run | 목적 | Worker 입력 계약에 포함할 것 |
 | --- | --- | --- |
-| `QA-000` | 환경 준비/스모크 | 통합 소스 존재 확인, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시, 차단 시 후속 QA 중단 조건 |
+| `QA-000` | 환경 준비/스모크 | `doctor --json` 환경 증적, 통합 소스 존재 확인, 의존성 설치 가능성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시, 차단 시 후속 QA 중단 조건 |
 | `QA-001` | 명령 기반 검증 | Gate 3/개발표준의 필수 명령, `check-contract`, `check-trace`, `run-check`, 로그 파일 경로, exit code 기록 기준 |
 | `QA-002` | UI/E2E 증적 | UI-ID 목록, viewport, 서버 기동 절차, `@playwright/test` 공식 runner 명령, HTML report/trace/screenshot/log 경로, 상태/시나리오별 1:1 증적 기준 |
 | `QA-003` | 결과 정리/판정 후보 | QA Finding/Test Result 갱신 범위, 추적표 반영 후보, FIND/CR/ISSUE 후보, Orchestrator 결정 필요 항목 |
@@ -664,7 +664,8 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 `QA-000`은 Gate 4 전체에서 재사용할 QA workspace를 준비하는 Run이다. 기본값은 `workflow.integration_branch`의 현재 작업공간이다.
 별도 QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다.
 `QA-000` Run 결과에는 `qa_workspace_path`, 기준 브랜치/커밋, 의존성 설치 상태, 서버/포트/DB 준비 상태를 남긴다.
-로컬 환경 상태가 불확실하거나 이전 Run이 `environment_blocked`/`Not Run`을 보고했다면 `python vulcan.py doctor` 결과 요약을 QA-000 입력 또는 결과에 연결한다.
+`QA-000`은 기본적으로 `python vulcan.py doctor --json` 결과를 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json`에 저장하고, 필요하면 사람이 읽을 로그를 `QA-000-doctor.log`로 함께 남긴다.
+`doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고 `environment_blocked` 또는 ISSUE 후보로 분리한다.
 `QA-001`, `QA-002`, `QA-003` Run 입력 계약에는 `QA-000`이 기록한 같은 `qa_workspace_path`를 포함해야 한다.
 후속 QA Run은 새 workspace를 임의로 만들지 않고 같은 workspace에서 실행한다.
 
@@ -672,6 +673,7 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 
 | 확인 항목 | 작성 기준 |
 | --- | --- |
+| Doctor JSON | `python vulcan.py doctor --json` 출력, `summary.fail`/`summary.warn`, checks 목록, JSON 증적 경로를 기록한다. |
 | Backend 빌드 도구 | Gradle wrapper 또는 프로젝트 지정 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 기록한다. |
 | Backend smoke | backend 최소 smoke test, test discovery, 컴파일 확인 중 하나 이상을 실행하거나 미실행 사유를 기록한다. |
 | Frontend 의존성 | `node_modules` 존재 여부 또는 `npm ci`/`npm install` 실행 가능 여부를 기록한다. |

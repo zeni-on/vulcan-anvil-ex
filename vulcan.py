@@ -856,6 +856,7 @@ AUDIT_QA_EXECUTION_POLICY = {
         "QA 중 결함 수정은 테스트 실행 중 즉시 수행하지 않고 workflow.integration_branch 통합 브랜치의 qa-fix-loop로 분리한다.",
     ],
     "qa000_required_checks": [
+        "`python vulcan.py doctor --json`을 실행하고 JSON 결과를 QA-000 환경 증적으로 저장한다.",
         "Gradle wrapper 또는 backend 빌드 도구가 로컬 캐시/권한 기준으로 실행 가능한지 확인한다.",
         "backend 최소 smoke test 또는 test discovery가 실행 가능한지 확인한다.",
         "frontend 의존성이 설치되어 있거나 npm ci/npm install을 실행할 수 있는지 확인한다.",
@@ -864,6 +865,16 @@ AUDIT_QA_EXECUTION_POLICY = {
         "SQLite 또는 프로젝트 지정 DB 파일을 생성/접근할 수 있는지 확인한다.",
         "필수 환경변수, test profile, 임시 디렉터리, 로그/증적 출력 디렉터리를 확인한다.",
     ],
+    "qa000_doctor_evidence": {
+        "command": "python vulcan.py doctor --json",
+        "json_evidence_path": "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json",
+        "log_evidence_path": "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.log",
+        "interpretation": [
+            "summary.fail > 0이면 제품 결함으로 단정하지 않고 environment_blocked 또는 ISSUE 후보로 분리한다.",
+            "summary.warn > 0이면 QA-000 Run 결과에 경고와 후속 판단을 남긴다.",
+            "doctor 결과만으로 테스트 Pass/Fail을 대신 판정하지 않는다.",
+        ],
+    },
     "stages": [
         "QA-000 환경 준비/스모크: 통합된 소스, 의존성, DB/포트/환경변수, backend/frontend 기동 가능성, Playwright 설치/브라우저 캐시를 확인하고 후속 QA Run이 재사용할 QA workspace 경로를 기록한다.",
         "QA-001 명령 기반 검증: QA-000 workspace에서 backend/frontend test, lint, build, check-contract, check-trace, run-check를 실행하고 로그 증적을 남긴다.",
@@ -2431,6 +2442,12 @@ qa_execution_policy:
 {format_yaml_sequence(qa_execution.get("qa_workspace_policy", []), 4)}
   qa000_required_checks:
 {format_yaml_sequence(qa_execution.get("qa000_required_checks", []), 4)}
+  qa000_doctor_evidence:
+    command: {format_yaml_scalar(qa_execution.get("qa000_doctor_evidence", {}).get("command", "python vulcan.py doctor --json"))}
+    json_evidence_path: {format_yaml_scalar(qa_execution.get("qa000_doctor_evidence", {}).get("json_evidence_path", "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json"))}
+    log_evidence_path: {format_yaml_scalar(qa_execution.get("qa000_doctor_evidence", {}).get("log_evidence_path", "docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.log"))}
+    interpretation:
+{format_yaml_sequence(qa_execution.get("qa000_doctor_evidence", {}).get("interpretation", []), 6)}
   stages:
 {format_yaml_sequence(qa_execution.get("stages", []), 4)}
   on_failure:
@@ -2447,6 +2464,7 @@ qa_failure_report_contract:
 - QA 실패는 `qa_failure_report_contract` 필드에 맞춰 원인 가설, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE 또는 environment_blocked를 기록하고 Orchestrator 결정 필요 항목으로 반환한다.
 - Gate 4 전체 QA를 한 Run에서 모두 수행하지 않는다. QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 Run의 범위를 명시한다.
 - QA-000은 후속 QA-001/QA-002/QA-003이 재사용할 QA workspace 경로를 남긴다. 기본값은 workflow.integration_branch의 현재 작업공간이다.
+- QA-000은 `python vulcan.py doctor --json` 결과를 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json`에 남기고, 환경 차단과 제품 결함을 분리한다.
 - QA-001/QA-002/QA-003은 QA-000이 기록한 같은 QA workspace에서 실행한다.
 - QA-000 환경 준비가 통과하지 않으면 QA-001/QA-002를 진행하지 않고 environment_blocked 또는 Not Run으로 반환한다."""
     if preset.get("include_ui_policies", True):
@@ -14114,6 +14132,8 @@ def run_preflight_file(path):
             warnings.append("qa-execution Run은 QA-000 환경 준비, QA-001 명령 검증, QA-002 UI/E2E 증적, QA-003 결과 정리 중 현재 단계가 드러나야 합니다.")
         if re.search(r"\bQA-000\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
             warnings.append("QA-000 Run은 후속 QA Run이 재사용할 qa_workspace_path를 기록해야 합니다.")
+        if re.search(r"\bQA-000\b", content) and not re.search(r"doctor\s+--json|qa000_doctor_evidence|QA-000-doctor\.json", content, re.IGNORECASE):
+            warnings.append("QA-000 Run은 `python vulcan.py doctor --json` 결과를 QA-000-doctor.json 환경 증적으로 남기는 것이 좋습니다.")
         if re.search(r"\bQA-00[1-3]\b", content) and not re.search(r"qa_workspace|qa_workspace_path", content, re.IGNORECASE):
             warnings.append("QA-001~QA-003 Run은 QA-000이 기록한 같은 qa_workspace_path를 입력으로 받아야 합니다.")
         blockers.extend(qa_workspace_preflight_blockers(path, qa_stage))

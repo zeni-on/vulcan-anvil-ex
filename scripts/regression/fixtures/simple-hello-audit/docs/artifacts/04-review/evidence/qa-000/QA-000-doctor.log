@@ -1,0 +1,8 @@
+python vulcan.py doctor --json
+
+summary.fail: 0
+summary.warn: 3
+
+Interpretation:
+- Doctor JSON was captured as QA-000 environment readiness evidence.
+- Warnings are recorded as environment readiness signals, not product defects.

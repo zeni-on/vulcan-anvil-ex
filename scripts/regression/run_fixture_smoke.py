@@ -157,6 +157,40 @@ def validate_fixture_inputs(project_dir: Path) -> None:
         raise FixtureSmokeFailure("fixture missing required files:\n" + "\n".join(f"  - {item}" for item in missing))
 
 
+def assert_qa000_doctor_evidence_policy(project_dir: Path) -> None:
+    run_path = (
+        project_dir
+        / "docs"
+        / "runs"
+        / "RUN-014_qa-000-gate-4-environment-smoke-for-python-hello-api_v0.1.md"
+    )
+    doctor_json_path = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "qa-000" / "QA-000-doctor.json"
+    doctor_log_path = project_dir / "docs" / "artifacts" / "04-review" / "evidence" / "qa-000" / "QA-000-doctor.log"
+    run_text = run_path.read_text(encoding="utf-8")
+    required_text = [
+        "python vulcan.py doctor --json",
+        "QA-000-doctor.json",
+        "qa000_doctor_evidence",
+        "environment_blocked",
+        "제품 결함",
+    ]
+    missing_text = [text for text in required_text if text not in run_text]
+    if missing_text:
+        raise FixtureSmokeFailure(f"QA-000 Run missing doctor evidence policy text: {missing_text}")
+    if not doctor_json_path.exists():
+        raise FixtureSmokeFailure(f"QA-000 fixture missing doctor JSON evidence: {doctor_json_path.relative_to(project_dir)}")
+    if not doctor_log_path.exists():
+        raise FixtureSmokeFailure(f"QA-000 fixture missing doctor log evidence: {doctor_log_path.relative_to(project_dir)}")
+    try:
+        payload = json.loads(doctor_json_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"QA-000 doctor JSON evidence is invalid: {exc}") from exc
+    summary = payload.get("summary") or {}
+    checks = payload.get("checks") or []
+    if "fail" not in summary or not isinstance(checks, list) or not checks:
+        raise FixtureSmokeFailure(f"QA-000 doctor JSON evidence missing summary/checks: {payload}")
+
+
 def validate_product_fixture_inputs(project_dir: Path) -> None:
     required = [
         "app/main.py",
@@ -1178,6 +1212,15 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         apply_fixture(fixture_dir, project_dir)
         validate_fixture_inputs(project_dir)
+        assert_qa000_doctor_evidence_policy(project_dir)
+        steps.append(
+            StepResult(
+                name="qa000-doctor-evidence-policy",
+                returncode=0,
+                stdout="QA-000 Run records doctor --json as environment evidence",
+                stderr="",
+            )
+        )
         steps.append(run_step("configure-git-user-email", ["git", "config", "user.email", "vulcan-regression@example.invalid"], cwd=project_dir))
         steps.append(run_step("configure-git-user-name", ["git", "config", "user.name", "Vulcan Regression"], cwd=project_dir))
         steps.append(run_step("commit-fixture-state:add", ["git", "add", "-A"], cwd=project_dir))

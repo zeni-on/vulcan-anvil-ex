@@ -452,7 +452,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 작업:
 
 - profile별 최소 환경 점검을 더 세분화한다.
-- QA-000 결과서와 doctor JSON 출력을 자동 연결할지 검토한다.
+- QA-000 Run 입력 계약과 fixture smoke는 `python vulcan.py doctor --json` 출력을 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 환경 증적으로 남기도록 고정한다.
 
 성공 기준:
 

@@ -347,12 +347,14 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 
 | QA Run | 목적 |
 | --- | --- |
-| `QA-000` | integration branch QA workspace 기록, 의존성/포트/DB/Playwright 가능성 확인 |
+| `QA-000` | integration branch QA workspace 기록, `doctor --json` 환경 증적, 의존성/포트/DB/Playwright 가능성 확인 |
 | `QA-001` | backend/frontend test, lint, build, `check-contract`, `run-check` 같은 명령 검증. 추적성 오류가 있으면 `check-trace` 상세 진단 |
 | `QA-002` | Playwright UI/E2E screenshot/log/trace 증적 수집 |
 | `QA-003` | QA Finding, Test Result, FIND/CR/ISSUE, Gate 4 판단 후보 정리 |
 
 `QA-001`~`QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행합니다. 기본 workspace는 `workflow.integration_branch`의 현재 작업공간입니다. QA worktree는 명시적으로 활성화한 경우에만 사용합니다. QA worker는 실패를 발견해도 소스코드를 바로 수정하지 않고 원인, 재현 명령, 로그 경로, 영향 ID, 후보 FIND/CR/ISSUE를 남깁니다. 수정이 필요하면 Orchestrator가 사용자와 결정한 뒤 별도 `qa-fix-loop` Run으로 처리합니다.
+
+`QA-000`에서는 `python vulcan.py doctor --json`을 실행해 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 같은 JSON 증적으로 남기는 것을 기본으로 합니다. 이 결과는 로컬 환경 readiness 판단용이며, 제품 기능 테스트의 Pass/Fail을 대신하지 않습니다.
 
 테스트 문서의 역할은 분리합니다. Gate 3 테스트케이스 문서는 “무엇을 어떻게 검증할지”를 담는 계획 문서이므로 `Planned`를 `Pass`로 덮어쓰지 않습니다. Gate 4에서 실제 실행한 결과는 `DOC-QA-G4-002_Test-Result_v0.1.md`에 `Pass / Fail / Not Run / Skipped / environment_blocked`로 기록하고, QA-003에서 이 결과와 증적을 근거로 요구사항추적표의 `상태`, `증적`, `요구사항별 검증 요약`을 갱신합니다.
 
