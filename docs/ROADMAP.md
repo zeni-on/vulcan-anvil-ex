@@ -129,6 +129,7 @@
 8. **Runtime harness UX 흡수**
    - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
    - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령으로 흡수한다.
+   - `status --json --check`와 `execute --dry-run --json`으로 사람용 출력과 자동화용 구조화 출력을 함께 제공한다.
    - Codex role-based model fallback은 1차 구현되어 `gpt-5.3-codex` 같은 미지원 alias를 실행 전 `gpt-5.5`로 정규화하고, Dashboard/status에 actual model과 fallback reason을 표시한다.
    - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
@@ -163,13 +164,16 @@
 5. **Orchestrator CLI facade**
    - `status` MVP부터 시작해 `branch-status`, `profile-status`, `prepare-transition` 진단을 한 화면으로 요약한다.
    - `transition check` 같은 유사 진단 명령은 만들지 않는다. 진단 표면은 `status --check`로 모은다.
+   - `status --json --check`는 전환 진단을 `transition_check` 객체로 제공한다.
    - `execute --dry-run` MVP는 Run 실행 전 `run-check`, `run-preflight`, sidecar 후보, scope, 검증 명령을 한 번에 확인하는 수준으로 들어갔다.
+   - `execute --dry-run --json`은 같은 계획을 `delegation_sidecar`, `planned_flow`, `run_check`, `preflight`, `scope`, `verification` 구조로 제공한다.
    - 이후 필요성이 검증되면 `plan`, 실제 `execute`, `transition`은 후보로 다시 검토한다.
    - 상세 설계는 `docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md`를 따른다.
 
 6. **Delegation sidecar와 worker completion state**
    - native subagent/thread/Agy branch 진행 상태를 `.vulcan/delegations/*.json` sidecar로 읽어 Dashboard에 표시하는 MVP가 들어갔다.
    - worker 완료와 Orchestrator 검증 완료를 Dashboard와 Run 기록에서 분리한다.
+   - `execute --dry-run --json`은 native 위임 시작 전에 만들 sidecar 후보를 구조화해 보여준다.
    - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 

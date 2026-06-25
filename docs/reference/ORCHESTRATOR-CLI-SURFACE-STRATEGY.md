@@ -145,9 +145,11 @@ python vulcan.py status
 python vulcan.py status --check
 python vulcan.py status --trace-detail
 python vulcan.py status --json
+python vulcan.py status --json --check
 ```
 
 `--check`는 `prepare-transition` 수준의 진단을 붙인다.
+`--json --check`는 같은 진단을 `transition_check` 객체로 캡처해 자동화와 Dashboard가 재사용할 수 있게 한다.
 `--trace-detail`은 추적성만 더 깊게 봐야 할 때 `check-trace`를 호출하거나 같은 내부 로직을 사용한다.
 
 ### 4.2 `vulcan plan`
@@ -183,6 +185,7 @@ python vulcan.py plan wave BW-001 --trace-seed REQ-001-01
 ```text
 python vulcan.py execute --run-id RUN-012 --runner native --dry-run
 python vulcan.py execute --run-id RUN-012 --runner codex-cli --dry-run
+python vulcan.py execute --run-id RUN-012 --runner native --dry-run --json
 ```
 
 장기 후보:
@@ -196,6 +199,7 @@ python vulcan.py execute complete-wave BW-001 --status Verified
 
 - native subagent/thread/Agy branch 위임 전에도 내부적으로 `run-preflight`를 먼저 수행한다.
 - dry-run 단계에서는 `run-check`, `run-preflight`, `scope.writable`, 검증 명령, delegation sidecar 후보만 요약한다.
+- `--json` 출력은 `delegation_sidecar`, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`를 같은 구조로 제공한다.
 - 외부 CLI runner가 필요한 경우에만 `run-exec`/`agent-run` 경로를 선택한다.
 - `execute`가 결과를 자동 승인하지 않는다.
 - scope 밖 변경은 `Config Hotfix Candidate`, `qa-fix-loop`, `CR`, `reject` 중 하나로 명시 분기한다.

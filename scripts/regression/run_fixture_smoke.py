@@ -654,6 +654,66 @@ def assert_status_model_fallback_summary(project_dir: Path, py: str) -> StepResu
     return result
 
 
+def assert_status_json_check(project_dir: Path, py: str) -> StepResult:
+    result = run_step(
+        "status-json-check",
+        [py, "vulcan.py", "status", "--json", "--check"],
+        cwd=project_dir,
+        timeout_seconds=90,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"status --json --check output is invalid: {exc}\n{result.combined_output}") from exc
+
+    transition = payload.get("transition_check") or {}
+    if transition.get("command") != "python vulcan.py prepare-transition":
+        raise FixtureSmokeFailure(f"status --json --check did not include prepare-transition command: {transition}")
+    if transition.get("status") != "pass" or transition.get("exit_code") != 0:
+        raise FixtureSmokeFailure(f"status --json --check should pass for completed fixture: {transition}")
+    if not any("prepare-transition" in line for line in transition.get("stdout_lines") or []):
+        raise FixtureSmokeFailure("status --json --check did not capture prepare-transition output")
+    return result
+
+
+def assert_execute_json_plan(project_dir: Path, py: str) -> StepResult:
+    result = run_step(
+        "execute-dry-run-json",
+        [
+            py,
+            "vulcan.py",
+            "execute",
+            "--run-id",
+            "RUN-011",
+            "--runner",
+            "native",
+            "--dry-run",
+            "--json",
+        ],
+        cwd=project_dir,
+        timeout_seconds=90,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"execute --dry-run --json output is invalid: {exc}\n{result.combined_output}") from exc
+
+    if payload.get("run_id") != "RUN-011":
+        raise FixtureSmokeFailure(f"execute JSON run_id mismatch: {payload.get('run_id')}")
+    if payload.get("runner_mode") != "native-delegation":
+        raise FixtureSmokeFailure(f"execute JSON runner_mode mismatch: {payload.get('runner_mode')}")
+    sidecar = payload.get("delegation_sidecar") or {}
+    if sidecar.get("path") != ".vulcan/delegations/RUN-011.json":
+        raise FixtureSmokeFailure(f"execute JSON sidecar candidate mismatch: {sidecar}")
+    if sidecar.get("status") != "delegated":
+        raise FixtureSmokeFailure(f"execute JSON sidecar candidate should start delegated: {sidecar}")
+    if not any("run-preflight" in item for item in payload.get("planned_flow") or []):
+        raise FixtureSmokeFailure(f"execute JSON planned_flow missing run-preflight: {payload.get('planned_flow')}")
+    if not isinstance((payload.get("scope") or {}).get("writable"), list):
+        raise FixtureSmokeFailure(f"execute JSON scope.writable should be a list: {payload.get('scope')}")
+    return result
+
+
 def assert_product_multi_scenario_seed_expansion(project_dir: Path, vulcan_py: Path, py: str) -> None:
     product_dir = project_dir / "docs" / "product"
     product_dir.mkdir(parents=True, exist_ok=True)
@@ -1432,6 +1492,8 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 required_text=["FAIL 0"],
             )
         )
+        steps.append(assert_status_json_check(project_dir, py))
+        steps.append(assert_execute_json_plan(project_dir, py))
 
         for run_name in REPRESENTATIVE_RUNS:
             steps.append(

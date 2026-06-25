@@ -396,6 +396,8 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 
 - `python vulcan.py execute --run-id <RUN> --runner native --dry-run` MVP가 들어갔다.
 - 실제 worker를 호출하지 않고 `run-check`, `run-preflight`, 위임 sidecar 후보, scope, 검증 명령, Orchestrator 재검증 흐름을 출력한다.
+- `--json`을 붙이면 같은 dry-run 계획을 자동화/Dashboard가 읽을 수 있는 구조로 출력한다.
+- JSON에는 `delegation_sidecar`, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다.
 - run-check issue 또는 preflight blocker가 있으면 dry-run도 실패 코드로 종료한다.
 
 작업:
@@ -403,6 +405,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 - external CLI 실행과 `run-integrate --dry-run`까지 자동 연결할지 검토
 - native sidecar 초안 생성/갱신은 실제 샘플 검증 뒤 검토
 - 실제 worker 호출은 초기에는 안내/체크리스트 출력까지만 허용한다.
+- `execute --dry-run --json`이 안정된 뒤에만 native sidecar 자동 생성 후보를 다시 검토한다.
 
 성공 기준:
 
@@ -435,6 +438,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 남은 후보:
 
 - Run 문서 생성 지침에서 `completed` 대신 `worker_completed`/`verified`를 명시적으로 쓰게 유도한다.
+- `status --json --check`와 `execute --dry-run --json` 결과를 Dashboard/자동화에서 같은 상태 언어로 소비하게 한다.
 
 ### P3. Doctor Command
 
