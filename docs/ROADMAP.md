@@ -71,6 +71,7 @@
 - `qa-execution` Run이 소스코드 writable scope나 긍정형 수정 지시를 포함하면 `run-check`와 `run-preflight`가 차단하고, fixture smoke가 이 회귀를 고정한다.
 - 2026-06-25 Product 샘플을 Gate 5까지 완료했고, `release-pr --dry-run`이 Product evidence와 Gate 5 승인서를 기준으로 통과함을 확인했다.
 - Product Gate 5에서 릴리즈 승인서가 없으면 `status --check`가 차단하도록 필수 산출물과 fixture smoke를 보강했다.
+- 2026-06-25 PoC 반복형 샘플에서 `Pass`/`Smoke Pass`가 실제 evidence 파일 없이 구현 완료로 집계되던 문제를 확인했고, PoC evidence guard와 fixture smoke를 보강했다.
 
 ## 다음 초점
 
@@ -99,7 +100,7 @@
 3. **Profile별 실제 샘플 재실행**
    - Product profile은 fixture smoke만으로 끝내지 않고, 실제 Product 샘플 1회를 재실행해 운영 마찰을 확인한다.
    - 2026-06-25 Product sample rerun에서 Phase 0~Gate 5, Impl handoff, native worker 구현, `BW-001` Verified, Gate 4 QA evidence, Gate 5 release approval, `release-pr --dry-run`까지 확인했다. full-stack Product Build Wave가 `build-frontend`로 잘못 추론되던 문제를 `build`로 보정했고, Product trace 원장 기반 구현 통계가 `3/3`으로 잡히도록 fixture에 고정했다. Gate 5 승인서 누락을 `status --check`가 놓치던 문제도 fixture에 고정했다. 결과는 `docs/reference/PRODUCT-PROFILE-SAMPLE-RERUN-2026-06-25.md`에 남겼다.
-   - PoC profile은 빠른 시간보다 실험 기록 복원성을 기준으로 본다. 여러 번 기능을 추가하는 반복형 PoC에서 `Fix Log / Experiment Iterations`가 충분히 복원 가능한지 확인한다.
+   - PoC profile은 빠른 시간보다 실험 기록 복원성을 기준으로 본다. 2026-06-25 반복형 PoC 샘플에서 `Fix Log / Experiment Iterations`가 REQ/테스트/증적과 연결되면 복원이 가능함을 확인했고, evidence 없는 `Smoke Pass`가 완료로 집계되지 않도록 fixture에 고정했다. 결과는 `docs/reference/POC-ITERATION-SAMPLE-RERUN-2026-06-25.md`에 남겼다.
    - Audit profile은 Gate 4/5 전환과 release-pr dry-run까지 큰 흐름이 깨지지 않는지 릴리즈 전 smoke 성격으로만 재실행한다.
    - Product 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`, PoC 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
 

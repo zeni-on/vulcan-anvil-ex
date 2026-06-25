@@ -784,6 +784,94 @@ def assert_product_gate5_requires_release_approval(project_dir: Path, py: str) -
         session_path.write_bytes(original_session_bytes)
 
 
+def assert_poc_pass_requires_existing_evidence(project_dir: Path, py: str) -> StepResult:
+    session_path = project_dir / "session.json"
+    req_path = project_dir / "docs" / "poc" / "POC_REQUIREMENTS.md"
+    design_path = project_dir / "docs" / "poc" / "POC_SYSTEM_DESIGN.md"
+    report_path = project_dir / "docs" / "poc" / "POC_TEST_REPORT.md"
+    originals = {
+        session_path: session_path.read_bytes(),
+        req_path: req_path.read_bytes(),
+        design_path: design_path.read_bytes(),
+        report_path: report_path.read_bytes(),
+    }
+    try:
+        session = json.loads(originals[session_path].decode("utf-8"))
+        session["current_gate"] = "impl"
+        session.setdefault("gate_status", {})["impl"] = "pending"
+        session_path.write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+        req_path.write_text(
+            """# PoC Requirements
+
+| 항목 | 내용 |
+| --- | --- |
+| 목표 | evidence guard smoke |
+| 성공 기준 | missing evidence should block |
+
+| Hypothesis ID | 가설 | 검증 방법 | 성공 기준 | 상태 |
+| --- | --- | --- | --- | --- |
+| HYP-001 | smoke | status --check | blocked | Accepted |
+
+| REQ-ID | 시나리오 | 인수 기준 | 우선순위 |
+| --- | --- | --- | --- |
+| REQ-001 | smoke scenario | pass requires evidence | Must |
+""",
+            encoding="utf-8",
+        )
+        design_path.write_text(
+            """# PoC System Design
+
+| ID | Method / Entry | Path / Name | Input | Output | Related REQ |
+| --- | --- | --- | --- | --- | --- |
+| API-001 | Function | smoke() | none | ok | REQ-001 |
+
+| ID | 이름 | 형태 | 필드 또는 상태 | Related REQ |
+| --- | --- | --- | --- | --- |
+| DATA-001 | Smoke | in-memory | ok | REQ-001 |
+
+| SCR-ID | 화면 또는 상호작용 | 주요 상태 | Related REQ |
+| --- | --- | --- | --- |
+| SCR-001 | CLI | ok | REQ-001 |
+""",
+            encoding="utf-8",
+        )
+        report_path.write_text(
+            """# PoC Test Report
+
+| Test ID | 검증 대상 | 실행 명령 또는 방법 | 기대 결과 | 실제 결과 | 상태 | Related ID |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-001 | HYP-001 / REQ-001 | python -m unittest | ok | 통과 | Smoke Pass | HYP-001, REQ-001 |
+
+| Evidence ID | 유형 | 경로 또는 요약 | 관련 Test | 판정 |
+| --- | --- | --- | --- | --- |
+| EV-001 | Log | docs/poc/evidence/missing.log | T-001 | Smoke Pass |
+
+| 항목 | 내용 |
+| --- | --- |
+| 최종 판단 | Continue |
+| 근거 | smoke |
+""",
+            encoding="utf-8",
+        )
+        result = run_step(
+            "poc-pass-blocks-missing-evidence",
+            [py, "vulcan.py", "status", "--json", "--check"],
+            cwd=project_dir,
+            expected_returncodes={1},
+            timeout_seconds=90,
+        )
+        expected = "Pass/Smoke Pass 결과가 있으나 실제 증적 파일을 찾을 수 없습니다"
+        if expected not in result.combined_output:
+            raise FixtureSmokeFailure(
+                "PoC status --check failed without missing pass evidence diagnostic\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+        return result
+    finally:
+        for path, content in originals.items():
+            path.write_bytes(content)
+
+
 def assert_execute_json_plan(project_dir: Path, py: str) -> StepResult:
     result = run_step(
         "execute-dry-run-json",
@@ -1442,6 +1530,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 ],
             )
         )
+        steps.append(assert_poc_pass_requires_existing_evidence(profile_poc_dir, py))
         poc_run_new = run_step(
             "run-new-profile-poc",
             [

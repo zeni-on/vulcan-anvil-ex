@@ -1,8 +1,19 @@
 /** @type {import('jest').Config} */
+const ignoredGeneratedPaths = [
+  '<rootDir>/.next/',
+  '<rootDir>/test-results/',
+  '<rootDir>/playwright-report/',
+  '<rootDir>/node_modules/',
+]
+
 const config = {
   preset: 'ts-jest',
   // 기본 환경: node (API/lib 테스트)
   testEnvironment: 'node',
+  roots: ['<rootDir>/src'],
+  testPathIgnorePatterns: ignoredGeneratedPaths,
+  modulePathIgnorePatterns: ignoredGeneratedPaths,
+  watchPathIgnorePatterns: ignoredGeneratedPaths,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
@@ -16,6 +27,10 @@ const config = {
       displayName: 'node',
       preset: 'ts-jest',
       testEnvironment: 'node',
+      roots: ['<rootDir>/src'],
+      testPathIgnorePatterns: ignoredGeneratedPaths,
+      modulePathIgnorePatterns: ignoredGeneratedPaths,
+      watchPathIgnorePatterns: ignoredGeneratedPaths,
       testMatch: ['<rootDir>/src/__tests__/**/*.test.ts'],
       moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
       transform: {
@@ -26,6 +41,10 @@ const config = {
       displayName: 'jsdom',
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
+      roots: ['<rootDir>/src'],
+      testPathIgnorePatterns: ignoredGeneratedPaths,
+      modulePathIgnorePatterns: ignoredGeneratedPaths,
+      watchPathIgnorePatterns: ignoredGeneratedPaths,
       testMatch: ['<rootDir>/src/__tests__/**/*.test.tsx'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
