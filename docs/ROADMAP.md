@@ -65,6 +65,7 @@
 - Product completed fixture smoke에서 `python vulcan.py doctor --json` 구조와 기본 pass 조건을 검증한다.
 - Gate 4 `QA-000` Run 입력 계약에 `python vulcan.py doctor --json` 실행과 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 증적 경로를 연결했다.
 - simple hello audit fixture에 `QA-000-doctor.json`/`.log` 증적을 추가했고, `scripts/regression/run_fixture_smoke.py`가 QA-000 doctor 증적 계약 누락을 감지한다.
+- QA-000 workspace가 `environment_blocked`이면 QA-001 후속 Run preflight와 실행 workspace 재사용 경로가 진행을 차단하도록 fixture smoke에 고정했다.
 
 ## 다음 초점
 
@@ -92,7 +93,8 @@
    - 신규 프로젝트 기본 `.gitignore`는 공식 QA 로그를 막지 않고 `playwright-report/`, `test-results/`를 보조 로컬 산출물로 제외한다.
    - 공식 증적은 `docs/artifacts/04-review/evidence/logs/*`와 `docs/artifacts/04-review/evidence/ui/*.png`에 둔다.
    - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
-   - QA-000은 `doctor --json` 환경 증적을 남긴다. 다음 보강은 실제 샘플에서 `environment_blocked`가 발생했을 때 QA-001/QA-002 진행 차단과 사용자 협의 안내가 자연스럽게 보이는지 확인하는 것이다.
+   - QA-000은 `doctor --json` 환경 증적을 남긴다. `environment_blocked` 상태의 QA-000 workspace가 있으면 후속 QA-001/QA-002 진행은 차단된다.
+   - 다음 보강은 실제 샘플에서 차단 후 사용자 협의 안내와 qa-fix-loop/ISSUE 후보 분기가 자연스럽게 보이는지 확인하는 것이다.
    - `run-integrate --dry-run`은 scope 밖 설정 변경을 Config Hotfix 후보로 분류하고, 자동 승인/자동 되돌림 대신 Orchestrator가 `accept`, `qa-fix-loop`, `CR`, `reject` 중 하나를 선택하게 안내한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않게 하고, 수정은 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리한다.
 

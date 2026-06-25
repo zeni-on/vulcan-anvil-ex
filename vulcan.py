@@ -10209,7 +10209,7 @@ def resolve_gate4_qa_workspace(project_dir, *, run_id, run_meta, run_content, cr
         print(f"오류: {stage}는 QA-000에서 만든 QA workspace를 재사용해야 합니다.")
         print("  먼저 QA-000 qa-execution Run을 실행해 qa_execution.gate4_workspace.path를 기록하세요.")
         sys.exit(1)
-    if qa_status in ("blocked", "missing"):
+    if qa_status in ("blocked", "failed", "missing", "environment_blocked"):
         print(f"오류: QA-000 workspace 상태가 {qa_status}입니다. 후속 QA Run을 진행할 수 없습니다.")
         print(f"  QA workspace: {qa_path}")
         sys.exit(1)

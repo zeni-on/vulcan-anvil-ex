@@ -1389,6 +1389,33 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 encoding="utf-8",
             )
 
+        session_blocked_qa_workspace = json.loads(json.dumps(session_before_qa_guard))
+        session_blocked_qa_workspace.setdefault("qa_execution", {}).setdefault("gate4_workspace", {})["status"] = "environment_blocked"
+        session_path.write_text(
+            json.dumps(session_blocked_qa_workspace, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        try:
+            steps.append(
+                run_step(
+                    "run-preflight-blocks-qa001-after-qa000-environment-blocked",
+                    [
+                        py,
+                        "vulcan.py",
+                        "run-preflight",
+                        str(Path("docs") / "runs" / QA_PREFLIGHT_RUNS[0]),
+                    ],
+                    cwd=project_dir,
+                    expected_returncodes={1},
+                    required_text=["workspace 상태가 environment_blocked"],
+                )
+            )
+        finally:
+            session_path.write_text(
+                json.dumps(session_before_qa_guard, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
         steps.append(run_step("export-snapshot", [py, "vulcan.py", "export"], cwd=project_dir))
         if not (project_dir / "snapshot.json").exists():
             raise FixtureSmokeFailure("export did not create snapshot.json")
