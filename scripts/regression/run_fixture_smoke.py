@@ -467,6 +467,18 @@ skill: build-wave
 bw_id: BW-001
 status: Verified
 related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
+target_contracts:
+  scenario: [SCN-001]
+  req: [REQ-001]
+  api: [API-001, API-002]
+  data: [DATA-001]
+  ui: [UI-001]
+scope:
+  writable:
+    - "backend/"
+    - "frontend/"
+    - "static/"
+    - "tests/"
 ---
 ```
 
@@ -496,6 +508,22 @@ related_ids: [SCN-001, REQ-001, API-001, API-002, DATA-001, UI-001, REG-001]
     if missing:
         raise FixtureSmokeFailure(
             f"Product Build Wave related IDs were not preserved: missing {missing}, actual {sorted(actual_ids)}"
+        )
+
+    inferred_role = module.infer_execution_role(
+        run_path.read_text(encoding="utf-8"),
+        {
+            "run_id": "RUN-001",
+            "persona": "build",
+            "skill": "build-wave",
+            "title": "Product scenario smoke",
+            "bw_id": "BW-001",
+        },
+    )
+    if inferred_role != "build":
+        raise FixtureSmokeFailure(
+            "Product full-stack Build Wave should infer generic build role, "
+            f"got {inferred_role}"
         )
 
 

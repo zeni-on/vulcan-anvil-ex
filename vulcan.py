@@ -12107,6 +12107,14 @@ def infer_execution_role(run_content, metadata):
             return "build-backend"
         if persona in ("ui", "screen", "frontend") or "frontend" in title_hint or "프론트" in title_hint:
             return "build-frontend"
+        target_contracts_block = re.search(r"(?is)target_contracts:\s*(.+?)(?:\n[a-zA-Z_][\w-]*:|\Z)", run_content)
+        target_contracts_text = (target_contracts_block.group(1) if target_contracts_block else "").lower()
+        has_api_or_data_contract = bool(re.search(r"(?m)^\s*(api|data|db)\s*:", target_contracts_text))
+        has_ui_contract = bool(re.search(r"(?m)^\s*ui\s*:", target_contracts_text))
+        has_backend_scope = any(marker in text for marker in ["backend/", "app/", "src/", "api"])
+        has_frontend_scope = any(marker in text for marker in ["frontend/", "static/", "ui-"])
+        if has_ui_contract and has_api_or_data_contract and has_backend_scope and has_frontend_scope:
+            return "build"
         header_frontend = min([idx for idx in [header_text.find("frontend"), header_text.find("front-end"), header_text.find("프론트")] if idx >= 0] or [999999])
         header_backend = min([idx for idx in [header_text.find("backend"), header_text.find("back-end"), header_text.find("백엔드")] if idx >= 0] or [999999])
         if header_backend < header_frontend:
