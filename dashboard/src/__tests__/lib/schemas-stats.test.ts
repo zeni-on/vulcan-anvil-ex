@@ -148,6 +148,8 @@ describe('runtime runner capability parsing', () => {
           runner: 'antigravity-cli',
           model: 'gemini-3.5-flash',
           reasoning_effort: 'high',
+          model_source: 'codex-model-policy:review|compat-fallback:gpt-5.3-codex',
+          model_fallback_reason: 'gpt-5.3-codex is not supported; using gpt-5.5',
         },
       ],
       worktrees: [
@@ -172,6 +174,7 @@ describe('runtime runner capability parsing', () => {
     expect(result.data.capabilities.cross_model_validation).toBe(true)
     expect(result.data.capabilities.parallel_cross_runner_work).toBe(true)
     expect(result.data.active_executions[0].status).toBe('running')
+    expect(result.data.active_executions[0].model_fallback_reason).toContain('gpt-5.3-codex')
     expect(result.data.worktrees[0].changed_count).toBe(1)
   })
 })

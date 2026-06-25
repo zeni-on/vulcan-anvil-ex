@@ -55,6 +55,13 @@ function runnerDetail(runner: RuntimeRunner): string {
   return [runner.model, effort].filter(Boolean).join(' / ') || runner.version || '설정값 없음'
 }
 
+function activityModelDetail(activity?: RuntimeActivity): string {
+  if (!activity) return ''
+  const detail = [activity.model, activity.reasoning_effort].filter(Boolean).join(' / ')
+  if (!detail && !activity.model_fallback_reason) return ''
+  return activity.model_fallback_reason ? `actual ${detail || 'model fallback'}` : `actual ${detail}`
+}
+
 function capabilityLabel(runtime: ProjectRuntime): { label: string; tone: 'green' | 'yellow' | 'gray' } {
   if (runtime.capabilities.cross_model_validation) {
     return { label: '교차검증 가능', tone: 'green' }
@@ -135,6 +142,7 @@ export default function RunnerStatusPanel({
             )
             const activeCount = runnerActivities.length
             const firstActivity = runnerActivities[0]
+            const actualDetail = activityModelDetail(firstActivity)
             const selectable = Boolean(firstActivity && onActivitySelect)
 
             return (
@@ -169,6 +177,11 @@ export default function RunnerStatusPanel({
                   <div className="truncate text-[11px] text-slate-500">
                     {runnerDetail(runner)}
                   </div>
+                  {actualDetail && (
+                    <div className="truncate text-[10px] text-cyan-200/80" title={firstActivity?.model_fallback_reason || actualDetail}>
+                      {actualDetail}
+                    </div>
+                  )}
                 </div>
                 {activeCount > 0 ? (
                   <span className="shrink-0 rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-200">

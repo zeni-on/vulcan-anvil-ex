@@ -113,7 +113,7 @@
 8. **Runtime harness UX 흡수**
    - 외부 runtime harness에서 command surface 단순화, durable progress state, verified completion loop, hooks, doctor/diagnostics 패턴을 참고한다.
    - Ex는 외부 runtime harness를 복제하거나 기본 dependency로 포함하지 않고, `delegation sidecar`, `execute` facade dry-run, worker completion state 분리, `doctor` 명령으로 흡수한다.
-   - Codex role-based model fallback은 1차 구현되어 `gpt-5.3-codex` 같은 미지원 alias를 실행 전 `gpt-5.5`로 정규화한다. 남은 작업은 Dashboard/status에 actual model과 fallback reason을 더 잘 보여주는 것이다.
+   - Codex role-based model fallback은 1차 구현되어 `gpt-5.3-codex` 같은 미지원 alias를 실행 전 `gpt-5.5`로 정규화하고, Dashboard/status에 actual model과 fallback reason을 표시한다.
    - 상세 정리는 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
 
 ### Next: 0.5 후보

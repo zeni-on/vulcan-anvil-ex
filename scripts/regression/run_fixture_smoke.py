@@ -577,6 +577,49 @@ def assert_codex_model_policy_fallback(vulcan_py: Path, py: str) -> StepResult:
     )
 
 
+def assert_status_model_fallback_summary(project_dir: Path, py: str) -> StepResult:
+    exec_dir = project_dir / "docs" / "runs" / "_exec"
+    exec_dir.mkdir(parents=True, exist_ok=True)
+    (exec_dir / "RUN-999_codex-summary.json").write_text(
+        json.dumps(
+            {
+                "run_id": "RUN-999",
+                "target_id": "RUN-999",
+                "runner": "codex-cli",
+                "status": "completed",
+                "model": "gpt-5.5",
+                "reasoning_effort": "high",
+                "model_source": "codex-model-policy:build|compat-fallback:gpt-5.3-codex",
+                "model_fallback_reason": "gpt-5.3-codex is not supported; using gpt-5.5",
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    result = run_step(
+        "status-json-model-fallback-summary",
+        [py, "vulcan.py", "status", "--json"],
+        cwd=project_dir,
+        timeout_seconds=60,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"status --json output is invalid: {exc}\n{result.combined_output}") from exc
+
+    fallbacks = payload.get("model_fallbacks") or []
+    if not any(
+        item.get("target_id") == "RUN-999"
+        and item.get("model") == "gpt-5.5"
+        and "compat-fallback:gpt-5.3-codex" in (item.get("model_source") or "")
+        and item.get("model_fallback_reason")
+        for item in fallbacks
+    ):
+        raise FixtureSmokeFailure(f"status --json did not report model fallback summary: {fallbacks}")
+    return result
+
+
 def assert_product_multi_scenario_seed_expansion(project_dir: Path, vulcan_py: Path, py: str) -> None:
     product_dir = project_dir / "docs" / "product"
     product_dir.mkdir(parents=True, exist_ok=True)
@@ -920,6 +963,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout_seconds,
             )
         )
+        steps.append(assert_status_model_fallback_summary(profile_product_dir, py))
         assert_product_adr_template_policy(profile_product_dir)
         steps.append(
             StepResult(

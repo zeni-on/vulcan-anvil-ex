@@ -28,6 +28,10 @@ const runtime: ProjectRuntime = {
       target_id: 'RV-001',
       runner: 'codex-cli',
       status: 'running',
+      model: 'gpt-5.5',
+      reasoning_effort: 'high',
+      model_source: 'codex-model-policy:review|compat-fallback:gpt-5.3-codex',
+      model_fallback_reason: 'gpt-5.3-codex is not supported; using gpt-5.5',
       phase: 'reviewing',
       current_task: 'Gate2 설계 검토 중',
       current_message: '프로그램 계약과 API 정의를 비교 중',
@@ -68,6 +72,7 @@ describe('AgentPanel worker activity drawer', () => {
     expect(screen.getByText('RV-001 독립 검수 시작')).toBeInTheDocument()
     expect(screen.getAllByText('프로그램 계약과 API 정의를 비교 중').length).toBeGreaterThan(0)
     expect(screen.getByText('019e-test-thread')).toBeInTheDocument()
+    expect(screen.getAllByText('gpt-5.3-codex is not supported; using gpt-5.5').length).toBeGreaterThan(0)
   })
 
   it('레이어 새로고침 버튼으로 현재 worker 상태를 다시 요청한다', () => {
@@ -114,6 +119,10 @@ describe('AgentPanel worker activity drawer', () => {
           delegate: 'build',
           task: 'Todo API 구현',
           status: 'completed',
+          model: 'gpt-5.5',
+          reasoning_effort: 'high',
+          model_source: 'codex-model-policy:build|compat-fallback:gpt-5.3-codex',
+          model_fallback_reason: 'gpt-5.3-codex is not supported; using gpt-5.5',
           source: 'delegation_records',
         },
       ],
@@ -124,6 +133,8 @@ describe('AgentPanel worker activity drawer', () => {
     expect(screen.getByText('Codex subagent')).toBeInTheDocument()
     expect(screen.getByText('Todo API 구현')).toBeInTheDocument()
     expect(screen.getByText('worker 완료')).toBeInTheDocument()
+    expect(screen.getAllByText('gpt-5.5 / high').length).toBeGreaterThan(0)
+    expect(screen.getByText('fallback: gpt-5.3-codex is not supported; using gpt-5.5')).toBeInTheDocument()
   })
 
   it('위임 상태에서 worker 완료와 Orchestrator 검증 완료를 구분해 표시한다', () => {

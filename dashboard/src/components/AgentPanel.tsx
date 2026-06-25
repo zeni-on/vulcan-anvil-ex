@@ -247,6 +247,10 @@ function activityTask(activity: RuntimeActivity): string {
   return activity.phase || activity.status
 }
 
+function modelSummary(model?: string, effort?: string): string {
+  return [model, effort].filter(Boolean).join(' / ')
+}
+
 function activityEvents(activity: RuntimeActivity): RuntimeActivityEvent[] {
   const events = activity.events ?? []
   if (events.length > 0) return events
@@ -296,6 +300,7 @@ function ActivityRow({
     activity.current_message,
     age,
     activity.resume_supported ? 'resume 가능' : '',
+    activity.model_fallback_reason ? `model fallback: ${activity.model_fallback_reason}` : '',
     watchdog,
   ].filter(Boolean).join('\n')
 
@@ -321,6 +326,11 @@ function ActivityRow({
       {watchdog && (
         <p className="mt-0.5 truncate pl-4 text-[11px] leading-4 text-slate-400">
           {watchdog}
+        </p>
+      )}
+      {activity.model_fallback_reason && (
+        <p className="mt-0.5 truncate pl-4 text-[11px] leading-4 text-amber-200/90">
+          model fallback: {activity.model}
         </p>
       )}
       <span className="sr-only">{tone.label}</span>
@@ -394,6 +404,21 @@ function ActivityDrawer({
             <span className="text-slate-600">runner</span>
             <span className="truncate">{activity.runner}</span>
           </div>
+          {(activity.model || activity.reasoning_effort || activity.model_source) && (
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <span className="text-slate-600">model</span>
+              <span className="truncate">
+                {modelSummary(activity.model, activity.reasoning_effort) || '-'}
+                {activity.model_source ? ` · ${activity.model_source}` : ''}
+              </span>
+            </div>
+          )}
+          {activity.model_fallback_reason && (
+            <div className="grid grid-cols-[80px_1fr] gap-2">
+              <span className="text-slate-600">fallback</span>
+              <span className="truncate text-amber-200">{activity.model_fallback_reason}</span>
+            </div>
+          )}
           {identity && (
             <div className="grid grid-cols-[80px_1fr] gap-2">
               <span className="text-slate-600">session</span>
@@ -540,6 +565,7 @@ function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
     record.delegate ? `delegate: ${record.delegate}` : '',
     record.task ? `task: ${record.task}` : '',
     record.result_summary ? `summary: ${record.result_summary}` : '',
+    record.model_fallback_reason ? `model fallback: ${record.model_fallback_reason}` : '',
     record.verification_status ? `verification: ${record.verification_status}` : '',
   ].filter(Boolean).join('\n')
 
@@ -565,6 +591,14 @@ function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-600">
             <span className="shrink-0">{delegationSourceLabel(record.source)}</span>
+            {modelSummary(record.model, record.reasoning_effort) && (
+              <>
+                <span className="shrink-0 text-slate-700">/</span>
+                <span className="min-w-0 truncate">
+                  {modelSummary(record.model, record.reasoning_effort)}
+                </span>
+              </>
+            )}
             {record.verification_status && (
               <>
                 <span className="shrink-0 text-slate-700">/</span>
@@ -572,6 +606,11 @@ function DelegationRow({ record }: { record: RuntimeDelegationRecord }) {
               </>
             )}
           </div>
+          {record.model_fallback_reason && (
+            <div className="mt-0.5 truncate text-[10px] text-amber-200/90">
+              fallback: {record.model_fallback_reason}
+            </div>
+          )}
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${statusTone.className}`}>
           <StatusIcon className={`h-3 w-3 ${statusTone.spin ? 'animate-spin' : ''}`} />

@@ -171,6 +171,9 @@ export interface RuntimeActivity {
   model?: string
   reasoning_effort?: string
   model_source?: string
+  effort_source?: string
+  model_policy_role?: string
+  model_fallback_reason?: string
   sandbox?: string
   exec_dir?: string
   worktree_path?: string | null
@@ -278,6 +281,12 @@ export interface RuntimeDelegationRecord {
   task?: string
   status?: string
   result_summary?: string
+  model?: string
+  reasoning_effort?: string
+  model_source?: string
+  effort_source?: string
+  model_policy_role?: string
+  model_fallback_reason?: string
   changed_count?: number
   changed_files?: string[]
   started_at?: string

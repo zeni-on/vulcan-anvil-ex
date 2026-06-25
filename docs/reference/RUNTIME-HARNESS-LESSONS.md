@@ -471,6 +471,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 - `gpt-5.3-codex`는 현재 `gpt-5.5`로 정규화한다.
 - 실행 activity/summary/Run Execution Record에는 `model_source`와 `model_fallback_reason`을 남긴다.
 - `scripts/regression/run_fixture_smoke.py`가 role policy와 CLI 명시 옵션 양쪽의 fallback을 smoke로 검증한다.
+- `status --json`은 최근 fallback 실행을 `model_fallbacks`로 노출하고, Dashboard Runner/진행 작업/위임 기록은 actual model과 fallback reason을 표시한다.
 
 작업:
 
@@ -481,7 +482,7 @@ sidecar는 Gate 승인, 테스트 Pass, release 가능 여부를 확정하지 �
 성공 기준:
 
 - `gpt-5.3-codex` 미지원 같은 문제가 worker 실행 시간을 낭비하지 않는다.
-- 남은 작업은 Dashboard/status에서 실제 모델과 fallback reason을 더 잘 드러내는 것이다.
+- Orchestrator와 사용자는 Dashboard/status에서 실제 사용 모델과 fallback reason을 확인할 수 있다.
 
 ### P5. Existing Codebase Adoption
 

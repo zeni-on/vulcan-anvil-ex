@@ -14817,6 +14817,7 @@ def collect_status_summary(project_dir="."):
         next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
 
     dashboard_comments = collect_dashboard_comments(project_abs)
+    model_fallbacks = collect_model_fallbacks(project_abs)
     profile_gap = None
     if session and profile in ("poc", "product", "audit"):
         gap_target = "product" if profile == "poc" else profile
@@ -14860,8 +14861,74 @@ def collect_status_summary(project_dir="."):
         "active_waves": active_waves,
         "profile_gap": profile_gap,
         "dashboard_comments": dashboard_comments,
+        "model_fallbacks": model_fallbacks,
         "next_actions": next_actions[:3],
     }
+
+
+def collect_model_fallbacks(project_dir="."):
+    exec_dir = os.path.join(os.path.abspath(project_dir), "docs", "runs", "_exec")
+    if not os.path.isdir(exec_dir):
+        return []
+
+    candidates = []
+    try:
+        for name in os.listdir(exec_dir):
+            if not name.endswith((".json", ".jsonl")):
+                continue
+            path = os.path.join(exec_dir, name)
+            if not os.path.isfile(path):
+                continue
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    if name.endswith(".jsonl"):
+                        rows = [
+                            json.loads(line)
+                            for line in f
+                            if line.strip().startswith("{")
+                        ]
+                        payload = rows[-1] if rows else {}
+                    else:
+                        payload = json.load(f)
+            except Exception:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            reason = str(payload.get("model_fallback_reason") or "").strip()
+            if not reason:
+                continue
+            target_id = (
+                payload.get("target_id")
+                or payload.get("run_id")
+                or payload.get("review_id")
+                or "-"
+            )
+            candidates.append({
+                "target_id": target_id,
+                "runner": payload.get("runner") or "-",
+                "model": payload.get("model") or "-",
+                "reasoning_effort": payload.get("reasoning_effort") or "",
+                "model_source": payload.get("model_source") or "",
+                "model_fallback_reason": reason,
+                "status": payload.get("status") or "",
+                "path": os.path.relpath(path, os.path.abspath(project_dir)).replace("\\", "/"),
+                "mtime": os.path.getmtime(path),
+            })
+    except Exception:
+        return []
+
+    seen = set()
+    deduped = []
+    for item in sorted(candidates, key=lambda value: value.get("mtime") or 0, reverse=True):
+        key = (item.get("target_id"), item.get("runner"), item.get("model_fallback_reason"))
+        if key in seen:
+            continue
+        seen.add(key)
+        item.pop("mtime", None)
+        deduped.append(item)
+        if len(deduped) >= 5:
+            break
+    return deduped
 
 
 def collect_dashboard_comments(project_dir="."):
@@ -15230,6 +15297,19 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
     if len(active_waves) > 5:
         print(f"  ... 외 {len(active_waves) - 5}건")
     print()
+
+    model_fallbacks = summary.get("model_fallbacks") or []
+    if model_fallbacks:
+        print(" model_fallbacks")
+        for item in model_fallbacks[:5]:
+            effort = f" / {item.get('reasoning_effort')}" if item.get("reasoning_effort") else ""
+            source = f" ({item.get('model_source')})" if item.get("model_source") else ""
+            print(
+                f"  - {item.get('target_id')} {item.get('runner')}: "
+                f"{item.get('model')}{effort}{source}"
+            )
+            print(f"    reason: {item.get('model_fallback_reason')}")
+        print()
 
     profile_gap = summary.get("profile_gap") or {}
     if profile_gap:
