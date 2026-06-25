@@ -171,22 +171,76 @@ Result:
 - Sample `sync-session`: implementation requirements changed to `3/3`
 - Sample `status --check`: impl to Gate 4 transition ready
 
+## Gate 4 QA Rerun
+
+The same sample was then continued through Gate 4.
+
+Gate 4 execution commands:
+
+```powershell
+python vulcan.py session --gate impl --status done --approved --approval-evidence "BW-001 Verified; compileall, pytest, npm test, npm run build, run-check, run-preflight passed; Product implementation stats 3/3"
+python vulcan.py doctor --json
+python vulcan.py doctor
+python -m compileall app backend src
+python -m pytest
+npm test
+npm run build
+npx --yes playwright test docs/product/evidence/G4_QA002_product_ui.spec.js --reporter=line --output=docs/product/evidence/playwright-output
+python vulcan.py sync-session
+python vulcan.py status --check
+python vulcan.py session --gate gate4 --status done --approved --approval-evidence "Product Gate4 QA completed: doctor warn only, compileall/pytest/npm test/npm build passed, npx playwright test passed with UI screenshot evidence"
+```
+
+Gate 4 evidence created in the sample:
+
+- `docs/product/evidence/G4_QA000_doctor.json`
+- `docs/product/evidence/G4_QA000_doctor.log`
+- `docs/product/evidence/G4_QA001_compileall.log`
+- `docs/product/evidence/G4_QA001_pytest.log`
+- `docs/product/evidence/G4_QA001_npm_test.log`
+- `docs/product/evidence/G4_QA001_npm_build.log`
+- `docs/product/evidence/G4_QA002_playwright.log`
+- `docs/product/evidence/G4_QA002_product_ui.spec.js`
+- `docs/product/evidence/G4_QA002_product_ui.png`
+
+Gate 4 result:
+
+- `doctor`: pass 10, warn 2, fail 0, info 2
+- Warnings:
+  - `node_modules` missing
+  - `@playwright/test` not pinned in `package.json`
+- Command QA: compileall, pytest, npm test, npm build passed
+- UI QA: `npx --yes playwright test ...` passed, 1 test
+- Product trace/report updated to Gate 4 Pass
+- Gate 4 completed and the sample is now at Gate 5 pending
+
+### Discovered Gate 4 readiness issue
+
+Before executing Gate 4 QA, `status --check` incorrectly allowed transition readiness while Product regression rows still said `Not run yet | Planned`.
+The Product checker already had a planned-regression guard, but its pattern did not include the Product template phrase `Not run yet`.
+
+The fix:
+
+- Product Gate 4 planned regression detection now treats `Not run yet | Planned` as a blocking execution result.
+- `scripts/regression/run_fixture_smoke.py` now verifies the real `status --json --check` path fails while Product Gate 4 regression rows remain not executed.
+
 ## Current Sample State
 
-The sample is intentionally left at the implementation-to-QA boundary:
+The sample is intentionally left at the Gate 5 boundary:
 
 - branch: `dev`
-- gate: `impl`
+- gate: `gate5`
 - Build Wave: `BW-001` Verified
 - implementation requirements: `3/3`
+- Gate 4 QA: completed
 - active Runs: none
 - active Waves: none
-- next transition: `impl` can be approved and Gate 4 can start
+- next transition: Gate 5 release approval can be tested
 
-This is enough for the roadmap item "Product profile actual sample rerun" to validate Product document flow, worker handoff quality, native implementation, and Product implementation stats. Gate 4 QA remains a separate follow-up because it should validate browser/UI evidence and release-facing regression output.
+This is enough for the roadmap item "Product profile actual sample rerun" to validate Product document flow, worker handoff quality, native implementation, Product implementation stats, and Product Gate 4 QA evidence flow.
 
 ## Follow-up
 
-- Continue the same sample with Gate 4 only when testing Product QA throughput is the goal.
+- Continue the same sample with Gate 5 only when testing Product release approval and release-pr behavior is the goal.
 - Keep adding fixture cases only when sample reruns reveal repeated or blocking failures.
 - Do not merge experimental scaffold automation until a sample proves it reduces Product Run drafting or skeleton setup time.
