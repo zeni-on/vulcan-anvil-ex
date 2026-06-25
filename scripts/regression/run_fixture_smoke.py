@@ -714,6 +714,36 @@ def assert_execute_json_plan(project_dir: Path, py: str) -> StepResult:
     return result
 
 
+def assert_scaffold_plan_json(project_dir: Path, py: str) -> StepResult:
+    result = run_step(
+        "scaffold-plan-json",
+        [py, "vulcan.py", "scaffold-plan", "--json"],
+        cwd=project_dir,
+        timeout_seconds=90,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise FixtureSmokeFailure(f"scaffold-plan --json output is invalid: {exc}\n{result.combined_output}") from exc
+
+    summary = payload.get("summary") or {}
+    if payload.get("mode") != "dry-run":
+        raise FixtureSmokeFailure(f"scaffold-plan should be dry-run only: {payload.get('mode')}")
+    if summary.get("interfaces", 0) < 1 or summary.get("methods", 0) < 1 or summary.get("skeletons", 0) < 1:
+        raise FixtureSmokeFailure(f"scaffold-plan did not extract expected contracts: {summary}")
+    if not any(item.get("if_id") == "IF-001" and item.get("name") == "HelloService" for item in payload.get("interfaces") or []):
+        raise FixtureSmokeFailure(f"scaffold-plan did not extract IF-001 HelloService: {payload.get('interfaces')}")
+    if not any(item.get("method_id") == "MTH-001" and item.get("method_name") == "get_hello" for item in payload.get("methods") or []):
+        raise FixtureSmokeFailure(f"scaffold-plan did not extract MTH-001 get_hello: {payload.get('methods')}")
+    if not any(item.get("contract_id") == "DTO-001" for item in payload.get("dtos") or []):
+        raise FixtureSmokeFailure(f"scaffold-plan did not extract DTO-001: {payload.get('dtos')}")
+    if not any(item.get("skeleton_id") == "SKEL-001" for item in payload.get("skeletons") or []):
+        raise FixtureSmokeFailure(f"scaffold-plan did not extract SKEL-001: {payload.get('skeletons')}")
+    if not any(item.get("path") == "backend/app/services/hello_service.py" for item in payload.get("files") or []):
+        raise FixtureSmokeFailure(f"scaffold-plan did not propose hello service path: {payload.get('files')}")
+    return result
+
+
 def assert_product_multi_scenario_seed_expansion(project_dir: Path, vulcan_py: Path, py: str) -> None:
     product_dir = project_dir / "docs" / "product"
     product_dir.mkdir(parents=True, exist_ok=True)
@@ -1494,6 +1524,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
         )
         steps.append(assert_status_json_check(project_dir, py))
         steps.append(assert_execute_json_plan(project_dir, py))
+        steps.append(assert_scaffold_plan_json(project_dir, py))
 
         for run_name in REPRESENTATIVE_RUNS:
             steps.append(

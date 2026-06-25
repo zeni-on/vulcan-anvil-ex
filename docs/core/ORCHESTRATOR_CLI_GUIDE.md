@@ -23,6 +23,7 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 | `doctor` | 로컬 Git/Node/npm/Playwright/runner/cache/Dashboard 환경 점검 |
 | `profile-gap` | 현재 산출물을 목표 profile 기준으로 볼 때 부족한 문서와 내용 보완 항목 진단 |
 | `metrics` | git/Run/증적 기반 진행 시간, 파일 수, 라인 수, 위임 기록 요약 |
+| `scaffold-plan` | Program Design에서 skeleton 후보를 dry-run으로 추출 |
 | `gate-start`, `session`, `sync-session` | Gate 라이프사이클 갱신 |
 | `orchestrator-plan`, `run-new`, `run-check`, `run-preflight` | Run 생성과 검증 |
 | `branch-start`, `wave-start`, `wave-complete`, `run-integrate` | 구현/QA 통합 브랜치와 Build Wave 운영 |
@@ -104,6 +105,7 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | Orchestrator Plan 생성 | `python vulcan.py orchestrator-plan --goal "<goal>" --gate <gate>` |
 | 새 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --related-ids "<ids>"` |
 | trace seed 기반 Run 생성 | `python vulcan.py run-new --skill <skill> --title "<title>" --trace-seed <ID>` |
+| Program Design 기반 skeleton 후보 | `python vulcan.py scaffold-plan --json` |
 | Run 실행 계획 dry-run | `python vulcan.py execute --run-id <RUN-ID> --runner native --dry-run` |
 | Run 실행 계획 JSON | `python vulcan.py execute --run-id <RUN-ID> --runner native --dry-run --json` |
 | worker handoff 전 사전검사 | `python vulcan.py run-preflight <run-file>` |
@@ -114,6 +116,8 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 `execute --dry-run`은 실제 worker를 실행하지 않는다. Run 문서를 기준으로 `run-check`, `run-preflight`, 위임 sidecar 후보, `scope.writable`, 검증 명령, 외부 runner 연결 명령을 한 번에 요약한다. native subagent/thread/Agy branch agent에게 일을 넘기기 전에는 이 출력으로 누락된 handoff 조건을 먼저 확인한다.
 
 자동화나 Dashboard 연동처럼 기계가 읽어야 하는 경우에는 `--json`을 붙인다. 이 JSON에는 `delegation_sidecar` 후보, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다. 이 출력도 dry-run 계획일 뿐이며 worker 실행, Gate 승인, Wave 완료를 수행하지 않는다.
+
+`scaffold-plan`은 Gate 2 Program Design의 Interface/Public Method/DTO/Skeleton 표를 읽어 생성 또는 확인할 파일 후보를 보여준다. 파일을 만들지 않으며, `BW-000 implementation-scaffold` 또는 Build Wave Run을 작성하기 전의 계획 입력으로만 사용한다.
 
 ## 6. 구현과 Build Wave
 

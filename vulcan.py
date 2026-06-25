@@ -5090,8 +5090,12 @@ def parse_program_contracts(program_design_path):
 
     interface_section = extract_markdown_section(content, r"Interface Contract|인터페이스")
     method_section = extract_markdown_section(content, r"Public Method Contract|public method|메소드")
+    dto_section = extract_markdown_section(content, r"DTO\s*/\s*Entity\s*/\s*Data Contract|DTO|Entity|Data Contract")
+    skeleton_section = extract_markdown_section(content, r"Contract Skeleton|Skeleton|스켈레톤")
     interfaces = []
     methods = []
+    dtos = []
+    skeletons = []
 
     for headers, rows in parse_markdown_tables(interface_section):
         if not any(re.search(r"IF-ID|Interface-ID", header, re.IGNORECASE) for header in headers):
@@ -5126,11 +5130,217 @@ def parse_program_contracts(program_design_path):
                 "output": table_cell(row, ["출력", "Output"]),
             })
 
+    for headers, rows in parse_markdown_tables(dto_section):
+        if not any(re.search(r"Contract-ID|DTO-ID|Entity-ID|Data-ID", header, re.IGNORECASE) for header in headers):
+            continue
+        for row in rows:
+            contract_id = table_cell(row, ["Contract-ID", "DTO-ID", "Entity-ID", "Data-ID"])
+            if not re.match(r"(DTO|ENT|DATA|MODEL)-\d{3}$", contract_id or "", re.IGNORECASE):
+                continue
+            dtos.append({
+                "contract_id": contract_id.upper(),
+                "type": table_cell(row, ["유형", "Type"]),
+                "name": table_cell(row, ["이름", "Name"]),
+                "fields": table_cell(row, ["필드", "Fields"]),
+                "constraints": table_cell(row, ["제약", "검증", "Constraints", "Validation"]),
+                "related": table_cell(row, ["관련 DB/API/SCR", "관련", "Related"]),
+                "note": table_cell(row, ["비고", "Note"]),
+            })
+
+    for headers, rows in parse_markdown_tables(skeleton_section):
+        if not any(re.search(r"Skeleton-ID|SKEL-ID", header, re.IGNORECASE) for header in headers):
+            continue
+        for row in rows:
+            skeleton_id = table_cell(row, ["Skeleton-ID", "SKEL-ID"])
+            if not re.match(r"SKEL-\d{3}$", skeleton_id or "", re.IGNORECASE):
+                continue
+            skeletons.append({
+                "skeleton_id": skeleton_id.upper(),
+                "target": table_cell(row, ["대상 PGM/IF/MTH", "대상", "Target"]),
+                "path": table_cell(row, ["파일 경로", "경로", "Path"]),
+                "public_contract": table_cell(row, ["생성할 public 계약", "public 계약", "Public Contract"]),
+                "logic_included": table_cell(row, ["업무 로직 포함 여부", "Logic"]),
+                "smoke": table_cell(row, ["검증 smoke", "Smoke"]),
+            })
+
     return {
         "program_design": program_design_path,
         "interfaces": interfaces,
         "methods": methods,
+        "dtos": dtos,
+        "skeletons": skeletons,
     }
+
+
+def _scaffold_language_from_paths(paths):
+    lowered = [path.lower() for path in paths]
+    if any(path.endswith(".py") for path in lowered):
+        return "python"
+    if any(path.endswith(".java") for path in lowered):
+        return "java"
+    if any(path.endswith((".ts", ".tsx")) for path in lowered):
+        return "typescript"
+    if any(path.endswith((".js", ".jsx")) for path in lowered):
+        return "javascript"
+    return "unknown"
+
+
+def build_scaffold_plan(project_dir=".", program_design=""):
+    project_abs = os.path.abspath(project_dir)
+    program_path = program_design or find_program_spec_file(project_abs)
+    if not program_path:
+        raise FileNotFoundError("프로그램 설계서를 찾을 수 없습니다.")
+    if not os.path.isabs(program_path):
+        program_path = os.path.join(project_abs, program_path)
+    if not os.path.exists(program_path):
+        raise FileNotFoundError(f"프로그램 설계서 파일이 없습니다: {program_path}")
+
+    contract = parse_program_contracts(program_path)
+    interfaces_by_id = {item["if_id"]: item for item in contract.get("interfaces", [])}
+    file_candidates = {}
+
+    def add_file(path_value, source, contract_ids, public_contracts=None, smoke=None):
+        for rel_path in extract_contract_paths(path_value):
+            if not rel_path:
+                continue
+            normalized = normalize_repo_path(rel_path)
+            if normalized in {"-", "해당없음"}:
+                continue
+            item = file_candidates.setdefault(normalized, {
+                "path": normalized,
+                "action": "verify" if os.path.exists(os.path.join(project_abs, normalized.replace("/", os.sep))) else "create",
+                "sources": [],
+                "contract_ids": [],
+                "public_contracts": [],
+                "smoke": [],
+            })
+            if source and source not in item["sources"]:
+                item["sources"].append(source)
+            for contract_id in contract_ids or []:
+                if contract_id and contract_id not in item["contract_ids"]:
+                    item["contract_ids"].append(contract_id)
+            for public_contract in public_contracts or []:
+                if public_contract and public_contract not in item["public_contracts"]:
+                    item["public_contracts"].append(public_contract)
+            if smoke and smoke not in item["smoke"]:
+                item["smoke"].append(smoke)
+
+    for interface in contract.get("interfaces", []):
+        add_file(
+            interface.get("path", ""),
+            interface.get("if_id"),
+            [interface.get("if_id"), *(split_contract_ids(interface.get("pgm", ""), "PGM"))],
+            [interface.get("name"), interface.get("implementation")],
+        )
+
+    methods_without_file = []
+    for method in contract.get("methods", []):
+        if_id = method.get("if_id")
+        interface = interfaces_by_id.get(if_id)
+        method_contract_id = method.get("method_id") or method.get("method_name")
+        if interface:
+            add_file(
+                interface.get("path", ""),
+                method_contract_id,
+                [method.get("method_id"), if_id, *(split_contract_ids(method.get("pgm", ""), "PGM"))],
+                [method.get("signature")],
+            )
+        else:
+            methods_without_file.append(method)
+
+    for skeleton in contract.get("skeletons", []):
+        related_ids = split_contract_ids(skeleton.get("target", ""), "PGM")
+        related_ids.extend(split_contract_ids(skeleton.get("target", ""), "IF"))
+        related_ids.extend(split_contract_ids(skeleton.get("target", ""), "MTH"))
+        add_file(
+            skeleton.get("path", ""),
+            skeleton.get("skeleton_id"),
+            [skeleton.get("skeleton_id"), *related_ids],
+            [skeleton.get("public_contract")],
+            skeleton.get("smoke"),
+        )
+
+    files = sorted(file_candidates.values(), key=lambda item: item["path"])
+    language = _scaffold_language_from_paths([item["path"] for item in files])
+    return {
+        "mode": "dry-run",
+        "project_dir": project_abs,
+        "program_design": normalize_repo_path(os.path.relpath(program_path, project_abs)),
+        "language": language,
+        "summary": {
+            "files": len(files),
+            "create": sum(1 for item in files if item.get("action") == "create"),
+            "verify": sum(1 for item in files if item.get("action") == "verify"),
+            "interfaces": len(contract.get("interfaces", [])),
+            "methods": len(contract.get("methods", [])),
+            "dtos": len(contract.get("dtos", [])),
+            "skeletons": len(contract.get("skeletons", [])),
+        },
+        "files": files,
+        "interfaces": contract.get("interfaces", []),
+        "methods": contract.get("methods", []),
+        "methods_without_file": methods_without_file,
+        "dtos": contract.get("dtos", []),
+        "skeletons": contract.get("skeletons", []),
+        "next": [
+            "Review this plan before generating files.",
+            "Use implementation-scaffold/BW-000 or a scoped Build Wave to create missing skeletons.",
+            "Do not mark business requirements Implemented from this dry-run plan alone.",
+        ],
+    }
+
+
+def cmd_scaffold_plan(program_design="", project_dir=".", emit_json=False, output=""):
+    try:
+        plan = build_scaffold_plan(project_dir=project_dir, program_design=program_design)
+    except FileNotFoundError as exc:
+        print(f"오류: {exc}")
+        sys.exit(1)
+
+    if output:
+        write_json_file(output, plan)
+
+    if emit_json:
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return
+
+    print("==================================================")
+    print(" [scaffold-plan] Program Design -> scaffold dry-run")
+    print("==================================================")
+    print(f" program_design: {plan['program_design']}")
+    print(f" language: {plan['language']}")
+    print(
+        " summary: "
+        f"files {plan['summary']['files']}, "
+        f"create {plan['summary']['create']}, "
+        f"verify {plan['summary']['verify']}, "
+        f"interfaces {plan['summary']['interfaces']}, "
+        f"methods {plan['summary']['methods']}, "
+        f"dtos {plan['summary']['dtos']}, "
+        f"skeletons {plan['summary']['skeletons']}"
+    )
+    print()
+    print(" files")
+    for item in plan["files"][:20]:
+        contracts = ", ".join(item.get("contract_ids") or []) or "-"
+        print(f"  - [{item['action']}] {item['path']} ({contracts})")
+        if item.get("public_contracts"):
+            for contract_text in item["public_contracts"][:3]:
+                print(f"      contract: {contract_text}")
+        if item.get("smoke"):
+            for smoke in item["smoke"][:2]:
+                print(f"      smoke: {smoke}")
+    if len(plan["files"]) > 20:
+        print(f"  ... 외 {len(plan['files']) - 20}건")
+    if plan.get("methods_without_file"):
+        print()
+        print(" methods_without_file")
+        for method in plan["methods_without_file"][:10]:
+            print(f"  - {method.get('method_id') or '-'} {method.get('signature')}")
+    print()
+    print(" next")
+    for item in plan["next"]:
+        print(f"  - {item}")
 
 
 def extract_contract_paths(path_cell):
@@ -16366,6 +16576,7 @@ def main():
   check-trace  현재 Gate 정합성 검사 (프로젝트 디렉토리에서 실행)
   prepare-transition Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사
   check-contract Program Design 구현 계약과 코드 구조 대조
+  scaffold-plan Program Design에서 skeleton 후보 계획 dry-run 생성
   trace-context 추적성 그래프에서 ID 주변 Run 입력 후보 출력
   gate-start   현재 진행 Gate 전환 (프로젝트 디렉토리에서 실행)
   session      Gate 상태 업데이트 + git commit (프로젝트 디렉토리에서 실행)
@@ -16390,6 +16601,7 @@ def main():
   python vulcan.py metrics
   python vulcan.py check-trace
   python vulcan.py check-contract --report docs/artifacts/04-review/evidence/contract/contract-conformance.json
+  python vulcan.py scaffold-plan --json
   python vulcan.py trace-context --id REQ-001-01 --depth 2 --emit yaml
   python vulcan.py gate-start gate1 --feature "로그인 기능"
   python vulcan.py session --gate gate1 --status awaiting-approval --feature "로그인 기능"
@@ -16442,6 +16654,12 @@ def main():
     p_check_contract.add_argument("--project-dir", default=".", help="검증할 프로젝트 루트 경로")
     p_check_contract.add_argument("--report", default="", help="검증 결과 JSON 저장 경로")
     p_check_contract.add_argument("--emit-contract", default="", help="Program Design 표에서 추출한 계약 JSON 저장 경로")
+
+    p_scaffold_plan = subparsers.add_parser("scaffold-plan", help="Program Design에서 skeleton 후보 계획 dry-run 생성")
+    p_scaffold_plan.add_argument("--program-design", default="", help="프로그램 설계서 경로")
+    p_scaffold_plan.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
+    p_scaffold_plan.add_argument("--json", action="store_true", help="scaffold 계획을 JSON으로 출력")
+    p_scaffold_plan.add_argument("--output", default="", help="scaffold 계획 JSON 저장 경로")
 
     p_drift_report = subparsers.add_parser("drift-report", help="설계 산출물과 실제 코드/DB 스키마 간의 불일치(Drift) 보고서 생성")
     p_drift_report.add_argument("--project-dir", default=".", help="검증할 프로젝트 루트 경로")
@@ -16668,6 +16886,13 @@ def main():
             emit_contract=args.emit_contract,
             project_dir=args.project_dir,
         ))
+    elif args.command == "scaffold-plan":
+        cmd_scaffold_plan(
+            program_design=args.program_design,
+            project_dir=args.project_dir,
+            emit_json=args.json,
+            output=args.output,
+        )
     elif args.command == "drift-report":
         cmd_drift_report(
             project_dir=args.project_dir,
