@@ -16375,9 +16375,10 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
             print("프로젝트에서 사용할 주 러너(Primary Runner)를 선택해 주세요:")
             for idx, r in enumerate(available_runners, 1):
                 name = r.get("name", "unknown")
+                display_name = "Agy / Antigravity CLI (antigravity-cli)" if name == "antigravity-cli" else name
                 model = r.get("model", "")
                 model_str = f" ({model})" if model else ""
-                print(f"  {idx}) {name}{model_str}")
+                print(f"  {idx}) {display_name}{model_str}")
             print(f"  {len(available_runners) + 1}) 선택하지 않음 (기본값 설정)")
             try:
                 ans = input(f"선택 (1-{len(available_runners) + 1}, 기본값: 1): ").strip()
@@ -16593,7 +16594,7 @@ def main():
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
     p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit; solution은 product alias)")
-    p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli)")
+    p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli, agy)")
 
     p_status = subparsers.add_parser("status", help="현재 Gate/Profile/Branch/Run 상태 요약")
     p_status.add_argument("--check", action="store_true", help="status 뒤에 prepare-transition 진단을 이어서 실행")
