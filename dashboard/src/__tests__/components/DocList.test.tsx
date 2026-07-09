@@ -63,6 +63,30 @@ describe('DocList', () => {
     expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
   })
 
+  it('product 문서를 제품 산출물 하위 구조로 표시한다', () => {
+    const productDocs: DocEntry[] = [
+      { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
+      { name: 'PRODUCT_ARCHITECTURE', path: 'docs/product/PRODUCT_ARCHITECTURE.md', category: 'product' },
+      { name: 'ADR_LOG', path: 'docs/product/ADR_LOG.md', category: 'product' },
+      { name: 'PRODUCT_CONTRACTS', path: 'docs/product/PRODUCT_CONTRACTS.md', category: 'product' },
+      { name: 'PRODUCT_TRACEABILITY', path: 'docs/product/PRODUCT_TRACEABILITY.md', category: 'product' },
+      { name: 'REGRESSION_AND_RELEASE_REPORT', path: 'docs/product/REGRESSION_AND_RELEASE_REPORT.md', category: 'product' },
+    ]
+    render(<DocList docs={productDocs} />)
+
+    expect(screen.getByTestId('doc-subfolder-00-overview')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-01-architecture')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts/data/erd')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts/ui/design')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts/ui/publishing')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts/security')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-02-contracts/build-deploy')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-03-traceability')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-04-regression-release')).toBeInTheDocument()
+    expect(screen.getByText('PRODUCT_CONTRACTS')).toBeInTheDocument()
+  })
+
   it('product 문서가 있으면 문서가 있는 artifact 카테고리만 표시한다', () => {
     const productDocs: DocEntry[] = [
       { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
@@ -76,6 +100,20 @@ describe('DocList', () => {
     expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
     expect(screen.queryByTestId('doc-category-security')).not.toBeInTheDocument()
     expect(screen.queryByTestId('doc-category-release')).not.toBeInTheDocument()
+  })
+
+  it('product 문서와 보안 기준선이 있으면 보안 카테고리를 함께 표시한다', () => {
+    const productDocs: DocEntry[] = [
+      { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
+      { name: 'SECURITY_BASELINE', path: 'docs/core/SECURITY_BASELINE.md', category: 'security' },
+    ]
+    render(<DocList docs={productDocs} />)
+
+    expect(screen.getByTestId('doc-category-product')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-security')).toBeInTheDocument()
+    expect(screen.getByText('SECURITY_BASELINE')).toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-requirements')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
   })
 
   it('test-plan 카테고리 섹션을 렌더링한다', () => {

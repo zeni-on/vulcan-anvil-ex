@@ -337,7 +337,10 @@ status: Draft
       {
         name: 'core',
         type: 'dir',
-        children: [{ name: 'ID_SYSTEM', type: 'file' }],
+        children: [
+          { name: 'ID_SYSTEM', type: 'file' },
+          { name: 'SECURITY_BASELINE', type: 'file' },
+        ],
       },
     ])
 
@@ -357,6 +360,7 @@ status: Draft
       expect.objectContaining({ path: 'docs/adapters/README.md', category: 'agent' }),
       expect.objectContaining({ path: 'docs/seed-docs/README.md', category: 'standards' }),
       expect.objectContaining({ path: 'docs/core/ID_SYSTEM.md', category: 'reference' }),
+      expect.objectContaining({ path: 'docs/core/SECURITY_BASELINE.md', category: 'security' }),
     ]))
   })
 

@@ -41,6 +41,9 @@ type RouteContext = { params: Promise<{ id: string }> }
 function resolveCategory(path: string): DocEntry['category'] {
   const normalizedPath = path.toLowerCase()
   const fileName = normalizedPath.split('/').pop() ?? ''
+  const isCoreSecurityBaseline =
+    normalizedPath.includes('docs/core/')
+    && fileName === 'security_baseline.md'
 
   if (normalizedPath.includes('docs/artifacts/00-discovery/')) return 'discovery'
   if (normalizedPath.includes('docs/artifacts/01-requirements/')) return 'requirements'
@@ -58,6 +61,7 @@ function resolveCategory(path: string): DocEntry['category'] {
   if (normalizedPath.includes('docs/03-test-plan/')) return 'test-plan'
   if (normalizedPath.includes('docs/04-review/')) return 'review'
   if (normalizedPath.includes('docs/05-security/')) return 'security'
+  if (isCoreSecurityBaseline) return 'security'
   if (normalizedPath.includes('docs/backlog/')) return 'backlog'
   if (normalizedPath.includes('docs/seed-docs/')) return 'standards'
   if (normalizedPath.includes('docs/templates/')) return 'templates'
