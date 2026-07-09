@@ -1,11 +1,10 @@
-import type { NextConfig } from 'next'
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Keep Next's file tracing inside the dashboard app. Without this, a parent
   // package-lock.json can make Next scan sample project cache folders.
   outputFileTracingRoot: process.cwd(),
 
-  // ESM-only 패키지 트랜스파일 (react-markdown, remark-gfm, rehype-sanitize)
+  // ESM-only packages used by the markdown document viewer.
   transpilePackages: [
     'react-markdown',
     'remark-gfm',
@@ -20,4 +19,4 @@ const nextConfig: NextConfig = {
   ],
 }
 
-export default nextConfig
+module.exports = nextConfig
