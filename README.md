@@ -106,6 +106,7 @@ Ex 프로젝트가 끝나면 단순히 코드만 남지 않습니다. Profile에
 
 Product profile은 `docs/product/`에 Product Brief, Architecture, ADR Log, Contracts, Traceability, Regression/Release Report를 생성합니다.
 이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
+API, 데이터 모델/ERD, UI 계약, 보안 체크리스트, 개발/빌드/배포 기준이 더 필요하면 audit 폴더 구조인 `docs/artifacts/02-design/...`를 재사용하되 Product 전용 경량 템플릿(`docs/templates/product/PRODUCT_*_TEMPLATE.md`)으로 작성합니다.
 중요한 아키텍처 의사결정이 아직 없다면 ADR Log는 `ADR-NONE`을 유지합니다.
 Gate 5의 `release-pr --dry-run`도 Product profile에서는 audit 산출물 대신 `docs/product/` 원장과 backlog, Gate 5 승인서를 evidence 기준으로 사용합니다.
 

@@ -36,6 +36,9 @@ Dashboard는 주로 다음 파일과 폴더를 읽습니다.
 | `.vulcan/delegations/*.json` | subagent/thread/native branch agent 위임 sidecar |
 | Git 커밋 | 최근 변경과 브랜치 상태 |
 
+Product profile에서는 `docs/product/`가 원장 문서이고, 상세 API/DB/UI/보안/개발표준 문서가 필요하면 `docs/artifacts/02-design/...` 아래에 Product 경량 상세 문서로 나타납니다.
+Dashboard에서는 원장은 `제품 문서`, 상세 산출물은 기존 `설계`/`보안`/`리뷰` 카테고리에서 함께 확인합니다.
+
 ## 화면 읽는 법
 
 | 영역 | 어떻게 보면 되는가 |

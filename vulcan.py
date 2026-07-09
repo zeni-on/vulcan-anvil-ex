@@ -231,6 +231,13 @@ PRODUCT_ARTIFACT_TEMPLATES = [
     ("docs/templates/product/PRODUCT_TRACEABILITY_TEMPLATE.md", "docs/product/PRODUCT_TRACEABILITY.md"),
     ("docs/templates/product/REGRESSION_AND_RELEASE_REPORT_TEMPLATE.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"),
 ]
+PRODUCT_OPTIONAL_DETAIL_TEMPLATES = [
+    ("docs/templates/product/PRODUCT_API_CONTRACT_TEMPLATE.md", "docs/artifacts/02-design/api/PRODUCT_API_CONTRACT.md"),
+    ("docs/templates/product/PRODUCT_DATA_MODEL_TEMPLATE.md", "docs/artifacts/02-design/data/PRODUCT_DATA_MODEL.md"),
+    ("docs/templates/product/PRODUCT_UI_CONTRACT_TEMPLATE.md", "docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md"),
+    ("docs/templates/product/PRODUCT_SECURITY_CHECKLIST_TEMPLATE.md", "docs/artifacts/02-design/security/PRODUCT_SECURITY_CHECKLIST.md"),
+    ("docs/templates/product/PRODUCT_ENGINEERING_GUIDE_TEMPLATE.md", "docs/artifacts/02-design/development-standard/PRODUCT_ENGINEERING_GUIDE.md"),
+]
 POC_REQUIRED_ARTIFACTS_BY_GATE = {
     "phase0": ["docs/poc/POC_REQUIREMENTS.md"],
     "gate1": ["docs/poc/POC_REQUIREMENTS.md"],

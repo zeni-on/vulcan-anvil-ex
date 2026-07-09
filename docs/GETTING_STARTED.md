@@ -36,8 +36,8 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 
 Product profile은 `docs/product/`에 6종 문서를 생성합니다.
 Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`와 섹션을 Gate 진행에 맞춰 갱신합니다.
-Dashboard에서는 이 6종을 `overview`, `architecture`, `contracts`, `traceability`, `regression/release` 구조로 보여줍니다.
-UI design, UI publishing, ERD, 보안, build/deploy, release evidence가 별도 파일로 생기면 `docs/product/02-contracts/`와 `docs/product/04-regression-release/evidence/` 하위 경로에 두면 됩니다.
+API/DB/UI/보안/개발표준이 Product 원장만으로 부족해지면 `docs/artifacts/02-design/...` 아래에 Product 전용 경량 상세 문서를 선택적으로 추가합니다.
+예: `PRODUCT_API_CONTRACT.md`, `PRODUCT_DATA_MODEL.md`, `PRODUCT_UI_CONTRACT.md`, `PRODUCT_SECURITY_CHECKLIST.md`, `PRODUCT_ENGINEERING_GUIDE.md`.
 중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
 Gate 5에서 `release-pr --dry-run`을 실행하면 Product profile은 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다.
 

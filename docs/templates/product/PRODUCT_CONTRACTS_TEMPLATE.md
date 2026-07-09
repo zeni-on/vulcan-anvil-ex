@@ -39,14 +39,15 @@ related_documents:
 
 ### 3.1 ERD / Data Model
 
-ERD, DBML, schema export가 있으면 다음 경로에 둔다.
-대시보드는 이 경로를 Product 산출물의 `02-contracts/data/erd` 하위 구조로 보여준다.
+ERD, DBML, schema export가 있으면 기존 상세 설계 폴더를 재사용한다.
+Product에서는 이 상세 문서가 필수가 아니지만, 데이터 계약이 구현/릴리즈 판단에 중요해지면 `PRODUCT_DATA_MODEL.md`로 분리한다.
 
 | 항목 | 권장 경로 | 내용 |
 | --- | --- | --- |
-| Logical ERD | `docs/product/02-contracts/data/erd/logical/` | 업무 엔티티와 관계 |
-| Physical ERD / DBML | `docs/product/02-contracts/data/erd/physical/` | 테이블, 컬럼, 제약조건, 인덱스 |
-| Export / Image | `docs/product/02-contracts/data/erd/exports/` | PNG, SVG, PDF 등 검토용 export |
+| Product Data Model | `docs/artifacts/02-design/data/PRODUCT_DATA_MODEL.md` | 핵심 데이터 의미, 보안 분류, persistence shape |
+| Logical ERD | `docs/artifacts/02-design/data/erd/logical/` | 업무 엔티티와 관계 |
+| Physical ERD / DBML | `docs/artifacts/02-design/data/erd/physical/` | 테이블, 컬럼, 제약조건, 인덱스 |
+| Export / Image | `docs/artifacts/02-design/data/erd/exports/` | PNG, SVG, PDF 등 검토용 export |
 
 | ERD/DATA ID | 산출물 | 기준 | 관련 Scenario |
 | --- | --- | --- | --- |
@@ -63,12 +64,14 @@ ERD, DBML, schema export가 있으면 다음 경로에 둔다.
 UI design과 퍼블리싱 산출물은 Product에서도 구현자가 볼 수 있는 기준선으로 남긴다.
 Figma, 이미지 시안, HTML/CSS/JS prototype, screenshot baseline 중 실제로 있는 것을 연결하고,
 없으면 "없음"이 아니라 어떤 수준의 UI 기준으로 구현할지 적는다.
+상세 기준이 필요하면 `PRODUCT_UI_CONTRACT.md`로 분리한다.
 
 | 항목 | 권장 경로 | 내용 |
 | --- | --- | --- |
-| UI Design | `docs/product/02-contracts/ui/design/` | 화면 흐름, 와이어프레임, 시안, 디자인 결정 |
-| UI Publishing | `docs/product/02-contracts/ui/publishing/` | HTML/CSS/JS prototype, static baseline, 구현 기준 파일 |
-| UI Evidence 후보 | `docs/product/04-regression-release/evidence/ui/` | Gate 4 또는 release regression screenshot |
+| Product UI Contract | `docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md` | 화면 흐름, 상태, UI 기준선, 증적 계획 |
+| UI Design | `docs/artifacts/02-design/screen/images/` | 화면 흐름, 와이어프레임, 시안, 디자인 결정 |
+| UI Publishing | `docs/artifacts/02-design/screen/prototypes/` | HTML/CSS/JS prototype, static baseline, 구현 기준 파일 |
+| UI Evidence 후보 | `docs/artifacts/04-review/evidence/ui/` | Gate 4 또는 release regression screenshot |
 
 | UI Baseline ID | 기준 산출물 | 유지해야 할 요소 | 변경 허용 범위 | 관련 UI/Scenario |
 | --- | --- | --- | --- | --- |
@@ -87,6 +90,7 @@ KISA/SR 매핑은 선택 참고이지만, OWASP/CWE 기반의 제품 보안 판�
 
 빌드와 배포는 `PRODUCT_ARCHITECTURE.md`의 Runtime And Deployment Assumptions와 연결한다.
 Product에서는 감리 제출용 배포 아키텍처가 아니더라도, 사용자가 실행/검증할 수 있는 최소 명령과 환경 변수는 비워두지 않는다.
+상세 개발/빌드/배포 기준이 필요하면 `docs/artifacts/02-design/development-standard/PRODUCT_ENGINEERING_GUIDE.md`로 분리한다.
 
 | Contract ID | 항목 | 기준 | 검증/증적 |
 | --- | --- | --- | --- |

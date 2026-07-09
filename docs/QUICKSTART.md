@@ -18,6 +18,7 @@ Vulcan-Anvil Ex를 처음 볼 때는 모든 Gate와 문서를 한 번에 이해�
 
 Profile은 품질 등급이 아닙니다.
 문서 깊이와 증적 밀도, 승인 절차의 차이입니다.
+Product는 `docs/product/` 원장 6종으로 시작하고, API/DB/UI/보안/개발표준 상세가 필요해질 때만 `docs/artifacts/02-design/...` 아래에 Product 경량 상세 문서를 추가합니다.
 
 ## 2. 프로젝트 만들기
 

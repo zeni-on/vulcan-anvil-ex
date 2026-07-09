@@ -32,7 +32,27 @@ Product Profile에서 유지해야 할 핵심 관점은 다음이다.
 
 Audit처럼 모든 ID를 촘촘하게 확장하지 않아도 되지만, 핵심 사용자 시나리오와 릴리즈 판단 근거는 끊기면 안 된다.
 
-## 3. 보안 기준선
+## 3. 산출물 구조 원칙
+
+Product는 `docs/product/`의 6종 원장을 기본으로 운영한다.
+원장은 상세 설계서 묶음이 아니라 제품 의사결정, 핵심 계약, 추적, 릴리즈 판단을 이어주는 문서 세트다.
+
+상세 문서가 필요할 때는 audit과 같은 `docs/artifacts/` 폴더 구조를 재사용한다.
+단, audit 템플릿을 그대로 쓰지 않고 Product 전용 경량 템플릿을 사용한다.
+
+| 상세 필요 영역 | 권장 경로 | Product 템플릿 |
+| --- | --- | --- |
+| API 계약 | `docs/artifacts/02-design/api/PRODUCT_API_CONTRACT.md` | `docs/templates/product/PRODUCT_API_CONTRACT_TEMPLATE.md` |
+| 데이터 모델/ERD | `docs/artifacts/02-design/data/PRODUCT_DATA_MODEL.md` | `docs/templates/product/PRODUCT_DATA_MODEL_TEMPLATE.md` |
+| UI 계약/디자인/퍼블리싱 | `docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md` | `docs/templates/product/PRODUCT_UI_CONTRACT_TEMPLATE.md` |
+| 보안 체크리스트 | `docs/artifacts/02-design/security/PRODUCT_SECURITY_CHECKLIST.md` | `docs/templates/product/PRODUCT_SECURITY_CHECKLIST_TEMPLATE.md` |
+| 개발/빌드/배포 기준 | `docs/artifacts/02-design/development-standard/PRODUCT_ENGINEERING_GUIDE.md` | `docs/templates/product/PRODUCT_ENGINEERING_GUIDE_TEMPLATE.md` |
+
+이 상세 문서들은 기본 필수가 아니다.
+Product 원장 6종만으로 구현과 릴리즈 판단이 충분하면 만들지 않는다.
+반대로 worker 구현, QA, 릴리즈 판단에서 원장만으로 계약이 부족하면 상세 문서로 분리한다.
+
+## 4. 보안 기준선
 
 Product 보안은 KISA/공공 제출용 매핑을 기본 강제하지 않는다. 대신 일반 제품 개발에서 납득 가능한 보안 기준선을 둔다.
 
@@ -58,7 +78,7 @@ Product에서 최소 검토할 보안 항목:
 
 KISA, 공공, 고객사 보안 기준은 선택 참고로 둘 수 있다. 다만 Audit으로 전환하면 KISA/SR 또는 고객 기준과 `SEC-ID`, 테스트, 증적을 공식 매핑해야 한다.
 
-## 4. 데이터/단어사전 기준선
+## 5. 데이터/단어사전 기준선
 
 Product에서도 단어사전은 필요하다. 다만 목적은 감리 제출이 아니라 팀과 AI 에이전트가 같은 데이터 의미를 쓰게 하는 것이다.
 
@@ -85,7 +105,7 @@ Product 단어사전의 최소 항목:
 | 보안 분류 | 일반, 식별정보, 인증정보, 개인정보, 민감정보, 시스템정보 |
 | 관련 ID | REQ, API, DB, PGM, SEC, TEST 중 필요한 연결 |
 
-## 5. Gate 운영
+## 6. Gate 운영
 
 | 단계 | Product 기준 |
 | --- | --- |
@@ -97,7 +117,7 @@ Product 단어사전의 최소 항목:
 | Gate 4 | 릴리즈 후보 검증, 주요 UI/API/E2E, known issue |
 | Gate 5 | release note, backlog, risk, merge/release 판단 |
 
-## 6. Audit 전환 Gap
+## 7. Audit 전환 Gap
 
 Product에서 Audit으로 전환할 때 보강할 수 있는 항목:
 

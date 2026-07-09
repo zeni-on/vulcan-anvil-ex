@@ -62,6 +62,7 @@
 | Codex model/effort | `docs/core/CODEX_MODEL_POLICY.md`, `docs/core/INDEPENDENT_EXECUTION_PROCESS.md` |
 
 `profile: product`의 Gate 2 이후 산출물에서는 `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG`를 확인한다. Product 보안은 OWASP ASVS/Top 10/API Top 10/CWE 기준을 기본으로 하며, KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
+Product 기본 문서는 `docs/product/`의 6종 원장이다. API/DB/UI/보안/개발표준 상세가 필요하면 audit 템플릿을 그대로 쓰지 말고 `docs/templates/product/PRODUCT_*_TEMPLATE.md`를 사용해 `docs/artifacts/02-design/...` 아래에 Product 경량 상세 문서로 만든다.
 
 ## 5. Codex Skill과 Custom Agent
 

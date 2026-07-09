@@ -118,37 +118,6 @@ const EXPECTED_EMPTY_SUBFOLDERS: Partial<Record<DocEntry['category'], string[]>>
     'data/erd/physical',
     'data/erd/exports',
   ],
-  product: [
-    '00-overview',
-    '01-architecture',
-    '01-architecture/diagrams',
-    '02-contracts',
-    '02-contracts/api',
-    '02-contracts/data',
-    '02-contracts/data/erd',
-    '02-contracts/data/erd/logical',
-    '02-contracts/data/erd/physical',
-    '02-contracts/ui',
-    '02-contracts/ui/design',
-    '02-contracts/ui/publishing',
-    '02-contracts/security',
-    '02-contracts/build-deploy',
-    '03-traceability',
-    '04-regression-release',
-    '04-regression-release/evidence',
-    '04-regression-release/evidence/ui',
-    '04-regression-release/evidence/logs',
-    '04-regression-release/evidence/reports',
-  ],
-}
-
-const PRODUCT_DOC_VIRTUAL_SUBPATH: Record<string, string> = {
-  'product_brief.md': '00-overview',
-  'product_architecture.md': '01-architecture',
-  'adr_log.md': '01-architecture',
-  'product_contracts.md': '02-contracts',
-  'product_traceability.md': '03-traceability',
-  'regression_and_release_report.md': '04-regression-release',
 }
 
 function DocSectionGroup({
@@ -178,9 +147,6 @@ function extractSubPath(entry: DocEntry, prefix: string): string {
   if (!entry.path.startsWith(prefix)) return ''
   const rest = entry.path.slice(prefix.length)
   const segments = rest.split('/')
-  if (entry.category === 'product' && segments.length === 1) {
-    return PRODUCT_DOC_VIRTUAL_SUBPATH[segments[0].toLowerCase()] ?? ''
-  }
   segments.pop() // 파일명 제거
   return segments.join('/')
 }

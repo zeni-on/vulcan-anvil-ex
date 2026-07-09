@@ -63,28 +63,23 @@ describe('DocList', () => {
     expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
   })
 
-  it('product 문서를 제품 산출물 하위 구조로 표시한다', () => {
+  it('product 상세 산출물은 artifacts 설계 구조로 표시한다', () => {
     const productDocs: DocEntry[] = [
       { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
-      { name: 'PRODUCT_ARCHITECTURE', path: 'docs/product/PRODUCT_ARCHITECTURE.md', category: 'product' },
-      { name: 'ADR_LOG', path: 'docs/product/ADR_LOG.md', category: 'product' },
       { name: 'PRODUCT_CONTRACTS', path: 'docs/product/PRODUCT_CONTRACTS.md', category: 'product' },
-      { name: 'PRODUCT_TRACEABILITY', path: 'docs/product/PRODUCT_TRACEABILITY.md', category: 'product' },
-      { name: 'REGRESSION_AND_RELEASE_REPORT', path: 'docs/product/REGRESSION_AND_RELEASE_REPORT.md', category: 'product' },
+      { name: 'PRODUCT_API_CONTRACT', path: 'docs/artifacts/02-design/api/PRODUCT_API_CONTRACT.md', category: 'design' },
+      { name: 'PRODUCT_DATA_MODEL', path: 'docs/artifacts/02-design/data/PRODUCT_DATA_MODEL.md', category: 'design' },
+      { name: 'PRODUCT_UI_CONTRACT', path: 'docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md', category: 'design' },
     ]
     render(<DocList docs={productDocs} />)
 
-    expect(screen.getByTestId('doc-subfolder-00-overview')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-01-architecture')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts/data/erd')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts/ui/design')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts/ui/publishing')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts/security')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-02-contracts/build-deploy')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-03-traceability')).toBeInTheDocument()
-    expect(screen.getByTestId('doc-subfolder-04-regression-release')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-product')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-design')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-api')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-data')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-subfolder-screen')).toBeInTheDocument()
     expect(screen.getByText('PRODUCT_CONTRACTS')).toBeInTheDocument()
+    expect(screen.getByText('PRODUCT_API_CONTRACT')).toBeInTheDocument()
   })
 
   it('product 문서가 있으면 문서가 있는 artifact 카테고리만 표시한다', () => {
