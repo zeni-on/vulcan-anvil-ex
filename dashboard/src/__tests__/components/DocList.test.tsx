@@ -63,6 +63,21 @@ describe('DocList', () => {
     expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
   })
 
+  it('product 문서가 있으면 문서가 있는 artifact 카테고리만 표시한다', () => {
+    const productDocs: DocEntry[] = [
+      { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
+      { name: 'DOC-PM-OPS-001_Backlog_v0.1', path: 'docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md', category: 'backlog' },
+    ]
+    render(<DocList docs={productDocs} />)
+
+    expect(screen.getByTestId('doc-category-product')).toBeInTheDocument()
+    expect(screen.getByTestId('doc-category-backlog')).toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-requirements')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-security')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-release')).not.toBeInTheDocument()
+  })
+
   it('test-plan 카테고리 섹션을 렌더링한다', () => {
     render(<DocList docs={mockDocs} />)
     expect(screen.getByTestId('doc-category-test-plan')).toBeInTheDocument()

@@ -570,9 +570,8 @@ export default function DocList({
 
   const hasAny = docs.length > 0
   const hasProductDocs = grouped.product.length > 0
-  const hasNonProductArtifactDocs = ARTIFACT_CATEGORY_ORDER.some((cat) => cat !== 'product' && grouped[cat].length > 0)
-  const artifactCategories = hasProductDocs && !hasNonProductArtifactDocs
-    ? (['product'] satisfies DocEntry['category'][])
+  const artifactCategories = hasProductDocs
+    ? ARTIFACT_CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0)
     : ARTIFACT_CATEGORY_ORDER
   const hasArtifactDocs = artifactCategories.some((cat) => grouped[cat].length > 0)
   const hasSupportDocs = SUPPORT_CATEGORY_ORDER.some((cat) => grouped[cat].length > 0)
