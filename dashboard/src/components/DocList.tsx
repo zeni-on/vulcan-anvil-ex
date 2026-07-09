@@ -569,7 +569,12 @@ export default function DocList({
   )
 
   const hasAny = docs.length > 0
-  const hasArtifactDocs = ARTIFACT_CATEGORY_ORDER.some((cat) => grouped[cat].length > 0)
+  const hasProductDocs = grouped.product.length > 0
+  const hasNonProductArtifactDocs = ARTIFACT_CATEGORY_ORDER.some((cat) => cat !== 'product' && grouped[cat].length > 0)
+  const artifactCategories = hasProductDocs && !hasNonProductArtifactDocs
+    ? (['product'] satisfies DocEntry['category'][])
+    : ARTIFACT_CATEGORY_ORDER
+  const hasArtifactDocs = artifactCategories.some((cat) => grouped[cat].length > 0)
   const hasSupportDocs = SUPPORT_CATEGORY_ORDER.some((cat) => grouped[cat].length > 0)
 
   return (
@@ -581,13 +586,13 @@ export default function DocList({
         <>
           {hasArtifactDocs && (
             <DocSectionGroup title="프로젝트 산출물">
-              {ARTIFACT_CATEGORY_ORDER.map((cat) => (
+              {artifactCategories.map((cat) => (
                 <CategorySection
                   key={cat}
                   category={cat}
                   docs={grouped[cat]}
                   defaultOpen={grouped[cat].length > 0}
-                  showWhenEmpty
+                  showWhenEmpty={artifactCategories.length > 1}
                   onDocSelect={onDocSelect}
                   onExternalOpen={onExternalOpen}
                   externalDisabled={externalDisabled}

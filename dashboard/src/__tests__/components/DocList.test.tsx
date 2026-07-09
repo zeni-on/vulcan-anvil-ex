@@ -59,6 +59,8 @@ describe('DocList', () => {
     expect(screen.getByTestId('doc-category-product')).toBeInTheDocument()
     expect(screen.getByText('제품 문서')).toBeInTheDocument()
     expect(screen.getByText('PRODUCT_BRIEF')).toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-requirements')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('doc-category-design')).not.toBeInTheDocument()
   })
 
   it('test-plan 카테고리 섹션을 렌더링한다', () => {

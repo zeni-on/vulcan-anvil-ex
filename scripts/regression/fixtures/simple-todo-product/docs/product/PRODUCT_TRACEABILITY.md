@@ -28,11 +28,11 @@ Product 추적은 감리용 전체 추적표가 아니라 릴리즈 판단을 �
 
 ## 2. Scenario Trace
 
-| Scenario ID | 관련 REQ | 시나리오 | Contract | Implementation | Regression | Release Evidence | 상태 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| SCN-001 | REQ-001 | 새 할 일을 입력해 목록에 추가한다. | API-001, API-002, DATA-001, UI-001 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002 | docs/product/evidence/G4_pytest.log | Verified |
-| SCN-002 | REQ-002 | 목록의 할 일을 완료/미완료로 전환한다. | API-001, API-003, DATA-001, UI-001 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002 | docs/product/evidence/G4_pytest.log | Verified |
-| SCN-003 | REQ-003 | 필요 없는 할 일을 삭제한다. | API-001, API-004, DATA-001, UI-001 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002 | docs/product/evidence/G4_pytest.log | Verified |
+| Scenario ID | 관련 REQ | 시나리오 | Product Contract | Security | Implementation | Regression | Release Evidence | 상태 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SCN-001 | REQ-001 | 새 할 일을 입력해 목록에 추가한다. | API-001, API-002, DATA-001, UI-001 | SEC-001, SEC-003 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002, SEC-REG-001 | docs/product/evidence/G4_pytest.log | Verified |
+| SCN-002 | REQ-002 | 목록의 할 일을 완료/미완료로 전환한다. | API-001, API-003, DATA-001, UI-001 | SEC-002, SEC-003 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002, SEC-REG-001 | docs/product/evidence/G4_pytest.log | Verified |
+| SCN-003 | REQ-003 | 필요 없는 할 일을 삭제한다. | API-001, API-004, DATA-001, UI-001 | SEC-002, SEC-003 | `app/main.py`, `static/app.js`, `tests/test_todos.py` | REG-001, REG-002, SEC-REG-001 | docs/product/evidence/G4_pytest.log | Verified |
 
 ## 3. Open Trace Gaps
 

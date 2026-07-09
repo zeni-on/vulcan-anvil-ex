@@ -46,14 +46,25 @@ related_documents:
 | --- | --- | --- | --- | --- |
 | UI-001 | TODO 단일 화면 | Empty / List / Loading / Validation Error / API Error | SCN-001~SCN-003 | REG-001 |
 
-## 5. Security And Data Baseline
+## 5. Security Contracts
+
+Product profile의 보안 계약은 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/REFERENCE_STANDARDS.md`를 기준으로 작성한다.
+KISA/SR 매핑은 선택 참고이지만, OWASP/CWE 기반의 제품 보안 판단은 비워두지 않는다.
+
+| SEC ID | 보안 계약 | 적용 대상 | 기준/참조 | 관련 Scenario | 검증 |
+| --- | --- | --- | --- | --- | --- |
+| SEC-001 | TODO text 입력은 공백 불가/길이 제한을 적용하고 오류 응답에 내부 구현 상세를 노출하지 않는다. | API-002, UI-001 | OWASP ASVS input validation, OWASP Top 10 A03, CWE-20 | SCN-001 | SEC-REG-001 |
+| SEC-002 | TODO 상태 변경/삭제는 존재하지 않는 ID와 잘못된 completed 값을 안전한 오류로 처리한다. | API-003, API-004 | OWASP API Top 10, CWE-20, CWE-209 | SCN-002, SCN-003 | SEC-REG-001 |
+| SEC-003 | Todo 데이터는 일반 데이터로 분류하며 개인정보/인증정보/민감정보를 저장하지 않는다. | DATA-001 | Product Security/Data Baseline | SCN-001~SCN-003 | SEC-REG-001 |
+
+## 6. Security And Data Baseline
 
 | 항목 | 기준 | 적용 위치 | 검증 |
 | --- | --- | --- | --- |
 | Security | docs/core/PRODUCT_PROFILE_BASELINE.md, docs/core/SECURITY_BASELINE.md | API 입력 검증, 오류 응답, UI 렌더링 | REG-001 |
 | Data | docs/core/DATA_STANDARD_RULES.md | Todo 데이터 필드 정의와 보안 분류 | REG-001 |
 
-## 6. Contract Gaps
+## 7. Contract Gaps
 
 | Gap ID | 내용 | 영향 | 후속 판단 |
 | --- | --- | --- | --- |
