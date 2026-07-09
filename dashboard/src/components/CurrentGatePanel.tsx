@@ -3,7 +3,7 @@
  * @description 현재 Gate 세부 정보 패널 (REQ-011-04)
  *
  * current_gate 값에 따라 gate별로 다른 콘텐츠를 렌더링한다.
- * gate2는 category === 'design'인 DocEntry 목록,
+ * gate2는 category === 'design' 또는 Product profile 문서 목록,
  * gate4는 category === 'review'인 DocEntry 목록을 표시한다.
  *
  * 원본: Vulcan-Anvil/templates/dashboard/src/components/CurrentGatePanel.tsx
@@ -164,6 +164,7 @@ export default function CurrentGatePanel({
       <div className="max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500">
         <GateContent
           gate={gate}
+          profile={session.profile}
           stats={stats}
           docs={docs}
           onDocSelect={onDocSelect}
@@ -178,13 +179,14 @@ export default function CurrentGatePanel({
 
 interface GateContentProps {
   gate: string
+  profile?: SessionData['profile']
   stats: ProjectStats
   docs: DocEntry[]
   onDocSelect?: (doc: DocNode) => void
 }
 
 /** Gate 값에 따라 다른 콘텐츠를 렌더링하는 내부 컴포넌트 */
-function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
+function GateContent({ gate, profile, stats, docs, onDocSelect }: GateContentProps) {
   const { requirements: req, tests } = stats
 
   if (gate === 'phase0') {
@@ -219,17 +221,22 @@ function GateContent({ gate, stats, docs, onDocSelect }: GateContentProps) {
     )
   }
 
-  // gate2: category === 'design'인 DocEntry 목록 (UT-011-15)
+  // gate2: category === 'design'인 DocEntry 목록. Product profile은 docs/product 문서가 설계/계약 원장이다.
   if (gate === 'gate2') {
     const designDocs = docs.filter(d => d.category === 'design' && d.kind !== 'external')
+    const productDocs = docs.filter(d => d.category === 'product' && d.kind !== 'external')
+    const isProductProfile = profile === 'product'
+    const gate2Docs = isProductProfile && productDocs.length > 0 ? productDocs : designDocs
+    const gate2Label = isProductProfile && productDocs.length > 0 ? 'Product 설계/계약 문서' : '생성된 설계 문서'
+    const emptyLabel = isProductProfile ? '아직 Product 문서가 없습니다' : '아직 설계 문서가 없습니다'
     return (
       <div className="space-y-2" data-testid="gate-content-gate2">
-        <p className="text-xs text-[#6B7280]">생성된 설계 문서</p>
-        {designDocs.length === 0 ? (
-          <p className="text-sm text-[#4B5563] italic">아직 설계 문서가 없습니다</p>
+        <p className="text-xs text-[#6B7280]">{gate2Label}</p>
+        {gate2Docs.length === 0 ? (
+          <p className="text-sm text-[#4B5563] italic">{emptyLabel}</p>
         ) : (
           <ul className="space-y-1.5">
-            {designDocs.map(doc => (
+            {gate2Docs.map(doc => (
               <li key={doc.path}>
                 <DocLink doc={doc} onDocSelect={onDocSelect} iconColor="text-purple-400" />
               </li>

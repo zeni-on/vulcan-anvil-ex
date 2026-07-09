@@ -449,6 +449,7 @@ export interface DocEntry {
     | 'requirements'
     | 'traceability'
     | 'design'
+    | 'product'
     | 'test-plan'
     | 'review'
     | 'independent-review'

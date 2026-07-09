@@ -50,6 +50,17 @@ describe('DocList', () => {
     expect(screen.getByTestId('doc-category-design')).toBeInTheDocument()
   })
 
+  it('product 카테고리 섹션을 제품 문서로 렌더링한다', () => {
+    const productDocs: DocEntry[] = [
+      { name: 'PRODUCT_BRIEF', path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' },
+      { name: 'PRODUCT_CONTRACTS', path: 'docs/product/PRODUCT_CONTRACTS.md', category: 'product' },
+    ]
+    render(<DocList docs={productDocs} />)
+    expect(screen.getByTestId('doc-category-product')).toBeInTheDocument()
+    expect(screen.getByText('제품 문서')).toBeInTheDocument()
+    expect(screen.getByText('PRODUCT_BRIEF')).toBeInTheDocument()
+  })
+
   it('test-plan 카테고리 섹션을 렌더링한다', () => {
     render(<DocList docs={mockDocs} />)
     expect(screen.getByTestId('doc-category-test-plan')).toBeInTheDocument()

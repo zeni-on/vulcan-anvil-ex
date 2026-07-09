@@ -320,6 +320,11 @@ status: Draft
         children: [{ name: 'REQUIREMENTS_SPEC_TEMPLATE', type: 'file' }],
       },
       {
+        name: 'product',
+        type: 'dir',
+        children: [{ name: 'PRODUCT_BRIEF', type: 'file' }],
+      },
+      {
         name: 'adapters',
         type: 'dir',
         children: [{ name: 'README', type: 'file' }],
@@ -347,6 +352,7 @@ status: Draft
         path: 'docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md',
         category: 'traceability',
       }),
+      expect.objectContaining({ path: 'docs/product/PRODUCT_BRIEF.md', category: 'product' }),
       expect.objectContaining({ path: 'docs/templates/REQUIREMENTS_SPEC_TEMPLATE.md', category: 'templates' }),
       expect.objectContaining({ path: 'docs/adapters/README.md', category: 'agent' }),
       expect.objectContaining({ path: 'docs/seed-docs/README.md', category: 'standards' }),

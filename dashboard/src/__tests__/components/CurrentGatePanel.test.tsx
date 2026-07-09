@@ -28,10 +28,11 @@ const baseGateStatus: SessionData['gate_status'] = {
   gate5: 'pending',
 }
 
-function makeSession(current_gate: SessionData['current_gate']): SessionData {
+function makeSession(current_gate: SessionData['current_gate'], profile: SessionData['profile'] = 'audit'): SessionData {
   return {
     project: 'Vulcan-Dev',
     vulcan_version: '1.0.0',
+    profile,
     current_gate,
     gate_status: baseGateStatus,
     started: '2026-04-01',
@@ -180,6 +181,17 @@ describe('UT-011-15: current_gate === "gate2"', () => {
     expect(screen.queryByText('REQUIREMENTS.md')).not.toBeInTheDocument()
     expect(screen.queryByText('TEST_PLAN.md')).not.toBeInTheDocument()
     expect(screen.queryByText('req-001-review.md')).not.toBeInTheDocument()
+  })
+
+  it('product profile에서는 docs/product 문서를 Gate2 문서로 표시한다', () => {
+    const productDocs: DocEntry[] = [
+      { name: 'PRODUCT_ARCHITECTURE', path: 'docs/product/PRODUCT_ARCHITECTURE.md', category: 'product' },
+      { name: 'PRODUCT_CONTRACTS', path: 'docs/product/PRODUCT_CONTRACTS.md', category: 'product' },
+    ]
+    render(<CurrentGatePanel session={makeSession('gate2', 'product')} stats={mockStats} docs={productDocs} />)
+    expect(screen.getByText('Product 설계/계약 문서')).toBeInTheDocument()
+    expect(screen.getByText('PRODUCT_ARCHITECTURE')).toBeInTheDocument()
+    expect(screen.getByText('PRODUCT_CONTRACTS')).toBeInTheDocument()
   })
 })
 
