@@ -79,6 +79,7 @@ const mockCommits: CommitEntry[] = [
 ]
 
 const defaultProps = {
+  projectId: 'test-project',
   session: sessionWithStats,
   sessionLoading: false,
   sessionError: null,

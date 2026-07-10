@@ -10,6 +10,8 @@ Vulcan-Anvil Ex는 AI 에이전트가 장기 프로젝트에서 길을 잃지 �
 
 에이전트가 코딩하고, Vulcan-Anvil이 그 일을 설명 가능하게 만듭니다.
 
+Vulcan 검사를 통과했다는 것은 필요한 기록과 연결이 현재 규칙에 맞게 존재한다는 뜻입니다. 설계·코드의 의미적 정확성, 보안 적합성, 감리·규제 준수를 자동 인증하거나 보장하지는 않습니다.
+
 ## 어떤 상황에 맞나
 
 | 상황 | 추천 |
@@ -147,7 +149,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3001`로 접속한 뒤 로컬 프로젝트 경로 또는 GitHub 저장소 URL을 등록합니다.
+브라우저에서 `http://127.0.0.1:3001`로 접속한 뒤 로컬 프로젝트 경로 또는 GitHub 저장소 URL을 등록합니다. Dashboard는 기본적으로 loopback에만 바인딩됩니다. 추가 보호가 필요하면 `VULCAN_DASHBOARD_TOKEN`, 등록 가능한 경로를 제한하려면 `VULCAN_DASHBOARD_ALLOWED_ROOTS`를 설정합니다. 자세한 내용은 [Dashboard Guide](docs/DASHBOARD_GUIDE.md)를 참고합니다.
 
 Dashboard는 `session.json`, `docs/artifacts/`, `docs/runs/`, Git 커밋을 읽어 프로젝트 상태를 보여줍니다.
 주로 현재 Gate, 산출문서, Run/worker 기록, QA 증적, 추적 그래프, 문서 코멘트를 확인하는 데 사용합니다.
@@ -175,7 +177,9 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.8**
+**Experimental - v0.4.9**
+
+`0.4.9`은 profile/runtime 안정화와 Dashboard 회귀 기반을 보강한 패치입니다. Product profile 원장/상세 산출물 경계를 정리하고 fixture smoke 및 Dashboard 검사를 강화했습니다.
 
 `0.4.8`은 Product profile 안정화 패치입니다. Product Build Wave의 `SCN/API/DATA/UI/REG` 관련 ID를 보존하고, Product Gate 5 release PR body가 `docs/product/` 원장 문서를 evidence로 표시하며, ADR이 없을 때는 `ADR-NONE` empty-state를 사용합니다.
 
@@ -206,6 +210,7 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | [Gate Execution Checklist](docs/core/GATE_EXECUTION_CHECKLIST.md) | 모든 runner가 공통으로 따르는 Gate 실행/승인/위임 경계 |
 | [Codex Custom Agent Strategy](docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md) | `.codex/agents` 기반 보조 에이전트 정의와 native/fallback 보고 기준 |
 | [Tech Stack Baselines](docs/core/TECH_STACK_BASELINES.md) | Spring Boot, Spring Security, React, Next.js, Vue.js, FastAPI 기본 개발 규칙 |
+| [Security Policy](SECURITY.md) | Dashboard 로컬 보안 기본값, 지원 범위, 취약점 신고 방법 |
 | [Contributing](CONTRIBUTING.md) | 공개 기여 시 권리, 회사/고객 정보 제외, PR 기준 |
 
 ## 주의

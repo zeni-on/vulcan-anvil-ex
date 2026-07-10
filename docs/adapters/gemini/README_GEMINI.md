@@ -69,8 +69,8 @@ Agy `Workspace: branch` worker가 부모 workspace의 untracked Run 문서에 �
 
 Gemini 어댑터는 다음 문서들로 구성되어 제어 규칙을 이행합니다.
 
-1. **[README_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/adapters/gemini/README_GEMINI.md)**: 본 개요 및 개념 정의서
-2. **[LIMITATIONS_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/adapters/gemini/LIMITATIONS_GEMINI.md)**: Gemini 엔진 고유의 한계와 극복 지침
-3. **[GATE_PROMPTS_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/adapters/gemini/GATE_PROMPTS_GEMINI.md)**: 런타임 구동 엔진이 기계적으로 파싱 가능한 구조화된 게이트 프롬프트 템플릿
-4. **[PERSONA_MAPPING_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/adapters/gemini/PERSONA_MAPPING_GEMINI.md)**: 코어 페르소나와 Gemini 시스템 인스트럭션 매핑 규칙
-5. **[RUN_OUTPUT_CONTRACT_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/adapters/gemini/RUN_OUTPUT_CONTRACT_GEMINI.md)**: 워커가 실행 완료 시 반환해야 하는 JSON/YAML 구조화 출력 정의서
+1. **[README_GEMINI.md](README_GEMINI.md)**: 본 개요 및 개념 정의서
+2. **[LIMITATIONS_GEMINI.md](LIMITATIONS_GEMINI.md)**: Gemini 엔진 고유의 한계와 극복 지침
+3. **[GATE_PROMPTS_GEMINI.md](GATE_PROMPTS_GEMINI.md)**: 런타임 구동 엔진이 기계적으로 파싱 가능한 구조화된 게이트 프롬프트 템플릿
+4. **[PERSONA_MAPPING_GEMINI.md](PERSONA_MAPPING_GEMINI.md)**: 코어 페르소나와 Gemini 시스템 인스트럭션 매핑 규칙
+5. **[RUN_OUTPUT_CONTRACT_GEMINI.md](RUN_OUTPUT_CONTRACT_GEMINI.md)**: 워커가 실행 완료 시 반환해야 하는 JSON/YAML 구조화 출력 정의서

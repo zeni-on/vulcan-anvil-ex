@@ -1,7 +1,7 @@
 # Gemini Run Output Contract Binding (GEMINI Standard)
 
 > 상태: v0.1 (Gemini Runner 출력 바인딩 사양)
-> 목적: Core 공통 출력 계약([RUN_OUTPUT_CONTRACT_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/RUN_OUTPUT_CONTRACT_GEMINI.md))을 Gemini API의 `Structured Outputs` 기능과 결합하기 위한 스키마 매핑 및 기술 규격을 정의한다.
+> 목적: Core 공통 출력 계약([RUN_OUTPUT_CONTRACT_GEMINI.md](../../core/RUN_OUTPUT_CONTRACT_GEMINI.md))을 Gemini API의 `Structured Outputs` 기능과 결합하기 위한 스키마 매핑 및 기술 규격을 정의한다.
 
 ---
 

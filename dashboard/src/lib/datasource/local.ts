@@ -4,7 +4,7 @@
  *
  * 보안 제약 (SEC-001-02, REQ-009-03):
  * - 생성자에서 basePath를 path.resolve()로 정규화한다.
- * - 모든 파일 접근 전에 resolvedPath.startsWith(resolvedBasePath)를 검증한다.
+ * - path.relative() 경계와 realpath를 함께 검사해 prefix 충돌과 symlink 이탈을 차단한다.
  * - 검증 실패 시 PathTraversalError를 throw한다.
  *
  * 에러 처리:
@@ -28,6 +28,7 @@ import {
   EXTERNAL_DOC_EXTENSIONS,
 } from '../types'
 import { RuntimeActivitySchema, SessionDataSchema, VulcanConfigSchema } from '../schemas'
+import { assertPathInside, isPathInside, UnsafePathError } from '../pathSecurity'
 
 /** 산출물 트리에 포함할 파일 확장자 (점 포함, 소문자) */
 const ALLOWED_DOC_EXTENSIONS = new Set<string>([
@@ -78,11 +79,14 @@ export class LocalDataSource implements DataSource {
    * SEC-001-02, REQ-009-03
    */
   private assertSafePath(targetPath: string): string {
-    const resolved = path.resolve(targetPath)
-    if (!resolved.startsWith(this.resolvedBasePath)) {
-      throw new PathTraversalError(targetPath)
+    try {
+      return assertPathInside(this.resolvedBasePath, targetPath)
+    } catch (err) {
+      if (err instanceof UnsafePathError) {
+        throw new PathTraversalError(targetPath)
+      }
+      throw err
     }
-    return resolved
   }
 
   /**
@@ -234,7 +238,7 @@ export class LocalDataSource implements DataSource {
       existsOverride?: boolean,
     ) => {
       const resolved = path.resolve(worktreePath)
-      if (!resolved.startsWith(this.resolvedBasePath)) return
+      if (!isPathInside(this.resolvedBasePath, resolved)) return
 
       const exists = existsOverride ?? fs.existsSync(resolved)
       const changedFiles = exists ? this.readGitChangedFiles(resolved) : []
@@ -636,6 +640,7 @@ export class LocalDataSource implements DataSource {
     try {
       return this.buildDocTree(docsPath, [])
     } catch (err) {
+      if (err instanceof PathTraversalError) throw err
       console.warn('[LocalDataSource] 문서 트리 읽기 실패:', err)
       return []
     }

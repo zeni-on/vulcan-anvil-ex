@@ -2,7 +2,7 @@
 
 > Status: review v0.1  
 > Date: 2026-06-08  
-> Target Document: [ORCHESTRATOR-CLI-SURFACE-STRATEGY.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/reference/ORCHESTRATOR-CLI-SURFACE-STRATEGY.md)  
+> Target Document: [ORCHESTRATOR-CLI-SURFACE-STRATEGY.md](ORCHESTRATOR-CLI-SURFACE-STRATEGY.md)
 > Reviewer: Agy (Gemini Orchestrator)
 
 ---

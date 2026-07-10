@@ -21,6 +21,7 @@ import { nanoid } from 'nanoid'
 import { readProjects, writeProjects } from '@/lib/projects'
 import { createDataSource } from '@/lib/datasource'
 import { Project, DataSourceError } from '@/lib/types'
+import { isAllowedProjectPath } from '@/lib/pathSecurity'
 
 /** projects.json 읽어 전체 목록 반환. 파일 오류 시 빈 배열로 폴백 (UT-003-01, UT-003-02) */
 export function GET(): NextResponse {
@@ -123,6 +124,9 @@ function parseLocalBody(b: Record<string, unknown>): ParseResult<AddProjectInput
   // 절대경로 검증: Unix(/로 시작) 또는 Windows(드라이브 문자 C:\)
   if (!isAbsolutePath(b.path)) {
     return { error: '로컬 타입: path는 절대 경로여야 합니다' }
+  }
+  if (!isAllowedProjectPath(b.path.trim())) {
+    return { error: '로컬 타입: 허용된 프로젝트 루트 밖의 경로입니다' }
   }
   return {
     value: {

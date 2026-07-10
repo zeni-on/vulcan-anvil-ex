@@ -8,8 +8,10 @@ __pycache__/
 pytest-cache-files*/
 *.tsbuildinfo
 dashboard/test-results/
+dashboard/playwright-report/
 dashboard/projects.json
 docs/ref-docs/
 docs/examples/
 .claude/worktrees/
 .vulcan/worktrees/
+.vulcan/dashboard-e2e-fixture/

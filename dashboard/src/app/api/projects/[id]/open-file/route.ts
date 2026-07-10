@@ -20,6 +20,7 @@ import path from 'path'
 import { readProjects } from '@/lib/projects'
 import { openInOS } from '@/lib/openInOS'
 import { isExternalDocExt } from '@/lib/types'
+import { isPathInside } from '@/lib/pathSecurity'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -75,14 +76,7 @@ export async function POST(
   // path traversal 검증: resolved 경로가 project.path 하위인지 확인
   const projectRoot = path.resolve(project.path)
   const resolvedTarget = path.resolve(projectRoot, relPath)
-  const projectRootWithSep = projectRoot.endsWith(path.sep)
-    ? projectRoot
-    : projectRoot + path.sep
-
-  if (
-    resolvedTarget !== projectRoot &&
-    !resolvedTarget.startsWith(projectRootWithSep)
-  ) {
+  if (!isPathInside(projectRoot, resolvedTarget)) {
     return NextResponse.json({ error: '경로가 프로젝트 범위를 벗어났습니다' }, { status: 403 })
   }
 

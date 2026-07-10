@@ -18,9 +18,13 @@ concurrency:
 
 jobs:
   smoke:
-    name: Python regression smoke
-    runs-on: ubuntu-latest
+    name: Python regression smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout
@@ -33,7 +37,11 @@ jobs:
 
       - name: Compile Python entry points
         run: |
-          python -m py_compile vulcan.py scripts/regression/run_audit_smoke.py scripts/regression/run_fixture_smoke.py
+          python -m py_compile vulcan.py vulcan_core/doctor.py vulcan_core/runners.py scripts/regression/run_audit_smoke.py scripts/regression/run_fixture_smoke.py
+
+      - name: Run core module unit tests
+        run: |
+          python -m unittest discover -s scripts/regression/tests -p "test_*.py"
 
       - name: Run init smoke regression
         run: |
@@ -42,3 +50,43 @@ jobs:
       - name: Run fixture smoke regression
         run: |
           python scripts/regression/run_fixture_smoke.py
+
+  dashboard:
+    name: Dashboard security and regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Run unit and component tests
+        run: npm test -- --runInBand
+
+      - name: Build production Dashboard
+        run: npm run build
+
+      - name: Check production dependency advisories
+        run: npm run audit:prod
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run repository-contained E2E
+        run: npm run test:e2e

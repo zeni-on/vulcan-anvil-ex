@@ -10,16 +10,21 @@
  */
 
 import { test, expect } from '@playwright/test'
-import path from 'path'
-
-const PROJECT_ID = 'local-julyi-Documents-workspace-antigravity-Vulcan-Dev-kweVml'
-const PROJECT_URL = `/projects/${PROJECT_ID}`
-const SCREENSHOTS_DIR = path.resolve(__dirname, '../../../../docs/04-review/screenshots')
+import { E2E_SCREENSHOTS_DIR, ensureE2EProject, removeE2EProject } from './fixture'
 
 test.describe('REQ-010: DocDrawer E2E 테스트', () => {
+  let projectId: string
+
+  test.beforeAll(async ({ request }) => {
+    projectId = await ensureE2EProject(request)
+  })
+
+  test.afterAll(async ({ request }) => {
+    await removeE2EProject(request, projectId)
+  })
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     // 문서 목록이 로드될 때까지 대기
     await page.waitForSelector('[data-testid="doc-list"]', { timeout: 10000 })
   })
@@ -44,7 +49,7 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
 
     // 스크린샷 저장
     await page.screenshot({
-      path: `${SCREENSHOTS_DIR}/TST-010-01-drawer-open.png`,
+      path: `${E2E_SCREENSHOTS_DIR}/TST-010-01-drawer-open.png`,
       fullPage: false,
     })
   })
@@ -77,7 +82,7 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
 
     // 스크린샷 저장
     await page.screenshot({
-      path: `${SCREENSHOTS_DIR}/TST-010-02-markdown-render.png`,
+      path: `${E2E_SCREENSHOTS_DIR}/TST-010-02-markdown-render.png`,
       fullPage: false,
     })
   })
@@ -100,7 +105,7 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
 
     // 스크린샷 저장
     await page.screenshot({
-      path: `${SCREENSHOTS_DIR}/TST-010-03-esc-close.png`,
+      path: `${E2E_SCREENSHOTS_DIR}/TST-010-03-esc-close.png`,
       fullPage: false,
     })
   })
@@ -124,7 +129,7 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
 
     // 스크린샷 저장
     await page.screenshot({
-      path: `${SCREENSHOTS_DIR}/TST-010-04-x-button-close.png`,
+      path: `${E2E_SCREENSHOTS_DIR}/TST-010-04-x-button-close.png`,
       fullPage: false,
     })
   })
@@ -148,7 +153,7 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
 
     // 스크린샷 저장
     await page.screenshot({
-      path: `${SCREENSHOTS_DIR}/TST-010-05-overlay-close.png`,
+      path: `${E2E_SCREENSHOTS_DIR}/TST-010-05-overlay-close.png`,
       fullPage: false,
     })
   })

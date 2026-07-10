@@ -8,6 +8,7 @@ import {
   type DocCommentStatus,
 } from './docCommentTypes'
 import type { LocalProject } from './types'
+import { assertPathInside } from './pathSecurity'
 
 const COMMENTS_RELATIVE_PATH = path.join('.vulcan', 'comments', 'comments.jsonl')
 
@@ -50,7 +51,7 @@ function normalizeDocCommentStatus(value: unknown): DocCommentStatus {
 }
 
 function commentsFilePath(project: LocalProject): string {
-  return path.join(project.path, COMMENTS_RELATIVE_PATH)
+  return assertPathInside(project.path, path.join(project.path, COMMENTS_RELATIVE_PATH))
 }
 
 function safeParseComment(line: string): DocComment | null {

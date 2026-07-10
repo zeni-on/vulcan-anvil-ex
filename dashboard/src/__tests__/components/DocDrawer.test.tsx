@@ -34,14 +34,14 @@ const mockUseDocContent = useDocContent as jest.MockedFunction<typeof useDocCont
 
 const qaDoc: DocNode = {
   name: 'DOC-QA-G4-002_Test-Result_v0.1',
-  path: 'docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md',
+  type: 'file',
   slug: ['docs', 'artifacts', '04-review', 'DOC-QA-G4-002_Test-Result_v0.1.md'],
   children: [],
 }
 
 const traceabilityDoc: DocNode = {
   name: 'DOC-CORE-G4-001_Traceability-Matrix_v0.1',
-  path: 'docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md',
+  type: 'file',
   slug: ['docs', 'artifacts', '02-traceability', 'DOC-CORE-G4-001_Traceability-Matrix_v0.1.md'],
   children: [],
 }

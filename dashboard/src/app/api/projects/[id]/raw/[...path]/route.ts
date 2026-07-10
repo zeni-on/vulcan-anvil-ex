@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { NextResponse } from 'next/server'
 import { readProjects } from '@/lib/projects'
+import { isPathInside } from '@/lib/pathSecurity'
 
 interface RouteContext {
   params: Promise<{ id: string; path: string[] }>
@@ -73,9 +74,7 @@ export async function GET(_req: Request, ctx: RouteContext) {
   if (project.type === 'local') {
     const projectRoot = path.resolve(project.path)
     const target = path.resolve(projectRoot, relPath)
-    const rootWithSep = projectRoot.endsWith(path.sep) ? projectRoot : projectRoot + path.sep
-
-    if (target !== projectRoot && !target.startsWith(rootWithSep)) {
+    if (!isPathInside(projectRoot, target)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
     const resolvedTarget = fs.existsSync(target) && fs.statSync(target).isFile()

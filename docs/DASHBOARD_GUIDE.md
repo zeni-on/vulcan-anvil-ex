@@ -16,10 +16,29 @@ npm run dev
 브라우저에서 다음 주소를 엽니다.
 
 ```text
-http://localhost:3001
+http://127.0.0.1:3001
 ```
 
 그 다음 로컬 프로젝트 폴더 또는 GitHub 저장소 URL을 등록합니다.
+
+## 로컬 보안 경계
+
+Dashboard는 문서와 로그를 읽고 코멘트 sidecar를 쓰거나 OS에서 파일을 열 수 있으므로 네트워크 서비스가 아니라 로컬 개발 도구로 실행합니다.
+
+- 기본 실행은 `127.0.0.1`에만 바인딩되며 원격 Host와 교차 출처 쓰기 요청을 거부합니다.
+- `VULCAN_DASHBOARD_TOKEN`을 설정하면 모든 화면/API 접근에 토큰이 필요합니다. 최초 접속은 `http://127.0.0.1:3001/?token=<value>`를 사용합니다.
+- `VULCAN_DASHBOARD_ALLOWED_ROOTS`를 설정하면 등록 가능한 로컬 프로젝트 경로를 제한합니다. 여러 경로는 Windows에서는 `;`, Linux/macOS에서는 `:`로 구분합니다.
+- `VULCAN_DASHBOARD_ALLOW_REMOTE=1`은 loopback 제한을 해제하지만 인증 프록시와 TLS가 없는 환경에서는 사용하지 않습니다.
+
+PowerShell 예시:
+
+```powershell
+$env:VULCAN_DASHBOARD_TOKEN = "충분히-긴-임의값"
+$env:VULCAN_DASHBOARD_ALLOWED_ROOTS = "C:\Users\user\Documents\antig-workspace"
+npm run dev
+```
+
+지원 범위와 취약점 신고 방법은 [Security Policy](../SECURITY.md)를 참고합니다.
 
 ## Dashboard가 읽는 것
 

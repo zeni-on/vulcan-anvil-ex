@@ -107,10 +107,12 @@ npm run dev
 실행 후 브라우저에서 다음 주소로 접속합니다.
 
 ```text
-http://localhost:3001
+http://127.0.0.1:3001
 ```
 
 ## 프로젝트 등록 방식
+
+Dashboard는 기본적으로 loopback에만 바인딩됩니다. `VULCAN_DASHBOARD_TOKEN`과 `VULCAN_DASHBOARD_ALLOWED_ROOTS`를 사용한 추가 보호 방법은 [Dashboard Guide](DASHBOARD_GUIDE.md)의 로컬 보안 경계를 참고합니다.
 
 Dashboard에는 두 가지 방식으로 프로젝트를 등록할 수 있습니다.
 
