@@ -36,7 +36,8 @@
 
 - M0: 완료. GitHub Actions에서 compile, core unit, audit smoke, fixture smoke를 실행한다.
 - M1: 완료. `vulcan_core/doctor.py`가 진단 로직을 소유하고 `vulcan.py`는 CLI wrapper만 유지한다.
-- 다음 후보: M2 release 경계 조사. 코드 이동 전 `release-pr --dry-run` 출력 fixture를 먼저 고정한다.
+- M2: 완료. `vulcan_core/release.py`가 프로필별 증적 정책, PR body, `gh` 명령 구성을 소유하고 Gate/branch/dirty guard는 `vulcan.py`에 유지한다.
+- 다음 후보: M3 session/status 경계 조사. 상태 변경과 조회를 먼저 분리하고 `status --check` 출력 fixture를 고정한다.
 
 ## 5. 단계별 검증
 
