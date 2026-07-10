@@ -49,6 +49,7 @@ const mockDocs: DocEntry[] = []
 const mockCommits: CommitEntry[] = []
 
 const layoutProps = {
+  projectId: 'test-project',
   session: baseSession,
   sessionLoading: false,
   sessionError: null,
@@ -121,7 +122,6 @@ describe('UT-012-18: template=A2일 때 LayoutA2 렌더링, LayoutA/LayoutB 미�
       ...baseSession,
       current_gate: 'phase0',
       gate_status: {
-        phase0: 'in-progress',
         gate1: 'pending',
         gate2: 'pending',
         gate3: 'pending',

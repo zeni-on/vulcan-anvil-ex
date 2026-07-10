@@ -72,6 +72,9 @@
 - 2026-06-25 Product 샘플을 Gate 5까지 완료했고, `release-pr --dry-run`이 Product evidence와 Gate 5 승인서를 기준으로 통과함을 확인했다.
 - Product Gate 5에서 릴리즈 승인서가 없으면 `status --check`가 차단하도록 필수 산출물과 fixture smoke를 보강했다.
 - 2026-06-25 PoC 반복형 샘플에서 `Pass`/`Smoke Pass`가 실제 evidence 파일 없이 구현 완료로 집계되던 문제를 확인했고, PoC evidence guard와 fixture smoke를 보강했다.
+- Dashboard를 loopback 전용으로 바인딩하고 원격 Host/교차 출처 쓰기 차단, 선택형 토큰과 프로젝트 루트 allowlist, realpath 기반 symlink 경계 검사를 추가했다.
+- Dashboard E2E의 개인 PC 절대경로 의존을 제거하고 저장소 내부 임시 fixture, production server, HTML report 기준으로 23개 시나리오를 재현 가능하게 만들었다.
+- GitHub Actions에 Windows/Linux Python smoke와 Dashboard type-check, Jest, production build, high 이상 dependency audit, Playwright E2E를 연결했다.
 
 ## 다음 초점
 
@@ -162,6 +165,16 @@
    - `run-check`/`run-preflight`는 완료된 worker Run에 worker 완료 상태만 있고 Orchestrator 재검증 기록이 없으면 경고한다.
    - 다음 작업은 sidecar 스키마 확장이 아니라 샘플에서 실제 위임 기록이 Dashboard/Run/최종 보고에 일관되게 보이는지 확인하는 것이다.
    - 외부 runtime harness에서 참고한 durable progress state와 verified completion 패턴은 `docs/reference/RUNTIME-HARNESS-LESSONS.md`를 따른다.
+
+7. **CLI 유지보수 경계와 배포 방식 정리**
+   - `vulcan.py`를 한 번에 재작성하지 않고 session/trace/run/execution/release/doctor 경계부터 테스트 가능한 모듈로 점진 분리한다.
+   - Markdown/YAML 입력 계약은 정규식만 늘리지 않고 구조화 파서와 schema 검증을 우선 적용할 후보를 선정한다.
+   - 단일 버전 원천, 문서 링크 검사, migration/golden test를 먼저 넣은 뒤 `pipx`/`uvx` 설치 경로를 검토한다.
+
+8. **외부 효과 검증**
+   - 같은 과제를 profile별 또는 무프레임워크 기준과 비교하되 시간만 보지 않고 누락 AC, 재작업, 검토시간, 증적률, 토큰 비용을 함께 측정한다.
+   - 공개 end-to-end 샘플 하나를 재현 가능한 fixture와 Dashboard 화면으로 연결한다.
+   - 외부 사용자 사례가 생기기 전까지 품질 향상이나 감리 준수를 보장한다고 표현하지 않는다.
 
 ### Later: 장기 확장 후보
 

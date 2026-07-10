@@ -97,6 +97,7 @@ describe('AgentPanel worker activity drawer', () => {
           current_task: 'RUN-016 worker 결과 작성 완료',
           completed_at: '2026-05-31T20:54:17',
           log: 'docs/runs/_exec/RUN-016_antigravity-exec.txt',
+          events: [],
         },
       ],
     }

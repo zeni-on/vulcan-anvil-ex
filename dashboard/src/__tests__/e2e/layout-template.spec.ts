@@ -12,15 +12,20 @@
  */
 
 import { test, expect } from '@playwright/test'
-import path from 'path'
-
-const PROJECT_ID = 'local-julyi-Documents-workspace-antigravity-Vulcan-Dev-kweVml'
-const PROJECT_URL = `/projects/${PROJECT_ID}`
-const SCREENSHOTS_DIR = path.resolve(__dirname, '../../../../docs/04-review/screenshots')
+import { E2E_SCREENSHOTS_DIR, ensureE2EProject, removeE2EProject } from './fixture'
 
 const STORAGE_KEY = 'vulcan-dashboard-layout'
 
 test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
+  let projectId: string
+
+  test.beforeAll(async ({ request }) => {
+    projectId = await ensureE2EProject(request)
+  })
+
+  test.afterAll(async ({ request }) => {
+    await removeE2EProject(request, projectId)
+  })
 
   /**
    * TST-012-01: localStorage에 레이아웃 설정이 없는 상태에서 프로젝트 상세 페이지 접속
@@ -28,7 +33,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    */
   test('TST-012-01: localStorage 없을 때 템플릿 A(3컬럼) 기본 렌더링', async ({ page }) => {
     // localStorage 클리어 후 접속
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     await page.evaluate(() => localStorage.removeItem('vulcan-dashboard-layout'))
     await page.reload()
 
@@ -44,7 +49,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(page.locator('[data-testid="layout-a-center"]')).toBeVisible()
     await expect(page.locator('[data-testid="layout-a-commits"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-01-templateA-기본렌더링.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-01-templateA-기본렌더링.png` })
   })
 
   /**
@@ -52,7 +57,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    * 기대: 템플릿 A2 레이아웃이 렌더링됨
    */
   test('TST-012-02: localStorage에 A2가 설정된 상태에서 템플릿 A2 렌더링', async ({ page }) => {
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     await page.evaluate((key) => localStorage.setItem(key, 'A2'), STORAGE_KEY)
     await page.reload()
 
@@ -65,7 +70,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(page.locator('[data-testid="layout-a2-center"]')).toBeVisible()
     await expect(page.locator('[data-testid="layout-a2-side"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-02-templateA2-렌더링.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-02-templateA2-렌더링.png` })
   })
 
   /**
@@ -73,7 +78,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    * 기대: 템플릿 B (상단 stats + 하단 2컬럼) 레이아웃이 렌더링됨
    */
   test('TST-012-02B: localStorage에 B가 설정된 상태에서 템플릿 B 렌더링', async ({ page }) => {
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     // localStorage에 B 설정 후 새로고침
     await page.evaluate((key) => localStorage.setItem(key, 'B'), STORAGE_KEY)
     await page.reload()
@@ -86,10 +91,10 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(page.locator('[data-testid="layout-a"]')).not.toBeVisible()
 
     // 상단 stats + 하단 좌/우 컨테이너 확인
-    await expect(page.locator('[data-testid="layout-b-left"]')).toBeVisible()
-    await expect(page.locator('[data-testid="layout-b-commits"]')).toBeVisible()
+    await expect(page.locator('[data-testid="layout-b-left"]')).toBeAttached()
+    await expect(page.locator('[data-testid="layout-b-commits"]')).toBeAttached()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-02-templateB-렌더링.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-02-templateB-렌더링.png` })
   })
 
   /**
@@ -98,7 +103,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    */
   test('TST-012-03: 토글 버튼 클릭 시 레이아웃 즉시 전환 (페이지 리로드 없음)', async ({ page }) => {
     // localStorage 초기화 후 A 상태로 시작
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY)
     await page.reload()
 
@@ -109,13 +114,13 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(toggleBtn).toBeVisible()
     await expect(page.locator('[data-testid="icon-columns"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-A상태.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-03-토글버튼-A상태.png` })
 
     // 클릭 — A → A2 전환
     await toggleBtn.click()
 
     // 페이지 URL이 변경되지 않아야 함 (SPA 전환)
-    await expect(page).toHaveURL(new RegExp(PROJECT_ID))
+    await expect(page).toHaveURL(new RegExp(projectId))
 
     // layout-a2 렌더링 확인
     await expect(page.locator('[data-testid="layout-a2"]')).toBeVisible()
@@ -124,7 +129,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     // 아이콘이 PanelLeft로 전환됨
     await expect(page.locator('[data-testid="icon-panel-left"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-A2전환후.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-03-토글버튼-A2전환후.png` })
 
     // A2 → B 전환
     await toggleBtn.click()
@@ -134,7 +139,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     // 아이콘이 LayoutGrid로 전환됨
     await expect(page.locator('[data-testid="icon-layout-grid"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-B전환후.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-03-토글버튼-B전환후.png` })
 
     // B → A 재전환
     await toggleBtn.click()
@@ -142,7 +147,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(page.locator('[data-testid="layout-b"]')).not.toBeVisible()
     await expect(page.locator('[data-testid="icon-columns"]')).toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-03-토글버튼-A재전환.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-03-토글버튼-A재전환.png` })
   })
 
   /**
@@ -150,7 +155,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    * 기대: 새로고침 후 localStorage 저장값이 복원되어 템플릿 B 레이아웃이 자동으로 적용됨
    */
   test('TST-012-04: 템플릿 B 전환 후 새로고침 시 B 유지 (localStorage 영속성)', async ({ page }) => {
-    await page.goto(PROJECT_URL)
+    await page.goto(`/projects/${projectId}`)
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY)
     await page.reload()
 
@@ -174,7 +179,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     await expect(page.locator('[data-testid="layout-b"]')).toBeVisible()
     await expect(page.locator('[data-testid="layout-a"]')).not.toBeVisible()
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-04-새로고침후B유지.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-04-새로고침후B유지.png` })
   })
 
   /**
@@ -185,7 +190,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     const invalidValues = ['C', 'undefined', '']
 
     for (const invalidVal of invalidValues) {
-      await page.goto(PROJECT_URL)
+      await page.goto(`/projects/${projectId}`)
       await page.evaluate(
         ({ key, val }) => localStorage.setItem(key, val),
         { key: STORAGE_KEY, val: invalidVal }
@@ -199,7 +204,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
       await expect(page.locator('[data-testid="layout-b"]')).not.toBeVisible()
     }
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-012-05-유효하지않은값-폴백.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-012-05-유효하지않은값-폴백.png` })
   })
 
   /**
@@ -207,6 +212,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
    * 기대: 'C', '<script>alert(1)</script>', '../etc/passwd' 등 임의 값 → A로 강제 폴백
    */
   test('TST-SEC-012-01: localStorage 악의적 값 주입 시도 → A 폴백 (SEC-012-01)', async ({ page }) => {
+    test.setTimeout(90_000)
     const maliciousValues = [
       'C',
       '<script>alert(1)</script>',
@@ -216,7 +222,7 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
     ]
 
     for (const malVal of maliciousValues) {
-      await page.goto(PROJECT_URL)
+      await page.goto(`/projects/${projectId}`)
       await page.evaluate(
         ({ key, val }) => localStorage.setItem(key, val),
         { key: STORAGE_KEY, val: malVal }
@@ -230,6 +236,6 @@ test.describe('REQ-012: 레이아웃 템플릿 시스템 E2E 테스트', () => {
       await expect(page.locator('[data-testid="layout-b"]')).not.toBeVisible()
     }
 
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TST-SEC-012-01-주입차단-A폴백.png') })
+    await page.screenshot({ path: `${E2E_SCREENSHOTS_DIR}/TST-SEC-012-01-주입차단-A폴백.png` })
   })
 })

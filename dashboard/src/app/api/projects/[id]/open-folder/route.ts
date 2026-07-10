@@ -20,6 +20,7 @@ import os from 'os'
 import path from 'path'
 import { readProjects } from '@/lib/projects'
 import { isWSL, openInOS } from '@/lib/openInOS'
+import { isPathInside } from '@/lib/pathSecurity'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -47,6 +48,9 @@ export async function POST(
 
   // docs 폴더가 없으면 프로젝트 루트로 폴백
   const target = fs.existsSync(docsPath) ? docsPath : project.path
+  if (!isPathInside(project.path, target)) {
+    return NextResponse.json({ error: '경로가 프로젝트 범위를 벗어났습니다' }, { status: 403 })
+  }
   if (!fs.existsSync(target)) {
     return NextResponse.json({ error: '경로가 존재하지 않습니다' }, { status: 404 })
   }

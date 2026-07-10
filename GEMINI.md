@@ -11,7 +11,7 @@
 지침 우선순위는 다음과 같다.
 1. 사용자 요청과 현재 대화 컨텍스트
 2. 이 `GEMINI.md`
-3. `docs/core/` (예: [AGENT_RUN_PROTOCOL_GEMINI.md](file:///c:/Users/user/Documents/antig-workspace/vulcan-anvil-ex/docs/core/AGENT_RUN_PROTOCOL_GEMINI.md))
+3. `docs/core/` (예: [AGENT_RUN_PROTOCOL_GEMINI.md](docs/core/AGENT_RUN_PROTOCOL_GEMINI.md))
 4. `docs/adapters/gemini/`
 5. 현재 프로젝트 산출물과 기존 코드 관례
 

@@ -69,7 +69,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3001`을 열고 프로젝트 폴더를 등록합니다.
+브라우저에서 `http://127.0.0.1:3001`을 열고 프로젝트 폴더를 등록합니다. Dashboard는 기본적으로 이 PC에서만 접근할 수 있습니다. 토큰과 프로젝트 경로 제한은 [Dashboard Guide](DASHBOARD_GUIDE.md)를 참고합니다.
 
 ## 5. Dashboard에서 먼저 볼 것
 

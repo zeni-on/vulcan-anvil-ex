@@ -11,6 +11,7 @@ import {
   updateDocCommentStatus,
 } from '@/lib/docComments'
 import type { DocComment } from '@/lib/docCommentTypes'
+import { UnsafePathError } from '@/lib/pathSecurity'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -49,6 +50,9 @@ export async function GET(req: Request, ctx: RouteContext) {
   } catch (err) {
     if (err instanceof InvalidCommentPathError) {
       return NextResponse.json({ error: 'Invalid document path' }, { status: 400 })
+    }
+    if (err instanceof UnsafePathError) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
     return NextResponse.json({ error: 'Failed to read comments' }, { status: 503 })
   }
@@ -102,6 +106,9 @@ export async function POST(req: Request, ctx: RouteContext) {
     if (err instanceof InvalidCommentPathError) {
       return NextResponse.json({ error: 'Invalid document path' }, { status: 400 })
     }
+    if (err instanceof UnsafePathError) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
     return NextResponse.json({ error: 'Failed to create comment' }, { status: 503 })
   }
 }
@@ -123,7 +130,10 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
     }
     return NextResponse.json({ comment })
-  } catch {
+  } catch (err) {
+    if (err instanceof UnsafePathError) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
     return NextResponse.json({ error: 'Failed to update comment' }, { status: 503 })
   }
 }
