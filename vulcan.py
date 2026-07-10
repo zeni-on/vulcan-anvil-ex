@@ -146,6 +146,13 @@ from vulcan_core.release import (
     release_pr_commands,
     release_profile_policy,
 )
+from vulcan_core.status import (
+    collect_dashboard_comments as collect_core_dashboard_comments,
+    collect_model_fallbacks as collect_core_model_fallbacks,
+    compose_status_summary,
+    implementation_display_counts as core_implementation_display_counts,
+    render_status_report,
+)
 from vulcan_core.runners import (
     EXEC_RUNNERS,
     INDEPENDENT_REVIEW_EXEC_RUNNERS,
@@ -3617,22 +3624,7 @@ def compute_implementation_progress(project_dir=".", session=None):
 
 def implementation_display_counts(implementation):
     """Return normalized implementation counts for status display."""
-    implementation = implementation or {}
-    reqs = implementation.get("requirements", {}) if isinstance(implementation, dict) else {}
-    waves = implementation.get("waves", {}) if isinstance(implementation, dict) else {}
-    implemented = reqs.get("implemented", implementation.get("implemented", 0) if isinstance(implementation, dict) else 0)
-    total = reqs.get("total", implementation.get("total", 0) if isinstance(implementation, dict) else 0)
-    percent = implementation.get("percent", 0) if isinstance(implementation, dict) else 0
-    if not percent and total:
-        percent = int((implemented / total) * 100)
-    return {
-        "implemented": implemented,
-        "total": total,
-        "percent": percent,
-        "waves_completed": waves.get("completed", implementation.get("waves_completed", 0) if isinstance(implementation, dict) else 0),
-        "waves_total": waves.get("total", implementation.get("waves_total", 0) if isinstance(implementation, dict) else 0),
-        "waves_current": waves.get("current", ""),
-    }
+    return core_implementation_display_counts(implementation)
 
 
 def parse_requirements(project_dir="."):
@@ -15156,34 +15148,11 @@ def collect_status_summary(project_dir="."):
         if wave.get("status") not in ("Verified", "Completed", "Done")
     ]
 
-    next_actions = []
-    if not session:
-        next_actions.extend([
-            "python vulcan.py init <target-dir> <project-name>",
-            "python vulcan.py version",
-        ])
-    else:
-        if current_gate == "completed":
-            next_actions.append("프로젝트 완료: 추가 Gate 전환 없음")
-        else:
-            next_actions.append("python vulcan.py status --check")
-    if current_gate == "impl":
-        if current_branch != integration_branch:
-            next_actions.insert(0, "python vulcan.py branch-start impl")
-        elif active_waves:
-            next_actions.insert(0, "python vulcan.py wave-complete <BW-ID> --status Verified")
-        else:
-            next_actions.insert(0, "python vulcan.py wave-start <BW-ID> --trace-seed <ID>")
-    elif current_gate in ("gate4", "gate5"):
-        next_actions.insert(0, "python vulcan.py prepare-transition")
-    elif current_gate in GATE_ORDER:
-        next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
-
     dashboard_comments = collect_dashboard_comments(project_abs)
     model_fallbacks = collect_model_fallbacks(project_abs)
     profile_gap = None
+    gap_target = "product" if profile == "poc" else profile
     if session and profile in ("poc", "product", "audit"):
-        gap_target = "product" if profile == "poc" else profile
         try:
             profile_gap = collect_profile_gap(project_abs, target_profile=gap_target)
         except Exception as exc:
@@ -15192,160 +15161,40 @@ def collect_status_summary(project_dir="."):
                 "summary": {"ok": 0, "partial": 0, "missing": 0, "review": 0, "content_issues": 0, "content_warnings": 0},
                 "read_error": str(exc),
             }
-        gap_summary = profile_gap.get("summary", {}) if isinstance(profile_gap, dict) else {}
-        if current_gate in GATE_ORDER and (
-            gap_summary.get("content_issues", 0) > 0 or gap_summary.get("missing", 0) > 0
-        ):
-            preferred_actions = [
-                "python vulcan.py status --check",
-                f"python vulcan.py profile-gap --to {gap_target}",
-            ]
-            next_actions = preferred_actions + [
-                action for action in next_actions
-                if action not in preferred_actions and not action.startswith("python vulcan.py session --gate")
-            ]
-    if qa_workspace_followup:
-        preferred_actions = [
-            "QA-000 doctor JSON/evidence 확인",
-            "환경 문제는 ISSUE/environment_blocked로 보류",
-            "제품 수정 필요 시 qa-fix-loop 생성",
-        ]
-        next_actions = preferred_actions + [
-            action for action in next_actions
-            if action not in preferred_actions
-        ]
 
-    return {
-        "project": session.get("project") or os.path.basename(project_abs),
-        "profile": profile,
-        "current_gate": current_gate,
-        "gate_status": gate_status.get(current_gate, "-") if current_gate != "-" else "-",
-        "current_branch": current_branch,
-        "main_branch": main_branch,
-        "integration_branch": integration_branch,
-        "branch_mode": workflow.get("branch_mode"),
-        "impl_uses_integration_branch": workflow.get("impl_uses_integration_branch"),
-        "session_branch_role": branch_state.get("current_role", "") or "-",
-        "qa_workspace": qa_state,
-        "qa_workspace_followup": qa_workspace_followup,
-        "dirty_blocking": has_blocking_dirty_status(project_abs),
-        "integration_exists": git_branch_exists(integration_branch, project_abs),
-        "implementation": implementation,
-        "active_runs": active_runs,
-        "active_waves": active_waves,
-        "profile_gap": profile_gap,
-        "dashboard_comments": dashboard_comments,
-        "model_fallbacks": model_fallbacks,
-        "next_actions": next_actions[:3],
-    }
+    return compose_status_summary(
+        project=session.get("project") or os.path.basename(project_abs),
+        profile=profile,
+        current_gate=current_gate,
+        gate_status=gate_status.get(current_gate, "-") if current_gate != "-" else "-",
+        current_branch=current_branch,
+        main_branch=main_branch,
+        integration_branch=integration_branch,
+        branch_mode=workflow.get("branch_mode"),
+        impl_uses_integration_branch=workflow.get("impl_uses_integration_branch"),
+        session_branch_role=branch_state.get("current_role", "") or "-",
+        qa_workspace=qa_state,
+        qa_workspace_followup=qa_workspace_followup,
+        dirty_blocking=has_blocking_dirty_status(project_abs),
+        integration_exists=git_branch_exists(integration_branch, project_abs),
+        implementation=implementation,
+        active_runs=active_runs,
+        active_waves=active_waves,
+        profile_gap=profile_gap,
+        dashboard_comments=dashboard_comments,
+        model_fallbacks=model_fallbacks,
+        session_exists=bool(session),
+        known_gates=GATE_ORDER,
+        gap_target=gap_target,
+    )
 
 
 def collect_model_fallbacks(project_dir="."):
-    exec_dir = os.path.join(os.path.abspath(project_dir), "docs", "runs", "_exec")
-    if not os.path.isdir(exec_dir):
-        return []
-
-    candidates = []
-    try:
-        for name in os.listdir(exec_dir):
-            if not name.endswith((".json", ".jsonl")):
-                continue
-            path = os.path.join(exec_dir, name)
-            if not os.path.isfile(path):
-                continue
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    if name.endswith(".jsonl"):
-                        rows = [
-                            json.loads(line)
-                            for line in f
-                            if line.strip().startswith("{")
-                        ]
-                        payload = rows[-1] if rows else {}
-                    else:
-                        payload = json.load(f)
-            except Exception:
-                continue
-            if not isinstance(payload, dict):
-                continue
-            reason = str(payload.get("model_fallback_reason") or "").strip()
-            if not reason:
-                continue
-            target_id = (
-                payload.get("target_id")
-                or payload.get("run_id")
-                or payload.get("review_id")
-                or "-"
-            )
-            candidates.append({
-                "target_id": target_id,
-                "runner": payload.get("runner") or "-",
-                "model": payload.get("model") or "-",
-                "reasoning_effort": payload.get("reasoning_effort") or "",
-                "model_source": payload.get("model_source") or "",
-                "model_fallback_reason": reason,
-                "status": payload.get("status") or "",
-                "path": os.path.relpath(path, os.path.abspath(project_dir)).replace("\\", "/"),
-                "mtime": os.path.getmtime(path),
-            })
-    except Exception:
-        return []
-
-    seen = set()
-    deduped = []
-    for item in sorted(candidates, key=lambda value: value.get("mtime") or 0, reverse=True):
-        key = (item.get("target_id"), item.get("runner"), item.get("model_fallback_reason"))
-        if key in seen:
-            continue
-        seen.add(key)
-        item.pop("mtime", None)
-        deduped.append(item)
-        if len(deduped) >= 5:
-            break
-    return deduped
+    return collect_core_model_fallbacks(project_dir)
 
 
 def collect_dashboard_comments(project_dir="."):
-    comments_path = os.path.join(os.path.abspath(project_dir), ".vulcan", "comments", "comments.jsonl")
-    summary = {
-        "path": ".vulcan/comments/comments.jsonl",
-        "total": 0,
-        "open": 0,
-        "closed": 0,
-        "items": [],
-    }
-    if not os.path.exists(comments_path):
-        return summary
-
-    try:
-        with open(comments_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    item = json.loads(line)
-                except Exception:
-                    continue
-                status = str(item.get("status") or "open").strip().lower()
-                if status in ("resolved", "converted", "stale"):
-                    status = "closed"
-                if status not in ("open", "closed"):
-                    status = "open"
-                summary["total"] += 1
-                summary[status] += 1
-                if status == "open":
-                    anchor = item.get("anchor") if isinstance(item.get("anchor"), dict) else {}
-                    summary["items"].append({
-                        "comment_id": item.get("comment_id") or "",
-                        "document": item.get("document") or "",
-                        "category": item.get("category") or "note",
-                        "line": anchor.get("start_line") or "",
-                        "body": truncate_dashboard_message(item.get("body") or "", limit=90),
-                    })
-    except Exception:
-        summary["read_error"] = True
-    return summary
+    return collect_core_dashboard_comments(project_dir)
 
 
 def collect_doctor_checks(project_dir="."):
@@ -15435,114 +15284,7 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
             sys.exit(exit_code)
         return
 
-    print("==================================================")
-    print(" [status] Vulcan Orchestrator status")
-    print("==================================================")
-    print(f" project: {summary['project']}")
-    print(f" profile: {summary['profile']}")
-    print(f" current_gate: {summary['current_gate']}")
-    print(f" gate_status: {summary['gate_status']}")
-    print()
-    print(" branch")
-    print(f"  current_branch: {summary['current_branch']}")
-    print(f"  main_branch: {summary['main_branch']}")
-    print(f"  integration_branch: {summary['integration_branch']}")
-    print(f"  integration_exists: {summary['integration_exists']}")
-    print(f"  dirty_blocking: {summary['dirty_blocking']}")
-    print(f"  session_branch_role: {summary['session_branch_role']}")
-    qa_state = summary.get("qa_workspace") or {}
-    if qa_state:
-        print(" qa_workspace")
-        print(f"  path: {qa_state.get('path') or '-'}")
-        print(f"  mode: {qa_state.get('mode') or '-'}")
-        print(f"  status: {qa_state.get('status') or '-'}")
-        print(f"  last_stage: {qa_state.get('last_stage') or '-'}")
-        followup = summary.get("qa_workspace_followup") or []
-        if followup:
-            print("  followup")
-            for item in followup:
-                print(f"   - {item}")
-    print()
-
-    implementation = summary.get("implementation") or {}
-    if implementation:
-        impl_counts = implementation_display_counts(implementation)
-        print(" implementation")
-        print(f"  implemented: {impl_counts['implemented']} / {impl_counts['total']}")
-        print(f"  percent: {impl_counts['percent']}")
-        print(f"  waves: {impl_counts['waves_completed']} / {impl_counts['waves_total']}")
-        if impl_counts["waves_current"]:
-            print(f"  current_wave: {impl_counts['waves_current']}")
-        print()
-
-    active_runs = summary.get("active_runs") or []
-    print(f" active_runs: {len(active_runs)}")
-    for run in active_runs[:5]:
-        print(f"  - {run['path']} ({run['status']})")
-    if len(active_runs) > 5:
-        print(f"  ... 외 {len(active_runs) - 5}건")
-
-    active_waves = summary.get("active_waves") or []
-    print(f" active_waves: {len(active_waves)}")
-    for wave in active_waves[:5]:
-        run_suffix = f" / {wave.get('run')}" if wave.get("run") else ""
-        print(f"  - {wave.get('id')} ({wave.get('status')}){run_suffix}")
-    if len(active_waves) > 5:
-        print(f"  ... 외 {len(active_waves) - 5}건")
-    print()
-
-    model_fallbacks = summary.get("model_fallbacks") or []
-    if model_fallbacks:
-        print(" model_fallbacks")
-        for item in model_fallbacks[:5]:
-            effort = f" / {item.get('reasoning_effort')}" if item.get("reasoning_effort") else ""
-            source = f" ({item.get('model_source')})" if item.get("model_source") else ""
-            print(
-                f"  - {item.get('target_id')} {item.get('runner')}: "
-                f"{item.get('model')}{effort}{source}"
-            )
-            print(f"    reason: {item.get('model_fallback_reason')}")
-        print()
-
-    profile_gap = summary.get("profile_gap") or {}
-    if profile_gap:
-        gap_summary = profile_gap.get("summary") or {}
-        print(" profile_gap")
-        print(f"  target_profile: {profile_gap.get('target_profile') or '-'}")
-        print(
-            "  docs: "
-            f"ok {gap_summary.get('ok', 0)}, "
-            f"partial {gap_summary.get('partial', 0)}, "
-            f"missing {gap_summary.get('missing', 0)}"
-        )
-        print(
-            "  content: "
-            f"issues {gap_summary.get('content_issues', 0)}, "
-            f"warnings {gap_summary.get('content_warnings', 0)}"
-        )
-        if profile_gap.get("read_error"):
-            print(f"  read_error: {profile_gap.get('read_error')}")
-        print()
-
-    comments = summary.get("dashboard_comments") or {}
-    if comments.get("total"):
-        print(" dashboard_comments")
-        print(f"  path: {comments.get('path')}")
-        print(
-            f"  open: {comments.get('open', 0)} / total: {comments.get('total', 0)} "
-            f"(closed {comments.get('closed', 0)})"
-        )
-        for item in (comments.get("items") or [])[:5]:
-            line = f":L{item.get('line')}" if item.get("line") else ""
-            print(f"  - {item.get('comment_id') or '-'} [{item.get('category')}] {item.get('document')}{line} - {item.get('body')}")
-        if comments.get("open", 0) > 5:
-            print(f"  ... 외 {comments.get('open', 0) - 5}건")
-        print()
-
-    print(" next_actions")
-    for action in summary.get("next_actions") or []:
-        print(f"  - {action}")
-    print("==================================================")
+    print(render_status_report(summary))
 
     if trace_detail:
         print()

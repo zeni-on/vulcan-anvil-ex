@@ -170,7 +170,7 @@
 7. **CLI 유지보수 경계와 배포 방식 정리**
    - `vulcan.py`를 한 번에 재작성하지 않고 session/trace/run/execution/release/doctor 경계부터 테스트 가능한 모듈로 점진 분리한다.
    - 단계별 경계, 검증, 중단 조건은 [`VULCAN-CORE-REFACTORING-PLAN.md`](reference/VULCAN-CORE-REFACTORING-PLAN.md)를 따른다.
-   - `doctor`와 release 정책/PR body 경계를 분리했다. 다음 후보는 session/status 조회 경계이며, 기능 추가와 구조 이동은 같은 PR에 섞지 않는다.
+   - `doctor`, release 정책/PR body, status 조회 경계를 분리했다. 다음 후보는 session 저장 경계이며, 기능 추가와 구조 이동은 같은 PR에 섞지 않는다.
    - Markdown/YAML 입력 계약은 정규식만 늘리지 않고 구조화 파서와 schema 검증을 우선 적용할 후보를 선정한다.
    - 단일 버전 원천, 문서 링크 검사, migration/golden test를 먼저 넣은 뒤 `pipx`/`uvx` 설치 경로를 검토한다.
 

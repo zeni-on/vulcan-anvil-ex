@@ -26,7 +26,8 @@
 | M0 | 기준선 | Python compile, core unit, audit smoke, fixture smoke 고정 | CI와 로컬에서 동일 명령 통과 |
 | M1 | doctor | 환경 탐지, 결과 요약, text/JSON 렌더링 분리 | `doctor --json` 계약과 종료 코드 유지 |
 | M2 | release | release readiness 수집과 PR body 생성 로직 분리 | `release-pr --dry-run` fixture 결과 유지 |
-| M3 | session/status | session 로드·정규화·상태 요약 분리 | `status`, `status --check`, `sync-session` 회귀 유지 |
+| M3a | status read | sidecar 수집, 상태 요약, 다음 행동, text 렌더링 분리 | `status`, `status --json`, `status --check` 회귀 유지 |
+| M3b | session write | session 로드·정규화·저장과 sync-session 분리 | Gate/session 변경 회귀와 commit 경계 유지 |
 | M4 | run | Run 생성, 입력 계약, run-check/preflight 분리 | 기존 차단/경고 fixture 결과 유지 |
 | M5 | trace/contracts | trace graph, check-trace, check-contract 판정 분리 | golden 문서 세트의 오류 위치와 판정 유지 |
 | M6 | execution | runner 실행, watchdog, worktree, integration 분리 | 외부 runner dry-run과 lifecycle 기록 유지 |
@@ -37,7 +38,8 @@
 - M0: 완료. GitHub Actions에서 compile, core unit, audit smoke, fixture smoke를 실행한다.
 - M1: 완료. `vulcan_core/doctor.py`가 진단 로직을 소유하고 `vulcan.py`는 CLI wrapper만 유지한다.
 - M2: 완료. `vulcan_core/release.py`가 프로필별 증적 정책, PR body, `gh` 명령 구성을 소유하고 Gate/branch/dirty guard는 `vulcan.py`에 유지한다.
-- 다음 후보: M3 session/status 경계 조사. 상태 변경과 조회를 먼저 분리하고 `status --check` 출력 fixture를 고정한다.
+- M3a: 완료. `vulcan_core/status.py`가 model fallback과 Dashboard comment sidecar 수집, 상태 요약, 다음 행동, text 렌더링을 소유한다.
+- 다음 후보: M3b session write 경계 조사. session 저장과 git commit 결합을 분리하기 전에 현재 mutation 호출 관계를 먼저 문서화한다.
 
 ## 5. 단계별 검증
 
