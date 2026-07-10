@@ -63,6 +63,7 @@
 
 - Codex runner 미지원 model alias fallback을 `resolve_codex_model_effort()`에 고정하고, 실행 기록과 status/Dashboard에서 actual model과 fallback reason을 볼 수 있게 했다.
 - Product completed fixture smoke에서 `python vulcan.py doctor --json` 구조와 기본 pass 조건을 검증한다.
+- `doctor`의 환경 진단·요약·출력 로직을 `vulcan_core/doctor.py`로 분리하고, `vulcan.py`에는 기존 CLI 호환용 얇은 어댑터만 남겼다. 전용 unit test와 기존 fixture smoke가 JSON 계약을 함께 고정한다.
 - Gate 4 `QA-000` Run 입력 계약에 `python vulcan.py doctor --json` 실행과 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 증적 경로를 연결했다.
 - simple hello audit fixture에 `QA-000-doctor.json`/`.log` 증적을 추가했고, `scripts/regression/run_fixture_smoke.py`가 QA-000 doctor 증적 계약 누락을 감지한다.
 - QA-000 workspace가 `environment_blocked`이면 QA-001 후속 Run preflight와 실행 workspace 재사용 경로가 진행을 차단하도록 fixture smoke에 고정했다.
@@ -168,6 +169,8 @@
 
 7. **CLI 유지보수 경계와 배포 방식 정리**
    - `vulcan.py`를 한 번에 재작성하지 않고 session/trace/run/execution/release/doctor 경계부터 테스트 가능한 모듈로 점진 분리한다.
+   - 단계별 경계, 검증, 중단 조건은 [`VULCAN-CORE-REFACTORING-PLAN.md`](reference/VULCAN-CORE-REFACTORING-PLAN.md)를 따른다.
+   - 1차로 `doctor` 경계를 분리했다. 다음 후보는 부작용이 비교적 좁은 release 진단/출력 영역이며, 기능 추가와 구조 이동은 같은 PR에 섞지 않는다.
    - Markdown/YAML 입력 계약은 정규식만 늘리지 않고 구조화 파서와 schema 검증을 우선 적용할 후보를 선정한다.
    - 단일 버전 원천, 문서 링크 검사, migration/golden test를 먼저 넣은 뒤 `pipx`/`uvx` 설치 경로를 검토한다.
 
