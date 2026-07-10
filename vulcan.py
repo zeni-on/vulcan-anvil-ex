@@ -140,6 +140,12 @@ from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
 )
+from vulcan_core.release import (
+    build_release_pr_body,
+    release_pr_body_path as core_release_pr_body_path,
+    release_pr_commands,
+    release_profile_policy,
+)
 from vulcan_core.runners import (
     EXEC_RUNNERS,
     INDEPENDENT_REVIEW_EXEC_RUNNERS,
@@ -15870,110 +15876,27 @@ def release_pr_body(project_dir, base_branch, head_branch, title):
     session = load_session(project_dir)
     project_name = session.get("project") or session.get("name") or os.path.basename(project_dir)
     profile = load_delivery_profile(project_dir)
-    if profile == "poc":
-        release_doc = "docs/poc/POC_TEST_REPORT.md"
-        evidence_documents = [
-            "docs/poc/POC_REQUIREMENTS.md",
-            "docs/poc/POC_SYSTEM_DESIGN.md",
-            "docs/poc/POC_TEST_REPORT.md",
-        ]
-        verification_checklist = [
-            "`python vulcan.py status --check`",
-            "PoC evidence logs and smoke result reviewed",
-            "Open ISSUE/Backlog/promotion candidates reviewed",
-            "PoC continue/pivot/stop decision reviewed",
-            "Independent review completed or explicitly waived",
-        ]
-    elif profile == "product":
-        release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
-        evidence_documents = [
-            release_doc,
-            "docs/product/PRODUCT_BRIEF.md",
-            "docs/product/PRODUCT_CONTRACTS.md",
-            "docs/product/PRODUCT_TRACEABILITY.md",
-            "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
-            "docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md",
-        ]
-        verification_checklist = [
-            "`python vulcan.py status --check`",
-            "Product regression result and release scope reviewed",
-            "Product traceability and backlog/deferred items reviewed",
-            "Gate 4 UI/API evidence reviewed",
-            "Release approval document reviewed",
-            "Independent PR review completed or explicitly waived",
-        ]
-    else:
-        release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
-        evidence_documents = [
-            release_doc,
-            "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
-            "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
-            "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
-        ]
-        verification_checklist = [
-            "`python vulcan.py check-trace`",
-            "`python vulcan.py check-contract` if Program Design contracts are in scope",
-            "Gate 4 QA command logs and evidence reviewed",
-            "Open FIND/CR/ISSUE/Backlog items reviewed",
-            "Release approval document reviewed",
-            "Independent PR review completed or explicitly waived",
-        ]
-
+    policy = release_profile_policy(profile)
     diff_stat = git_text(["diff", "--stat", f"{base_branch}...{head_branch}"], project_dir)
     commit_log = git_text(["log", "--oneline", "--decorate", f"{base_branch}..{head_branch}"], project_dir)
-    if not diff_stat:
-        diff_stat = "(no local diff stat available)"
-    if not commit_log:
-        commit_log = "(no local commits found between base/head)"
-
-    doc_lines = []
-    for rel_path in evidence_documents:
-        marker = "OK" if os.path.exists(os.path.join(project_dir, rel_path)) else "MISSING"
-        doc_lines.append(f"- [{marker}] `{rel_path}`")
-    checklist_lines = "\n".join(f"- [ ] {item}" for item in verification_checklist)
-
-    return f"""# {title}
-
-## Release Candidate
-
-- Project: `{project_name}`
-- Profile: `{profile}`
-- Base: `{base_branch}`
-- Head: `{head_branch}`
-- Source of truth: `{release_doc}`
-- Merge policy: manual only after Gate 5 approval
-
-## Gate 5 Evidence Documents
-
-{chr(10).join(doc_lines)}
-
-## Verification Checklist
-
-{checklist_lines}
-
-## Diff Stat
-
-```text
-{diff_stat}
-```
-
-## Commits
-
-```text
-{commit_log}
-```
-
-## Notes
-
-This PR is a Gate 5 release candidate from the integration branch to the release baseline.
-It must not be auto-merged by runner output alone. Merge requires explicit user approval or the project's Gate 5 release approval process.
-"""
+    evidence_status = {
+        rel_path: os.path.exists(os.path.join(project_dir, rel_path))
+        for rel_path in policy["evidence_documents"]
+    }
+    return build_release_pr_body(
+        project_name=project_name,
+        profile=profile,
+        base_branch=base_branch,
+        head_branch=head_branch,
+        title=title,
+        diff_stat=diff_stat,
+        commit_log=commit_log,
+        evidence_status=evidence_status,
+    )
 
 
 def release_pr_body_path(project_dir):
-    body_dir = os.path.join(project_dir, ".vulcan", "release")
-    os.makedirs(body_dir, exist_ok=True)
-    return os.path.join(body_dir, "release-pr-body.md")
+    return core_release_pr_body_path(project_dir)
 
 
 def gh_available():
@@ -15981,21 +15904,9 @@ def gh_available():
 
 
 def gh_open_release_pr(project_dir, base_branch, head_branch, title, body_path, dry_run=False):
-    list_cmd = [
-        "gh", "pr", "list",
-        "--base", base_branch,
-        "--head", head_branch,
-        "--state", "open",
-        "--json", "number,url",
-        "--limit", "10",
-    ]
-    create_cmd = [
-        "gh", "pr", "create",
-        "--base", base_branch,
-        "--head", head_branch,
-        "--title", title,
-        "--body-file", body_path,
-    ]
+    commands = release_pr_commands(base_branch, head_branch, title, body_path)
+    list_cmd = commands["list"]
+    create_cmd = commands["create"]
 
     if dry_run:
         print("Dry-run: GitHub PR command")

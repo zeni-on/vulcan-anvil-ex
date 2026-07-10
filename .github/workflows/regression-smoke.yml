@@ -37,7 +37,7 @@ jobs:
 
       - name: Compile Python entry points
         run: |
-          python -m py_compile vulcan.py vulcan_core/doctor.py vulcan_core/runners.py scripts/regression/run_audit_smoke.py scripts/regression/run_fixture_smoke.py
+          python -m py_compile vulcan.py vulcan_core/doctor.py vulcan_core/release.py vulcan_core/runners.py scripts/regression/run_audit_smoke.py scripts/regression/run_fixture_smoke.py
 
       - name: Run core module unit tests
         run: |
