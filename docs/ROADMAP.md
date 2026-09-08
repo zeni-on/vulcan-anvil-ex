@@ -84,6 +84,16 @@
 
 ### Now: testing-first stabilization
 
+#### 현재 계약 조회와 Git 증적 연결 (2026-09-08)
+
+기준: [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md). 새 브랜치 `codex/current-contract-evidence`에서 기존 CLI를 확장한다.
+
+1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. Moderate production advisory 2건은 남아 있다.
+2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
+3. 진행: 선택형 검증 명령 실행 시 소스 Git 식별자와 미커밋/실행 중 변경을 자동 기록한다.
+4. 대기: 기존 trace-context에서 출처/줄 범위/공통 제약을 포함한 계약 절 조회를 제공한다. 기존 원장은 자동 분할하지 않는다.
+5. 대기: 합성 fixture와 사적 프로젝트 로컬 복사본으로 확인한다. 원본 프로젝트 변경이나 사적 문서 공개는 하지 않는다.
+
 #### Product 입력/검증 비용 정리 (2026-09-08)
 
 - 작업 브랜치: `codex/product-astra-workflow`. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
