@@ -36,6 +36,8 @@ Product profile의 보안 smoke는 취약점 진단 전체가 아니라 릴리�
 
 ## 3. Gate 4 Execution Result
 
+현재 릴리즈의 판단 근거를 중심으로 기록하고 과거 실행 상세는 기존 Run/증적 링크로 보존한다. 검증 JSON이 있으면 로그/증적 칸에서 연결한다. 실제 테스트한 소스 커밋과 이 결과 문서를 저장한 커밋은 다를 수 있으며, 미커밋 변경을 포함한 검증을 HEAD만 검증한 것으로 표시하지 않는다. 기준은 `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md`다.
+
 | REG ID | 실행 일시 | 결과 | 로그/증적 | 비고 |
 | --- | --- | --- | --- | --- |
 | REG-001 | TBD | Planned / Pass / Fail / Not Run / environment_blocked | TBD | TBD |

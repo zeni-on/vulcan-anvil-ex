@@ -15,6 +15,9 @@ worker, not the Orchestrator. The Run defines the approved task and writable pat
 - Expand references when the contract is incomplete or conflicting. Do not read
   every ledger, historical Run, or Orchestrator protocol by default. Report a
   missing public contract instead of inventing one or silently dropping it.
+- Treat current/candidate/history markers as applicability labels, not approvals.
+  Section lookup is a reading aid; resolve unclassified/conflicting or truncated
+  input against the original contract and approval record.
 
 ## Implement and verify
 
@@ -24,6 +27,10 @@ worker, not the Orchestrator. The Run defines the approved task and writable pat
   and source/environment identity when observable. Never invent missing metadata.
 - If dependencies or the environment block a required command, report
   environment_blocked/not_run with the failed command and evidence. Do not mark Pass.
+- When assigned `execute --verify`, include code/tests/lockfiles in its explicit
+  source scope and link its JSON evidence. It records observed source identity,
+  not environment equivalence, test coverage or QA approval. Do not use a report
+  storage commit as the tested source commit.
 - Stop after required scoped checks pass. Repeat or broaden checks only for a new
   relevant change, failure, or unresolved concern. Metadata-only edits do not
   require product tests again. Report nonblocking warnings instead of chasing zero.

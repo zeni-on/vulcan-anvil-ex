@@ -42,6 +42,7 @@ import tempfile
 import threading
 import time
 from datetime import date, datetime, timedelta
+from vulcan_core.document_context import lookup_sections
 
 # Windows 콘솔 UTF-8 출력 보장
 if sys.platform == "win32":
@@ -140,6 +141,7 @@ from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
 )
+from vulcan_core.evidence import record_verification
 from vulcan_core.release import (
     build_release_pr_body,
     release_pr_body_path as core_release_pr_body_path,
@@ -4505,10 +4507,20 @@ def format_trace_context_metadata(trace_info, indent=0):
         f"{child}depth: {trace_info.get('depth', 2)}",
         f"{child}direction: {format_yaml_scalar(trace_info.get('direction', 'both'))}",
         f"{child}source: \"trace-context\"",
+        f"{child}section_lookup: {format_yaml_scalar('python vulcan.py trace-context --id ' + ','.join(trace_info['seeds']) + ' --sections --emit json')}",
     ])
 
 
-def cmd_trace_context(seed_id, depth=2, direction="downstream", emit="yaml", edge_types="", include_excluded=False, project_dir="."):
+def cmd_trace_context(seed_id, depth=2, direction="downstream", emit="yaml", edge_types="", include_excluded=False, project_dir=".", sections=False, documents=None, max_chars=12000):
+    if sections:
+        try:
+            context = lookup_sections(project_dir, seed_id, documents, max_chars)
+        except (ValueError, OSError) as exc:
+            print(f"trace-context: {exc}", file=sys.stderr)
+            sys.exit(1)
+        # JSON is also YAML 1.2: reuse the existing serializer without a new dependency.
+        print(json.dumps(context, ensure_ascii=False, indent=2))
+        return
     if not seed_id:
         print("오류: --id 값이 필요합니다.")
         sys.exit(1)
@@ -16167,6 +16179,10 @@ def main():
     p_trace_context.add_argument("--edge-types", default="", help="허용 edge type 콤마 구분")
     p_trace_context.add_argument("--emit", default="yaml", choices=["yaml", "json"], help="출력 형식")
     p_trace_context.add_argument("--include-excluded", action="store_true", help="Deferred/Rejected 상태도 포함")
+    p_trace_context.add_argument("--sections", action="store_true", help="Bounded Markdown section references (comma-separated IDs)")
+    p_trace_context.add_argument("--document", action="append", help="Relative Markdown source; repeat to select documents")
+    p_trace_context.add_argument("--max-chars", type=int, default=12000, help="Section excerpt budget (1..100000)")
+    p_trace_context.add_argument("--project-dir", default=".", help="Project root")
 
     p_gate_start = subparsers.add_parser("gate-start", help="현재 진행 Gate 전환")
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
@@ -16222,11 +16238,16 @@ def main():
     p_run_preflight.add_argument("run_file", help="사전 검사할 Run 문서 경로")
 
     p_execute = subparsers.add_parser("execute", help="Run 실행 전 preflight/위임/검증 계획 dry-run")
-    p_execute.add_argument("--run-id", required=True, help="실행 계획을 확인할 Run ID (예: RUN-010)")
+    p_execute.add_argument("--run-id", help="실행 계획을 확인할 Run ID (예: RUN-010)")
     p_execute.add_argument("--runner", default="native", help="native, subagent, thread, agy-branch-agent 또는 codex-cli/claude-cli/antigravity-cli")
     p_execute.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
     p_execute.add_argument("--dry-run", action="store_true", help="실제 worker 호출 없이 실행 계획만 출력")
     p_execute.add_argument("--json", action="store_true", help="실행 계획 dry-run을 JSON으로 출력")
+    p_execute.add_argument("--verify", action="store_true", help="Record explicit argv verification without worker/Gate mutations")
+    p_execute.add_argument("--source", action="append", help="Relative source scope (repeatable)")
+    p_execute.add_argument("--evidence", help="New relative .json evidence path")
+    p_execute.add_argument("--cwd", help="Relative verification working directory")
+    p_execute.add_argument("verify_command", nargs=argparse.REMAINDER, help="-- executable args...")
 
     p_backlog = subparsers.add_parser("backlog", help="백로그 관리 (list/add/done/reject)")
     p_orchestrator_plan = subparsers.add_parser("orchestrator-plan", help="Orchestrator 실행 계획 Run 생성")
@@ -16393,6 +16414,10 @@ def main():
             emit=args.emit,
             edge_types=args.edge_types,
             include_excluded=args.include_excluded,
+            project_dir=args.project_dir,
+            sections=args.sections,
+            documents=args.document,
+            max_chars=args.max_chars,
         )
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
@@ -16444,6 +16469,24 @@ def main():
     elif args.command == "run-preflight":
         cmd_run_preflight(args.run_file)
     elif args.command == "execute":
+        if args.verify:
+            if args.dry_run or args.json or args.runner != "native":
+                parser.error("--verify cannot be combined with dry-run/JSON/runner options")
+            if not args.source or not args.evidence or not args.verify_command or args.verify_command[0] != "--":
+                parser.error("--verify requires --source, --evidence and -- executable args...")
+            try:
+                _, exit_code = record_verification(
+                    args.project_dir, args.source, args.evidence, args.verify_command[1:],
+                    cwd=args.cwd if args.cwd is not None else ".", run_id=args.run_id, run_lookup=find_run_file,
+                )
+            except (OSError, ValueError) as exc:
+                parser.error(str(exc))
+            print(f"Verification evidence: {args.evidence}")
+            sys.exit(exit_code)
+        if args.source is not None or args.evidence is not None or args.cwd is not None or args.verify_command:
+            parser.error("--source/--evidence/--cwd/command require --verify")
+        if not args.run_id:
+            parser.error("execute dry-run requires --run-id")
         cmd_execute(
             run_id=args.run_id,
             runner=args.runner,

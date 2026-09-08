@@ -57,6 +57,7 @@
 | Run 입력/출력 | `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md` |
 | worker/subagent/thread 위임 | `docs/core/AGENT_RUN_PROTOCOL.md`, `docs/core/AGENT_PERSONAS.md` |
 | 요구사항/추적성 | `docs/core/TRACEABILITY_RULES.md`, 요구사항정의서, 추적표 |
+| 누적 문서/검증 소스 기준 | `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md` |
 | 설계 | `docs/core/ORCHESTRATOR_PROTOCOL.md`, Gate 2 산출물 |
 | Product 보안/데이터 기준 | `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md` |
 | 기술스택/표준 | `docs/core/TECH_STACK_BASELINES.md`, 개발표준정의서 |

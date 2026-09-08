@@ -41,6 +41,8 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 
 ## 3. 선택 필드
 
+검증 증적의 Git 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md) 4~5절을 따른다. `evidence.commit`이 소스 기준인지 결과 문서 저장 커밋인지 불명확한 과거 기록은 추정하지 않는다. 자동 수집한 검증 JSON을 기존 `evidence`/`verification_results`에서 링크하고, 각 요구사항 행에 같은 SHA를 복제하지 않는다. 명령 성공, 미커밋 소스 식별, QA 승인과 릴리즈 대상 일치는 별도 사실이다.
+
 | 필드 | 넣는 경우 |
 | --- | --- |
 | `execution` | 외부 CLI runner의 model, effort, sandbox, timeout, worktree, branch, log 경로 같은 실행 메타가 필요할 때 |

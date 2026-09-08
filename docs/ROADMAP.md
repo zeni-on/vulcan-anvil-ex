@@ -90,13 +90,13 @@
 
 1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. Moderate production advisory 2건은 남아 있다.
 2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
-3. 진행: 선택형 검증 명령 실행 시 소스 Git 식별자와 미커밋/실행 중 변경을 자동 기록한다.
-4. 대기: 기존 trace-context에서 출처/줄 범위/공통 제약을 포함한 계약 절 조회를 제공한다. 기존 원장은 자동 분할하지 않는다.
-5. 대기: 합성 fixture와 사적 프로젝트 로컬 복사본으로 확인한다. 원본 프로젝트 변경이나 사적 문서 공개는 하지 않는다.
+3. 완료: 선택형 `execute --verify`가 명시한 소스/테스트/lockfile 범위의 Git 기준, 파일 해시, 미커밋/실행 중 변경, 명령 exit code를 JSON으로 기록한다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다.
+4. 완료: 선택형 `trace-context --sections`가 정확한 ID, 출처/줄 범위/해시, 적용 상태와 공통 제약을 반환한다. Run에는 짧은 `section_lookup`만 추가한다. 기존 그래프/원장을 자동 수정하지 않는다.
+5. 검증 중: 합성 unit/기존 init·fixture smoke와 사적 프로젝트 로컬 복사본을 확인했다. 새 문맥 review에서 발견한 Git 식별/Markdown 표식 경계를 보정하고 PR #24의 최종 회귀/CI를 확인한다. [파일럿 관찰과 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#61-로컬-조회-파일럿-2026-09-08)를 함께 남겼다. 원본 프로젝트 변경이나 사적 문서 공개는 하지 않는다.
 
 #### Product 입력/검증 비용 정리 (2026-09-08)
 
-- 작업 브랜치: `codex/product-astra-workflow`. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
+- PR #23으로 main에 반영했다. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
 - Product Run 생성/사전검사 단위 회귀, Audit 초기화 smoke, Product/PoC/Audit fixture smoke를 확인했다. 다음은 실제 작업에서 같은 모델/effort로 입력량, 재검사, 위임 왕복, 결함/보정량을 비교하는 것이다. 실행 시간이나 크레딧 감소는 아직 입증하지 않았다.
 - 다음 후보는 기존 `trace-context`의 계약 구간 추출이다. 다중 active Wave, App Server 연동, 외부 CLI 모델 기본값 변경은 이번 범위에 포함하지 않는다.
 - 후속 정책: Codex custom agent의 모델/effort 고정을 제거하고 사용자 모델 설정 상속과 작업별 effort 선택을 분리했다. [native review 기준](core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)은 위험도에 따른 호출 판단과 부모 대화 비상속을 명시한다. 자동 리뷰 호출/새 mandatory checker는 추가하지 않았고, 외부 CLI 기본값/사용자 전역 설정도 변경하지 않는다.

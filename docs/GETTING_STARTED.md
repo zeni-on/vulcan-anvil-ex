@@ -184,7 +184,8 @@ my-project/
 | `run-new` | persona/skill 기반 Run 초안 생성 |
 | `run-check` | Run 문서 필수 필드와 상태 검사 |
 | `prepare-transition` | 다음 Gate로 넘어가기 전 상세/호환 진단. 일반적으로는 `status --check`를 먼저 사용 |
-| `trace-context` | 특정 ID 주변 추적성 그래프를 Run 입력 후보 YAML/JSON으로 출력 |
+| `trace-context` | 특정 ID 주변 그래프 조회. `--sections`는 출처/줄 범위/적용 상태를 포함한 문서 구간 조회 |
+| `execute` | `--dry-run`은 위임 전 검사, `--verify`는 명시한 검증 명령 실행과 소스 기준 JSON 기록 |
 | `run-new --trace-seed <ID>` | 추적성 그래프 기반으로 Run 초안의 관련 ID와 참조 문서 후보 보강 |
 | `wave-start <BW-ID> --trace-seed <ID>` | Build Wave Run 초안의 `related_ids`, `target_contracts`, 참조 문서 후보 보강 |
 | `profile-status` | 현재 Delivery Profile과 `profile_rules` 상세 확인 |
@@ -364,6 +365,18 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 `QA-000`에서는 `python vulcan.py doctor --json`을 실행해 `docs/artifacts/04-review/evidence/qa-000/QA-000-doctor.json` 같은 JSON 증적으로 남기는 것을 기본으로 합니다. 이 결과는 로컬 환경 readiness 판단용이며, 제품 기능 테스트의 Pass/Fail을 대신하지 않습니다.
 
 테스트 문서의 역할은 분리합니다. Gate 3 테스트케이스 문서는 “무엇을 어떻게 검증할지”를 담는 계획 문서이므로 `Planned`를 `Pass`로 덮어쓰지 않습니다. Gate 4에서 실제 실행한 결과는 `DOC-QA-G4-002_Test-Result_v0.1.md`에 `Pass / Fail / Not Run / Skipped / environment_blocked`로 기록하고, QA-003에서 이 결과와 증적을 근거로 요구사항추적표의 `상태`, `증적`, `요구사항별 검증 요약`을 갱신합니다.
+
+### 문서가 누적됐거나 검증 기준이 불분명할 때
+
+모든 문서를 매번 읽기보다 관련 ID의 구간을 조회하고 원문과 승인 기록을 확인합니다. 표시가 없는 기존 문서는 `unclassified`이며, 최신 날짜라는 이유로 현재 계약이라고 확정하지 않습니다.
+
+```powershell
+python vulcan.py trace-context --id API-001 --sections --emit json
+```
+
+검증 대상 커밋과 결과 문서를 저장한 커밋은 다를 수 있습니다. 필요한 검증에는 선택형 `execute --verify`로 소스/테스트/lockfile 범위의 실행 전후 상태를 남기고, 기존 QA 증적 칸에서 JSON을 연결합니다. 요구사항마다 SHA를 반복하지 않습니다. 명령 성공만으로 QA 승인이나 소스 식별 성공을 확정하지 않습니다.
+
+명령 예시와 제약은 [CLI Guide](core/ORCHESTRATOR_CLI_GUIDE.md), 현재 계약/이력 및 Git 의미는 [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md)를 참고합니다.
 
 ### Run 생성 예시
 

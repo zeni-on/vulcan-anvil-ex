@@ -25,6 +25,8 @@ related_documents:
 이 문서는 상세 설계서 복사본이 아니라 Product profile의 구현 계약 진입점이다.
 상세 API/DB/UI/보안 설계가 필요한 경우 `docs/artifacts/02-design/` 산출물로 분리하고, 이 문서에서는 링크와 핵심 계약만 유지한다.
 
+승인된 변경은 해당 현재 계약에 반영하고, 변경 이유와 과거 내용은 기존 CR/ADR/Run 또는 Git 이력으로 연결한다. 날짜순 Delta를 앞뒤로 계속 붙여 현재 규격을 추론하게 하지 않는다. 선택형 절 상태 표식과 출처 조회 기준은 `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md`를 따른다. 상태 표식은 Gate 승인이나 구현 완료를 대신하지 않는다.
+
 ## 2. API Contracts
 
 | API ID | Method | Path / Entry | Request | Response | 관련 Scenario | 상세 문서 |
