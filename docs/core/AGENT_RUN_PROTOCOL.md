@@ -280,6 +280,7 @@ worker 실패가 unsupported model, runner 미감지, npm/Playwright/cache, 포�
 - `--trace-seed`가 보강한 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`는 추천값이다. Orchestrator는 worker 실행 전에 `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 Program Design, Gate 3 테스트케이스, 실제 수정 범위 기준으로 확인하고 확정한다.
 
 Wave 완료 검증은 전체 Gate 4 QA와 구분한다.
+Product에서는 아래 표와 본문의 재실행 요구를 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 적용한다. worker는 [PRODUCT_WORKER_GUIDE.md](PRODUCT_WORKER_GUIDE.md)의 담당 구현/테스트 결과를 반환하고, Orchestrator가 증적 확인과 필요한 재실행을 판단한다.
 
 | 구분 | 책임 | 목적 | 예 |
 | --- | --- | --- | --- |
@@ -345,6 +346,7 @@ RUN-014_build-wave-BW-004_...md
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. backend와 frontend처럼 실제 지시서가 달라져야 하는 범위는 하나의 Wave 안에서 병렬 subagent로 나누지 말고 별도 Build Wave Run으로 분리한다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
 
 native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. 단, native subagent/thread/Agy Workspace: branch 위임은 `run-exec` 경로를 타지 않으므로 Orchestrator가 직접 preflight를 실행해야 한다. 이 두 명령은 필수 실행 경로가 아니라 외부 CLI runner를 선택했을 때 쓰는 실행 옵션이다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
+`execute --dry-run`도 실제 preflight를 수행한다. 통과 후 Run/계약/범위/프로젝트 상태가 그대로면 같은 사전검사를 다시 호출할 필요는 없으며, 변경이 생기면 위임 전에 재검사한다.
 
 `prepare-transition`은 현재 Gate에서 완료된 worker Run에 대해 preflight를 다시 돌려 차단 항목을 사후 점검한다. 이는 native 위임 전 preflight 누락을 발견하기 위한 안전망이며, worker 실행 전 검사 절차를 대체하지 않는다.
 

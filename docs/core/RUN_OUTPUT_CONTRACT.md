@@ -269,6 +269,7 @@ PoC profile의 짧은 실험은 Run 문서를 만들지 않을 수 있다. 이 �
 ### Verified
 
 Orchestrator가 worker 결과를 통합하고 담당 검증을 재실행해 Wave 또는 Run 완료 조건을 확인했을 때 사용한다.
+Product에서는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 실제 증적의 대상 일치를 확인하고 필요한 검증을 재실행한다. `orchestrator_verification`에 확인 근거와 재실행/재사용 이유를 기록한다. worker 성공 메시지만으로 Verified를 확정하지 않는다.
 
 필수:
 

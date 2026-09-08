@@ -4,6 +4,8 @@
 
 구현 단계에서 `implementation-plan`이 정의한 하나의 `Build Wave`를 실행할 때 사용한다.
 
+Product worker는 [PRODUCT_WORKER_GUIDE.md](../../../core/PRODUCT_WORKER_GUIDE.md)를 따른다. 아래 범용 절차의 Orchestrator 작업은 수행하지 않으며, 재검증은 `PRODUCT_PROFILE_BASELINE.md` 7절의 조건으로 적용한다.
+
 Build Wave는 전체 구현이 아니라 하나의 검증 가능한 구현 배치다. Wave가 끝나면 코드, 테스트케이스, Orchestrator가 재실행할 검증 명령, 문서/추적표 갱신 필요 항목, 커밋 후보가 함께 남아야 한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 갱신해야 할 ID와 증적 후보를 보고한다.
 
 Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다. 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 15분을 넘길 것으로 예상되면 개발을 중간에 끊지 말고 더 작은 `FUNC/PGM/API/DB/SEC/TEST` 계약 묶음으로 다시 나눈다.
@@ -38,7 +40,7 @@ Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다.
 12. worker worktree의 Node/Playwright self-check는 보조 검증이다. worker가 `npm run dev`, `npm run build`, `npx playwright test`를 완료하지 못해도 그 사실만으로 구현 실패로 단정하지 않는다.
 13. npm registry, 권한, 인증, 네트워크, cache 문제로 `npm install`, `npm ci`, `npx playwright install`, lint/build/test를 실행하지 못했으면 `environment_blocked` 또는 `not_run`으로 기록하고 실패 명령/cwd/exit code/log path/Orchestrator 재실행 명령을 남긴다.
 14. 요구사항추적표, session 상태, Wave 완료 상태, 전체 테스트 결과서 통합은 Orchestrator가 처리한다. 작업자 runner는 갱신 필요 항목만 보고한다.
-15. 작업자 runner로 실행 중이면 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `vulcan.py prepare-transition`, `vulcan.py check-trace`를 직접 실행하지 않고 Orchestrator에게 실행 필요 여부를 보고한다. Orchestrator는 worker 결과를 통합하고, worker가 만든 테스트케이스를 재실행한 뒤 `wave-complete`와 `sync-session`으로 session 상태를 갱신한다. Gate 전환 가능 여부는 `prepare-transition`으로 확인하고, 추적성 오류가 남을 때만 `check-trace`를 상세 진단으로 실행한다.
+15. 작업자 runner로 실행 중이면 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`, `vulcan.py status --check`, `vulcan.py check-trace`를 직접 실행하지 않고 Orchestrator에게 실행 필요 여부를 보고한다. Orchestrator는 worker 결과를 통합하고 필요한 검증 후 `wave-complete`와 `sync-session`으로 session 상태를 갱신한다. Gate 전환 가능 여부는 `status --check`로 확인하고, 추적성 오류가 남을 때만 `check-trace`를 상세 진단으로 실행한다.
 16. Codex subagent/thread 같은 native worker를 사용했으면 현재 Run의 `delegation_records`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남긴다. 외부 CLI runner를 사용한 경우에는 `Run Execution Record`와 `docs/runs/_exec/` 로그도 함께 남긴다.
 17. 커밋 후보 메시지를 보고한다. 사용자가 승인하거나 자동 커밋 정책이 있으면 Wave 단위로 커밋한다.
 
@@ -101,7 +103,7 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 - worker worktree에서 화면 서버나 Playwright를 못 띄운 사실만으로 구현 실패를 확정하지 않는다. 통합 UI/Playwright 판정은 Gate 4 QA 입력으로 넘긴다.
 - 실패한 테스트는 숨기지 않고 `FIND` 또는 `ISSUE`로 남긴다.
 - `open_issues`가 남아 있으면 `Verified`로 닫지 않는다. 후속 조치가 필요하면 `CompletedWithIssues` 또는 `Blocked`로 보고하고, Orchestrator가 별도 보정 Run/QA Fix/CR 여부를 판단한다.
-- 작업자 runner는 추적표 갱신 필요 항목을 보고하고, Orchestrator가 worker 테스트케이스와 현재 Wave 범위에서 가능한 회귀 검증을 재실행한 뒤 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`으로 session을 반영한다. Gate 전환 준비는 `python vulcan.py prepare-transition`으로 확인하고, 추적성 오류가 남을 때만 `python vulcan.py check-trace`를 상세 진단으로 실행한다.
+- 작업자 runner는 추적표 갱신 필요 항목을 보고하고, Orchestrator가 profile별 검증 기준을 확인한 뒤 `vulcan.py wave-complete <BW-ID>`, `vulcan.py sync-session`으로 session을 반영한다. Gate 전환 준비는 `python vulcan.py status --check`로 확인하고, 추적성 오류가 남을 때만 `python vulcan.py check-trace`를 상세 진단으로 실행한다.
 - Wave 완료를 Gate 4 QA Pass나 전체 E2E 완료로 표현하지 않는다.
 - 다음 Wave 진행 가능 여부와 남은 위험을 보고한다.
 

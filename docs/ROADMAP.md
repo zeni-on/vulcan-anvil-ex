@@ -84,6 +84,12 @@
 
 ### Now: testing-first stabilization
 
+#### Product 입력/검증 비용 정리 (2026-09-08)
+
+- 작업 브랜치: `codex/product-astra-workflow`. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
+- Product Run 생성/사전검사 단위 회귀, Audit 초기화 smoke, Product/PoC/Audit fixture smoke를 확인했다. 다음은 실제 작업에서 같은 모델/effort로 입력량, 재검사, 위임 왕복, 결함/보정량을 비교하는 것이다. 실행 시간이나 크레딧 감소는 아직 입증하지 않았다.
+- 다음 후보는 기존 `trace-context`의 계약 구간 추출이다. 다중 active Wave, App Server 연동, 모델 기본값 변경은 이번 범위에 포함하지 않는다.
+
 지금은 새 기능을 늘리기보다, 이미 얻은 운영 규칙이 실제 샘플과 fixture에서 반복 검증되는지 확인하는 구간이다.
 새 CLI나 자동화 후보는 먼저 테스트/샘플에서 효과를 확인하고, 효과가 분명할 때만 main으로 승격한다.
 

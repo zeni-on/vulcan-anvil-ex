@@ -25,6 +25,11 @@ Use this for Gate 4 QA and QA iterations.
 
 `QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`. A separate QA worktree is optional and should be used only when explicitly enabled by project policy.
 
+For Product, use `docs/core/PRODUCT_PROFILE_BASELINE.md` section 7 for evidence
+review and repeat-check decisions. Execute the approved release-candidate checks;
+do not replace them with Impl self-checks. Subsequent report-only edits do not
+require running the same product tests again. Record remaining warnings honestly.
+
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.

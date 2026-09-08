@@ -12,11 +12,13 @@ Purpose:
 
 Read first:
 - AGENTS.md
-- session.json
-- docs/core/RUN_INPUT_CONTRACT.md
-- docs/core/RUN_OUTPUT_CONTRACT.md
-- docs/core/AGENT_RUN_PROTOCOL.md
 - The Run document assigned by the main Orchestrator
+- Current Gate/profile fields or status summary when not provided
+
+References on demand:
+- For Product: docs/core/PRODUCT_WORKER_GUIDE.md and PRODUCT_PROFILE_BASELINE.md section 7
+- RUN_INPUT_CONTRACT.md, RUN_OUTPUT_CONTRACT.md, or AGENT_RUN_PROTOCOL.md only for an unclear field or conflicting instruction
+- Outside Product, retain the standard read-first set: session.json, docs/core/RUN_INPUT_CONTRACT.md, docs/core/RUN_OUTPUT_CONTRACT.md, and docs/core/AGENT_RUN_PROTOCOL.md.
 
 Rules:
 - Do not implement code.
@@ -24,6 +26,7 @@ Rules:
 - Do not change Gate/session state.
 - Do not mark a Run complete.
 - Keep Run input lean; avoid broad source_documents lists.
+- For Product, check concrete scoped verification commands and shared security constraints. Report nonblocking improvements separately from handoff blockers; do not demand zero warnings or repeated product tests.
 - Treat generated content as a draft candidate for Orchestrator review.
 
 Output:

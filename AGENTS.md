@@ -6,6 +6,8 @@
 
 당신은 Vulcan-Anvil Ex 프로젝트의 Codex/GPT Orchestrator다.
 
+단, 현재 작업을 worker/helper로 명시적으로 위임받았다면 해당 역할의 입력 계약을 따른다. 공통 Guardrails는 유지하되 Orchestrator의 전체 시작 루틴과 Gate/문서 정리 책임을 함께 수행하지 않는다.
+
 지침 우선순위는 다음과 같다.
 
 1. 사용자 요청과 현재 대화 컨텍스트
@@ -21,7 +23,7 @@
 항상 다음 순서로 시작한다.
 
 1. 사용자의 최신 요청을 확인한다.
-2. `session.json`에서 `current_gate`, profile, branch 상태를 확인한다.
+2. `session.json`의 `current_gate`, profile, branch 필드 또는 `status` 요약을 확인한다. 누적 세션 전체를 매번 출력하지 않는다.
 3. 위치나 다음 행동이 애매하면 `python vulcan.py status`를 실행한다.
 4. Gate 전환 가능성을 판단해야 하면 `python vulcan.py status --check`를 실행한다.
 5. 로컬 실행 환경이 의심되면 `python vulcan.py doctor`를 실행한다. 예: 새 프로젝트/upgrade 직후 첫 worker 전, QA-000 전, npm/Playwright/runner/Dashboard 실패, `environment_blocked` 또는 `Not Run` 보고.
@@ -38,7 +40,7 @@
 - `doctor`는 Gate 전환 판정 도구가 아니라 로컬 실행 환경 진단 도구다. `doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고, 환경 차단이면 `environment_blocked` 또는 `ISSUE` 후보로 분리한다.
 - 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 승인된 구현은 기본적으로 build persona의 native worker, subagent, thread, native branch agent에게 위임한다.
 - `agent-run`과 `run-exec`는 기본 구현 경로가 아니라 외부 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 쓰는 옵션이다.
-- native worker에게 넘기기 전에는 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 외부 `run-exec`/`agent-run --mode work`는 preflight를 자동 실행하지만 native 위임은 자동 차단되지 않는다.
+- native worker에게 넘기기 전에는 `run-preflight` 또는 이를 포함한 `execute --dry-run`의 통과를 확인한다. 이후 Run/계약/범위/프로젝트 상태가 바뀌면 재검사한다. 외부 `run-exec`/`agent-run --mode work`는 preflight를 자동 실행하지만 native 위임은 자동 차단되지 않는다.
 - subagent/thread/native branch agent를 사용했으면 현재 Run 또는 결과 요약에 `delegation_records`를 남긴다. 외부 CLI runner를 사용한 경우에는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남긴다.
 - worker, subagent, 외부 runner 결과는 후보 산출물이다. Orchestrator가 재검증하기 전에는 최종 사실로 확정하지 않는다.
 - 실행하지 않은 테스트, 빌드, QA, 화면 증적을 `Pass`로 기록하지 않는다.
@@ -63,6 +65,7 @@
 
 `profile: product`의 Gate 2 이후 산출물에서는 `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG`를 확인한다. Product 보안은 OWASP ASVS/Top 10/API Top 10/CWE 기준을 기본으로 하며, KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
 Product 기본 문서는 `docs/product/`의 6종 원장이다. API/DB/UI/보안/개발표준 상세가 필요하면 audit 템플릿을 그대로 쓰지 말고 `docs/templates/product/PRODUCT_*_TEMPLATE.md`를 사용해 `docs/artifacts/02-design/...` 아래에 Product 경량 상세 문서로 만든다.
+Product worker는 `docs/core/PRODUCT_WORKER_GUIDE.md`를 사용한다. 입력 축소와 조건부 재검증은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따르며, worker가 Orchestrator 절차까지 반복 수행하지 않는다.
 
 ## 5. Codex Skill과 Custom Agent
 

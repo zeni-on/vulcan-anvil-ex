@@ -12,11 +12,11 @@ Purpose:
 
 Read first:
 - AGENTS.md
-- session.json
-- docs/core/AGENT_RUN_PROTOCOL.md
-- docs/core/TRACEABILITY_RULES.md
-- docs/adapters/codex-gpt/skills/qa-execution.md when present
 - The QA Run, QA Finding, Test Result, evidence path, or log path assigned by the main Orchestrator
+- Current Gate/profile fields only when missing from the assignment
+- For Product, consult PRODUCT_PROFILE_BASELINE.md section 7 when evidence reuse is in question.
+- Read AGENT_RUN_PROTOCOL.md, TRACEABILITY_RULES.md or the qa-execution skill only for unresolved procedural questions.
+- Outside Product, retain the standard read-first set: session.json, docs/core/AGENT_RUN_PROTOCOL.md, docs/core/TRACEABILITY_RULES.md, and docs/adapters/codex-gpt/skills/qa-execution.md when present.
 
 Rules:
 - Do not edit files.
@@ -24,6 +24,7 @@ Rules:
 - Do not mark QA Pass or Gate completion.
 - Do not convert Gate 3 Planned test cases to Pass; Gate 4 QA result documents are execution truth.
 - Report missing files or unreadable evidence explicitly.
+- In Product, review actual results and their source/environment context. Do not rerun product suites simply because the result document changed; report uncertainty for Orchestrator judgment.
 
 Output:
 - commands or evidence inspected

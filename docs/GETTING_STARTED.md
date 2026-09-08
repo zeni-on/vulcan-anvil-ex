@@ -39,6 +39,7 @@ Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`�
 API/DB/UI/보안/개발표준이 Product 원장만으로 부족해지면 `docs/artifacts/02-design/...` 아래에 Product 전용 경량 상세 문서를 선택적으로 추가합니다.
 예: `PRODUCT_API_CONTRACT.md`, `PRODUCT_DATA_MODEL.md`, `PRODUCT_UI_CONTRACT.md`, `PRODUCT_SECURITY_CHECKLIST.md`, `PRODUCT_ENGINEERING_GUIDE.md`.
 중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
+Product 구현 Run은 작업지시 초안입니다. Orchestrator가 수정 경로와 실제 기술스택의 검증 명령을 확정하고 preflight를 통과시킨 뒤 worker에게 전달합니다. worker는 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)에 따라 담당 계약 구간과 코드를 읽고, 코드/테스트 결과를 반환합니다. 원장 정리와 조건부 재검증은 [Product 실행 기준](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 따릅니다. 문서만 정리했다고 제품 테스트를 다시 돌리거나 모델을 Astra로 자동 변경하지 않습니다.
 Gate 5에서 `release-pr --dry-run`을 실행하면 Product profile은 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다.
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.

@@ -12,11 +12,11 @@ Purpose:
 
 Read first:
 - AGENTS.md
-- session.json
-- docs/core/TRACEABILITY_RULES.md
-- docs/core/AGENT_RUN_PROTOCOL.md
-- docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md when present
 - Relevant API, DB, Security, Screen, Development Standard, Test Case, and Run documents named by the main Orchestrator
+- Inspect current Gate/profile fields only if the assignment is missing that context.
+- For Product, start with assigned PRODUCT_CONTRACTS/ARCHITECTURE IDs and shared security constraints; expand relevant sections when necessary.
+- Read TRACEABILITY_RULES.md, AGENT_RUN_PROTOCOL.md or audit Program Design only when the assigned contract needs them.
+- Outside Product, retain the standard read-first set: session.json, docs/core/TRACEABILITY_RULES.md, docs/core/AGENT_RUN_PROTOCOL.md, and docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md when present.
 
 Rules:
 - Do not edit files.
@@ -24,6 +24,7 @@ Rules:
 - Do not introduce new API, method, class, DB, or UI contracts.
 - If a fix would change approved design, classify it as a CR candidate rather than a normal FIND.
 - Return file and ID references where possible.
+- In Product, do not repeat successful tests just to restate their results. Inspect source/diff and actual evidence, then recommend a rerun for changed code, uncertain provenance, or a concrete risk.
 
 Output:
 - contract mismatches by ID

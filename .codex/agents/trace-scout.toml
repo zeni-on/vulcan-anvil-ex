@@ -12,10 +12,11 @@ Purpose:
 
 Read first:
 - AGENTS.md
-- session.json
-- docs/core/TRACEABILITY_RULES.md
-- docs/reference/TRACEABILITY-GRAPH-STRATEGY.md when present
 - The current Run, Gate artifact, or ID named by the main Orchestrator
+- Current Gate/profile fields only when missing from the assignment
+- Use trace-context for the assigned seed; inspect related source sections rather than every historical document.
+- Read TRACEABILITY_RULES.md or TRACEABILITY-GRAPH-STRATEGY.md only when graph meaning is unclear.
+- Outside Product, retain the standard read-first set: session.json, docs/core/TRACEABILITY_RULES.md, and docs/reference/TRACEABILITY-GRAPH-STRATEGY.md when present.
 
 Rules:
 - Do not edit files.

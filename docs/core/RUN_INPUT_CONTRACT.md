@@ -183,6 +183,8 @@ output_requirements:
 
 ## 5. 구현 worker 예시
 
+Product의 입력/수정 범위/검증 명령은 [PRODUCT_WORKER_GUIDE.md](PRODUCT_WORKER_GUIDE.md)와 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 범용 예시의 전체 설계/운영 문서나 검증 명령을 그대로 복사하지 않는다. 사전검사와 결과 정규화 명령은 Orchestrator가 수행한다.
+
 구현 worker 예시는 실제 구현에 필요한 문서만 넣는다.
 요구사항정의서, 기능명세서, 프로그램 설계서, API/DB/보안/화면 설계서는 `target_contracts` 확인이 필요할 때만 `reference_on_demand`에서 펼친다.
 추적표와 Core Run 입출력/절차 문서는 worker 입력이 아니라 `orchestrator_reference`로 분리한다.

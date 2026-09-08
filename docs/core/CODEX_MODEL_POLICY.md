@@ -13,6 +13,12 @@ Vulcan-Anvil Ex는 초기 audit workflow에서 Codex runner를 보수적으로 `
 
 Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니다.
 
+### Astra와 native 실행
+
+Product는 품질 profile이며 별도의 `product-astra` profile을 만들지 않는다. Astra에서도 Product 입력/검증 범위는 `PRODUCT_PROFILE_BASELINE.md` 7절을 적용한다. 모델별 지침 검토 근거는 [공식 Astra 가이드](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra)다.
+아래 CLI 기본값을 바꾸거나 Run에 모델명을 적는 것만으로 Codex 앱의 메인 모델이나 native subagent 설정이 바뀌지는 않는다. 현재 surface가 지원하는 설정만 사용하고, 실제 모델/effort가 확인되지 않으면 추정해 기록하지 않는다. custom agent의 고정 TOML 값과 일반 worker의 상속 설정도 구분한다.
+입력/반복 검증 개선의 비교에서는 기존 모델/effort를 유지한다. 이후 작업 위험도에 따라 effort와 모델을 별도 비교하며 일괄 Astra 전환이나 하향을 강제하지 않는다. Fast 설정은 실제 사용 여부를 확인한다. API의 `configuration_update`/비동기 도구 옵션은 문서 지시만으로 앱에 적용되지 않는다.
+
 ## 2. 기본 원칙
 
 - 명시 옵션이 항상 우선한다.

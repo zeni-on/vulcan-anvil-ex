@@ -82,6 +82,7 @@ native subagent/thread를 사용한 경우에도 위임 사실은 사라지지 �
 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)가 수행하는 것을 기본값으로 한다.
 `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
 Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
+Product에서는 이 문서의 테스트 재실행 지시를 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절의 조건부 재검증으로 적용한다. diff/scope와 실제 증적 확인 책임은 유지하며, 동일 대상의 성공 검증을 문서 정리 때문에 반복하지 않는다.
 
 Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로 제한한다.
 
@@ -159,7 +160,7 @@ Implementation Plan Run
 
 ## 6. Orchestrator Plan 계약
 
-`vulcan.py gate-start`는 Gate 상태를 갱신한 뒤 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 같은 Gate에 열린 Run이 있으면 중복 생성하지 않는다. 단, `poc` profile은 빠른 실험 흐름을 위해 Gate별 Orchestrator Plan Run을 자동 생성하지 않는다. PoC에서는 `docs/poc` 3종과 `status --check`를 기본 운영 원장으로 삼고, 외부 worker/긴 위임/재현 기록이 필요할 때만 compact Run을 만든다.
+`vulcan.py gate-start`는 Audit에서 Gate 상태를 갱신한 뒤 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 같은 Gate에 열린 Run이 있으면 중복 생성하지 않는다. `poc`, `product`는 Gate별 Orchestrator Plan Run을 자동 생성하지 않는다. 각 profile의 원장과 `status --check`를 우선 사용하고 위임/재현/검수 기록이 필요할 때 Run을 만든다.
 
 `vulcan.py orchestrator-plan`은 Orchestrator가 다음 작업을 잊지 않도록 `docs/runs/`에 실행 계획 Run을 만든다.
 
