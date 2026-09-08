@@ -92,7 +92,7 @@
 2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
 3. 완료: 선택형 `execute --verify`가 명시한 소스/테스트/lockfile 범위의 Git 기준, 파일 해시, 미커밋/실행 중 변경, 명령 exit code를 JSON으로 기록한다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다.
 4. 완료: 선택형 `trace-context --sections`가 정확한 ID, 출처/줄 범위/해시, 적용 상태와 공통 제약을 반환한다. Run에는 짧은 `section_lookup`만 추가한다. 기존 그래프/원장을 자동 수정하지 않는다.
-5. 검증 중: 합성 unit/기존 init·fixture smoke와 사적 프로젝트 로컬 복사본을 확인했다. 새 문맥 review에서 발견한 Git 식별/Markdown 표식 경계를 보정하고 PR #24의 최종 회귀/CI를 확인한다. [파일럿 관찰과 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#61-로컬-조회-파일럿-2026-09-08)를 함께 남겼다. 원본 프로젝트 변경이나 사적 문서 공개는 하지 않는다.
+5. 완료: 로컬 unit 92건 중 89건 통과/Windows symlink 권한에 따른 3건 skip, init smoke 12단계, fixture smoke 84단계를 확인했다. 새 문맥 review의 Git 식별/Markdown 표식 지적 3건을 보정했고 reviewer 재검사 9건도 통과했다. [파일럿 관찰과 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#61-로컬-조회-파일럿-2026-09-08)를 남겼으며 원본 프로젝트 변경이나 사적 문서 공개는 하지 않았다. 변경은 [PR #24](https://github.com/zeni-on/vulcan-anvil-ex/pull/24)에서 검토하며 최신 CI 상태도 해당 PR에서 확인한다.
 
 #### Product 입력/검증 비용 정리 (2026-09-08)
 
