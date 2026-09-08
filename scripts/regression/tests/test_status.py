@@ -16,6 +16,19 @@ GATES = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 
 
 class StatusCoreTests(unittest.TestCase):
+    def test_qa_and_release_recommend_one_readiness_entry_point(self):
+        for gate in ("gate4", "gate5"):
+            with self.subTest(gate=gate):
+                actions = status_next_actions(
+                    session_exists=True,
+                    current_gate=gate,
+                    current_branch="dev",
+                    integration_branch="dev",
+                    active_waves=[],
+                    known_gates=GATES,
+                )
+                self.assertEqual(actions, ["python vulcan.py status --check"])
+
     def test_impl_and_profile_gap_actions_keep_existing_priority(self):
         actions = status_next_actions(
             session_exists=True,

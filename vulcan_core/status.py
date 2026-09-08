@@ -168,9 +168,7 @@ def status_next_actions(
             next_actions.insert(0, "python vulcan.py wave-complete <BW-ID> --status Verified")
         else:
             next_actions.insert(0, "python vulcan.py wave-start <BW-ID> --trace-seed <ID>")
-    elif current_gate in ("gate4", "gate5"):
-        next_actions.insert(0, "python vulcan.py prepare-transition")
-    elif current_gate in known_gates:
+    elif current_gate in known_gates and current_gate not in ("gate4", "gate5"):
         next_actions.insert(0, f"python vulcan.py session --gate {current_gate} --status done --approved --approval-evidence \"<승인 근거>\"")
 
     gap_summary = profile_gap.get("summary", {}) if isinstance(profile_gap, dict) else {}

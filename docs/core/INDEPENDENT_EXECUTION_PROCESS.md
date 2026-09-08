@@ -3,6 +3,8 @@
 > 상태: v0.1
 > 목적: 독립 검수, Build Wave, Evidence Run을 같은 별도 세션/worktree 실행 모델로 다루기 위한 공통 규칙을 정의한다.
 
+이 문서의 CLI/runner 설정과 result 파일 절차는 외부 실행을 선택했을 때 적용한다. native 독립검수는 [AGENT_RUN_PROTOCOL.md](AGENT_RUN_PROTOCOL.md) 5.4절을 우선한다. Product는 새 문맥의 native reviewer를 기본 후보로 삼으며, 외부 모델이나 worktree를 문맥 분리의 필수조건으로 두지 않는다. 아래 다른 runner 교차검증은 별도 선택 경로이며 Audit/고객/사용자가 명시한 요건은 유지한다.
+
 ## 1. 개념
 
 Independent Execution은 Orchestrator의 현재 대화 세션과 분리된 runner가 Run 계약을 읽고 작업하는 실행 단위다.

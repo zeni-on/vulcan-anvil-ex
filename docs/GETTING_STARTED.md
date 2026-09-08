@@ -39,6 +39,7 @@ Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`�
 API/DB/UI/보안/개발표준이 Product 원장만으로 부족해지면 `docs/artifacts/02-design/...` 아래에 Product 전용 경량 상세 문서를 선택적으로 추가합니다.
 예: `PRODUCT_API_CONTRACT.md`, `PRODUCT_DATA_MODEL.md`, `PRODUCT_UI_CONTRACT.md`, `PRODUCT_SECURITY_CHECKLIST.md`, `PRODUCT_ENGINEERING_GUIDE.md`.
 중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
+Product 구현 Run은 작업지시 초안입니다. Orchestrator가 수정 경로와 실제 기술스택의 검증 명령을 확정하고 preflight를 통과시킨 뒤 worker에게 전달합니다. worker는 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)에 따라 담당 계약 구간과 코드를 읽고, 코드/테스트 결과를 반환합니다. 원장 정리와 조건부 재검증은 [Product 실행 기준](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 따릅니다. 문서만 정리했다고 제품 테스트를 다시 돌리거나 모델을 Astra로 자동 변경하지 않습니다.
 Gate 5에서 `release-pr --dry-run`을 실행하면 Product profile은 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다.
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
@@ -202,7 +203,7 @@ my-project/
 | `upgrade` | 기존 프로젝트에 최신 framework 문서 반영 |
 | `version` | 현재 Vulcan-Anvil Ex 버전 확인 |
 
-독립 검수와 교차검증의 기본 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`와 `runtime.model_policy`에서 정한다.
+외부 CLI로 독립 검수/교차검증을 실행할 때의 모델과 추론 강도는 `vulcan.config.json`의 `runtime.available_runners`와 `runtime.model_policy`에서 정한다. 이 설정은 앱의 메인이나 native subagent 모델 설정이 아니다.
 Codex runner는 기본적으로 역할별 model/effort 정책을 사용한다.
 현재 Codex CLI 계정에서 지원되지 않는 model alias가 들어오면 실행 전에 호환 fallback으로 정규화하고, 실행 기록에 fallback 사유를 남긴다.
 감리/QA 목적의 Gate 2, Gate 4 검수는 Codex 기준 `gpt-5.5` + `high`를 권장하고, QA 실행/로그 정리 같은 작업은 더 가벼운 정책을 사용할 수 있다.
@@ -211,7 +212,7 @@ Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude
 
 새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 교차검증을 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
 독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
-`init`은 현재 PC의 `codex`와 `claude` CLI 설치 여부를 감지해 `vulcan.config.json.runtime.available_runners`에 기록한다. Codex만 있으면 같은 runner 기반 독립검수/동시 worktree 작업으로 운영하고, Codex와 Claude가 모두 있으면 Gate/PR/QA 교차검증과 cross-runner 작업을 기본 후보로 둔다.
+`init`이 감지한 외부 CLI 목록은 선택 가능한 실행 경로다. CLI가 여러 개 설치되어 있다는 이유만으로 모두 호출하지 않는다. Product의 기본 검수 후보는 새 문맥의 native reviewer이며, 외부 모델/CLI는 추가 관점이나 별도 실행 증적이 필요할 때 선택한다. Audit/고객/사용자의 필수 검수 요건은 유지한다.
 
 ### 4.1 Codex repo-local skill과 custom agent
 
@@ -234,6 +235,10 @@ Codex를 메인 Orchestrator로 사용할 때는 다음 세 계층을 구분합�
 
 custom agent 결과는 후보 의견입니다. Gate 전환, session 갱신, QA Pass, release/merge 가능 판단은 메인 Orchestrator가 다시 검증합니다.
 현재 Codex surface가 native custom agent 선택을 직접 노출하지 않는 경우도 있으므로, Orchestrator는 실제 실행 방식을 `native_custom_agent`, `prompt_contract_fallback`, `unknown` 중 하나로 보고해야 합니다.
+
+Ex custom agent는 모델/effort를 고정하지 않습니다. 메인 모델/effort는 사용자가 선택한 값을 유지하고, subagent 모델은 사용자 설정을 상속하며 effort는 작업에 맞게 선택합니다(일반 `medium`, 단순 `low`, 고위험/복잡한 작업 `high`). 사용자 `[agents]` 기본값이 있으면 부모와 다를 수 있으므로 실제 설정은 [Codex Model Policy](core/CODEX_MODEL_POLICY.md#31-native-모델-상속과-작업별-effort)를 확인합니다. 사용자 전역 설정은 Ex가 덮어쓰지 않습니다.
+
+리뷰어 호출은 자동 보장되지 않습니다. Orchestrator가 [native review 기준](core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)으로 위험을 판단합니다. 독립검수로 호출할 때는 **부모 대화를 상속하지 않은 새 reviewer**를 사용하고, 요구/계약/diff/코드/증적을 전달합니다. `fork_context: false`는 지원되는 도구에서 명시하며, 단순히 이전 내용을 잊으라는 프롬프트를 주는 것과는 다릅니다. `upgrade` 후 기존 세션이 옛 고정 역할 설정을 보여주면 새 세션에서 확인합니다.
 
 ### 4.2 Antigravity/Agy main Orchestrator
 

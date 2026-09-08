@@ -280,6 +280,7 @@ worker 실패가 unsupported model, runner 미감지, npm/Playwright/cache, 포�
 - `--trace-seed`가 보강한 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`는 추천값이다. Orchestrator는 worker 실행 전에 `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 Program Design, Gate 3 테스트케이스, 실제 수정 범위 기준으로 확인하고 확정한다.
 
 Wave 완료 검증은 전체 Gate 4 QA와 구분한다.
+Product에서는 아래 표와 본문의 재실행 요구를 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 적용한다. worker는 [PRODUCT_WORKER_GUIDE.md](PRODUCT_WORKER_GUIDE.md)의 담당 구현/테스트 결과를 반환하고, Orchestrator가 증적 확인과 필요한 재실행을 판단한다.
 
 | 구분 | 책임 | 목적 | 예 |
 | --- | --- | --- | --- |
@@ -345,6 +346,7 @@ RUN-014_build-wave-BW-004_...md
 `Implementation Plan Run`은 전체 지도이고, `Build Wave Run`은 해당 Wave의 작업지시서이자 결과보고서다. backend와 frontend처럼 실제 지시서가 달라져야 하는 범위는 하나의 Wave 안에서 병렬 subagent로 나누지 말고 별도 Build Wave Run으로 분리한다. subagent에게는 전체 프로젝트 맥락을 과도하게 넘기기보다 해당 Wave Run의 목표, 관련 ID, 수정 허용 범위, 테스트, 완료 조건을 전달한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 반영해야 할 ID와 증적 후보를 Orchestrator 결정 필요 항목으로 반환한다.
 
 native worker(subagent/thread/native branch agent) 또는 외부 CLI runner 실행 전에 Orchestrator는 현재 실행할 Build Wave Run에 대해 `python vulcan.py run-preflight <run-file>`을 실행한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 내부적으로 preflight를 자동 실행하며, 차단 항목이 있으면 worker를 시작하지 않는다. 단, native subagent/thread/Agy Workspace: branch 위임은 `run-exec` 경로를 타지 않으므로 Orchestrator가 직접 preflight를 실행해야 한다. 이 두 명령은 필수 실행 경로가 아니라 외부 CLI runner를 선택했을 때 쓰는 실행 옵션이다. `run-check`는 필수 필드와 완료 문서 형식을 확인하고, `run-preflight`는 worker에게 넘겨도 되는 작업지시서인지 확인한다. Preflight가 차단 항목을 반환하면 worker 실행 전에 Run을 보정한다.
+`execute --dry-run`도 실제 preflight를 수행한다. 통과 후 Run/계약/범위/프로젝트 상태가 그대로면 같은 사전검사를 다시 호출할 필요는 없으며, 변경이 생기면 위임 전에 재검사한다.
 
 `prepare-transition`은 현재 Gate에서 완료된 worker Run에 대해 preflight를 다시 돌려 차단 항목을 사후 점검한다. 이는 native 위임 전 preflight 누락을 발견하기 위한 안전망이며, worker 실행 전 검사 절차를 대체하지 않는다.
 
@@ -522,6 +524,27 @@ Build Wave와 worker Run은 시간이나 파일 개수가 아니라 닫힌 기�
 | 테스트 실행 | Gate 3에서 정의한 테스트와 개발표준정의서의 필수 검증 명령이 실행되고 Pass/Fail/Skip/Not Run 상태가 기록된다. |
 | 화면 구현 검증 | 화면이 있으면 Playwright로 기준 시안 또는 화면설계서와 실제 구현 화면을 desktop/mobile에서 확인하고, UI Implementation Contract 대비 차이를 기록한다. |
 | 문서 갱신 | 구현 결과가 테스트케이스와 Run 기록에 반영되고, 추적표 상태는 Orchestrator 재검증 후 반영된다. |
+
+## 5.4 새 문맥의 native review
+
+기본 독립검수 수단은 작성 대화를 상속하지 않은 native reviewer다. 외부 모델/CLI, 별도 worktree는 문맥 분리의 필수조건이 아니다. 같은 모델의 새 문맥은 문맥 독립 검토이며, 다른 모델과 같은 오류 독립성을 보장하지 않는다. 외부 runner의 상세 실행 계약은 `INDEPENDENT_EXECUTION_PROCESS.md`에 유지한다.
+
+### 호출 판단
+
+- Product에서는 모든 Wave마다 리뷰어를 일괄 호출하지 않는다. Orchestrator는 중요한 계약/보안/권한/DB 변경, 여러 모듈의 통합, 증적 불확실 또는 원인 분석 정체가 있는지 확인해 별도 리뷰 여부를 판단한다. PR/통합 경계는 판단 지점이지 무조건 호출하는 조건이 아니다.
+- 단순 문구/국소 수정은 담당 검사와 메인의 diff 확인으로 충분할 수 있다. 위험하거나 판단이 충돌하면 새 문맥의 reviewer를 우선 사용하고, 다른 모델은 추가 관점이 필요하거나 사용자가 요청할 때 선택한다.
+- Audit/고객 계약, 현재 Gate 또는 사용자가 명시한 필수 검수는 생략하지 않는다. 다른 모델 검수가 명시된 경우 같은 모델의 새 문맥으로 대체하지 않는다. PoC도 명시 요구를 유지하며 불필요한 정례 리뷰를 추가하지 않는다.
+- 리뷰 여부와 중요한 이유는 기존 Run/PR/결과 요약에 짧게 남긴다. 새 필수 문서나 checker 차단 항목은 추가하지 않는다. 이 정책은 자동 호출 장치가 아니라 Orchestrator의 판단 기준이다.
+
+### 호출과 입력
+
+1. 현재 도구가 제공하는 새 문맥 옵션을 명시한다. Codex `spawn_agent`에 `fork_context`가 있으면 `false`로 설정하고, 구현에 참여했던 agent를 독립 reviewer로 재사용하지 않는다. role 이름이나 새 agent ID만으로 문맥 분리를 단정하지 않는다.
+2. 사용자 목표/승인 계약, 검토 대상 revision 또는 diff와 관련 코드, 공유 보안/데이터 제약, 실제 테스트 명령/결과/증적, 검토 범위를 전달한다. 부모 대화 전체나 구현자의 자기평가/성공 결론을 전제로 주지 않는다. 계약이 부족하면 필요한 원문을 찾아 읽게 한다.
+3. 같은 작업 폴더를 읽어도 되지만 검토 대상 파일은 검토 동안 안정된 상태로 둔다. concurrent 변경이나 검토 후 변경이 생기면 증적의 대상 일치를 다시 확인하고 영향 구간을 재검토한다. 문맥 분리와 filesystem 격리는 다른 조건이다.
+4. reviewer는 읽기 중심으로 결함/위험 후보와 파일/라인, 기대 계약과 실제 동작, 재현 근거를 반환한다. 자동 수정, 재귀 위임, Gate/QA/merge 승인 판단은 하지 않는다. 비차단 제안과 실제 결함을 구분하고 `No Findings`도 정상 결과로 인정한다. 선택적 테스트 재현은 승인 범위 안에서만 하며 부산물이 생기면 알린다.
+5. 문맥 상속을 해제할 수 없거나 확인할 수 없으면 `inherited` 또는 `unknown`으로 알린다. “이전 내용을 잊어라”라는 프롬프트를 fresh context의 증거로 쓰지 않는다. 명시적으로 문맥 독립 검수가 필요한 경우 조건을 충족한 것으로 처리하지 않고 지원되는 새 세션/실행 경로를 확인한다.
+
+Codex 모델/effort는 [CODEX_MODEL_POLICY.md](CODEX_MODEL_POLICY.md) 3.1절을 적용한다. 부모 모델 상속, 선택한 effort, 문맥 분리 요청과 실제 확인 범위를 구분해 기존 위임 요약에 기록한다. reviewer의 완료나 동의는 자동 Pass가 아니며, Orchestrator가 증거와 영향 범위를 확인한다.
 
 ## 6. 승인과 질문 규칙
 

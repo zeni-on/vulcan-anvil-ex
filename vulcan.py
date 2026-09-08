@@ -2248,9 +2248,68 @@ def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""
     }
 
 
+PRODUCT_WORKER_GUIDE = "docs/core/PRODUCT_WORKER_GUIDE.md"
+PRODUCT_BUILD_SKILLS = {"build-wave", "implementation-scaffold"}
+PRODUCT_ORCHESTRATOR_VERIFICATION = (
+    "Orchestrator confirms diff/scope and actual command/cwd/evidence/source/environment matching; "
+    "rerun scoped verification after code integration or change, new failures, or uncertain evidence. "
+    "Matching unchanged evidence does not require duplicate tests. Gate 4 required release validation remains mandatory."
+)
+
+
+def build_product_worker_preset(gate, skill, run_rel_path, adapter=""):
+    run_rel_path = run_rel_path.replace("\\", "/")
+    return {
+        "profile": "product",
+        "adapter": adapter or "codex-gpt",
+        "skill": skill,
+        "skill_path": PRODUCT_WORKER_GUIDE,
+        "run_type": "ImplementationScaffold" if skill == "implementation-scaffold" else "Implementation",
+        "worker_run": True,
+        "source_documents": {
+            "read_first": [run_rel_path, "AGENTS.md", PRODUCT_WORKER_GUIDE],
+            "working_documents": [run_rel_path],
+            "reference_on_demand": [
+                "docs/product/PRODUCT_CONTRACTS.md",
+                "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/core/SECURITY_BASELINE.md",
+            ],
+        },
+        "orchestrator_reference": [
+            "docs/product/PRODUCT_BRIEF.md",
+            "docs/product/PRODUCT_TRACEABILITY.md",
+            "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            "docs/core/AGENT_RUN_PROTOCOL.md",
+            "docs/core/RUN_INPUT_CONTRACT.md",
+            "docs/core/RUN_OUTPUT_CONTRACT.md",
+        ],
+        "scope": {
+            "writable": [
+                run_rel_path,
+                "TBD: Orchestrator must assign exact code/test paths and any explicit evidence log files before handoff",
+            ],
+            "readonly": [
+                "AGENTS.md", "session.json", "docs/core/", "docs/templates/",
+                "docs/product/PRODUCT_BRIEF.md", "docs/product/PRODUCT_ARCHITECTURE.md",
+                "docs/product/PRODUCT_CONTRACTS.md", "docs/product/PRODUCT_TRACEABILITY.md",
+                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+            ],
+            "excluded": ["docs/ref-docs/", "**/*.db", "**/__pycache__/", "**/.ruff_cache/", "**/node_modules/", "**/.next/"],
+        },
+        "verification": {
+            "cwd": "TBD: Orchestrator must select the command working directory relative to the project root",
+            "commands": ["TBD: Orchestrator must select essential scoped tests or scaffold smoke commands from the actual project"],
+            "evidence": {"required": True, "target_documents": [run_rel_path]},
+        },
+    }
+
+
 def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path, adapter=""):
     if profile == "poc":
         return build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=adapter)
+
+    if profile == "product" and skill in PRODUCT_BUILD_SKILLS:
+        return build_product_worker_preset(gate, skill, run_rel_path, adapter=adapter)
 
     if profile != "audit":
         return None
@@ -2425,7 +2484,131 @@ def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path, adapt
     }
 
 
+def render_product_worker_input(preset, ids, persona, gate, trace_info=None):
+    source = preset["source_documents"]
+    scope = preset["scope"]
+    verification = preset["verification"]
+    scaffold = ""
+    if preset["skill"] == "implementation-scaffold":
+        scaffold = """  contract_skeleton:
+    mode: "new|existing-alignment|not-required"
+    files:
+      - path: "TBD: Orchestrator must assign the skeleton file"
+        create: "TBD: approved interface/schema to scaffold"
+    forbidden:
+      - "Do not complete business logic or claim requirements/test/UI status as Implemented, Verified, or Pass."
+    smoke_commands:
+      - "TBD: select the scoped skeleton smoke command and align it with verification.commands"
+"""
+    return f"""## 3. Run 입력 계약
+
+```yaml
+profile: product
+adapter: {format_yaml_scalar(preset["adapter"])}
+skill: {preset["skill"]}
+skill_path: {PRODUCT_WORKER_GUIDE}
+run_type: {preset["run_type"]}
+gate: {gate}
+persona: {persona}
+related_ids: {format_yaml_list(ids)}
+{format_trace_context_metadata(trace_info)}
+target_contracts:
+{format_yaml_mapping_sequences(classify_product_target_contracts(ids), 2)}
+  interface_contract:
+    language: "Use the approved Product architecture/runtime for this Run."
+    signatures:
+      - "Implement only assigned source IDs and their approved API/UI/DATA contracts."
+    schemas:
+      - "Use the referenced PRODUCT_CONTRACTS rows and direct design inputs for public request, response, and persistence shapes."
+    error_contracts:
+      - "Preserve approved errors/validation; missing or conflicting contracts require an open issue, not an invented public contract."
+{scaffold}runner_role: worker-runner
+source_documents:
+  read_first:
+{format_yaml_sequence(source["read_first"], 4)}
+  working_documents:
+{format_yaml_sequence(source["working_documents"], 4)}
+  reference_on_demand:
+{format_yaml_sequence(source["reference_on_demand"], 4)}
+orchestrator_reference:
+{format_yaml_sequence(preset["orchestrator_reference"], 2)}
+scope:
+  writable:
+{format_yaml_sequence(scope["writable"], 4)}
+  readonly:
+{format_yaml_sequence(scope["readonly"], 4)}
+  excluded:
+{format_yaml_sequence(scope["excluded"], 4)}
+worker_execution_policy:
+  forbidden_actions:
+    - "Do not modify files outside scope.writable or change session.json, Gate state, approvals, QA Pass, release or merge decisions."
+    - "Do not expand assigned contracts or weaken shared security constraints, even when no SEC-ID is assigned."
+    - "PRODUCT_TRACEABILITY and report normalization are Orchestrator-owned; return proposed updates only."
+  required_outputs:
+    - "Return changed files and source IDs, actual commands/cwd/exit codes/results, evidence paths and source revision/diff/environment context."
+    - "Report failures, Not Run/environment_blocked reasons, contract conflicts and nonblocking warnings, then return."
+  completion_rules:
+    - "Complete only assigned contracts and essential scoped tests; broken required tests or unresolved scope/contract/security blockers are not completion."
+    - "After essential tests, record nonblocking warnings and return; do not chase timing metadata or warning cleanup."
+    - "Workers need not execute run-check or run-preflight; Orchestrator owns handoff checks, delegation metadata and normalization."
+security_policy:
+  required_constraints:
+    - "Apply approved authentication/authorization, input validation, data protection, safe error/logging, web/API risk, secrets/config and dependency controls."
+    - "These shared constraints apply to every Product Build Run, regardless of target_contracts SEC membership; consult Security Design Baseline and SECURITY_BASELINE when relevant or unclear."
+    - "Never expose secrets, personal data, raw user input, internal paths or stack traces in public output/logs; do not commit sensitive data or send project files externally without approval."
+    - "Missing security decisions or public contract conflicts must return to Orchestrator; do not waive them to complete the Run."
+dependency_install_policy:
+  if_install_blocked: "Report environment_blocked or Not Run with cause; installed tools do not establish correct test commands."
+development_standards_applied:
+  - standard_id: "PRODUCT-LOG-001"
+    source: "docs/product/PRODUCT_CONTRACTS.md"
+    rule: "Use safe error handling and logging without exposing sensitive/internal information."
+  - standard_id: "PRODUCT-TEST-001"
+    source: "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+    rule: "Tests identify their scenario/source IDs, inputs and expected outcomes; the Orchestrator normalizes the report."
+development_standard_checklist:
+  logging:
+    required: true
+    rule: "Use the project logger and safe error handling; no sensitive data in logs or public responses."
+  comments:
+    required: true
+    rule: "Briefly document non-obvious responsibilities and related source IDs in comments/docstrings."
+  tests:
+    required: true
+    rule: "Given inputs, when the scoped action runs, then assert the expected outcome and identify SCN/REG or other source IDs."
+verification:
+  owner: "worker-scoped-tests-orchestrator-conditional-validation"
+  cwd: {format_yaml_scalar(verification["cwd"])}
+  commands:
+{format_yaml_sequence(verification["commands"], 4)}
+  evidence:
+    required: true
+    target_documents:
+{format_yaml_sequence(verification["evidence"]["target_documents"], 6)}
+```
+
+## 4. Worker Directions
+
+- Read only `source_documents.read_first` first. The assigned Run provides Gate, scope and source ID mapping; a full session read is not required.
+- Working documents are this Run plus any direct contract/design inputs explicitly assigned by the Orchestrator. Reference documents are on demand, not a request to read all Product ledgers.
+- Resolve assigned `target_contracts` IDs against approved contracts/design when needed. Trace-context IDs are source mapping, not permission to expand writable scope or implement other Waves.
+- Stop for Orchestrator narrowing if writable paths, required command selection or cwd remain TBD. Do not guess tests from installed tools or an absent stack.
+- Write evidence logs only to explicitly assigned file paths in scope.writable; no blanket evidence-directory permission. Record inline results in this Run otherwise.
+- Scaffold work verifies only the assigned skeleton/smoke, not business completion or final trace/test states.
+
+## 5. Completion And Orchestrator Verification
+
+- Run essential scoped tests, report actual results and nonblocking warnings, then return. A failure or uncertain contract/security decision remains unresolved, never silently Pass.
+- {PRODUCT_ORCHESTRATOR_VERIFICATION}
+- Orchestrator owns PRODUCT_TRACEABILITY, regression/release report normalization, delegation/timing metadata, run-check/run-preflight, Wave completion and Gate approval requests.
+- Gate 4 official integration/UI/E2E evidence and required release validation remain required at Gate 4; they are not duplicated as this Build worker's completion condition.
+"""
+
+
 def render_run_input_preset(preset, ids, persona, gate, trace_info=None):
+    if preset["profile"] == "product" and preset.get("skill") in PRODUCT_BUILD_SKILLS:
+        return render_product_worker_input(preset, ids, persona, gate, trace_info=trace_info)
+
     source = preset["source_documents"]
     scope = preset["scope"]
     verification = preset["verification"]
@@ -8606,40 +8789,9 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
             "TBD: 이 Wave의 코드/테스트 수정 경로를 Orchestrator가 구체화",
         ]
         if profile == "product":
-            product_contracts = classify_product_target_contracts(ids)
-            product_read_first = [
-                "AGENTS.md",
-                "session.json",
-                rel_path_posix,
-                ".agents/skills/vulcan-impl-wave/SKILL.md",
-            ]
-            product_working_documents = [
-                "docs/product/PRODUCT_BRIEF.md",
-                "docs/product/PRODUCT_ARCHITECTURE.md",
-                "docs/product/PRODUCT_CONTRACTS.md",
-                "docs/product/PRODUCT_TRACEABILITY.md",
-                "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
-            ]
-            product_reference_documents = [
-                "docs/core/DELIVERY_PROFILES.md",
-                "docs/core/TECH_STACK_BASELINES.md",
-            ]
-            product_writable = [
-                rel_path_posix,
-                "app/",
-                "src/",
-                "backend/",
-                "frontend/",
-                "static/",
-                "tests/",
-                "requirements.txt",
-                "pyproject.toml",
-                "package.json",
-                "package-lock.json",
-                "README.md",
-                "docs/product/PRODUCT_TRACEABILITY.md",
-                "docs/product/evidence/",
-            ]
+            product_preset = build_run_input_preset("product", "impl", wave_skill, skill_path, rel_path)
+            skill_path = product_preset["skill_path"]
+            input_sections = render_run_input_preset(product_preset, ids, "build", "impl", trace_info=trace_info)
             content = f"""# {run_id} Build Wave {bw_id} - {run_title}
 
 ```yaml
@@ -8648,7 +8800,7 @@ gate: impl
 persona: build
 adapter: codex-gpt
 skill: {wave_skill}
-skill_path: .agents/skills/vulcan-impl-wave/SKILL.md
+skill_path: {skill_path}
 profile: product
 bw_id: {bw_id}
 run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
@@ -8656,101 +8808,6 @@ status: InProgress
 created_at: {date.today()}
 related_ids: {format_yaml_list(ids)}
 {format_trace_context_metadata(trace_info)}
-target_contracts:
-{format_yaml_mapping_sequences(product_contracts, 2)}
-  interface_contract:
-    language: "Product profile stack/runtime is defined in PRODUCT_ARCHITECTURE and PRODUCT_CONTRACTS."
-    signatures:
-      - "Implement only the scenarios in target_contracts.scenario using the API/UI/DATA contracts listed in target_contracts."
-    schemas:
-      - "Use PRODUCT_CONTRACTS API/data tables as the public request, response, and persistence shape."
-    error_contracts:
-      - "Use PRODUCT_CONTRACTS accepted error/validation behavior; if missing, report an open issue instead of inventing a new public contract."
-runner_role: worker-runner
-source_documents:
-  read_first:
-{format_yaml_sequence(product_read_first, 4)}
-  working_documents:
-{format_yaml_sequence(product_working_documents, 4)}
-  reference_on_demand:
-{format_yaml_sequence(product_reference_documents, 4)}
-orchestrator_reference:
-  - "docs/core/AGENT_RUN_PROTOCOL.md"
-  - "docs/core/RUN_INPUT_CONTRACT.md"
-  - "docs/core/RUN_OUTPUT_CONTRACT.md"
-scope:
-  writable:
-{format_yaml_sequence(product_writable, 4)}
-  readonly:
-    - "docs/core/"
-    - "docs/templates/"
-    - "docs/product/PRODUCT_BRIEF.md"
-    - "docs/product/PRODUCT_ARCHITECTURE.md"
-    - "docs/product/PRODUCT_CONTRACTS.md"
-    - "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
-  excluded:
-    - "docs/ref-docs/"
-    - "**/*.db"
-    - "**/__pycache__/"
-    - "**/.ruff_cache/"
-    - "**/node_modules/"
-    - "**/.next/"
-worker_execution_policy:
-  forbidden_actions:
-    - "Gate 전환을 수행하지 않는다."
-    - "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다."
-    - "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다."
-    - "scope.writable 밖 파일을 수정하지 않는다."
-  required_outputs:
-    - "수행한 변경과 검증 결과를 Run 결과에 남긴다."
-    - "wave-complete, Gate 전환, session 변경, 최종 승인 판단이 필요하면 Orchestrator 결정 필요 항목으로 반환한다."
-  completion_rules:
-    - "이 Run의 target_contracts.scenario만 완결한다."
-    - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
-dependency_install_policy:
-  worker_cache_required: true
-  npm_cache_env: "npm_config_cache"
-  playwright_cache_env: "PLAYWRIGHT_BROWSERS_PATH"
-  if_install_blocked: "dependency install이 권한, 인증, 네트워크, registry, cache 문제로 막히면 코드 실패로 단정하지 않고 environment_blocked 또는 not_run으로 보고한다."
-development_standards_applied:
-  - standard_id: "PRODUCT-LOG-001"
-    source: "docs/product/PRODUCT_CONTRACTS.md"
-    rule: "사용자 입력, 내부 오류, 저장소 경로, stack trace를 화면이나 공개 응답에 노출하지 않는다."
-  - standard_id: "PRODUCT-TEST-001"
-    source: "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
-    rule: "테스트는 어떤 시나리오와 기대 결과를 검증하는지 사람이 읽을 수 있게 남긴다."
-development_standard_checklist:
-  logging:
-    required: true
-    targets:
-      - "API handler"
-      - "Service or state handler"
-    rule: "표준 logger 또는 최소 오류 처리 흐름을 사용하고 민감정보를 로그/화면에 남기지 않는다."
-  comments:
-    required: true
-    targets:
-      - "public API handler"
-      - "core state mutation function"
-    rule: "핵심 책임과 관련 scenario/API/DATA ID를 짧은 주석 또는 docstring으로 남긴다."
-  tests:
-    required: true
-    targets:
-      - "scenario smoke"
-      - "unit or integration test"
-    rule: "테스트 이름이나 설명에 입력값, 기대값, 관련 SCN/REG ID를 남긴다."
-verification:
-  commands:
-    - "python -m compileall app backend src"
-    - "python -m pytest"
-    - "npm test"
-    - "npm run build"
-    - "python vulcan.py run-check {rel_path_posix}"
-    - "python vulcan.py run-preflight {rel_path_posix}"
-  evidence:
-    required: true
-    target_documents:
-      - "docs/product/PRODUCT_TRACEABILITY.md"
-      - "docs/product/evidence/"
 verification_results: []
 evidence: []
 delegation_records: []
@@ -8764,32 +8821,12 @@ open_issues: []
 
 {run_title}
 
-## 2. Product 구현 범위
+## 2. Product Scope
 
-- 기준 시나리오: {format_yaml_list(product_contracts.get("scenario", []))}
-- 관련 요구/계약: {format_yaml_list(ids)}
-- Product profile은 audit 산출물 대신 `docs/product/` 문서 세트를 기준으로 구현한다.
+- This Run performs only `{bw_id}` and its assigned source IDs: {format_yaml_list(ids)}.
+- Native workers implement the assigned contracts; Orchestrator reviews/integrates their candidate results and decides `wave-complete {bw_id}`.
 
-## 3. 작업자 입력 계약
-
-- 먼저 `source_documents.read_first`를 읽고 `{bw_id}` 범위와 관련 ID를 확인한다.
-- `source_documents.working_documents`의 Product Brief, Architecture, Contracts, Traceability, Regression 문서를 구현 기준으로 삼는다.
-- `target_contracts.scenario`, `api`, `data`, `ui`, `regression`에 없는 기능은 추가하지 않는다.
-- `target_contracts.interface_contract`는 세부 class 설계가 아니라 Product 계약 경계다. public API/data/UI shape가 충돌하면 임의 변경하지 말고 `open_issues`로 보고한다.
-- `scope.writable` 안에서만 코드, 테스트, 자기 Run, Product Trace/evidence를 수정한다.
-- 전체 QA Pass, 릴리즈 가능 여부, Gate 전환은 Orchestrator가 판단한다.
-
-## 4. Orchestrator 지시
-
-- 실제 구현은 native worker(subagent/thread/native branch agent)가 수행한다.
-- Orchestrator는 worker 결과의 diff/scope를 확인하고, 관련 테스트를 재실행한 뒤 `wave-complete {bw_id}` 여부를 판단한다.
-- `agent-run`/`run-exec`는 외부 CLI 실행 증적이나 worktree/watchdog이 필요할 때만 선택한다.
-
-## 5. 검증 계획
-
-- worker는 가능한 self-check만 실행하고, 실패/미실행 명령은 이유를 남긴다.
-- Orchestrator는 worker가 작성한 테스트와 가능한 build/smoke를 재실행한다.
-- Gate 4의 공식 UI/E2E 증적과 릴리즈 판정은 이 Run 완료 조건이 아니다.
+{input_sections}
 
 ## 6. 결과 기록
 
@@ -9489,10 +9526,16 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         )
         ids = trace_info.get("related_ids", split_csv(related_ids))
         skill_path = RUN_SKILLS[skill]
+        product_build = profile == "product" and skill in PRODUCT_BUILD_SKILLS
+        if product_build:
+            ids = product_related_ids_for_seeds(project_dir, trace_info.get("seeds", []), ids)
+            trace_info["related_ids"] = ids
+            trace_info["target_contracts"] = classify_product_target_contracts(ids)
         preset = build_run_input_preset(profile, gate, skill, skill_path, rel_path, adapter=adapter)
         if preset:
+            skill_path = preset.get("skill_path", skill_path)
             source_docs = preset.setdefault("source_documents", {})
-            if is_gemini_long_context_mode(project_dir) and profile != "poc":
+            if is_gemini_long_context_mode(project_dir) and profile != "poc" and not product_build:
                 long_context_docs = []
                 for root_dir in ["docs/core", "docs/artifacts"]:
                     abs_root = os.path.join(project_dir, root_dir)
@@ -9504,7 +9547,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
                                     rel_p = os.path.relpath(full_p, project_dir).replace("\\", "/")
                                     long_context_docs.append(rel_p)
                 source_docs["reference_on_demand"] = merge_unique(long_context_docs, source_docs.get("reference_on_demand", []))
-            elif trace_info.get("reference_on_demand"):
+            elif trace_info.get("reference_on_demand") and not product_build:
                 source_docs["reference_on_demand"] = compact_reference_documents_for_profile(
                     profile,
                     merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
@@ -9520,6 +9563,10 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
             skill_path,
         ]
         first_read_section = "\n".join(f"- `{path}`" for path in first_read_docs)
+        completion_summary = (
+            f"Draft: return scoped changes, actual verification results and remaining issues per `{PRODUCT_WORKER_GUIDE}`; Orchestrator owns output normalization."
+            if product_build else "Draft 상태. 작업 완료 후 `RUN_OUTPUT_CONTRACT.md`에 맞춰 요약한다."
+        )
         input_sections = render_run_input_preset(preset, ids, persona, gate, trace_info=trace_info) if preset else f"""## 3. 입력 범위
 
 | 항목 | 내용 |
@@ -9581,7 +9628,7 @@ open_issues: []
 
 ### 요약
 
-Draft 상태. 작업 완료 후 `RUN_OUTPUT_CONTRACT.md`에 맞춰 요약한다.
+{completion_summary}
 
 ### 변경 파일
 
@@ -9602,7 +9649,7 @@ Draft 상태. 작업 완료 후 후속 조치나 다음 Run 제안을 기록한�
     if trace_info.get("seeds"):
         print(f"  trace-context 보강: {format_yaml_list(trace_info['seeds'])} → related_ids {len(ids)}개")
     version_run_document(rel_path, f"run: create {run_id} - {title}", project_dir)
-    if skill == "build-wave":
+    if skill == "build-wave" or (product_build and skill == "implementation-scaffold"):
         print_run_preflight_notice(os.path.join(project_dir, rel_path), context="run-new")
     print(f"다음 단계: 에이전트는 Run 파일과 `{skill_path}`를 기준으로 작업합니다.")
 
@@ -12433,8 +12480,14 @@ def _execute_plan(run_id, runner="native", project_dir="."):
         "note": "candidate only; create/update when native delegation actually starts",
     }
 
+    run_profile = run_meta.get("profile") or load_delivery_profile(project_abs)
+    product_build = run_profile == "product" and run_meta.get("skill") in PRODUCT_BUILD_SKILLS
     planned_flow = [
-        f'python vulcan.py run-preflight "{run_command_path}"',
+        (
+            "Use the run-preflight result already computed in this plan; delegate only if checks pass. "
+            "Refresh preflight only if Run/contracts/scope/project state changes."
+            if product_build else f'python vulcan.py run-preflight "{run_command_path}"'
+        ),
         f"record delegation sidecar candidate: {sidecar_rel_path}",
     ]
     if runner_mode == "external-cli":
@@ -12448,7 +12501,7 @@ def _execute_plan(run_id, runner="native", project_dir="."):
             "collect changed_files/self_check from worker result",
         ])
     planned_flow.extend([
-        "Orchestrator reruns the Run-specific verification commands",
+        PRODUCT_ORCHESTRATOR_VERIFICATION if product_build else "Orchestrator reruns the Run-specific verification commands",
         f'python vulcan.py run-check "{run_command_path}"',
         "update delegation status to verified/needs_review/blocked after Orchestrator verification",
     ])
@@ -12458,7 +12511,7 @@ def _execute_plan(run_id, runner="native", project_dir="."):
         "project_dir": project_abs,
         "run_file": normalize_repo_path(run_rel_path),
         "gate": run_meta.get("gate") or "",
-        "profile": run_meta.get("profile") or load_delivery_profile(project_abs),
+        "profile": run_profile,
         "skill": run_meta.get("skill") or "",
         "inferred_role": role,
         "runner_mode": runner_mode,
@@ -14440,6 +14493,32 @@ def run_preflight_file(path):
             warnings.append("worker Run writable scope에 Gate3 테스트케이스 문서가 포함되어 있습니다. 테스트 코드/자기 Run 문서 중심으로 좁히세요.")
 
         commands_block = _extract_yaml_block_text(content, "commands")
+        if run_contract_profile == "product":
+            readiness_issues = []
+            commands = extract_nested_yaml_list(content, "verification", "commands")
+            verification_block = _extract_yaml_block_text(content, "verification")
+            cwd = _extract_yaml_block_text(verification_block, "cwd").strip().strip('"').strip("'")
+            placeholder = re.compile(
+                r"^(?:(?:TBD|TODO|TBC|미정|확정필요)(?:\s|:|$)|(?:none|null|pending)$|<[^<>]+>$)",
+                re.IGNORECASE,
+            )
+            if not commands or any(not command.strip() or placeholder.match(command.strip()) for command in commands):
+                readiness_issues.append("Product Build verification.commands must contain concrete essential scoped test/smoke commands, not missing/TBD placeholders.")
+            elif any(is_orchestrator_only_command(command) or re.search(r"\brun-(?:check|preflight)\b", command) for command in commands):
+                readiness_issues.append("Product Build verification.commands must be worker tests/smoke, not Orchestrator Run/Gate checks.")
+            cwd_exists = os.path.isdir(os.path.join(project_dir, cwd))
+            # Ambiguous bare values can name real directories, but explicit TBD markers cannot.
+            cwd_placeholder = placeholder.match(cwd) and not (cwd.lower() in {"none", "null", "pending"} and cwd_exists)
+            if not cwd or cwd_placeholder or cwd in {"-", "[]", "{}"}:
+                readiness_issues.append("Product Build verification.cwd must be a concrete command working directory (project-relative or absolute), not missing/TBD.")
+            elif not cwd_exists:
+                readiness_issues.append(f"Product Build verification.cwd does not exist: {cwd}")
+            # Historical results stay evaluable; this is a pre-execution readiness contract.
+            if status in {"Completed", "Verified", "CompletedWithIssues"}:
+                warnings.extend(f"Historical Product Build readiness: {issue}" for issue in readiness_issues)
+            else:
+                blockers.extend(readiness_issues)
+
         if re.search(r"check-trace|sync-session|wave-complete|gate-start|python\s+vulcan\.py\s+session", commands_block, re.IGNORECASE):
             warnings.append("worker Run에 Orchestrator 전용 명령이 포함되어 있을 수 있습니다. worker self-check와 Orchestrator 재실행 명령을 분리하세요.")
 

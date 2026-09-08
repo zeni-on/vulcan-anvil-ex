@@ -109,9 +109,10 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | worker handoff 전 사전검사 | `python vulcan.py run-preflight <run-file>` |
 | Run 완료/형식 검사 | `python vulcan.py run-check <run-file>` |
 
-native subagent, thread, native branch agent에게 넘기기 전에는 Orchestrator가 `run-preflight`를 직접 실행한다. `run-exec`와 `agent-run --mode work`는 preflight 자동 실행 경로가 있지만, native 위임은 자동 차단되지 않는다.
+native subagent, thread, native branch agent에게 넘기기 전에는 Orchestrator가 `run-preflight` 또는 이를 포함한 `execute --dry-run`의 통과를 확인한다. `run-exec`와 `agent-run --mode work`는 preflight 자동 실행 경로가 있지만, native 위임은 자동 차단되지 않는다.
 
 `execute --dry-run`은 실제 worker를 실행하지 않는다. Run 문서를 기준으로 `run-check`, `run-preflight`, 위임 sidecar 후보, `scope.writable`, 검증 명령, 외부 runner 연결 명령을 한 번에 요약한다. native subagent/thread/Agy branch agent에게 일을 넘기기 전에는 이 출력으로 누락된 handoff 조건을 먼저 확인한다.
+이 호출에서 preflight가 통과했고 이후 Run/계약/범위/프로젝트 상태가 바뀌지 않았다면 동일 사전검사를 별도 명령으로 반복할 필요는 없다. 변경이 생기면 위임 전에 다시 검사한다.
 
 자동화나 Dashboard 연동처럼 기계가 읽어야 하는 경우에는 `--json`을 붙인다. 이 JSON에는 `delegation_sidecar` 후보, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다. 이 출력도 dry-run 계획일 뿐이며 worker 실행, Gate 승인, Wave 완료를 수행하지 않는다.
 
@@ -126,7 +127,7 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 
 구현은 기본적으로 통합 브랜치에서 수행한다. Orchestrator는 기능 구현의 주 작성자가 아니라 worker 결과를 통합하고 검증하는 역할이다.
 
-Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 `docs/product/PRODUCT_BRIEF.md`, `PRODUCT_CONTRACTS.md`, `PRODUCT_TRACEABILITY.md`, `REGRESSION_AND_RELEASE_REPORT.md`를 기준으로 관련 `REQ/API/DATA/UI/REG`를 추천한다. 생성된 Product Build Wave Run은 기본적으로 `docs/product/` 원장 문서 세트를 worker 입력으로 사용한다. 원장만으로 API/DB/UI/보안/개발표준 계약이 부족하면 audit 템플릿을 그대로 끌어오지 말고 `docs/templates/product/PRODUCT_*_TEMPLATE.md`에서 Product 경량 상세 문서를 만들어 `docs/artifacts/02-design/...`에 둔다.
+Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 Product 원장에서 관련 `REQ/API/DATA/UI/REG`를 추천한다. 원장 전체 정독 대신 worker guide와 대상 계약 ID/섹션을 입력으로 사용한다. 생성된 Run의 수정 경로와 검증 명령 TBD는 실제 프로젝트 기준으로 확정한 뒤 preflight를 통과시킨다. 원장만으로 계약이 부족하면 `docs/templates/product/PRODUCT_*_TEMPLATE.md`의 경량 상세 문서를 `docs/artifacts/02-design/...`에 둔다. 추적표/최종 결과 정리는 Orchestrator가 맡으며, 증적 재사용과 재실행 조건은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 
 `BW-000 implementation-scaffold`는 skeleton/build smoke만 검증한다. 업무 요구사항, 테스트, UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다.
 

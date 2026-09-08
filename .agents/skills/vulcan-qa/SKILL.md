@@ -25,6 +25,11 @@ Use this for Gate 4 QA and QA iterations.
 
 `QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`. A separate QA worktree is optional and should be used only when explicitly enabled by project policy.
 
+For Product, use `docs/core/PRODUCT_PROFILE_BASELINE.md` section 7 for evidence
+review and repeat-check decisions. Execute the approved release-candidate checks;
+do not replace them with Impl self-checks. Subsequent report-only edits do not
+require running the same product tests again. Record remaining warnings honestly.
+
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.
@@ -32,7 +37,7 @@ Use this for Gate 4 QA and QA iterations.
 - If QA is delegated to an external CLI runner, keep the full Run Execution Record, `_exec` logs, watchdog/timeout status, and any recovered transcript.
 - If logs, screenshots, transcripts, or previous failures are mixed, use `qa-reader` to classify evidence before deciding a fix path.
 - If a QA command is `Not Run` or `environment_blocked` because of local tooling, run `doctor` before retrying or classifying it as a product failure.
-- If QA failure appears related to Program/API/DB/UI contract drift, use `contract-reviewer` before creating a `qa-fix-loop`.
+- If QA failure appears related to Program/API/DB/UI contract drift, consider a fresh-context `contract-reviewer` under `AGENT_RUN_PROTOCOL.md` section 5.4 before creating a `qa-fix-loop`. Preserve mandatory reviews; do not treat an inherited implementation conversation as independent review.
 - Classify failures as `FIND`, `CR`, `ISSUE`, or `environment_blocked`.
 - Start `qa-fix-loop` only after Orchestrator/user decision.
 - A `qa-fix-loop` Run must name the target `FIND-ID`, scope writable paths, and verification commands.
