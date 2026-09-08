@@ -289,13 +289,16 @@ class EvidenceTests(unittest.TestCase):
         self.assertIsNone(report["tested_commit"])
 
     def test_symlink_and_junction_validation_without_privileges(self):
+        # The implementation resolves the root (including Windows short paths).
+        self.root = self.root / ".." / self.root.name
+        target = (self.root / "src").resolve()
         for method in ("is_symlink", "is_junction"):
             if not hasattr(Path, method):
                 continue
             original = getattr(Path, method)
 
             def detect(path):
-                return path == self.root / "src" or original(path)
+                return path == target or original(path)
 
             with self.subTest(method=method), mock.patch.object(Path, method, detect):
                 with self.assertRaises(ValueError):
