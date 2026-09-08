@@ -1,14 +1,14 @@
 # Codex Model Policy
 
 > Status: draft v0.1
-> Scope: `codex-cli` runner only
+> Scope: Codex native subagent policy and optional `codex-cli` runner policy
 
 ## 1. 목적
 
 Vulcan-Anvil Ex는 초기 audit workflow에서 Codex runner를 보수적으로 `gpt-5.5` + `high` reasoning effort로 사용했다.
 이 기본값은 설계 정합성, QA 판단, 릴리즈 전 검수에는 안전하지만 모든 worker 작업에 쓰기에는 시간이 오래 걸리고 비용도 커질 수 있다.
 
-이 문서는 Codex runner의 작업 성격별 model/effort 선택 기준을 정의한다.
+이 문서는 Codex native subagent와 외부 runner의 model/effort 선택 기준을 구분한다. native 호출은 3.1절, 외부 `codex-cli` 호출은 2절, 3절의 역할 표와 4절 이후의 설정을 따른다.
 목표는 별도 벤치마크 프로젝트를 만들지 않고, 실제 Run 실행 기록을 누적해 점진적으로 정책을 조정하는 것이다.
 
 Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니다.
@@ -16,10 +16,10 @@ Claude CLI와 Antigravity/Gemini runner는 이 문서의 적용 대상이 아니
 ### Astra와 native 실행
 
 Product는 품질 profile이며 별도의 `product-astra` profile을 만들지 않는다. Astra에서도 Product 입력/검증 범위는 `PRODUCT_PROFILE_BASELINE.md` 7절을 적용한다. 모델별 지침 검토 근거는 [공식 Astra 가이드](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra)다.
-아래 CLI 기본값을 바꾸거나 Run에 모델명을 적는 것만으로 Codex 앱의 메인 모델이나 native subagent 설정이 바뀌지는 않는다. 현재 surface가 지원하는 설정만 사용하고, 실제 모델/effort가 확인되지 않으면 추정해 기록하지 않는다. custom agent의 고정 TOML 값과 일반 worker의 상속 설정도 구분한다.
-입력/반복 검증 개선의 비교에서는 기존 모델/effort를 유지한다. 이후 작업 위험도에 따라 effort와 모델을 별도 비교하며 일괄 Astra 전환이나 하향을 강제하지 않는다. Fast 설정은 실제 사용 여부를 확인한다. API의 `configuration_update`/비동기 도구 옵션은 문서 지시만으로 앱에 적용되지 않는다.
+아래 CLI 기본값이나 Run의 모델명은 앱의 메인 모델을 바꾸지 않는다. 메인 모델/effort는 사용자가 선택한 값을 유지한다. native subagent 모델은 사용자 설정 상속을 기본으로 하고 effort만 3.1절에 따라 작업별로 선택한다. 실제 모델/effort가 확인되지 않으면 추정해 기록하지 않는다.
+입력 축소와 effort 조정의 효과는 구분해서 비교한다. 일괄 Astra 전환이나 모델 하향을 강제하지 않는다. Fast 설정은 실제 사용 여부를 확인한다. API의 `configuration_update`/비동기 도구 옵션은 문서 지시만으로 앱에 적용되지 않는다.
 
-## 2. 기본 원칙
+## 2. 외부 CLI 기본 원칙
 
 - 명시 옵션이 항상 우선한다.
   - `--model`
@@ -32,7 +32,7 @@ Product는 품질 profile이며 별도의 `product-astra` profile을 만들지 �
 - 품질 판단이 필요한 작업은 계속 강한 모델/높은 effort를 사용한다.
 - 로그 요약, 증적 index, Run 초안 같은 정리 작업은 낮은 모델/effort를 우선 사용한다.
 
-## 3. 권장 역할 정책
+## 3. 외부 CLI 권장 역할 정책
 
 | Role | Model | Effort | 용도 |
 | --- | --- | --- | --- |
@@ -49,20 +49,25 @@ Product는 품질 profile이며 별도의 `product-astra` profile을 만들지 �
 이 표는 성능 개선을 위한 시작점이다.
 정답으로 고정하지 않고 실제 sample Run에서 duration, 실패율, Orchestrator 보정량을 보고 조정한다.
 
-## 3.1 Codex Custom Agent 권장값
+## 3.1 Native 모델 상속과 작업별 effort
 
-`.codex/agents/*.toml`에 정의하는 custom agent는 역할별로 model/effort를 직접 명시한다.
-이 값은 `agent-run/run-exec`의 runner 정책이 아니라 Codex subagent 정의에 적용되는 값이다.
+Ex가 배포하는 `.codex/agents/*.toml`은 역할만 정의하고 `model`, `model_reasoning_effort`를 고정하지 않는다. 일반 worker와 custom agent 모두 기본적으로 `model` override를 생략한다. 메인의 설정이나 사용자 전역 `.codex/config.toml`을 Ex가 임의로 변경하지 않는다.
 
-| Custom Agent | Model | Effort | 이유 |
-| --- | --- | --- | --- |
-| `trace-scout` | `gpt-5.5` | `medium` | 빠른 관련 ID/source document 탐색 |
-| `run-drafter` | `gpt-5.5` | `medium` | Run 작업지시서 누락/과다 범위 검토 |
-| `contract-reviewer` | `gpt-5.5` | `high` | 설계/구현 계약 누락과 CR 후보 판단 |
-| `qa-reader` | `gpt-5.5` | `medium` | QA 로그 원인 분류와 FIND/CR/ISSUE 후보 판단 |
+[OpenAI 공식 subagent 문서](https://developers.openai.com/codex/subagents)에 따르면 custom TOML 값이 있으면 우선하며, 그 외에는 명시적 spawn 값, 사용자 `[agents]` 기본값, 부모 설정 순으로 결정된다. 따라서 Ex의 고정값을 제거해도 사용자의 `agents.default_subagent_model` 설정이 있으면 부모와 다를 수 있다. 부모 모델 상속 의도와 충돌하면 그 사실을 알리고 사용자 설정을 확인한다. 실제 적용값을 확인하지 못했으면 `unknown`으로 보고한다.
 
-custom agent도 정답으로 고정하지 않는다.
-실제 샘플 프로젝트에서 소요 시간, 유효 지적 수, 잘못 짚은 지적 수, Orchestrator 보정량을 보고 조정한다.
+사용자가 특정 subagent effort를 지시했다면 우선한다. 그 외에는 Orchestrator가 생성 전에 아래 기준으로 선택하고, 현재 도구가 지원하면 `reasoning_effort` 인자로 전달한다. 메인의 effort는 바꾸지 않는다.
+
+| effort | 선택 기준 |
+| --- | --- |
+| `low` | 판단 범위가 좁은 파일/ID 탐색, 확정된 형식의 결과 정리, 기계적 수정 |
+| `medium` | 기본값. 계약이 명확한 일반 구현, 담당 테스트 작성, 국소 검토/증적 해석 |
+| `high` | 보안/권한, 데이터 마이그레이션, 여러 모듈의 계약 변경, 모호한 설계나 어려운 원인 분석 |
+
+역할 이름만으로 effort를 고정하지 않는다. 중요한 검토를 무조건 low로 시작했다가 반복 재시도하지 않고, 위험을 알면 처음부터 high를 선택한다. `xhigh` 이상은 자동 기본값으로 쓰지 않는다. 사용자가 명시했거나 별도 합의된 정책이 있을 때만 사용한다.
+
+현재 모델/도구가 선택값을 지원하지 않거나 세션에 이전 custom agent 고정값이 로드돼 있으면, 프롬프트에 effort를 적는 것으로 적용됐다고 주장하지 않는다. 지원되는 설정/역할로 재시작하거나, 상속값과 한계를 알린 뒤 기존 권한 안에서 진행한다. fresh-context 요구는 별도로 [AGENT_RUN_PROTOCOL.md](AGENT_RUN_PROTOCOL.md) 5.4절을 따른다.
+
+호출 시 선택한 effort와 간단한 이유는 기존 위임 요약에 남길 수 있다. 런타임이 응답하지 않은 실제 값/토큰/비용은 만들지 않으며, 이를 위해 새 필수 Run 필드나 경고 0개 정리 루프를 추가하지 않는다. effort는 사고량 조정이지 테스트/보안/승인 기준 완화가 아니다. 비용 절감은 입력량, 재시도, 유효 결함과 보정량을 함께 보고 판단한다.
 
 ## 4. 설정 예시
 

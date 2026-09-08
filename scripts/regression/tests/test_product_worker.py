@@ -5,6 +5,7 @@ import json
 import re
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -354,21 +355,41 @@ class ProductWorkerTests(unittest.TestCase):
                 self.assertEqual(plan["runner"]["model"], "")
                 self.assertFalse((root / plan["delegation_sidecar"]["path"]).exists())
 
+    def test_custom_agents_leave_model_and_effort_to_runtime(self):
+        names = {"trace-scout", "run-drafter", "contract-reviewer", "qa-reader"}
+        for name in names:
+            with self.subTest(agent=name):
+                config = tomllib.loads((ROOT / f".codex/agents/{name}.toml").read_text(encoding="utf-8"))
+                self.assertEqual(config["name"], name)
+                self.assertTrue(config["description"])
+                self.assertTrue(config["developer_instructions"])
+                self.assertNotIn("model", config)
+                self.assertNotIn("model_reasoning_effort", config)
+
     def test_init_and_upgrade_install_worker_guide(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         root = Path(temp.name) / "product-fixture"
         expected = (ROOT / vulcan.PRODUCT_WORKER_GUIDE).read_text(encoding="utf-8")
+        agents = {p.relative_to(ROOT): p.read_text(encoding="utf-8") for p in (ROOT / ".codex/agents").glob("*.toml")}
         with contextlib.redirect_stdout(io.StringIO()), \
                 mock.patch.object(vulcan.subprocess, "run", side_effect=OSError("Git disabled in unit fixture")):
             vulcan.init(str(root), "worker-fixture", "Codex", profile="product", primary="codex-cli")
         guide = root / vulcan.PRODUCT_WORKER_GUIDE
         self.assertEqual(guide.read_text(encoding="utf-8"), expected)
+        for rel_path, source in agents.items():
+            self.assertEqual((root / rel_path).read_text(encoding="utf-8"), source)
+            self.write(root / rel_path, 'model = "previous-fixed-model"\nmodel_reasoning_effort = "high"\n')
+        user_config = "[agents]\ndefault_subagent_model = 'user-choice'\ndefault_subagent_reasoning_effort = 'high'\n"
+        self.write(root / ".codex/config.toml", user_config)
         self.write(guide, "# Old worker guide\n")
         with contextlib.redirect_stdout(io.StringIO()), \
                 mock.patch.object(vulcan.subprocess, "run", side_effect=AssertionError("No external processes in upgrade fixture")):
             vulcan.cmd_upgrade(str(root))
         self.assertEqual(guide.read_text(encoding="utf-8"), expected)
+        for rel_path, source in agents.items():
+            self.assertEqual((root / rel_path).read_text(encoding="utf-8"), source)
+        self.assertEqual((root / ".codex/config.toml").read_text(encoding="utf-8"), user_config)
         self.assertEqual(json.loads((root / "session.json").read_text(encoding="utf-8"))["current_gate"], "phase0")
 
 

@@ -36,6 +36,8 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
   - `contract-reviewer`: design, implementation, API, DB, UI, or release contract consistency is risky.
   - `qa-reader`: QA logs/evidence contain mixed failures, stale results, or unclear root causes.
 - Custom agent results are advisory. Record whether execution was native custom agent or prompt-contract fallback when reporting.
+- Use `docs/core/CODEX_MODEL_POLICY.md` section 3.1: inherit the user's model configuration, choose supported effort per task (normally medium), and preserve explicit user overrides. Do not rewrite user/global model settings.
+- Apply `docs/core/AGENT_RUN_PROTOCOL.md` section 5.4 before independent review. In Product, assess risk instead of invoking reviewers for every Wave; preserve mandatory Audit/customer/user reviews. Use a new reviewer without parent conversation (`fork_context: false` when available), with scoped contracts/diff/evidence rather than the implementer's success narrative. External models are optional unless explicitly required.
 - See `docs/reference/CODEX-CUSTOM-AGENT-STRATEGY.md` for details.
 
 ## Guardrails

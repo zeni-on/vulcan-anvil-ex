@@ -213,13 +213,15 @@ Handoff는 기본적으로 강제 절차가 아니다. Orchestrator는 Gate 4로
 같은 별도 세션/worktree 실행 모델은 Build Wave 구현, Evidence 수집, QA Fix에도 적용할 수 있다.
 사용자-facing 용어는 `교차검증`을 우선 사용한다. 기존 `독립 검수`는 호환 용어로 유지한다.
 
+native 검수 호출 판단과 문맥 분리의 원본 기준은 [AGENT_RUN_PROTOCOL.md](AGENT_RUN_PROTOCOL.md) 5.4절이다. Product에서는 아래 Gate/PR 지점을 위험 평가 시점으로 보고 매번 외부 runner를 호출하지 않는다. Audit/고객/사용자가 명시한 필수 검수는 유지한다. 같은 모델의 새 문맥 검수와 다른 모델의 교차검증은 구분한다.
+
 `vulcan.py review-request`는 작성 세션과 분리된 독립 검수 요청을 만든다.
 
 독립 검수는 handoff보다 더 좁은 검수 절차다. 목적은 다른 세션 또는 detached worktree에서 산출물과 증적을 읽기 중심으로 재검토하고, 결과를 `PASS`, `FIND`, `CR`, `ISSUE` 후보로 남기는 것이다.
 
 `vulcan.py agent-run --mode review --target-id RV-NNN`은 `codex-cli`, `claude-cli`, `antigravity-cli` runner로 요청을 실제 실행한다. 이때 새 Desktop 대화창을 여는 것이 아니라 `codex exec`, `claude -p`, `agy.exe --print` 기반의 분리 실행을 만들고, 실행 로그와 마지막 응답, result 파일 변경 여부를 증적으로 남긴다.
 
-PR도 교차검증 대상이다. Build runner가 만든 브랜치나 draft PR은 작성 runner와 다른 runner가 PR diff, CI, 관련 Run, 테스트 결과, Playwright 증적, 추적표 delta를 검토한 뒤 Orchestrator가 merge 후보, `FIND`, `CR`, `ISSUE`로 확정한다. PR 교차검증 결과도 자동 승인이나 자동 merge 권한을 갖지 않는다.
+PR도 검수 대상이다. 별도 검수가 필요하면 새 문맥의 native reviewer가 PR diff, CI, 관련 Run, 테스트 결과와 증적을 검토할 수 있다. 다른 runner/model이 명시적으로 필요한 교차검증은 그 요구를 따른다. Orchestrator가 근거를 확인해 merge 후보, `FIND`, `CR`, `ISSUE`로 정리하며 리뷰 결과는 자동 승인이나 자동 merge 권한을 갖지 않는다.
 
 기본 권장 적용 지점은 다음이다.
 

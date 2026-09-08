@@ -90,6 +90,8 @@ Codex custom agent 정의는 `.codex/agents/`에 있다. 결과는 후보 의견
 
 현재 surface가 custom agent 이름을 tool schema로 직접 받는다고 가정하지 않는다. native custom agent가 아니고 fallback으로 TOML 내용을 프롬프트에 주입했다면, model/effort가 자동 적용됐다고 보고하지 않는다.
 
+Codex native 호출은 `CODEX_MODEL_POLICY.md` 3.1절에 따라 모델 override를 기본 생략하고 effort만 작업별로 선택한다. Ex custom agent는 모델/effort를 고정하지 않는다. Product 리뷰 호출 판단과 새 문맥 요건은 `AGENT_RUN_PROTOCOL.md` 5.4절을 따른다. 독립 reviewer는 부모 대화를 상속하지 않으며(`fork_context: false` 지원 시 명시), 사용자가 요청한 검수와 Audit 필수 검수는 유지한다.
+
 ## 6. 완료 보고
 
 완료 보고에는 다음을 간결하게 포함한다.

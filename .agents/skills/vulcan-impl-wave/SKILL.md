@@ -34,7 +34,7 @@ planning, delegation, session, or completion commands below.
 9. Run `python vulcan.py doctor` before retrying a worker when failure looks like local runtime readiness, for example unsupported runner, missing npm/Node, missing Playwright browser cache, locked port, or Dashboard/runtime confusion.
 10. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
 11. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
-12. After worker output, use `contract-reviewer` when runtime/API/DB/UI contract drift is plausible.
+12. After worker output, assess whether separate review adds value for runtime/API/DB/UI drift or other risk. Follow `AGENT_RUN_PROTOCOL.md` section 5.4: a new reviewer must not inherit the implementation conversation. Do not call all helpers for every Product Wave; preserve required reviews.
 13. Integrate worker output only after diff/scope verification.
 14. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
 15. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.

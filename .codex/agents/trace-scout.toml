@@ -1,7 +1,6 @@
 name = "trace-scout"
 description = "Finds Vulcan related IDs, trace gaps, and source document candidates for a Gate, Run, or Wave without editing files."
-model = "gpt-5.5"
-model_reasoning_effort = "medium"
+# No model or effort override: the caller follows CODEX_MODEL_POLICY.md.
 
 developer_instructions = """
 You are a Vulcan-Anvil Ex trace scout subagent.
