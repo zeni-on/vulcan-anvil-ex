@@ -241,6 +241,24 @@ Ex custom agent는 모델/effort를 고정하지 않습니다. 메인 모델/eff
 
 리뷰어 호출은 자동 보장되지 않습니다. Orchestrator가 [native review 기준](core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)으로 위험을 판단합니다. 독립검수로 호출할 때는 **부모 대화를 상속하지 않은 새 reviewer**를 사용하고, 요구/계약/diff/코드/증적을 전달합니다. `fork_context: false`는 지원되는 도구에서 명시하며, 단순히 이전 내용을 잊으라는 프롬프트를 주는 것과는 다릅니다. `upgrade` 후 기존 세션이 옛 고정 역할 설정을 보여주면 새 세션에서 확인합니다.
 
+#### 4.1.1 데스크톱 앱에서 역할별 작업 운영
+
+사용자는 총괄하고만 대화하고, 설계·경험설계·개발·품질검증은 별도 작업창에서 담당하게 할 수 있습니다. 역할 수는 고정이 아니며, 짧은 보조 업무에는 subagent를 사용합니다. 기존 작업을 연결할 때 총괄에게 다음처럼 알려줍니다.
+
+```text
+이 프로젝트에서 나는 총괄하고만 대화할게.
+기존 설계, 경험설계, 개발, 품질검증 작업을 역할별 담당으로 연결해줘.
+현재 Gate와 승인 범위 안에서 필요한 담당자에게만 업무를 전달하고 결과를 회수해줘.
+Gate 상태와 최종 추적표는 총괄이 관리하고, 질문과 승인 요청도 모아서 알려줘.
+연결 도구가 없거나 대상/작업공간이 불명확하면 먼저 알려줘.
+```
+
+작업창 이름만으로 역할/권한/모델 설정이나 자동 협업이 생기지는 않습니다. 총괄이 실제 대상 ID와 Local/worktree 경로, 소스 기준을 확인합니다. 역할 작업창의 오래된 대화보다 현재 승인된 원본 문서가 기준이며, 전체 원장을 매번 전달하지 않습니다.
+
+기존 Run은 개별 업무 계약으로 재사용하고, 결과는 `delegation_records`로 연결합니다. PoC의 Run 생략 규칙은 그대로 유지합니다. 새 역할별 산출물 세트나 Gate는 만들지 않고, 단일 active Build Wave와 사용자 승인 경계도 유지합니다. 장기 품질검증 담당과 새 문맥의 독립 리뷰어는 구분합니다.
+
+상세 기준: [공통 협업 규칙](core/COLLABORATION_PROTOCOL.md), [Codex 작업 연결](adapters/codex-gpt/PERSONA_DELEGATION.md). `init`/`upgrade`는 이 지침을 설치하지만 실제 작업창을 만들거나 연결하지는 않습니다. 먼저 읽기 전용 업무 하나로 전달/회수를 확인한 뒤 확대합니다.
+
 ### 4.2 Antigravity/Agy main Orchestrator
 
 Agy를 메인 Orchestrator로 사용할 수도 있습니다. 이 경우 Agy는 `GEMINI.md`, `docs/core/`, `docs/adapters/gemini/`를 기준으로 Gate를 조율하고, 플랫폼의 native subagent와 `Workspace: branch` 기능을 활용해 worker를 분리 실행할 수 있습니다.

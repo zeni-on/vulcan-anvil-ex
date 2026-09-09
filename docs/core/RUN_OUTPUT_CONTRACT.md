@@ -166,6 +166,8 @@ next_run_suggestion:
 
 `delegation_records`는 Orchestrator가 작업을 직접 수행하지 않고 다른 실행자에게 맡긴 사실을 남기는 얇은 책임 추적 기록이다.
 
+역할별 지속 작업은 [Role-Based Collaboration](COLLABORATION_PROTOCOL.md)에 따라 업무별 결과를 이 기록으로 연결한다. `codex-thread`의 실제 작업 ID/경로는 알 수 있을 때 `notes` 또는 기존 실행 메타에 남긴다. 작업창 전체를 하나의 완료 Run으로 취급하거나 새 필수 식별자 스키마를 추가하지 않는다.
+
 외부 CLI runner를 사용할 때는 `Run Execution Record`와 `execution`에 상세 메타를 남긴다. subagent 또는 같은 Codex thread 계열 위임은 프로세스 로그, stderr, timeout, cache 경로까지 남기지 않아도 된다. 대신 누가, 어떤 범위로, 어떤 결과를 반환했고, Orchestrator가 무엇을 재검증했는지는 남긴다.
 
 ```yaml

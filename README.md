@@ -126,6 +126,8 @@ Codex를 메인 Orchestrator로 사용할 때는 프로젝트 루트의 `AGENTS.
 
 Custom agent는 자동 승인자가 아닙니다. 메인 Orchestrator가 관련 ID 탐색, Run 초안 검토, 계약 정합성 검토, QA 로그 해석 같은 보조 작업을 맡길 때 사용하고, 최종 Gate 전환과 승인 판단은 다시 Orchestrator가 검증합니다.
 
+데스크톱 앱에서는 설계·경험설계·개발·품질검증 작업을 나누고 총괄하고만 대화하는 방식도 사용할 수 있습니다. Ex 문서와 Gate는 유지하며, 실제 전달/회수 도구와 담당 파일을 확인합니다. [역할별 작업 운영](docs/GETTING_STARTED.md#411-데스크톱-앱에서-역할별-작업-운영)은 선택형 정책이며 자동 dispatcher 기능은 아닙니다.
+
 ## Antigravity/Agy에서 사용할 때
 
 Antigravity/Agy도 메인 Orchestrator가 될 수 있습니다. 이 경우 Gemini/Antigravity adapter 문서를 기준으로 Core Gate 규칙을 읽고, Agy 플랫폼의 native subagent와 `Workspace: branch` 기능을 활용해 worker를 격리 실행합니다.

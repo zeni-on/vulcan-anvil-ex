@@ -1,82 +1,70 @@
 # Codex/GPT Persona Delegation
 
-> 상태: 초안 v0.1
-> 목적: Codex/GPT 런타임에서 메인 에이전트가 persona 기반 subagent 작업을 위임하는 방식을 정의한다.
+> Codex desktop의 역할별 작업(thread)과 일시적인 subagent를 Ex의 공통 작업 계약에 연결한다. CLI에서도 사용 가능한 경로만 적용한다.
 
-## 1. 개념
+## 1. 공통 기준
 
-Codex/GPT Adapter에서 persona는 subagent 이름이 아니라 작업 계약이다.
+역할, 문서 소유권, 짧은 전달/회수, 승인 경계는 [Role-Based Collaboration](../../core/COLLABORATION_PROTOCOL.md)을 따른다. persona는 작업 계약이며 작업창 제목이나 custom agent 이름과 같을 필요는 없다. 새 역할별 필수 문서나 별도 Gate 상태를 만들지 않는다.
 
-Codex 런타임이 subagent를 지원하면 메인 에이전트는 `docs/core/AGENT_PERSONAS.md`의 persona를 기준으로 작업을 나누어 위임한다. subagent 기능이 없거나 사용할 수 없는 환경에서는 메인 에이전트가 같은 persona 계약을 직접 수행한다.
+## 2. 어떤 실행 공간을 쓸까
 
-## 2. 위임 우선순위
+| 목적 | 권장 방식 |
+| --- | --- |
+| 사용자가 유지하려는 설계/경험설계/개발/품질검증 대화 | 사용자가 지정하거나 생성 요청한 역할별 작업 |
+| 현재 업무 안의 짧고 독립적인 조사/구현/증적 해석 | 총괄 아래의 subagent |
+| 독립 리뷰 | 부모 대화를 상속하지 않은 새 reviewer |
+| 다른 모델 또는 별도 CLI 실행 증적 | 선택형 외부 runner |
 
-메인 에이전트는 다음 순서로 판단한다.
+사용자가 역할별 운영을 선택해도 작업 수를 고정하거나 Run마다 새 작업창을 만들지 않는다. 새 사용자 작업창은 사용자 생성 요청이 있을 때만 만든다. 현재 업무의 하위 일은 subagent를 사용한다. 이미 있는 역할 작업은 같은 프로젝트인지 확인한 뒤 재사용한다. 역할 제목만으로 읽기 전용 권한이나 model/effort가 설정되었다고 보고하지 않는다.
 
-1. Run 입력의 `persona`를 확인한다.
-2. `docs/core/AGENT_PERSONAS.md`에서 persona의 책임과 금지사항을 확인한다.
-3. `docs/adapters/codex-gpt/skills/`에서 필요한 skill 카드를 추가로 확인한다.
-4. 수정 범위가 겹치지 않는 경우에만 subagent 병렬 실행을 고려한다.
-5. subagent 결과는 반드시 Run 출력 계약으로 정규화한다.
-6. Codex thread/subagent를 사용했으면 외부 CLI runner의 `Run Execution Record`가 없더라도 현재 Run에 `delegation_records`를 남긴다.
+## 3. 기존 작업 연결
 
-## 3. 권장 위임 패턴
+1. 현재 도구 목록에서 작업 조회, 메시지 전달, 결과 회수 기능을 확인한다. Codex 앱 도구가 제공되면 `list_threads`, `read_thread`, `send_message_to_thread`, `wait_threads`에 해당하는 기능을 사용할 수 있다. 실제 이름/인자는 노출된 schema를 따른다.
+2. 사용자 지정 역할을 반환된 프로젝트/작업 ID에 연결한다. 표시 제목은 그대로 사용하되 제목만으로 식별하거나 임의 ID를 만들지 않는다. 동명이거나 위치가 불명확하면 배정 전에 확인한다.
+3. 연결 정보는 기존 총괄 Plan/작업 요약에 짧게 남긴다. `session.json`에 새로운 필수 registry를 만들지 않는다. 대상 작업이 사라졌거나 접근할 수 없으면 재조회하고, 오래된 ID로 성공을 가정하지 않는다.
+4. 대상의 진행 상태와 실제 작업 경로/branch/소스 기준을 확인한다. 같은 프로젝트 아래에 있어도 Local/worktree가 다를 수 있다. 별도 worktree에는 총괄의 미커밋 문서나 최신 통합 변경이 자동 반영됐다고 가정하지 않는다.
+5. 업무를 전달한 뒤 도구가 제공하는 완료 알림/긴 대기를 사용한다. API의 접수/전송 성공이나 작성 중이라는 상태는 결과 완료가 아니다. 완료 응답을 회수하고 원본 파일/증적을 확인한다. 반복 전체 대화 조회나 의미 없는 재지시는 피한다.
 
-| 상황 | 권장 persona | 위임 방식 |
-| --- | --- | --- |
-| 요구사항 초안 작성 | `requirements` | 단일 subagent 또는 메인 에이전트 직접 수행 |
-| 기능/프로그램/DB/화면 설계 | `design` | 기능 단위로 나누어 순차 실행 |
-| 구현 | `build` | 파일 소유권이 분리될 때만 병렬 실행 |
-| 화면 캡처/테스트 증적 | `evidence` | 구현 완료 후 별도 Run으로 실행 |
-| 보안/추적성/품질 검토 | `review` | 구현과 분리된 읽기 중심 Run으로 실행 |
-| QA 결함 수정 | `build` + `review` | build가 수정하고 review가 재검증 |
-| 변경요청 영향도 분석 | `change-control` | 먼저 분석 후 필요한 Gate persona로 진행 |
+일반 대화의 종료 후에도 총괄이 자동으로 계속 깨어난다고 가정하지 않는다. 현재 작업에서 지원되는 대기/알림을 사용하고, 그 기능이 없으면 재개 필요를 알린다. 자동화는 사용자의 별도 요청 없이 만들지 않는다.
 
-## 4. Codex subagent 전달문 기본형
+도구가 없으면 해당 역할 작업창을 호출했다고 보고하지 않는다. 허용된 subagent나 외부 runner로 대체 가능한지 판단하고 실행 매체 변경을 알린다. 사용자가 특정 작업/새 문맥을 지정했다면 임의 대체하지 않는다. 기능 구현의 직접 수행 예외와 Gate 승인은 기존 Core 규칙을 유지한다.
+
+## 4. 전달문 예시
+
+Run이 있는 경우 아래처럼 연결 정보와 변경점만 보낸다. 값은 실제 배정에서 확인해 채운다.
 
 ```text
-너는 Vulcan-Anvil Ex의 `{persona}` persona로 동작한다.
-
-반드시 먼저 읽을 문서:
-- AGENTS.md
-- docs/core/AGENT_PERSONAS.md
-- docs/core/AGENT_RUN_PROTOCOL.md
-- docs/core/TRACEABILITY_RULES.md
-- docs/core/RUN_INPUT_CONTRACT.md
-- docs/core/RUN_OUTPUT_CONTRACT.md
-
-이번 Run:
-<RUN_INPUT_YAML>
-
-규칙:
-- scope.writable 안의 파일만 수정한다.
-- related_ids와 무관한 변경은 하지 않는다.
-- 검증하지 않은 결과를 통과로 보고하지 않는다.
-- 완료 시 변경 파일, 검증 결과, 증적, 미해결 이슈, Orchestrator가 `delegation_records`에 기록할 위임 결과 요약을 반환한다.
+이번 업무는 build 담당이다. 총괄 절차나 다른 역할의 정리를 함께 수행하지 않는다.
+작업: <Run 경로 / 이번 업무>
+기준: <Gate, Profile, 승인 범위, 실제 cwd, 소스 기준과 dirty 여부>
+입력: <관련 ID와 원본 계약 구간, 이전 배정 이후 달라진 조건>
+범위: <Run scope.writable 참조, 제외 범위, 선행 결과>
+검증: <Run verification.commands/cwd 참조>
+반환: 변경 파일, 실행 결과/증적, 미해결 사항과 총괄 결정 필요 항목.
+읽기 시작점은 AGENTS.md와 배정 Run이며, Product build는
+docs/core/PRODUCT_WORKER_GUIDE.md를 따른다. 필요한 계약과 공통 제약만 추가로 읽는다.
 ```
 
-## 5. 병렬 위임 제한
+다른 persona는 해당 담당 지침으로 바꾼다. PoC에서 Run을 생략할 수 있으면 Profile에서 허용한 짧은 작업 계약을 사용한다. 담당자에게 Core 전체와 누적 session/원장을 일괄 전달하지 않는다.
 
-다음 경우에는 병렬 subagent 실행을 피한다.
+## 5. 결과, 권한과 비용
 
-- 같은 파일을 둘 이상의 persona가 수정해야 한다.
-- 요구사항 또는 설계가 아직 승인되지 않았다.
-- 보안 기준을 낮추는 판단이 필요하다.
-- DB 스키마와 프로그램 구현이 동시에 바뀌어 순서 의존성이 크다.
-- 테스트 실패 원인이 요구사항 변경인지 구현 결함인지 불명확하다.
+- 기존 `delegation_records`에서 별도 작업 위임은 `mode: codex-thread`, subagent는 `mode: codex-subagent`로 구분한다. 실제 대상 ID/경로가 있으면 `notes` 또는 기존 실행 메타에 남긴다. 알 수 없는 시간/model/effort/식별자를 추정하지 않는다.
+- `worker_completed`는 담당자 완료다. `verified`와 Gate/QA 최종 판정은 총괄 검증 후에만 기록한다. 읽기 전용 리뷰도 테스트 실행 부산물이 생겼다면 보고한다.
+- 모델/effort는 [Codex Model Policy](../../core/CODEX_MODEL_POLICY.md) 3.1절을 따른다. 기존 역할 작업은 자체 설정이 있을 수 있으므로 총괄 모델 상속을 단정하거나 기본적으로 덮어쓰지 않는다.
+- 독립 reviewer는 [native review 기준](../../core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)을 따른다. 지원되는 subagent 호출은 `fork_context: false`를 명시한다. 기존 구현 대화를 fork한 작업이나 장기 QA 담당에게 "이전 대화를 잊어라"고 하는 것은 같은 보장이 아니다.
+- Codex의 Local/worktree 전환은 Gate 전환이 아니다. 품질검증은 총괄이 지정한 안정된 QA workspace/소스에서 수행하고, 테스트 동안 해당 환경의 동시 변경을 막는다. 총괄/담당자가 서로 같은 Git index에서 커밋하지 않는다.
 
-## 6. 결과 수집
+## 6. 작은 운영 리허설
 
-메인 에이전트는 subagent 결과를 그대로 최종 답변으로 사용하지 않는다.
+사용자가 선택한 기존 역할 작업에 한 개 계약 구간의 읽기 전용 검토를 맡겨 다음을 확인한다.
 
-반드시 다음을 수행한다.
+1. 올바른 프로젝트/작업 ID와 소스 기준으로 전달되었는가?
+2. 결과가 총괄에 회수되고 근거 파일/구간을 확인할 수 있는가?
+3. 담당자가 Gate/session/공통 원장을 수정하지 않았는가?
+4. 도구 부재/입력 불일치/질문이 있을 때 총괄로 반환하는가?
 
-1. 변경 파일과 관련 ID를 대조한다.
-2. 검증 command와 결과가 있는지 확인한다.
-3. 증적 경로가 실제로 존재하는지 확인한다.
-4. 필요한 경우 `vulcan.py run-check`로 Run 문서를 검사한다.
-5. 미해결 이슈가 있으면 `FIND`, `CR`, `ISSUE` 중 하나로 분류한다.
-6. subagent/thread의 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 현재 Run의 `delegation_records`로 기록한다.
+이후 승인된 개발 업무와 안정된 소스의 QA로 확장한다. 이 지침 설치만으로 실제 메시징 성공, 비용 절감 또는 자동 운영이 검증되지는 않는다. App Server 연동은 이 방식의 필수 조건이 아니다.
 
-외부 CLI runner를 사용한 경우에는 `docs/runs/_exec/` 로그, stdout/stderr, timeout/watchdog, worktree/branch 같은 상세 실행 기록을 함께 남길 수 있다. Codex native subagent나 thread 위임은 같은 프로세스 수준 메타가 없을 수 있으므로, `delegation_records`를 최소 책임 추적 단위로 사용한다.
+공식 참고: [Projects and chats](https://learn.chatgpt.com/docs/projects), [Worktrees](https://learn.chatgpt.com/docs/environments/git-worktrees), [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents). 실제 제공 도구와 사용자 승인 범위가 우선이다.
 

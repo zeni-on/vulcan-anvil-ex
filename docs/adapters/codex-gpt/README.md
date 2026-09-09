@@ -27,6 +27,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 - `workflow.integration_branch` 기준 구현 통합 브랜치와 worker 실행
 - Gate 4 `qa-execution`과 `QA-000` workspace 재사용
 - Run 문서 작성과 `vulcan.py` 기반 검증
+- 사용자가 선택한 역할별 지속 작업의 전달/회수와 단일 총괄 운영: [Persona Delegation](PERSONA_DELEGATION.md)
 - Dashboard가 읽는 `session.json`, Run, 문서 상태 갱신
 
 ## 3. Codex/GPT 실행 특징
