@@ -109,7 +109,7 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | worker handoff 전 사전검사 | `python vulcan.py run-preflight <run-file>` |
 | Run 완료/형식 검사 | `python vulcan.py run-check <run-file>` |
 
-native subagent, thread, native branch agent에게 넘기기 전에는 Orchestrator가 `run-preflight` 또는 이를 포함한 `execute --dry-run`의 통과를 확인한다. `run-exec`와 `agent-run --mode work`는 preflight 자동 실행 경로가 있지만, native 위임은 자동 차단되지 않는다.
+Run을 사용하는 native subagent/thread/branch agent에게 넘기기 전에는 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. Product의 일반 작업은 기존 요구사항/이슈/작업 요약의 목표, 수정 범위, 계약, 검증 기준으로 진행할 수 있으며 Run 생성이 선행 조건이 아니다. 외부 `run-exec`/`agent-run --mode work`의 Run과 자동 preflight는 유지한다.
 
 `execute --dry-run`은 실제 worker를 실행하지 않는다. Run 문서를 기준으로 `run-check`, `run-preflight`, 위임 sidecar 후보, `scope.writable`, 검증 명령, 외부 runner 연결 명령을 한 번에 요약한다. native subagent/thread/Agy branch agent에게 일을 넘기기 전에는 이 출력으로 누락된 handoff 조건을 먼저 확인한다.
 이 호출에서 preflight가 통과했고 이후 Run/계약/범위/프로젝트 상태가 바뀌지 않았다면 동일 사전검사를 별도 명령으로 반복할 필요는 없다. 변경이 생기면 위임 전에 다시 검사한다.
@@ -139,7 +139,7 @@ python vulcan.py execute --verify --source app --source tests --source requireme
 | Build Wave 완료 | `python vulcan.py wave-complete <BW-ID> --status Verified` |
 | worker 결과 통합 검토 | `python vulcan.py run-integrate <run-file>` |
 
-구현은 기본적으로 통합 브랜치에서 수행한다. Orchestrator는 기능 구현의 주 작성자가 아니라 worker 결과를 통합하고 검증하는 역할이다.
+구현은 기본적으로 통합 브랜치에서 수행한다. Product의 실행자 선택은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 일반 수정마다 새 worker/Run을 만들지 않는다. `status`는 Product에서 승인된 변경의 구현/검증을 안내하며 `wave-start`를 필수 다음 행동으로 추천하지 않는다. Wave를 선택하면 기존 시작/완료 명령을 사용하며 미완료 Wave를 자동 완료하지 않는다. Audit/PoC의 위임 방식은 유지한다.
 
 Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 Product 원장에서 관련 `REQ/API/DATA/UI/REG`를 추천한다. 원장 전체 정독 대신 worker guide와 대상 계약 ID/섹션을 입력으로 사용한다. 생성된 Run의 수정 경로와 검증 명령 TBD는 실제 프로젝트 기준으로 확정한 뒤 preflight를 통과시킨다. 원장만으로 계약이 부족하면 `docs/templates/product/PRODUCT_*_TEMPLATE.md`의 경량 상세 문서를 `docs/artifacts/02-design/...`에 둔다. 추적표/최종 결과 정리는 Orchestrator가 맡으며, 증적 재사용과 재실행 조건은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 

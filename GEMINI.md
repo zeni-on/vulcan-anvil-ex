@@ -44,11 +44,11 @@
 - **Product 상세 산출물 원칙**: Product 기본 문서는 `docs/product/`의 6종 원장이다. 상세 API/DB/UI/보안/개발표준 문서가 필요하면 공통 `docs/artifacts/02-design/...` 폴더 구조를 재사용하되, Product 전용 경량 템플릿을 사용한다. 상세 문서가 없다는 이유만으로 Product Gate를 audit처럼 차단하지 않는다.
 - **환경 진단 분리**: `doctor`는 Gate 전환 판정 도구가 아니라 로컬 실행 환경 진단 도구다. `doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고, 환경 차단이면 `environment_blocked` 또는 `ISSUE` 후보로 분리한다.
 - **환경 Runway 선행 가능**: Phase 0~Gate 3 동안 Agy `Workspace: branch` 또는 subagent로 구현 환경을 병렬 준비할 수 있다. 이 작업은 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke까지만 허용하며, 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경, Gate/session 변경은 금지한다.
-- **Orchestrator의 역할 한정**: 구현 단계에서 오케스트레이터는 직접 대량의 코드를 작성하지 않는다. 실제 구현은 `build` 페르소나의 **Native Worker (subagent/thread/native branch agent)**에게 위임하는 것을 원칙으로 한다.
+- **실행자 선택**: Product는 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절에 따라 실행자와 Run/Wave를 선택한다. 사용자 역할 배정을 유지하고 기존 개발 담당을 재사용할 수 있다. 그 외 profile은 기존 native worker 구현 원칙을 따른다.
 - **PoC Impl 책임 경계**: `profile: poc`의 구현 worker는 코드, dependency manifest, 빠른 self-check까지만 담당한다. `README.md`, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker가 담당한다.
 - **PoC 정합성 표현**: PoC에서는 "계약 100% 일치" 같은 audit식 단정보다 "PoC 목표 검증에 충분히 일치"와 "제품화/감리 승격 시 보강 gap"을 함께 기록한다.
-- **사전 검사 의무화**: Native Worker에게 위임을 기동하기 전, 반드시 **`python vulcan.py run-preflight <run-file>`**을 직접 실행하여 계약(TBD 미보강 등) 및 Scope 차단 요소를 검사해야 한다.
-- **위임 사실의 기록**: subagent나 Workspace: branch 워커를 통해 작업을 수행한 경우, 반드시 완료 보고서(Run Output)의 **`delegation_records`**에 위임 대상, 작업 범위, 변경 파일, 오케스트레이터 재검증 명령을 충실히 기록한다.
+- **Run 선택과 사전 검사**: Run을 사용하는 native worker는 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 통과해야 한다. Run 없는 Product 작업도 목표/범위/계약/검증을 전달하며, YAML을 채우려고 Run을 새로 만들지 않는다. 외부 CLI의 자동 preflight는 유지한다.
+- **위임 사실의 기록**: 기존 결과 요약에 위임 대상, 범위, 변경 파일과 검증을 남긴다. Run이 있으면 `delegation_records`를 사용하며 선택적 timing 필드를 만들기 위해 별도 작업을 하지 않는다.
 - **검증의 엄격성**: 실제로 실행하여 통과하지 않은 테스트 결과를 Pass로 기록하지 않는다.
 
 ---

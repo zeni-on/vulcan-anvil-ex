@@ -101,6 +101,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - 공공데이터 공통표준은 공공/SI/Audit에서는 우선 검토 대상이지만, Product에서는 조직/도메인 표준이 없을 때 참고 표준으로 사용할 수 있다.
 - 화면설계와 증적은 주요 사용자 흐름과 회귀 테스트 기준에 집중한다.
 - 변경관리는 CR보다 Issue, Feature, Release Note, ADR과 연결될 수 있다.
+- Run/Wave는 선택 사항이다. 일반 변경의 실행자, 짧은 작업 전달, 사후 현행화는 `PRODUCT_PROFILE_BASELINE.md` 7절을 따르며, 외부 CLI 실행은 기존 Run 계약을 유지한다.
 - Gate는 유지하되 승인 절차를 가볍게 운영할 수 있다.
 - Program Design은 모든 private method까지 요구하지 않고 public API, service/usecase, DTO, persistence adapter 경계를 중심으로 작성한다.
 - QA는 릴리즈 후보 기준의 회귀 테스트, 주요 화면/API 증적, release note와 backlog 연결을 우선한다.

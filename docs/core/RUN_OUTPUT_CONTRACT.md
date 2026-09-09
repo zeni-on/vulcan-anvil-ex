@@ -7,6 +7,8 @@
 
 Run Output Contract는 worker 또는 Orchestrator Run의 완료보고서다.
 
+아래 필수 필드는 Run을 선택한 경우에 적용한다. Run 없는 Product 작업은 `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 기존 작업 결과/PR/보고서에 변경 범위, 실제 검증과 증적, 미해결 사항을 한 번 남긴다. 위임했다면 대상/범위를 함께 기록하며 `run_id`나 알 수 없는 timing 필드를 만들지 않는다.
+
 Runner 종류가 달라도 출력은 같은 구조로 정규화한다.
 Adapter는 각 runner의 stdout, last message, result file, activity log를 이 계약으로 변환할 수 있지만, 출력 형식을 runner별로 따로 정의하지 않는다.
 

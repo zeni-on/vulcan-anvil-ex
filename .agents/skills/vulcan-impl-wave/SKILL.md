@@ -8,7 +8,7 @@ description: Use for Vulcan implementation phase work, BW-000 scaffold, Build Wa
 Use this for `impl` Gate execution and follow-up implementation iterations.
 
 This is an Orchestrator routing skill. If you are an assigned Product worker,
-follow the Run and `docs/core/PRODUCT_WORKER_GUIDE.md`; do not perform the
+follow the assigned summary or Run and `docs/core/PRODUCT_WORKER_GUIDE.md`; do not perform the
 planning, delegation, session, or completion commands below.
 
 ## Preconditions
@@ -19,7 +19,20 @@ planning, delegation, session, or completion commands below.
 4. Apply profile-specific Run weight and trace depth rules from `docs/core/DELIVERY_PROFILES.md`.
 5. Use `python vulcan.py branch-status` only if branch-only detail is needed beyond `status`.
 
-## Workflow
+## Product workflow
+
+Use `docs/core/PRODUCT_PROFILE_BASELINE.md` section 7. An approved goal, writable
+scope, contract references and meaningful completion checks can live in the
+existing task/issue; do not create a Run/Wave or a fresh worker for every change.
+Respect user-assigned roles; reuse the development task or implement bounded work
+directly when appropriate. Record actual results and update the current contract,
+not a new copy of every ledger. If a Run is chosen, check it before execution;
+if a Wave is chosen, use the Wave lifecycle below. Required QA and approvals remain.
+
+## Run/Wave workflow
+
+Apply this when a Run/Wave is required by the profile or deliberately selected.
+Product does not inherit the general direct-edit exception bookkeeping below.
 
 1. Create or review an implementation plan Run when scope is more than a tiny change.
 2. If buildable skeleton is missing, check the delivery profile before starting `BW-000`.
@@ -44,8 +57,8 @@ planning, delegation, session, or completion commands below.
 
 ## Guardrails
 
-- Orchestrator should not be the primary implementer.
-- User silence about worker usage is not a direct-implementation exception.
+- Outside Product, Orchestrator should not be the primary implementer; user silence
+  about worker usage is not a direct-implementation exception.
 - Do not mark Gate 3 planned tests as Pass during Impl just to satisfy trace checks.
 - Full E2E/UI evidence belongs to Gate 4 unless explicitly scoped as smoke evidence.
 - In `poc`, warning cleanup is not a worker completion goal unless the warning hides a real product failure, broken test, or scope violation.
@@ -54,7 +67,7 @@ planning, delegation, session, or completion commands below.
 
 ## Verification
 
-- `python vulcan.py run-check <run-file>`
-- `python vulcan.py run-preflight <run-file>`
+- `python vulcan.py run-check <run-file>` when using a Run
+- `python vulcan.py run-preflight <run-file>` before executing a Run
 - Relevant backend/frontend tests for the Wave
 - `python vulcan.py status --check` when assessing Gate readiness; `check-trace` only for detailed trace errors or trace-only regression

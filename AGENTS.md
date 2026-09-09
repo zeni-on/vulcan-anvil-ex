@@ -38,10 +38,10 @@
 - Gate 상태는 문서의 `gate:` 값으로 바뀌지 않는다. 실제 전환과 완료는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py sync-session` 계열로 갱신한다.
 - `status`가 기본 진입점이다. `prepare-transition`은 상세/호환 진단이 필요할 때, `check-trace`는 추적성 오류를 상세 분석하거나 trace-only 회귀 검증이 필요할 때만 직접 실행한다.
 - `doctor`는 Gate 전환 판정 도구가 아니라 로컬 실행 환경 진단 도구다. `doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고, 환경 차단이면 `environment_blocked` 또는 `ISSUE` 후보로 분리한다.
-- 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 승인된 구현은 기본적으로 build persona의 native worker, subagent, thread, native branch agent에게 위임한다.
+- Product의 실행자와 Run/Wave 사용은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 사용자 역할 배정을 존중하며 작은 수정마다 새 worker/Run을 만들지 않는다. 그 외 profile의 구현 위임 기준은 유지한다.
 - `agent-run`과 `run-exec`는 기본 구현 경로가 아니라 외부 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 쓰는 옵션이다.
-- native worker에게 넘기기 전에는 `run-preflight` 또는 이를 포함한 `execute --dry-run`의 통과를 확인한다. 이후 Run/계약/범위/프로젝트 상태가 바뀌면 재검사한다. 외부 `run-exec`/`agent-run --mode work`는 preflight를 자동 실행하지만 native 위임은 자동 차단되지 않는다.
-- subagent/thread/native branch agent를 사용했으면 현재 Run 또는 결과 요약에 `delegation_records`를 남긴다. 외부 CLI runner를 사용한 경우에는 `Run Execution Record`, `_exec` 로그, timeout/watchdog, worktree/branch 정보를 남긴다.
+- Run을 사용하는 native worker에게 넘기기 전에는 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. Run 없는 Product 작업도 목표/범위/계약/검증 기준은 전달한다. 외부 `run-exec`/`agent-run --mode work`의 자동 preflight는 유지한다.
+- subagent/thread/native branch agent를 사용했으면 현재 Run 또는 결과 요약에 위임 대상/범위/결과를 남긴다. Run에서는 `delegation_records`를 사용한다. 외부 CLI runner는 기존 실행 기록과 로그를 유지한다.
 - worker, subagent, 외부 runner 결과는 후보 산출물이다. Orchestrator가 재검증하기 전에는 최종 사실로 확정하지 않는다.
 - 실행하지 않은 테스트, 빌드, QA, 화면 증적을 `Pass`로 기록하지 않는다.
 - 대시보드 문서 코멘트는 `.vulcan/comments/comments.jsonl`에 sidecar로 저장된다. 원본 Markdown에 보이지 않으므로 `python vulcan.py status`의 `dashboard_comments` 요약을 확인한다. 코멘트 상태는 `open` 또는 `closed`만 사용한다.

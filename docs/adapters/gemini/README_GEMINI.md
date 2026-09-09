@@ -34,7 +34,7 @@ Agy를 메인 Orchestrator로 사용할 때는 다음 기준을 적용한다.
 * `profile: poc`의 Impl worker는 코드, dependency manifest, 빠른 self-check까지만 담당한다. `README.md`, `POC_TEST_REPORT.md` 최종화, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker로 넘긴다.
 * Gate 전환 가능성은 `python vulcan.py status --check`로 요약 진단하고, `prepare-transition`은 상세/호환 진단이 필요할 때 직접 실행한다.
 * Agy native subagent와 `Workspace: branch`는 외부 CLI runner가 아니라 native delegation 경로로 취급한다.
-* worker 호출 전 Orchestrator가 직접 `python vulcan.py run-preflight <run-file>`를 실행한다.
+* Product의 실행자/Run/Wave 선택은 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. Run을 사용하는 worker만 호출 전에 preflight를 실행하며, Run 없는 작업도 목표/범위/계약/검증을 전달한다.
 * worker 결과는 `delegation_records.mode: agy-branch-agent`로 남기고, 최종 Gate/Wave/QA 판단은 Orchestrator가 부모 workspace에서 다시 검증한다.
 
 ### ① Structured Outputs (JSON Schema 강제) 활용
@@ -53,7 +53,7 @@ Antigravity/Agy가 제공하는 `Workspace: branch` 방식은 Gemini adapter의 
 
 Orchestrator는 Agy worker 결과를 그대로 확정하지 않고 부모 workspace에서 변경 파일과 `scope.writable`을 확인하고 필요한 검증 명령을 재실행한다.
 
-Orchestrator는 Agy native branch worker에게 위임하기 전에 반드시 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 이 경로는 `run-exec`/`agent-run --mode work`의 자동 preflight를 통과하지 않으므로, `status --check`/`prepare-transition`의 사후 점검은 누락을 발견하는 안전망으로만 취급한다.
+Run을 사용하는 Agy native branch worker는 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 통과해야 한다. 외부 CLI 자동 preflight는 유지한다. Product는 Run 없는 작업 요약을 허용하고 전환 때 완료된 과거 Run의 preflight를 반복하지 않는다. 결과 요약에는 위임 대상, 변경 범위, 실제 검증과 남은 문제를 기록한다.
 
 Environment Readiness Track에서 생성한 결과도 같은 방식으로 검증한다. 단, 환경 기준선 후보는 기능 구현 Wave가 아니므로 REQ/AC/UI/UT/IT를 `Implemented`, `Verified`, `Pass`로 변경하지 않는다.
 
@@ -63,7 +63,7 @@ Agy `Workspace: branch` worker가 부모 workspace의 untracked Run 문서에 �
 
 `agent-run`/`run-exec`로 `agy.exe`를 호출하는 경로는 transcript, watchdog, 프로세스 로그 같은 외부 CLI 증적이 필요한 경우의 선택 옵션이다.
 
-검토 기록: [Agy Workspace Branch Delegation Review](../../reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)
+검토 기록(프로젝트에 복사되지 않는 Ex 저장소 문서): [Agy Workspace Branch Delegation Review](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/_reviews/AGY-WORKSPACE-BRANCH-DELEGATION-REVIEW.md)
 
 ## 3. 하위 최소 산출물 구성
 

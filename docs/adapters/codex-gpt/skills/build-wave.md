@@ -4,7 +4,7 @@
 
 구현 단계에서 `implementation-plan`이 정의한 하나의 `Build Wave`를 실행할 때 사용한다.
 
-Product worker는 [PRODUCT_WORKER_GUIDE.md](../../../core/PRODUCT_WORKER_GUIDE.md)를 따른다. 아래 범용 절차의 Orchestrator 작업은 수행하지 않으며, 재검증은 `PRODUCT_PROFILE_BASELINE.md` 7절의 조건으로 적용한다.
+Product는 `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 Run/Wave를 선택한 경우에만 이 절차를 사용한다. 일반 수정에 아래 계획 Run, 시간별 분할, 직접 수정 예외를 강제하지 않는다. Product worker는 [PRODUCT_WORKER_GUIDE.md](../../../core/PRODUCT_WORKER_GUIDE.md)의 작업 요약/Run을 따르며 Orchestrator 정리를 반복하지 않는다.
 
 Build Wave는 전체 구현이 아니라 하나의 검증 가능한 구현 배치다. Wave가 끝나면 코드, 테스트케이스, Orchestrator가 재실행할 검증 명령, 문서/추적표 갱신 필요 항목, 커밋 후보가 함께 남아야 한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 갱신해야 할 ID와 증적 후보를 보고한다.
 

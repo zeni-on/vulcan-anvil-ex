@@ -7,7 +7,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 
 ## 1. 공통 원칙
 
-- 항상 `session.json.current_gate`, 사용자 최신 지시, 현재 Run 문서를 먼저 확인한다.
+- `session.json.current_gate`, 사용자 최신 지시와 현재 작업 요약 또는 Run을 확인한다. Product의 Run/Wave 선택 기준은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.
 - Gate 전환은 문서의 `gate:` 값으로 완료되지 않는다. 현재 위치는 `python vulcan.py status`로 확인하고, 전환 가능성은 기본적으로 `python vulcan.py status --check`로 진단한다. 실제 상태 갱신은 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py sync-session`으로 수행한다.
 - `prepare-transition`은 상세/호환 전환 진단이 필요할 때 직접 실행하는 원자 명령이다. `check-trace`는 추적성 오류를 디버깅하거나 회귀 검증에서 추적성만 확인할 때 직접 실행한다.
@@ -27,9 +27,9 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 - worker, subagent, 외부 runner 결과는 후보 산출물이다. Orchestrator가 다시 검증하기 전에는 최종 사실로 확정하지 않는다.
 - worker는 Gate 전환, `session.json` 직접 편집, 사용자 승인, QA Pass, 릴리즈 승인, merge 가능 판단을 직접 하지 않는다.
 - worker가 범위 밖 변경이 필요하다고 판단하면 직접 수정하지 말고 Orchestrator 결정 필요 항목으로 반환한다.
-- native subagent/thread/Agy Workspace: branch worker를 실행하기 전에는 Orchestrator가 `python vulcan.py run-preflight <run-file>`를 직접 실행한다. 외부 `run-exec`/`agent-run --mode work`는 자동 실행하지만 native 위임은 자동 차단되지 않는다.
-- `prepare-transition`의 worker Run preflight 점검은 사후 안전망이다. worker 위임 전 preflight 실행을 생략해도 된다는 뜻이 아니다.
-- subagent/thread를 사용한 경우에는 외부 CLI 수준의 `Run Execution Record`가 없을 수 있다. 대신 현재 Run 또는 결과 요약에 `delegation_records`를 남겨 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증을 추적한다.
+- Run을 사용하는 native worker는 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 통과해야 한다. 외부 `run-exec`/`agent-run --mode work`의 자동 preflight는 유지한다.
+- Run 없는 Product 작업도 목표/범위/계약/검증을 확인하며 사전검사를 실행했다고 기록하지 않는다. Product 전환 검사는 완료된 과거 Run의 입력 preflight를 반복하지 않는다.
+- subagent/thread를 사용한 경우에는 기존 결과 요약에 위임 대상/범위/변경 파일/검증을 남긴다. Run이 있으면 `delegation_records`를 사용한다.
 
 ## 4. Gate별 최소 확인
 
