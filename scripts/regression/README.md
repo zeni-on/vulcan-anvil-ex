@@ -12,6 +12,8 @@ python -m unittest scripts.regression.tests.test_evidence scripts.regression.tes
 
 `test_evidence`는 clean/dirty/새 파일/실행 중 변경, 실패 명령, 경로 및 출력 덮어쓰기 경계를 검증한다. `test_document_context`는 구간 상태/공통 조건/정확한 ID/출처/조회 제한을 검증한다. CI의 기존 `test_*.py` discovery에 포함된다. symlink 생성 권한이 없는 환경에서는 해당 실제 symlink 테스트를 skip한다.
 
+역할별 협업 지침의 배포/보존 회귀는 `python -m unittest scripts.regression.tests.test_collaboration_docs`로 실행한다. 합성 PoC/Product/Audit 초기화, 실제 upgrade 경로의 지침 갱신과 기존 Product 문서/Run/코드/Gate/Profile 보존, 설치된 문서 링크를 검사한다. Git 초기화는 mock하며, 실제 역할 작업창의 메시징/자동 실행이나 비용 절감을 검증하는 테스트는 아니다.
+
 ### 1. 최소 init smoke
 
 ```powershell

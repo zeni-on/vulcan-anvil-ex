@@ -395,6 +395,7 @@ worker 완료 후 `python vulcan.py run-integrate --run-id RUN-NNN --dry-run`으
 `package.json`, lockfile, `pyproject.toml`은 dependency/security 영향이 있을 수 있으므로 Config Hotfix 후보로 보이더라도 dependency review가 필요하다.
 
 Codex desktop의 `spawn_agent`, Codex thread, Claude subagent, Agy workspace branch agent 같은 런타임 native worker는 같은 Gate/Run 계약 안에서 우선 사용할 수 있다.
+역할별 지속 작업의 문서 소유권, 업무 전달/회수와 실행 기준 확인은 [Role-Based Collaboration](COLLABORATION_PROTOCOL.md)을 따른다. 작업창 분리는 파일 격리나 다중 active Wave 허용을 뜻하지 않는다.
 외부 CLI runner(`agent-run`/`run-exec`)는 장시간 독립 실행, cross-runner 검증, 별도 프로세스 로그/timeout/watchdog 증적이 필요한 경우에 사용한다.
 
 subagent/thread가 직접 작업했다면 Orchestrator는 결과를 현재 Run 또는 별도 Run에 `delegation_records`로 정규화한다.

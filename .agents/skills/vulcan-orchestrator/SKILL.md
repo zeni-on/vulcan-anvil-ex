@@ -30,6 +30,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
   - `vulcan-qa`
   - `vulcan-release`
 - Use existing Core and adapter docs for details. Do not copy full Core rules into prompts.
+- When the user chooses persistent role-based collaboration, read `docs/core/COLLABORATION_PROTOCOL.md` and `docs/adapters/codex-gpt/PERSONA_DELEGATION.md`. Route approved work to the selected existing tasks when messaging tools are available; use subagents for bounded subtasks. Keep one Orchestrator for shared state, and do not create user-visible tasks without a user request.
 - For accumulated contract documents or unclear evidence source revisions, use `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md`. Retrieve relevant sections; do not treat the newest paragraph as approved or copy entire ledgers into each handoff.
 - When the user has approved autonomous orchestration or custom-agent assistance, use helper agents from `.gemini/agents/` or `.codex/agents/` selectively:
   - `trace-scout`: related IDs/source documents are broad or unclear.

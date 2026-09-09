@@ -61,6 +61,8 @@ Orchestrator는 반복적으로 다음 순서를 따른다.
 
 Orchestrator는 `AGENT_PERSONAS.md`의 persona를 사용한다.
 
+사용자가 역할별 지속 작업을 선택하면 [Role-Based Collaboration](COLLABORATION_PROTOCOL.md)을 적용한다. 역할 작업창은 실행 공간이며 새 Gate나 별도 원장이 아니다. 총괄이 배정/회수와 공통 상태를 관리하고, 담당자는 개별 계약 범위만 수행한다.
+
 | 상황 | 우선 persona |
 | --- | --- |
 | 배경, 제약, 현행 자료 확인 | discovery |

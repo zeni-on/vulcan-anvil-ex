@@ -56,6 +56,7 @@
 | CLI 사용과 상태 확인 | `docs/core/ORCHESTRATOR_CLI_GUIDE.md` |
 | Run 입력/출력 | `docs/core/RUN_INPUT_CONTRACT.md`, `docs/core/RUN_OUTPUT_CONTRACT.md` |
 | worker/subagent/thread 위임 | `docs/core/AGENT_RUN_PROTOCOL.md`, `docs/core/AGENT_PERSONAS.md` |
+| 역할별 지속 작업 협업 | `docs/core/COLLABORATION_PROTOCOL.md`, `docs/adapters/codex-gpt/PERSONA_DELEGATION.md` |
 | 요구사항/추적성 | `docs/core/TRACEABILITY_RULES.md`, 요구사항정의서, 추적표 |
 | 누적 문서/검증 소스 기준 | `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md` |
 | 설계 | `docs/core/ORCHESTRATOR_PROTOCOL.md`, Gate 2 산출물 |
