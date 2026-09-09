@@ -146,6 +146,7 @@ def status_next_actions(
     integration_branch,
     active_waves,
     known_gates,
+    profile="audit",
     profile_gap=None,
     gap_target="product",
     qa_workspace_followup=None,
@@ -164,6 +165,10 @@ def status_next_actions(
     if current_gate == "impl":
         if current_branch != integration_branch:
             next_actions.insert(0, "python vulcan.py branch-start impl")
+        elif profile == "product":
+            next_actions.insert(0, "승인된 변경 범위 구현/검증과 현재 계약 현행화 (Run/Wave 선택)")
+            if active_waves:
+                next_actions.insert(1, "등록된 미완료 Wave의 차단/검증 결과 확인 후 완료 여부 판단")
         elif active_waves:
             next_actions.insert(0, "python vulcan.py wave-complete <BW-ID> --status Verified")
         else:
@@ -188,7 +193,7 @@ def status_next_actions(
         preferred_actions = [
             "QA-000 doctor JSON/evidence 확인",
             "환경 문제는 ISSUE/environment_blocked로 보류",
-            "제품 수정 필요 시 qa-fix-loop 생성",
+            "승인된 결함 수정 범위와 재검증 결정 (Run 선택)" if profile == "product" else "제품 수정 필요 시 qa-fix-loop 생성",
         ]
         next_actions = preferred_actions + [
             action for action in next_actions
@@ -251,6 +256,7 @@ def compose_status_summary(
             integration_branch=integration_branch,
             active_waves=active_waves,
             known_gates=known_gates,
+            profile=profile,
             profile_gap=profile_gap,
             gap_target=gap_target,
             qa_workspace_followup=qa_workspace_followup,

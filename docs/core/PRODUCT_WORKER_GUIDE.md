@@ -1,14 +1,15 @@
 # Product Worker Guide
 
-Use this for an assigned Product build/scaffold Run. You are the implementation
-worker, not the Orchestrator. The Run defines the approved task and writable paths.
+Use this for assigned Product implementation. You are the implementation worker,
+not the Orchestrator. The handoff can be an existing task/issue summary or a Run;
+it defines the approved goal, writable paths, contracts and completion checks.
 
 ## Read
 
-- Read AGENTS.md, this guide, and the assigned Run. Use its confirmed Gate/profile;
+- Read AGENTS.md, this guide, and the assigned handoff. Use its confirmed Gate/profile;
   inspect selected session fields only if that context is missing or inconsistent.
 - Read the assigned contract IDs/sections and their enclosing constraints from
-  the Run's source documents. Follow referenced API, data, UI, and security rules.
+  the referenced source documents. Follow API, data, UI, and security rules.
 - Always check shared authorization, input validation, sensitive-data/logging,
   and compatibility constraints relevant to the change. An absent SEC seed does
   not exempt the implementation from the project's security baseline.
@@ -21,9 +22,10 @@ worker, not the Orchestrator. The Run defines the approved task and writable pat
 
 ## Implement and verify
 
-- Work only inside scope.writable. Preserve other agents' changes.
-- Implement the assigned code and tests; run the concrete verification.commands
-  from their specified directories. Report command, cwd, exit status, results,
+- Work only inside the assigned writable paths (`scope.writable` when using a Run).
+  Preserve other agents' changes. Do not create a Run merely to restate the handoff.
+- Implement the assigned code and tests; run the agreed checks (`verification.commands`
+  when using a Run) from their specified directories. Report command, cwd, exit status, results,
   and source/environment identity when observable. Never invent missing metadata.
 - If dependencies or the environment block a required command, report
   environment_blocked/not_run with the failed command and evidence. Do not mark Pass.

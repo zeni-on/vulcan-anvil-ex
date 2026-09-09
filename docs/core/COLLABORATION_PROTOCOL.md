@@ -39,7 +39,7 @@
 
 기준과 식별자를 알 수 없으면 추정하지 말고 확인한다. 현재 계약 구간과 검증 소스 식별은 [Current Context And Evidence](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다. 잘린 구간/미분류/서로 다른 계약은 승인된 사실로 간주하지 않는다. 공통 보안 조건을 읽기 범위에서 빠뜨리지 않는다.
 
-Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. 계약/범위/Run/프로젝트 상태가 바뀌면 재검사한다. PoC에서 Run을 생략할 수 있는 기존 Profile 규칙은 유지하며, 그 경우 허용된 짧은 작업 계약과 결과 요약을 사용한다.
+Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. 계약/범위/Run/프로젝트 상태가 바뀌면 재검사한다. Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 작업/이슈 요약으로 전달할 수 있다. PoC의 기존 Run 생략 기준도 유지한다. 역할 작업창을 사용한다는 이유로 Run을 추가하지 않는다.
 
 ## 4. 전달, 회수, 다음 행동
 
@@ -47,7 +47,7 @@ Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 �
 2. 담당자는 현재 배정이 이전 대화와 다르면 최신 승인 계약을 기준으로 차이를 확인한다. 불명확한 계약, scope 밖 수정, 의존 작업 변경은 총괄에게 반환한다. 다른 역할에 다시 일을 넘기려면 총괄의 명시적 배정이 필요하다.
 3. 총괄은 완료 알림이나 긴 대기를 사용하고, 범위 변경/차단 해소가 있을 때만 추가 지시한다. 역할 작업창을 만들었다고 상시 실행하거나 반복적으로 상태/문서를 읽히지 않는다.
 4. 담당자는 변경 파일, 실행한 명령/cwd/결과와 증적 경로, 남은 질문/FIND/CR/ISSUE 후보를 반환한다. 테스트를 실행하지 않았으면 이유와 `Not Run` 또는 `environment_blocked`를 구분한다.
-5. 총괄은 실제 diff/scope/소스 기준과 증적을 확인하고 필요한 재검증 후 통합한다. 상태/검증 기록은 [Run Output Contract](RUN_OUTPUT_CONTRACT.md)의 기존 `delegation_records`를 사용한다. 역할 작업창 하나에 대한 영구 완료가 아니라 개별 업무의 결과를 기록한다.
+5. 총괄은 실제 diff/scope/소스 기준과 증적을 확인하고 필요한 재검증 후 통합한다. 기존 작업 결과에 위임 대상/범위/검증을 기록하고, Run이 있으면 [Run Output Contract](RUN_OUTPUT_CONTRACT.md)의 `delegation_records`를 사용한다. 역할 작업창 하나에 대한 영구 완료가 아니라 개별 업무의 결과를 기록한다.
 6. 사용자 질문과 승인 요청은 총괄이 모아 전달한다. 도구가 사용자 보안 승인을 직접 요구하면 우회하지 않는다. 도구/대상 연결이 없거나 결과 회수가 안 되면 그 한계를 보고하고, 완료나 다음 Gate로 추정하지 않는다.
 
 실행 위치나 기준선이 달라졌거나 통합 중 코드가 바뀌었다면 과거 검증이 그대로 유효하다고 간주하지 않는다. Product의 재실행 범위는 [Product Profile Baseline](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 정한다. 담당자 self-check를 무조건 반복하거나 문서 정리만으로 제품 테스트를 재실행하지 않는다.
@@ -55,7 +55,7 @@ Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 �
 ## 5. 병렬 작업과 독립 검수
 
 - 승인된 같은 단계 안의 독립 조사/설계 후보/증적 분석은 충돌 없이 병렬 수행할 수 있다. 역할을 나눴다는 이유로 다음 Gate나 의존 계약이 확정되지 않은 구현을 먼저 진행하지 않는다.
-- [Agent Run Protocol](AGENT_RUN_PROTOCOL.md)의 단일 active Build Wave 규칙을 유지한다. 여러 개발 작업창을 만들었다고 다중 Wave나 한 Wave의 여러 구현 runner를 자동 허용하지 않는다.
+- Wave를 선택한 경우 [Agent Run Protocol](AGENT_RUN_PROTOCOL.md)의 단일 active Build Wave 규칙을 유지한다. 여러 개발 작업창을 만들었다고 다중 Wave나 한 Wave의 여러 구현 runner를 자동 허용하지 않는다.
 - QA는 지정된 통합 소스와 QA workspace를 확인한다. 테스트 도중 다른 담당자가 해당 소스/DB/서버/포트를 변경하지 않도록 검증 구간을 조율한다. 역할마다 QA 환경을 새로 만들지는 않는다.
 - 오래 유지한 품질검증 담당은 프로젝트 맥락을 가진 QA 담당이다. 중요한 독립 리뷰에는 [새 문맥의 native review](AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)를 적용하고, 구현에 참여한 작업이나 그 대화를 복제한 작업을 독립 reviewer로 간주하지 않는다.
 - 모든 역할을 매 업무에 호출하지 않는다. 필요한 관점/산출물만 요청하고, 모든 대화/로그 전달이나 동일 테스트의 중복 실행으로 조율 비용을 늘리지 않는다.

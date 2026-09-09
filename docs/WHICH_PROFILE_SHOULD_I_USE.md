@@ -49,6 +49,8 @@ Product에서 중요한 것은 다음입니다.
 
 Product는 "가벼운 Audit"이 아니라 제품 운영에 필요한 중간 레이어입니다. 자세한 기준은 [Product Profile Baseline](core/PRODUCT_PROFILE_BASELINE.md)을 참고합니다.
 
+일반 변경은 기존 작업/이슈의 목표, 범위, 관련 계약, 검증 기준으로 진행할 수 있습니다. Run/Wave와 새 worker는 필요할 때 선택하며, 매 수정마다 새 문서를 만들지는 않습니다. 승인 경계, 보안, 실제 테스트 결과와 현재 계약의 현행화는 유지합니다.
+
 ### Audit
 
 Audit은 기본 profile입니다. 감리, 고객 검수, 장기 유지보수, 인수인계, 보안/QA 증적이 중요한 경우에 사용합니다.

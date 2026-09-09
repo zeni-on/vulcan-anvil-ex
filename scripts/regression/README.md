@@ -14,6 +14,8 @@ python -m unittest scripts.regression.tests.test_evidence scripts.regression.tes
 
 역할별 협업 지침의 배포/보존 회귀는 `python -m unittest scripts.regression.tests.test_collaboration_docs`로 실행한다. 합성 PoC/Product/Audit 초기화, 실제 upgrade 경로의 지침 갱신과 기존 Product 문서/Run/코드/Gate/Profile 보존, 설치된 문서 링크를 검사한다. Git 초기화는 mock하며, 실제 역할 작업창의 메시징/자동 실행이나 비용 절감을 검증하는 테스트는 아니다.
 
+Product 결과 중심 운영 회귀는 `python -m unittest scripts.regression.tests.test_product_workflow scripts.regression.tests.test_product_history scripts.regression.tests.test_status`로 실행한다. Run/Wave 선택 여부와 별개로 실제 미완료 작업, 승인/검증 경계가 보존되는지 확인한다. 현재/과거 Gate 및 실행 Wave 식별은 합성 문서/Git 이력으로 검증하며 개인 프로젝트 산출물을 fixture로 복사하지 않는다. 승인 조회는 실제 중첩 Git 프로젝트와 200건을 넘는 합성 이력으로 검사한다. Product/Core/Codex/Gemini 지침의 init/upgrade 배포도 `test_collaboration_docs`에 포함한다.
+
 ### 1. 최소 init smoke
 
 ```powershell

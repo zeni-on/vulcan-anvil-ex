@@ -13,7 +13,7 @@ Use this for Gate 4 QA and QA iterations.
 2. Confirm Impl was approved or explicitly completed for QA.
 3. Run `python vulcan.py status` to confirm Gate, profile, branch, QA workspace, active Run, and dirty state.
 4. Apply profile-specific QA evidence and review strictness from `docs/core/DELIVERY_PROFILES.md`.
-5. Read the current QA Run and Gate 3 test cases.
+5. Read the current QA scope and applicable test plan. Read the QA Run when one is used; Product may use an existing task summary and regression report under `PRODUCT_PROFILE_BASELINE.md` section 7.
 6. Run `python vulcan.py doctor` before QA-000 when the machine/project has not been checked in this session, or when npm, Playwright, browser cache, runner, port, DB, or Dashboard readiness is uncertain.
 
 ## Staged QA
@@ -33,18 +33,18 @@ require running the same product tests again. Record remaining warnings honestly
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.
-- If QA is delegated to a native subagent/thread, record the result in `delegation_records` with delegate, scope, evidence/log paths, result summary, and Orchestrator rerun commands.
+- If QA is delegated to a native subagent/thread, retain delegate, scope, evidence/log paths, result summary, and Orchestrator verification in the existing result summary. Use `delegation_records` when a Run is used; do not invent reruns that were not executed.
 - If QA is delegated to an external CLI runner, keep the full Run Execution Record, `_exec` logs, watchdog/timeout status, and any recovered transcript.
 - If logs, screenshots, transcripts, or previous failures are mixed, use `qa-reader` to classify evidence before deciding a fix path.
 - If a QA command is `Not Run` or `environment_blocked` because of local tooling, run `doctor` before retrying or classifying it as a product failure.
 - If QA failure appears related to Program/API/DB/UI contract drift, consider a fresh-context `contract-reviewer` under `AGENT_RUN_PROTOCOL.md` section 5.4 before creating a `qa-fix-loop`. Preserve mandatory reviews; do not treat an inherited implementation conversation as independent review.
 - Classify failures as `FIND`, `CR`, `ISSUE`, or `environment_blocked`.
 - Start `qa-fix-loop` only after Orchestrator/user decision.
-- A `qa-fix-loop` Run must name the target `FIND-ID`, scope writable paths, and verification commands.
+- A `qa-fix-loop` Run must name the target `FIND-ID`, scope writable paths, and verification commands. Product may keep the approved fix scope and retest criteria in the existing issue/task summary instead of creating a Run.
 
 ## Verification
 
-- Run `python vulcan.py run-check <run-file>` for QA and fix Runs.
+- Run `python vulcan.py run-check <run-file>` when QA or fix Runs are used.
 - Run `python vulcan.py status --check` after QA result synthesis to check Gate readiness.
 - Run `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed.
 - Run `python vulcan.py check-trace` only if the readiness output points to traceability errors that need detailed debugging.

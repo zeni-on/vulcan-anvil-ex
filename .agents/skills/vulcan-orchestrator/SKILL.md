@@ -14,6 +14,7 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 3. Run `python vulcan.py status` first when current Gate, profile, branch, Run, or next action is unclear.
 4. Confirm the delivery profile from `session.json`, `python vulcan.py status`, or `python vulcan.py profile-status`.
 5. Apply profile-specific depth, evidence, review, and Run-weight rules from `docs/core/DELIVERY_PROFILES.md`.
+   - In `product`, follow `PRODUCT_PROFILE_BASELINE.md` section 7: Run/Wave and a fresh worker are optional. Reuse the agreed task scope and update current contracts/results without duplicating them into a new Run.
    - In `poc`, prefer subagent/result-summary flow for short experiments; create compact Runs only for external workers, independent review, long delegation, or reproducible experiment records.
    - In `poc`, do not create Gate-level Orchestrator Plan Runs by habit. Use `docs/poc` plus `python vulcan.py status --check` unless a Run is needed for handoff or replay.
    - In `poc`, allow `TBD` only with reason and next decision timing. Do not leave goals, success criteria, or actual execution results as `TBD`.
@@ -49,12 +50,12 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
 - Use `python vulcan.py status --check` for Gate transition readiness summary. Use `prepare-transition` only when detailed/compatibility transition diagnostics are needed. Use `check-trace` only when traceability needs detailed debugging or trace-only regression verification.
 - Use `doctor` as a local environment diagnostic, not as a Gate readiness substitute. `doctor fail/warn` should be reported as environment readiness, `environment_blocked`, or an ISSUE candidate unless a product defect is separately reproduced.
 - Use `run-check`, `run-preflight`, and `check-contract` as applicable.
-- Before native worker delegation, confirm `run-preflight` passes, directly or through `execute --dry-run`. Recheck after Run/contract/scope/project-state changes. External work execution auto-runs preflight; native delegation does not.
-- Treat `prepare-transition` preflight findings as a safety net for completed current-Gate worker Runs, not as a substitute for pre-worker handoff preflight.
+- Before executing a Run, confirm `run-preflight` passes, directly or through `execute --dry-run`. Product handoffs without Runs still specify goal/scope/contracts/checks; do not invent a Run to run preflight. External work execution auto-runs preflight.
+- Gate readiness does not substitute for pre-worker handoff checks. Product does not re-preflight all completed historical Runs.
 - Worker, subagent, and external runner outputs are candidates until the Orchestrator verifies them.
 - For Product, use `PRODUCT_PROFILE_BASELINE.md` section 7 for scoped handoff, warning handling, and conditional reruns. Keep Gate approval and required QA checks intact.
 - Use native completion notifications or a long wait when available. Do independent authorized work while a worker runs; send new instructions only for changed scope, a blocker, or a necessary correction.
-- Native subagent/thread outputs should be normalized into `delegation_records`; external CLI runner outputs keep the full Run Execution Record and `_exec` logs.
+- Native subagent/thread results identify the delegate/scope/results in the existing summary; use `delegation_records` when there is a Run. External CLI runner outputs keep Run Execution Record and `_exec` logs.
 - Do not treat global memory or other sample projects as project facts.
 
 ## CLI

@@ -84,6 +84,14 @@
 
 ### Now: testing-first stabilization
 
+#### Product 결과 중심 실행 정리 (2026-09-09, 로컬 검증 완료 / PR 검토 대기)
+
+- [Product 기준 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 일반 작업/이슈 요약 기반으로 정리했다. Run/Wave와 새 worker는 선택하고, 승인 범위·보안·실제 검증·현재 계약 현행화는 유지한다. 외부 CLI는 기존 Run/preflight 계약을 유지한다.
+- `status`의 새 Wave 생성 강제 안내, 과거 완료 Run의 입력 사전검사 반복, 계획 문장 속 BW 번호의 실행 Wave 오인을 보정했다. Git 승인 조회는 변경 후보를 찾아 일괄 읽으며, 실제 미완료 작업과 근거 없는 미래 Gate 산출물은 계속 진단한다.
+- Codex/Core/Gemini/사용자 안내를 같은 기준에 맞췄다. unit 130건 중 127건 통과/Windows symlink 권한 관련 3건 skip, init smoke 12단계와 fixture smoke 84단계가 통과했다. 새 문맥 리뷰에서 과거/현재 결과 혼합, 승인 조회 비용, 결과 컬럼 충돌과 손상된 승인 기록을 보정했고 재검토에서 남은 지적은 없었다.
+- 기존 프로젝트의 읽기 전용 관찰에서 계획 참조와 실행 Wave를 구분하고 승인된 과거 Run을 재검사에서 제외함을 확인했다. 실제 미완료 작업/승인 근거가 불명확한 기록은 유지한다. 기존 산출물 자동 삭제·재작성, 사용자 프로젝트 upgrade, Dashboard 재구성은 이번 변경에 포함하지 않는다.
+- 후속: PR 검토 후 작은 실제 변경 한 건에서 문서 생성 수, 재검사 횟수, 입력 범위와 누락/보정량을 비교한다. 속도나 크레딧 절감은 실측 전 보장하지 않는다.
+
 #### 역할별 작업 협업 정책 (2026-09-09)
 
 - [공통 협업 규칙](core/COLLABORATION_PROTOCOL.md)과 [Codex 작업 연결](adapters/codex-gpt/PERSONA_DELEGATION.md)을 추가/정리했다. 역할별 문서 소유권, 개별 업무 전달/회수, 실제 작업공간/소스 확인, 총괄의 단일 상태 관리와 새 문맥 review를 기존 Run/Profile/Gate 체계에 연결한다.

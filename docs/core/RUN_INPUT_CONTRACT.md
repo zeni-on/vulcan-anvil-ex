@@ -7,6 +7,8 @@
 
 Run Input Contract는 Orchestrator가 worker에게 전달하는 공통 작업지시서다.
 
+이 문서는 Run을 생성한 경우의 형식이다. Product에서는 `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 기존 작업/이슈의 목표, 범위, 계약, 검증 기준으로 위임할 수 있다. 이 YAML을 채우기 위해 Run을 새로 만들지 않는다. Audit 필수 Run과 외부 CLI 실행 계약은 유지한다.
+
 Runner 종류가 달라도 worker는 같은 계약을 읽고 같은 방식으로 움직여야 한다.
 Adapter는 이 계약을 런타임별 CLI 호출, 프롬프트, 로그, 상태파일로 변환할 뿐이며 계약 형식을 따로 정의하지 않는다.
 
@@ -33,7 +35,7 @@ worker별 다른 구현 구조
 
 worker에게는 가능한 한 `3. Worker 입력 계약`과 해당 Run에 필요한 보조 블록만 전달한다.
 
-worker 실행 전 Orchestrator는 `python vulcan.py run-preflight <run-file>`로 현재 Run 입력 계약을 사전 검사한다. `wave-start`와 `run-new --skill build-wave`는 Run 초안 생성 직후 preflight 경고/차단 항목을 안내한다. `run-exec`와 `agent-run --mode work`는 preflight를 자동 실행하고 차단 항목이 있으면 worker 실행을 시작하지 않는다. native subagent/thread/Agy Workspace: branch 위임은 이 자동 실행 경로를 타지 않으므로 Orchestrator가 위임 전에 직접 `run-preflight`를 실행해야 한다. `prepare-transition`은 완료된 worker Run에 대한 사후 안전망으로 preflight를 다시 확인하지만, 위임 전 preflight를 대체하지 않는다. `run-preflight`는 완성된 구현 결과를 판단하지 않고, worker가 scope 밖으로 나가거나 Gate/session/추적표 확정을 직접 수행할 위험이 있는지 확인한다.
+Run 실행 전 Orchestrator는 `run-preflight` 또는 이를 포함한 `execute --dry-run`으로 입력 계약을 검사한다. `wave-start`와 `run-new --skill build-wave`는 초안 생성 후 사전검사 항목을 안내한다. 외부 `run-exec`/`agent-run --mode work`는 자동 preflight로 차단한다. Run을 사용하는 native 위임은 이 자동 경로를 타지 않으므로 직접 검사해야 한다. Product 전환 검사에서는 완료된 과거 Run을 입력 계약 기준으로 다시 preflight하지 않는다. 사전검사는 실행 결과나 최종 QA 승인을 대신하지 않는다.
 
 Build Wave Run이나 구현 worker Run을 생성할 때 대표 상세 ID가 있으면 Orchestrator는 `run-new --trace-seed <ID>` 또는 `wave-start --trace-seed <ID>`를 우선 사용한다. 이 옵션은 추적성 그래프에서 `related_ids`, `target_contracts`, `source_documents.reference_on_demand`를 추천하지만, `interface_contract`, `contract_skeleton`, `scope.writable`, 검증 명령은 Orchestrator가 Program Design과 실제 작업 범위에 맞게 확정해야 한다.
 `6. 작성/검증 규칙` 이후의 내용은 Orchestrator와 도구가 보는 작성 기준이다.

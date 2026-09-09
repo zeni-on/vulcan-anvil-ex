@@ -76,12 +76,12 @@ Orchestrator는 `AGENT_PERSONAS.md`의 persona를 사용한다.
 | 변경요청 영향도와 다시 진행할 Gate 판단 | change-control |
 | 문서 버전, 용어, 산출물 정합성 정리 | documentation |
 
-Orchestrator가 직접 해도 되는 일은 작은 탐색, 작업지시서 작성, 짧은 문서 보정, worker가 만든 테스트케이스 재실행, 결과 통합이다. 범위가 커지거나 관점 분리가 필요하면 persona Run으로 나눈다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절의 실행자/Run 선택 기준을 따른다. 기존 작업 요약으로 범위와 검증이 명확하면 별도 Run이나 직접 수정 예외 기록을 만들지 않는다. 사용자가 정한 담당 역할은 유지한다. 그 외 profile에서는 Orchestrator가 직접 하는 일을 작은 탐색, 작업지시서 작성, 짧은 문서 보정, 테스트 재실행, 결과 통합으로 제한하며 범위가 커지면 persona Run으로 나눈다.
 
 Codex thread/subagent, Claude subagent, Agy workspace branch agent처럼 런타임이 직접 제공하는 native worker가 있으면 우선 사용할 수 있다. `agent-run`/`run-exec`는 외부 CLI 프로세스 증적, cross-runner 검증, 긴 실행 watchdog, 독립 worktree 기록이 필요할 때 사용한다.
-native subagent/thread를 사용한 경우에도 위임 사실은 사라지지 않는다. Orchestrator는 현재 Run에 `delegation_records`를 남겨 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 기록한다.
+native subagent/thread를 사용한 경우에도 위임 사실은 사라지지 않는다. Orchestrator는 기존 결과 요약에 위임 대상, 작업 범위, 변경 파일, 결과와 재검증 근거를 남기며, Run을 사용했다면 `delegation_records`로 기록한다.
 
-구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)가 수행하는 것을 기본값으로 한다.
+Product 이외의 구현 단계에서 Orchestrator는 기능 구현의 주 작성자가 되지 않는다. 작은 기능, 단일 파일, 단일 테스트 변경이라도 실제 코드/테스트/UI/API 구현은 `build` persona의 native worker(subagent/thread/native branch agent)가 수행하는 것을 기본값으로 한다.
 `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
 Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
 Product에서는 이 문서의 테스트 재실행 지시를 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절의 조건부 재검증으로 적용한다. diff/scope와 실제 증적 확인 책임은 유지하며, 동일 대상의 성공 검증을 문서 정리 때문에 반복하지 않는다.

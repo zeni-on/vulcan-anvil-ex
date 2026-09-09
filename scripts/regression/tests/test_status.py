@@ -16,6 +16,42 @@ GATES = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
 
 
 class StatusCoreTests(unittest.TestCase):
+    def test_product_implementation_does_not_require_or_auto_complete_waves(self):
+        for waves in ([], [{"id": "BW-001", "status": "Blocked"}]):
+            with self.subTest(waves=waves):
+                actions = status_next_actions(
+                    session_exists=True, current_gate="impl", current_branch="dev",
+                    integration_branch="dev", active_waves=waves, known_gates=GATES,
+                    profile="product",
+                )
+                self.assertIn("Run/Wave 선택", actions[0])
+                self.assertIn("python vulcan.py status --check", actions)
+                self.assertFalse(any("wave-start" in action or "--status Verified" in action for action in actions))
+                if waves:
+                    self.assertIn("미완료 Wave", actions[1])
+
+    def test_product_keeps_branch_guard_and_other_profiles_keep_wave_routing(self):
+        for profile in ("product", "audit", "poc"):
+            with self.subTest(profile=profile):
+                args = dict(
+                    session_exists=True, current_gate="impl", current_branch="main",
+                    integration_branch="dev", active_waves=[], known_gates=GATES,
+                    profile=profile,
+                )
+                self.assertEqual(status_next_actions(**args)[0], "python vulcan.py branch-start impl")
+                if profile != "product":
+                    args["current_branch"] = "dev"
+                    self.assertIn("wave-start", status_next_actions(**args)[0])
+
+    def test_product_environment_block_does_not_require_fix_run(self):
+        actions = status_next_actions(
+            session_exists=True, current_gate="gate4", current_branch="dev",
+            integration_branch="dev", active_waves=[], known_gates=GATES,
+            profile="product", qa_workspace_followup=["blocked"],
+        )
+        self.assertIn("environment_blocked", actions[1])
+        self.assertIn("Run 선택", actions[2])
+
     def test_qa_and_release_recommend_one_readiness_entry_point(self):
         for gate in ("gate4", "gate5"):
             with self.subTest(gate=gate):

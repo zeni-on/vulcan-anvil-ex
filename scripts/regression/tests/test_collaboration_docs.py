@@ -18,7 +18,23 @@ CORE = "docs/core/COLLABORATION_PROTOCOL.md"
 ADAPTER = "docs/adapters/codex-gpt/PERSONA_DELEGATION.md"
 BOOTSTRAP = "AGENTS.md"
 SKILL = ".agents/skills/vulcan-orchestrator/SKILL.md"
-ROUTING_DOCS = (CORE, ADAPTER, BOOTSTRAP, SKILL)
+ROUTING_DOCS = (
+    CORE, ADAPTER, BOOTSTRAP, SKILL,
+    "GEMINI.md",
+    "docs/core/PRODUCT_PROFILE_BASELINE.md",
+    "docs/core/PRODUCT_WORKER_GUIDE.md",
+    "docs/core/AGENT_RUN_PROTOCOL.md",
+    "docs/core/ORCHESTRATOR_PROTOCOL.md",
+    "docs/core/ORCHESTRATOR_CLI_GUIDE.md",
+    "docs/core/GATE_EXECUTION_CHECKLIST.md",
+    "docs/core/RUN_INPUT_CONTRACT.md",
+    "docs/core/RUN_OUTPUT_CONTRACT.md",
+    "docs/core/DELIVERY_PROFILES.md",
+    ".agents/skills/vulcan-impl-wave/SKILL.md",
+    ".agents/skills/vulcan-qa/SKILL.md",
+    "docs/adapters/codex-gpt/skills/build-wave.md",
+    "docs/adapters/gemini/README_GEMINI.md",
+)
 
 spec = importlib.util.spec_from_file_location("vulcan_collaboration_tests", ROOT / "vulcan.py")
 vulcan = importlib.util.module_from_spec(spec)

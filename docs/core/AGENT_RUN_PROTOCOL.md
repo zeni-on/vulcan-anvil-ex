@@ -250,6 +250,8 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 
 ## 5.3 Implementation Plan과 Build Wave
 
+Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 먼저 적용한다. 일반 변경에는 Run/Wave와 새 worker 생성이 필수가 아니며, 아래의 계획 Run/직접 수정 예외/고정 분할 절차는 Product에 일괄 적용하지 않는다. Run을 선택한 경우 해당 입력/출력 계약과 실행 전 preflight, Wave를 선택한 경우 단일 active Wave 제약은 유지한다. Audit/PoC의 기존 기준은 유지한다.
+
 구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 `Implementation Scaffold`와 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona의 native worker(subagent/thread/native branch agent)가 수행한다.
 
 `agent-run --mode work`와 `run-exec`는 기본 구현 경로가 아니다. 별도 CLI 프로세스, cross-runner 검증, worktree/timeout/watchdog 증적이 필요할 때 선택하는 옵션이다.
@@ -294,7 +296,7 @@ Wave 검증은 Gate 3 테스트 설계 중 해당 Wave의 `target_contracts`에 
 단, 하나의 Wave가 vertical slice를 완성했다면 해당 slice의 smoke 또는 제한된 E2E를 실행할 수 있다.
 이 경우에도 보고 문구는 "전체 통합 테스트 완료"가 아니라 "해당 Wave 범위의 계약 테스트와 가능한 회귀 검증 완료"로 쓴다.
 
-Gate 4 QA 검증은 가능하면 `qa-execution` worker Run으로 수행한다. QA worker는 테스트 명령, Playwright, 로그/증적 생성, 후보 FIND/CR/ISSUE 분류를 담당하고 소스코드 수정은 하지 않는다. 실패가 나오면 `Fail`, `Not Run`, `Skipped`, `environment_blocked` 중 하나로 기록하고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다. Orchestrator는 이 보고를 사용자와 검토한 뒤 승인된 설계 범위 안의 결함만 별도 `qa-fix-loop` Run으로 수정한다.
+Gate 4 QA 검증은 가능하면 `qa-execution` worker Run으로 수행한다. QA worker는 테스트 명령, Playwright, 로그/증적 생성, 후보 FIND/CR/ISSUE 분류를 담당하고 소스코드 수정은 하지 않는다. 실패가 나오면 `Fail`, `Not Run`, `Skipped`, `environment_blocked` 중 하나로 기록하고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 남긴다. Orchestrator는 이 보고를 사용자와 검토한 뒤 승인된 설계 범위 안의 결함만 수정한다. Product는 기존 이슈/작업 요약으로 수정 범위와 재검증을 전달할 수 있으며, 그 외에는 별도 `qa-fix-loop` Run을 사용한다.
 
 `qa-fix-loop`는 코드/테스트 수정 Run이다.
 파일명에는 `qa-fix-loop`와 대상 `FIND-ID`를 포함하고, `run_type: QAFix`로 작성한다.

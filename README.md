@@ -107,6 +107,8 @@ Ex 프로젝트가 끝나면 단순히 코드만 남지 않습니다. Profile에
 샘플 기준의 소요 시간과 산출물 차이는 [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md)를 참고합니다.
 
 Product profile은 `docs/product/`에 Product Brief, Architecture, ADR Log, Contracts, Traceability, Regression/Release Report를 생성합니다.
+
+Product의 일반 수정은 기존 요구사항/이슈/작업 요약으로 진행할 수 있습니다. Run/Wave와 새 worker는 매번 필수가 아니며, 사용자 역할 배정과 작업 위험에 맞게 선택합니다. 승인된 범위·보안 계약·실제 테스트·릴리즈 승인은 유지하고, 구현 후 현재 문서를 현행화합니다. [Product 실행 기준](docs/core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 참고하세요.
 이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
 API, 데이터 모델/ERD, UI 계약, 보안 체크리스트, 개발/빌드/배포 기준이 더 필요하면 audit 폴더 구조인 `docs/artifacts/02-design/...`를 재사용하되 Product 전용 경량 템플릿(`docs/templates/product/PRODUCT_*_TEMPLATE.md`)으로 작성합니다.
 중요한 아키텍처 의사결정이 아직 없다면 ADR Log는 `ADR-NONE`을 유지합니다.
@@ -141,7 +143,7 @@ Antigravity/Agy도 메인 Orchestrator가 될 수 있습니다. 이 경우 Gemin
 
 Agy `Workspace: branch`는 일반 Git worktree와 다르게 플랫폼이 가상 격리 작업공간을 제공하는 경로로 취급합니다. 외부 CLI runner처럼 `_exec` 로그를 두껍게 남기기보다, Run 문서의 `delegation_records.mode: agy-branch-agent`에 위임 대상, 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령을 남깁니다.
 
-주의할 점도 있습니다. Agy native branch 위임은 `run-exec` 경로가 아니므로 자동 preflight가 걸리지 않습니다. Orchestrator는 worker를 부르기 전에 직접 `python vulcan.py run-preflight <run-file>`를 실행해 `TBD`, scope, Run metadata 불일치를 먼저 막아야 합니다.
+Run을 사용하는 Agy native 위임은 자동 preflight가 없으므로 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 실행합니다. Run 없는 Product 작업은 목표/범위/계약/검증을 짧게 전달합니다. 외부 CLI 실행의 Run과 자동 preflight는 유지합니다.
 
 ## Dashboard
 

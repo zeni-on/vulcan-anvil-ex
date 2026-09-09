@@ -3612,6 +3612,7 @@ def parse_run_input_contract_yaml(content):
 
 def collect_build_wave_records(project_dir="."):
     records = {}
+    product = load_delivery_profile(project_dir) == "product"
 
     for path in find_run_files(project_dir):
         try:
@@ -3622,6 +3623,30 @@ def collect_build_wave_records(project_dir="."):
 
         rel_path = os.path.relpath(path, project_dir)
         metadata = parse_simple_yaml_block(content)
+        if product:
+            # Execution identity belongs to the Build Run, never its plan/prose.
+            skill = metadata.get("skill", "")
+            run_type = metadata.get("run_type", "").lower()
+            if skill not in {"build-wave", "implementation-scaffold"} and not (
+                not skill and run_type in {"implementation", "implementationwave", "implementationscaffold"}
+            ):
+                continue
+            bw_id = str(metadata.get("bw_id", "")).strip().upper()
+            if not bw_id:
+                match = re.search(r"(?<![A-Za-z0-9])BW-\d{3}(?![A-Za-z0-9])", os.path.basename(path), re.IGNORECASE)
+                bw_id = match.group().upper() if match else ""
+            if not re.fullmatch(r"BW-\d{3}", bw_id):
+                continue
+            status = metadata.get("status") or "Planned"
+            previous = records.get(bw_id)
+            # A completed sibling must not conceal failed or unfinished execution.
+            if previous and previous["status"] not in {"Verified", "Completed", "Done"}:
+                continue
+            records[bw_id] = {
+                "id": bw_id, "status": status, "run": rel_path,
+                "related_ids": sorted(set(item.upper() for item in BUILD_WAVE_RELATED_ID_RE.findall(content))),
+            }
+            continue
         ids = set(re.findall(r"\bBW-\d{3}\b", content))
         if metadata.get("bw_id"):
             ids.add(metadata["bw_id"])
@@ -3670,7 +3695,8 @@ def collect_build_wave_records(project_dir="."):
     return [records[key] for key in sorted(records)]
 
 
-def merge_session_wave_records(session, discovered):
+def merge_session_wave_records(session, discovered, profile=None):
+    profile = profile or (session or {}).get("profile") or (session or {}).get("delivery_profile")
     merged = {item["id"]: dict(item) for item in discovered}
     session_impl = session.get("implementation", {}) if session else {}
     session_waves = session_impl.get("waves", {}) if isinstance(session_impl, dict) else {}
@@ -3678,14 +3704,26 @@ def merge_session_wave_records(session, discovered):
         bw_id = item.get("id")
         if not bw_id:
             continue
+        if (profile == "product" and bw_id not in merged
+                and item.get("status", "Planned") == "Planned"
+                and not item.get("run") and bw_id != session_waves.get("current")):
+            continue
         base = merged.setdefault(
             bw_id,
-            {"id": bw_id, "status": "Planned", "run": "", "related_ids": []},
+            {"id": bw_id, "status": item.get("status", "Planned") if profile == "product" else "Planned", "run": "", "related_ids": []},
         )
         session_status = item.get("status")
         base_status = base.get("status")
         session_rank = WAVE_STATUS_RANK.get(session_status, -1)
         base_rank = WAVE_STATUS_RANK.get(base_status, -1)
+        if profile == "product":
+            done = {"Verified", "Completed", "Done"}
+            if (base_status not in done and session_status in done) or (
+                base_status in {"Blocked", "Failed"} and session_status not in {"Blocked", "Failed"}
+            ):
+                session_rank = base_rank - 1
+            elif session_status and session_status not in done and (base_status in done or session_status in {"Blocked", "Failed"}):
+                session_rank = base_rank
         if session_status and session_rank >= base_rank:
             base["status"] = session_status
             if item.get("run"):
@@ -3693,6 +3731,9 @@ def merge_session_wave_records(session, discovered):
         elif not base.get("run") and item.get("run"):
             base["run"] = item["run"]
         base["related_ids"] = sorted(set(base.get("related_ids", []) + item.get("related_ids", [])))
+    current = session_waves.get("current") if isinstance(session_waves, dict) else ""
+    if profile == "product" and current and current not in merged:
+        merged[current] = {"id": current, "status": "InProgress", "run": "", "related_ids": []}
     return [merged[key] for key in sorted(merged)]
 
 
@@ -3776,10 +3817,13 @@ def compute_implementation_progress(project_dir=".", session=None):
         reqs = session_impl.get("requirements", {}) if isinstance(session_impl, dict) else {}
         completed_ids.update(reqs.get("completed_ids", []))
 
-    wave_records = merge_session_wave_records(session or {}, collect_build_wave_records(project_dir))
+    profile = load_delivery_profile(project_dir)
+    wave_records = merge_session_wave_records(session or {}, collect_build_wave_records(project_dir), profile=profile)
     current = ""
     for item in wave_records:
-        if item.get("status") in WAVE_ACTIVE_STATUSES:
+        if item.get("status") in WAVE_ACTIVE_STATUSES or (
+            profile == "product" and item.get("status") not in {"Verified", "Completed", "Done"}
+        ):
             current = item["id"]
             break
     if session:
@@ -3788,7 +3832,7 @@ def compute_implementation_progress(project_dir=".", session=None):
             .get("waves", {})
             .get("current", "")
         )
-        if session_current:
+        if session_current and (profile != "product" or any(item["id"] == session_current for item in wave_records)):
             current = session_current
 
     return {
@@ -3800,7 +3844,9 @@ def compute_implementation_progress(project_dir=".", session=None):
         },
         "waves": {
             "total": len(wave_records),
-            "completed": sum(1 for item in wave_records if item.get("status") in WAVE_DONE_STATUSES),
+            "completed": sum(1 for item in wave_records if item.get("status") in (
+                {"Verified", "Completed", "Done"} if profile == "product" else WAVE_DONE_STATUSES
+            )),
             "current": current,
             "items": wave_records,
         },
@@ -5076,6 +5122,7 @@ def collect_product_profile_findings(project_dir=".", gate=None):
 
     release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
     if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
+        issues.extend(product_verification_result_findings(release_content, gate))
         if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
             issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
         if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
@@ -5095,6 +5142,127 @@ def collect_product_profile_findings(project_dir=".", gate=None):
                     issues.append(f"docs/product/REGRESSION_AND_RELEASE_REPORT.md의 {label}가 TBD입니다.")
 
     return issues, warnings
+
+
+def product_verification_result_findings(content, gate, warnings=None):
+    """Check scoped current results; legacy ambiguity is not an invented failure."""
+    from vulcan_core.document_context import _sections
+
+    issues, notices = [], []
+    planned, optional, results = set(), set(), {}
+    sections = _sections(content)
+    explicit_current = False
+    status_pattern = re.compile(
+        r"^(environment[_ -]blocked|not[_ -]run|not_executed|pass(?:ed)?|fail(?:ed)?|"
+        r"blocked|skip(?:ped)?|planned|pending|tbd|통과|성공|실패|미실행|환경\s*차단)"
+        r"(?=$|[\s;:,.(/])", re.I,
+    )
+
+    def explicit_status(value):
+        match = status_pattern.match(value)
+        status = match.group(1).lower().replace("_", " ") if match else None
+        if match and re.match(r"\s*(?:/|or\b|또는)", value[match.end():], re.I):
+            return None
+        if status in {"passed", "통과", "성공"}:
+            return "pass"
+        if status in {"failed", "실패"}:
+            return "fail"
+        return status
+
+    for section in sections:
+        titles = [section["heading"]] + [sections[i]["heading"] for i in reversed(section["parents"])]
+        declared_current = bool(re.search(r"(?m)^\s*<!--\s*vulcan:state=current\s*-->\s*$", section["visible"]))
+        if not declared_current and any(re.search(r"\bhistory\b|\bhistorical\b|\barchive\w*\b|\bprevious\b|\bpast\b|\bsuperseded\b|과거|이력|이전", title, re.I) for title in titles):
+            continue
+        kind = "unclassified"
+        for title in titles:
+            if re.search(r"\bhistory\b|\bhistorical\b|\barchive\w*\b|\bprevious\b|\bpast\b|\bsuperseded\b|과거|이력|이전", title, re.I):
+                kind = "history"
+                break
+            if re.search(r"\bplan\b|계획", title, re.I):
+                kind = "plan"
+                break
+            if re.search(r"\bcurrent\b|현재|\bexecution\s+results?\b|\bsecurity\s+check\s+results?\b|실행\s*결과", title, re.I):
+                kind = "current"
+                break
+        if declared_current:
+            kind = "current"
+        if section["state"] in {"history", "candidate"} or kind == "history":
+            continue
+        if section["state_conflict"]:
+            notices.append("Product result section has conflicting state markers; manual review required.")
+            continue
+        if section["state"] == "current" and kind != "plan":
+            kind = "current"
+        for headers, rows in parse_markdown_tables(section["visible"]):
+            keys = {header.strip().lower(): header for header in headers}
+            id_headers = [header for key, header in keys.items() if re.fullmatch(r"(?:(?:sec[ -])?reg[ -]?)?id", key)]
+            result_headers = [keys[key] for key in ("결과", "result", "status", "상태") if key in keys]
+            if not id_headers:
+                continue
+            is_plan = kind == "plan" or (not result_headers and any(
+                re.search(r"method|target|명령|방법|검증 대상", key, re.I) for key in keys
+            ))
+            if not is_plan and not result_headers:
+                continue
+            if kind == "current" and not is_plan:
+                explicit_current = True
+            for row in rows:
+                ids = {clean_contract_cell(row.get(header, "")).upper() for header in id_headers}
+                ids = {value for value in ids if re.fullmatch(r"(?:SEC-)?REG-\d{3}", value)}
+                if not ids:
+                    continue
+                requirement = next((row.get(keys[key], "").strip().lower() for key in (
+                    "required", "필수", "필수 여부", "scope",
+                ) if key in keys), "")
+                is_optional = requirement in {"no", "false", "optional", "excluded", "deferred", "선택", "제외"}
+                if is_optional:
+                    optional.update(ids)
+                if is_plan:
+                    if not is_optional:
+                        planned.update(ids)
+                    continue
+                values = [clean_contract_cell(row.get(header, "")).strip('"\'') for header in result_headers]
+                observed = [(explicit_status(value), value) for value in values]
+                known = [(status, value) for status, value in observed if status]
+                if len({status for status, _ in known}) > 1:
+                    issues.append(f"Product verification {', '.join(sorted(ids))}: conflicting Result/Status columns; manual resolution required.")
+                    status, value = None, " / ".join(values)
+                else:
+                    status, value = known[0] if known else observed[0]
+                for result_id in ids:
+                    results.setdefault(result_id, []).append((status, kind, value, is_optional))
+
+    for result_id, records in results.items():
+        statuses = {status for status, _, _, _ in records if status}
+        if "pass" in statuses and len(statuses) > 1:
+            issues.append(f"Product verification {result_id}: contradictory current/unclassified results; classify history or resolve explicitly.")
+            continue
+        for status, kind, value, is_optional in records:
+            if is_optional or (result_id in optional and result_id not in planned):
+                if status != "pass":
+                    notices.append(f"Product optional verification {result_id}: manual review of {value!r}; no failure inferred.")
+            elif status in {"fail", "blocked", "not run", "not executed", "environment blocked", "미실행", "환경 차단"}:
+                issues.append(f"Product verification {result_id}: {value} blocks completion.")
+            elif status != "pass":
+                notices.append(f"Product verification {result_id}: ambiguous/incomplete result {value!r}; manual review required.")
+    if gate in {"gate4", "gate5", "completed"}:
+        current = {
+            result_id: [status for status, kind, _, _ in records if not explicit_current or kind == "current"]
+            for result_id, records in results.items()
+        }
+        for prefix in ("REG-", "SEC-REG-"):
+            if not any(result_id.startswith(prefix) and statuses for result_id, statuses in current.items()):
+                issues.append(f"Product required verification {prefix}: current execution results are missing.")
+        for result_id in sorted(planned | (results.keys() - optional)):
+            if not current.get(result_id) or any(status != "pass" for status in current[result_id]):
+                issues.append(f"Product required verification {result_id}: missing successful current execution result.")
+    if warnings is not None:
+        warnings.extend(notices)
+    else:
+        for notice in notices:
+            print(f"  ! {notice}")
+    return issues
 
 
 def validate_poc_trace(project_dir=".", gate=None):
@@ -6347,6 +6515,83 @@ def detect_early_implementation_files(project_dir="."):
     return found
 
 
+def git_json_snapshots(project_dir, refs):
+    """Read immutable session blobs in one Git process, including missing parents."""
+    result = subprocess.run(
+        ["git", "cat-file", "--batch"], cwd=project_dir, capture_output=True,
+        input="".join(f"{ref}:./session.json\n" for ref in refs).encode("utf-8"),
+    )
+    if result.returncode:
+        return {}
+    stream = io.BytesIO(result.stdout)
+    snapshots = {}
+    for ref in refs:
+        header = stream.readline().split()
+        if len(header) == 2 and header[-1] == b"missing":
+            continue
+        if len(header) != 3 or header[1] != b"blob" or not header[2].isdigit():
+            return {}
+        body = stream.read(int(header[2]))
+        if stream.read(1) != b"\n":
+            return {}
+        try:
+            parsed = json.loads(body)
+            if isinstance(parsed, dict):
+                snapshots[ref] = parsed
+        except (ValueError, UnicodeError):
+            continue
+    return snapshots
+
+
+def product_gate_approval_snapshot(project_dir, session, gate):
+    """Find the existing approval-introducing snapshot, not a dated Run claim."""
+    approvals = session.get("approvals", {})
+    approval = approvals.get(gate) if isinstance(approvals, dict) else None
+    if not isinstance(approval, dict) or not approval.get("approval_evidence"):
+        return ""
+    try:
+        datetime.fromisoformat(approval.get("approved_at", ""))
+    except (TypeError, ValueError):
+        return ""
+
+    try:
+        # Search approval changes, not every Wave/session update since approval.
+        commits = git_text(
+            ["log", "--first-parent", "--format=%H", "-G", re.escape(approval["approved_at"]), "--", "session.json"], project_dir,
+        ).splitlines()
+        if not commits:
+            return ""
+        snapshots = git_json_snapshots(project_dir, [ref for commit in commits for ref in (commit, f"{commit}^")])
+        for commit in commits:
+            saved = snapshots.get(commit, {})
+            saved_approvals = saved.get("approvals", {})
+            saved_gates = saved.get("gate_status", {})
+            if not isinstance(saved_approvals, dict) or saved_approvals.get(gate) != approval:
+                continue
+            if not isinstance(saved_gates, dict) or saved_gates.get(gate) != "done":
+                continue
+            # Later commits carrying the same approval cannot approve new Runs.
+            parent = snapshots.get(f"{commit}^", {})
+            parent_approvals = parent.get("approvals", {})
+            if not parent or not isinstance(parent_approvals, dict) or parent_approvals.get(gate) == approval:
+                continue
+            return commit
+    except OSError:
+        pass
+    return ""
+
+
+def product_run_matches_approval(project_dir, record, snapshot):
+    if not snapshot or record["status"].strip().lower() not in {"completed", "verified", "done"}:
+        return False
+    try:
+        historical = git_text(["show", f"{snapshot}:./{record['path'].replace(os.sep, '/')}"], project_dir)
+        with open(os.path.join(project_dir, record["path"]), encoding="utf-8") as f:
+            return bool(historical and historical == f.read().strip())
+    except (OSError, UnicodeError):
+        return False
+
+
 def validate_gate_progression(project_dir=".", current_gate="phase0"):
     issues = []
     if current_gate not in GATE_ORDER:
@@ -6358,10 +6603,22 @@ def validate_gate_progression(project_dir=".", current_gate="phase0"):
         record for record in run_records
         if record["gate"] in GATE_ORDER and GATE_ORDER.index(record["gate"]) > current_idx
     ]
+    product_iteration = load_delivery_profile(project_dir) == "product" and current_gate in {"gate2", "gate3", "impl"}
+    session = load_session(project_dir) if product_iteration and future_runs else {}
+    approval_snapshots = {}
     for record in future_runs:
+        diagnostic = ""
+        if product_iteration and record["gate"] in {"gate4", "gate5"}:
+            gate = record["gate"]
+            if gate not in approval_snapshots:
+                approval_snapshots[gate] = product_gate_approval_snapshot(project_dir, session, gate)
+            snapshot = approval_snapshots[gate]
+            if product_run_matches_approval(project_dir, record, snapshot):
+                continue
+            diagnostic = " [Product approval history unproved: requires an unchanged completed Run in the approval-introducing Git snapshot; new/changed Runs remain unauthorized]"
         issues.append(
             f"  X 프로세스 위반: 현재 Gate는 {current_gate}인데 앞선 Gate Run이 존재합니다 "
-            f"({record['gate']}, {record['path']})"
+            f"({record['gate']}, {record['path']}){diagnostic}"
         )
 
     if current_idx < GATE_ORDER.index("impl"):
@@ -7197,6 +7454,92 @@ def require_gate_start_prerequisites(project_dir=".", target_gate="phase0"):
     sys.exit(1)
 
 
+def product_run_completion_findings(path):
+    """Read actual failure signals, not a retroactive Run authoring contract."""
+    from vulcan_core.document_context import _sections
+
+    issues, warnings = [], []
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except (OSError, UnicodeError) as error:
+        return [f"Cannot read Product Run result: {error}"], []
+    sections = _sections(content)
+    observed = []
+
+    def result(value, source, optional=False):
+        value = clean_contract_cell(value).strip('"\'')
+        match = re.match(
+            r"^(environment[_ -]blocked|not[_ -]run|not_executed|pass(?:ed)?|fail(?:ed)?|"
+            r"blocked|skip(?:ped)?|통과|성공|실패|미실행|환경\s*차단)(?=$|[\s;:,.(/])", value, re.I,
+        )
+        status = match.group(1).lower().replace("_", " ") if match else None
+        if match and re.match(r"\s*(?:/|or\b|또는)", value[match.end():], re.I):
+            status = None
+        observed.append(status)
+        if optional or status is None or status in {"skip", "skipped"}:
+            warnings.append(f"Product legacy/optional output {source}: manual review of {value!r}; no failure inferred.")
+        elif status not in {"pass", "passed", "통과", "성공"}:
+            issues.append(f"Product current output {source}: {value} blocks completion.")
+
+    for index, section in enumerate(sections):
+        titles = [section["heading"]] + [sections[i]["heading"] for i in reversed(section["parents"])]
+        declared_current = bool(re.search(r"(?m)^\s*<!--\s*vulcan:state=current\s*-->\s*$", section["visible"]))
+        if not declared_current and any(re.search(r"\bhistory\b|\bhistorical\b|\barchive\w*\b|\bprevious\b|\bpast\b|\bsuperseded\b|과거|이력|이전", title, re.I) for title in titles):
+            continue
+        kind = "unclassified"
+        for title in titles:
+            if re.search(r"\bhistory\b|\bhistorical\b|\barchive\w*\b|\bprevious\b|\bpast\b|\bsuperseded\b|과거|이력|이전", title, re.I):
+                kind = "history"
+                break
+            if re.search(r"\bplan\b|계획", title, re.I):
+                kind = "plan"
+                break
+            if re.search(r"\bcurrent\b|\bexecution\b|\bverification\b|\bresults?\b|현재|검증\s*결과|실행\s*결과", title, re.I):
+                kind = "output"
+                break
+        if declared_current:
+            kind = "output"
+        if section["state"] in {"history", "candidate"} or kind in {"history", "plan"}:
+            continue
+        if section["state_conflict"]:
+            warnings.append("Product Run output has conflicting section state markers; manual review required.")
+            continue
+        text = section["excerpt"]
+        metadata = parse_simple_yaml_block(text)
+        if index <= 1 and str(metadata.get("status", "")).lower() in {"failed", "blocked", "environment_blocked"}:
+            result(metadata["status"], "Run status")
+        for yaml_text in re.findall(r"```yaml\s*(.*?)```", text, re.S | re.I):
+            verification = _extract_yaml_block_text(yaml_text, "verification_results")
+            for value in re.findall(
+                r"(?im)(?:^\s*(?:-\s*)?|[,{]\s*)[\"']?(?:result|status)[\"']?\s*:\s*([^,}\n]+)", verification,
+            ):
+                result(value, "verification_results")
+            if any(int(value) != 0 for value in re.findall(r"[\"']?exit_code[\"']?\s*:\s*(-?\d+)", verification)):
+                issues.append("Product current verification has a nonzero exit_code; classify superseded attempts as history explicitly.")
+            open_items = _extract_yaml_block_text(yaml_text, "open_issues")
+            if open_items and open_items not in {"[]", "null"}:
+                warnings.append("Product Run open_issues require manual triage; presence alone is not a completion blocker.")
+                for item in re.split(r"(?m)^\s*-\s+(?=\w+\s*:)", open_items):
+                    waived = re.search(r"(?im)^\s*(?:blocking:\s*false|waived:\s*true|status:\s*(?:waived|closed|resolved|nonblocking))\s*$", item)
+                    blocking = re.search(r"(?im)^\s*(?:blocking:\s*true|status:\s*(?:blocked|failed)|severity:\s*blocker)\s*$", item)
+                    if blocking and not waived:
+                        issues.append("Product current open_issues contains an explicit unresolved blocker.")
+        for headers, rows in parse_markdown_tables(section["visible"]):
+            keys = {header.strip().lower(): header for header in headers}
+            result_headers = [keys[key] for key in ("result", "결과", "status", "상태") if key in keys]
+            if not result_headers or (kind != "output" and not any(key in keys for key in ("command", "명령", "검증 명령"))):
+                continue
+            for row in rows:
+                optional = any(row.get(keys[key], "").strip().lower() in {"false", "no", "optional", "선택"}
+                               for key in ("required", "필수", "필수 여부") if key in keys)
+                for header in result_headers:
+                    result(row.get(header, ""), section["heading"], optional=optional)
+    if not observed:
+        warnings.append("Historical Product Run has no structured current verification results; manual review, not a retroactive required-field failure.")
+    return list(dict.fromkeys(issues)), list(dict.fromkeys(warnings))
+
+
 def cmd_prepare_transition(project_dir="."):
     session = load_session(project_dir)
     current_gate = session.get("current_gate", "phase0")
@@ -7242,7 +7585,13 @@ def cmd_prepare_transition(project_dir="."):
     active_runs = []
     open_statuses = {"draft", "inprogress", "in progress", "running"}
     for record in collect_run_gate_records(project_dir):
-        if record["gate"] == current_gate and record["status"].strip().lower() in open_statuses:
+        if profile == "product":
+            relevant = record["gate"] in GATE_ORDER and GATE_ORDER.index(record["gate"]) <= current_idx
+            unfinished = record["status"].strip().lower() not in {"completed", "verified", "done"}
+        else:
+            relevant = record["gate"] == current_gate
+            unfinished = record["status"].strip().lower() in open_statuses
+        if relevant and unfinished:
             active_runs.append(record)
 
     if active_runs:
@@ -7255,25 +7604,37 @@ def cmd_prepare_transition(project_dir="."):
     print()
 
     # [3] 현재 Gate worker Run preflight 사후 점검
-    print("[3] 현재 Gate worker Run preflight 사후 점검")
+    result_check_label = "Product worker completion/output" if profile == "product" else "preflight"
+    print(f"[3] 현재 Gate worker Run {result_check_label} 사후 점검")
     preflight_records = []
     preflight_skills = {"build-wave", "implementation-scaffold", "qa-execution", "qa-fix-loop"}
     preflight_statuses = {"completed", "verified", "completedwithissues"}
+    completed_snapshot = ""
+    if profile == "product":
+        preflight_statuses.add("done")
+        completed_snapshot = product_gate_approval_snapshot(project_dir, session, current_gate)
     for record in collect_run_gate_records(project_dir):
         if record["gate"] != current_gate:
             continue
         if record["status"].strip().lower() not in preflight_statuses:
             continue
+        if profile == "product" and product_run_matches_approval(project_dir, record, completed_snapshot):
+            continue
         run_abs = os.path.join(project_dir, record["path"])
         try:
             with open(run_abs, encoding="utf-8") as f:
                 run_content = f.read()
-        except OSError:
+        except OSError as error:
+            if profile == "product":
+                preflight_records.append((record["path"], [f"Cannot read Product Run result: {error}"], []))
             continue
         run_metadata = parse_simple_yaml_block(run_content)
         if run_metadata.get("skill") not in preflight_skills:
             continue
-        blockers, warnings = run_preflight_file(run_abs)
+        if profile == "product":
+            blockers, warnings = product_run_completion_findings(run_abs)
+        else:
+            blockers, warnings = run_preflight_file(run_abs)
         if blockers or warnings:
             preflight_records.append((record["path"], blockers, warnings))
 
@@ -7281,7 +7642,7 @@ def cmd_prepare_transition(project_dir="."):
     preflight_warning_count = sum(len(warnings) for _, _, warnings in preflight_records)
     if preflight_blocker_count:
         overall_pass = False
-        print(f"  -> 결과: ❌ preflight 차단 {preflight_blocker_count}건 발견 (완료 불가)")
+        print(f"  -> 결과: ❌ {result_check_label} 차단 {preflight_blocker_count}건 발견 (완료 불가)")
         for path, blockers, warnings in preflight_records:
             if blockers:
                 print(f"     - {path}")
@@ -7290,14 +7651,19 @@ def cmd_prepare_transition(project_dir="."):
             elif warnings:
                 print(f"     - {path}: 경고 {len(warnings)}건")
     elif preflight_warning_count:
-        print(f"  -> 결과: ! preflight 경고 {preflight_warning_count}건 발견 (전환 가능, 확인 권장)")
-        for path, _blockers, warnings in preflight_records:
+        print(f"  -> 결과: ! {result_check_label} 경고 {preflight_warning_count}건 발견 (전환 가능, 확인 권장)")
+        warning_records = preflight_records[:5] if profile == "product" else preflight_records
+        for path, _blockers, warnings in warning_records:
             if warnings:
                 print(f"     - {path}")
-                for warning in warnings:
+                for warning in (warnings[:3] if profile == "product" else warnings):
                     print(f"       ! {warning}")
+                if profile == "product" and len(warnings) > 3:
+                    print(f"       ... 외 {len(warnings) - 3}건")
+        if profile == "product" and len(preflight_records) > 5:
+            print(f"     ... 외 {len(preflight_records) - 5}개 Run. 과거 기록 일괄 보정 대신 현재 작업에 관련된 결과만 확인하세요.")
     else:
-        print("  -> 결과: ✨ preflight 차단/경고 없음 (통과)")
+        print(f"  -> 결과: ✨ {result_check_label} 차단/경고 없음 (통과)")
     print()
 
     # [4] 산출물 내용 완성도 검사
@@ -7349,7 +7715,7 @@ def cmd_prepare_transition(project_dir="."):
             transition_issues.append(f"Product 필수 산출물 없음: {rel_path}")
 
         if current_gate == "impl":
-            wave_records = collect_build_wave_records(project_dir)
+            wave_records = merge_session_wave_records(session, collect_build_wave_records(project_dir), profile="product")
             active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
             for w in active_waves:
                 run_file_str = f" ({w['run']})" if w['run'] else ""
@@ -14145,7 +14511,7 @@ def check_run_file(path):
                 warnings.append("delegation_records에 heartbeat_count 또는 status_probe_count가 없습니다. 장시간 worker 병목 분석을 위해 기록을 권장합니다.")
 
         has_direct_reason = direct_edit_reason_present(content)
-        if is_impl_run and has_impl_code_result and has_direct_reason:
+        if run_contract_profile != "product" and is_impl_run and has_impl_code_result and has_direct_reason:
             scope_text = direct_edit_scope_block(content)
             if not scope_text:
                 warnings.append("Orchestrator 직접 구현 예외가 있지만 direct_edit_scope가 없습니다. files, estimated_loc, contract_changed, verification, followup_review_required를 남기세요.")
@@ -14428,10 +14794,10 @@ def run_preflight_file(path):
         and not re.search(r"아니다|아니며|not\s+a\s+reason|not\s+an\s+acceptable\s+reason", line, re.IGNORECASE)
         for line in content.splitlines()
     )
-    if invalid_direct_reason:
+    if invalid_direct_reason and run_contract_profile != "product":
         blockers.append("Orchestrator 직접 구현 사유로 'worker/subagent를 명시하지 않았다'는 취지의 문구를 사용할 수 없습니다.")
 
-    if is_impl and has_code_result_claim and direct_edit_reason_present(content):
+    if run_contract_profile != "product" and is_impl and has_code_result_claim and direct_edit_reason_present(content):
         scope_text = direct_edit_scope_block(content)
         if not scope_text:
             warnings.append("Orchestrator 직접 구현 예외가 있지만 direct_edit_scope가 없습니다. files, estimated_loc, contract_changed, verification, followup_review_required를 남기세요.")
