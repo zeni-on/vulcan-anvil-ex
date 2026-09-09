@@ -84,9 +84,19 @@
 
 ### Now: testing-first stabilization
 
+#### 현재 계약 조회와 Git 증적 연결 (2026-09-08)
+
+기준: [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md). 새 브랜치 `codex/current-contract-evidence`에서 기존 CLI를 확장한다.
+
+1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. Moderate production advisory 2건은 남아 있다.
+2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
+3. 완료: 선택형 `execute --verify`가 명시한 소스/테스트/lockfile 범위의 Git 기준, 파일 해시, 미커밋/실행 중 변경, 명령 exit code를 JSON으로 기록한다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다.
+4. 완료: 선택형 `trace-context --sections`가 정확한 ID, 출처/줄 범위/해시, 적용 상태와 공통 제약을 반환한다. Run에는 짧은 `section_lookup`만 추가한다. 기존 그래프/원장을 자동 수정하지 않는다.
+5. 완료: 로컬 unit 92건 중 89건 통과/Windows symlink 권한에 따른 3건 skip, init smoke 12단계, fixture smoke 84단계를 확인했다. 새 문맥 review의 Git 식별/Markdown 표식 지적 3건을 보정했고 reviewer 재검사 9건도 통과했다. [파일럿 관찰과 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#61-로컬-조회-파일럿-2026-09-08)를 남겼으며 원본 프로젝트 변경이나 사적 문서 공개는 하지 않았다. 변경은 [PR #24](https://github.com/zeni-on/vulcan-anvil-ex/pull/24)에서 검토하며 최신 CI 상태도 해당 PR에서 확인한다.
+
 #### Product 입력/검증 비용 정리 (2026-09-08)
 
-- 작업 브랜치: `codex/product-astra-workflow`. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
+- PR #23으로 main에 반영했다. Product 원장/승인/보안 수준을 유지하며 worker 입력, 수정 경로와 실제 검증 명령을 좁히고, 증적 확인과 재실행 조건을 구분한다. 실행 기준은 [Product Profile Baseline 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위), worker 입력은 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)다.
 - Product Run 생성/사전검사 단위 회귀, Audit 초기화 smoke, Product/PoC/Audit fixture smoke를 확인했다. 다음은 실제 작업에서 같은 모델/effort로 입력량, 재검사, 위임 왕복, 결함/보정량을 비교하는 것이다. 실행 시간이나 크레딧 감소는 아직 입증하지 않았다.
 - 다음 후보는 기존 `trace-context`의 계약 구간 추출이다. 다중 active Wave, App Server 연동, 외부 CLI 모델 기본값 변경은 이번 범위에 포함하지 않는다.
 - 후속 정책: Codex custom agent의 모델/effort 고정을 제거하고 사용자 모델 설정 상속과 작업별 effort 선택을 분리했다. [native review 기준](core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review)은 위험도에 따른 호출 판단과 부모 대화 비상속을 명시한다. 자동 리뷰 호출/새 mandatory checker는 추가하지 않았고, 외부 CLI 기본값/사용자 전역 설정도 변경하지 않는다.

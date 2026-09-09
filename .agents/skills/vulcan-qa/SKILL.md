@@ -49,3 +49,4 @@ require running the same product tests again. Record remaining warnings honestly
 - Run `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed.
 - Run `python vulcan.py check-trace` only if the readiness output points to traceability errors that need detailed debugging.
 - Run `python vulcan.py check-contract` when Program Design contracts are relevant.
+- When tested-source identity is needed, use the optional `execute --verify` path in `docs/core/ORCHESTRATOR_CLI_GUIDE.md`. Link its JSON through existing evidence fields; command success, source identity, and QA approval are separate facts.

@@ -4,6 +4,14 @@
 
 ## 현재 제공 스크립트
 
+문서 구간 조회와 검증 소스 식별은 합성 임시 문서/Git 저장소로 단위 회귀를 실행한다. 실제 고객/개인 프로젝트 문서를 공개 fixture로 가져오지 않는다.
+
+```powershell
+python -m unittest scripts.regression.tests.test_evidence scripts.regression.tests.test_document_context
+```
+
+`test_evidence`는 clean/dirty/새 파일/실행 중 변경, 실패 명령, 경로 및 출력 덮어쓰기 경계를 검증한다. `test_document_context`는 구간 상태/공통 조건/정확한 ID/출처/조회 제한을 검증한다. CI의 기존 `test_*.py` discovery에 포함된다. symlink 생성 권한이 없는 환경에서는 해당 실제 symlink 테스트를 skip한다.
+
 ### 1. 최소 init smoke
 
 ```powershell

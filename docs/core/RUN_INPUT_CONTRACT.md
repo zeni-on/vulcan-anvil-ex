@@ -510,6 +510,8 @@ direct_edit_scope:
 
 ### 6.6 `source_documents`
 
+큰 문서는 파일 경로만 전달하지 말고 관련 ID/절과 공통 제약을 안내한다. 선택적인 절 조회 결과는 원문의 위치/해시를 가진 읽기 안내이며 새 계약 원본이 아니다. 현재/후보/이력/미분류와 출력 잘림을 확인하고, 충돌하거나 누락된 조건은 원문/승인 기록에서 확인한다. 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md) 2~3절이다.
+
 `source_documents.read_first`는 worker가 작업 시작 전에 반드시 먼저 읽는 최소 문서다.
 보통 `AGENTS.md`, `session.json`, 현재 skill 문서만 둔다.
 

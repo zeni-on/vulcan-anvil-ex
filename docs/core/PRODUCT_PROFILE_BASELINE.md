@@ -118,6 +118,7 @@ Product에서 Audit으로 전환할 때 보강할 수 있는 항목:
 이 절은 Product의 worker 입력과 검증 반복 기준이다. 다른 Core/adapter 문서의 일반적인 "worker 테스트 재실행"은 Product에서 아래 조건으로 해석한다. 품질/보안 계약, 사전검사, Gate 승인 조건은 완화하지 않는다.
 
 - 원장 6종은 유지한다. worker에게는 현재 Run, 직접 관련 계약 ID/섹션과 공통 보안/데이터 제약을 전달한다. 전체 원장/과거 Run은 필요할 때만 읽는다. 상세 계약이 부족하면 먼저 보완하며, 분량을 줄이려고 필수 조건을 생략하지 않는다.
+- 누적 원장의 현재 계약/후보/이력 구분과 Git 증적 연결은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다. 날짜순 추가 문구를 승인된 현재 계약으로 자동 해석하지 않는다. 상세 계약은 한 위치에서 유지하며, 분할은 해당 기능부터 기존 링크/검사 호환성을 확인해 적용한다.
 - worker 입력은 [PRODUCT_WORKER_GUIDE.md](PRODUCT_WORKER_GUIDE.md)를 사용한다. Orchestrator용 skill의 계획/위임/Gate 절차를 worker에게 수행시키지 않는다.
 - 생성된 수정 경로와 검증 명령의 TBD는 Orchestrator가 실제 코드 구조와 프로젝트 명령으로 확정한다. Python/Node/Java 도구가 설치되어 있다는 이유만으로 모든 스택의 검증을 추가하지 않는다.
 - worker는 코드/담당 테스트와 결과를 반환한다. 추적표, 최종 보고서, session, 선택적 위임 메타데이터 정규화는 Orchestrator가 맡는다. 비차단 경고는 보고 후 판단하며, 경고 0개를 구현 완료 조건으로 삼지 않는다.

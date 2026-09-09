@@ -116,6 +116,20 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 
 자동화나 Dashboard 연동처럼 기계가 읽어야 하는 경우에는 `--json`을 붙인다. 이 JSON에는 `delegation_sidecar` 후보, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다. 이 출력도 dry-run 계획일 뿐이며 worker 실행, Gate 승인, Wave 완료를 수행하지 않는다.
 
+### 5.1 검증 대상 Git 기록
+
+이미 승인된 검증 명령의 소스 기준을 남기려면 `execute --verify`를 사용한다. `execute --dry-run`의 worker 계획과는 별개이며 worker 호출, Run 자동 실행, Gate 전환을 하지 않는다.
+
+```text
+python vulcan.py execute --verify --source app --source tests --source requirements.txt --evidence docs/product/evidence/REG-001-source.json -- python -m pytest tests -q
+```
+
+경로는 실제 프로젝트에 맞게 선택한다. `--source`에는 코드/테스트/lockfile 등 실제 검증 입력을 반복 지정하고, `--cwd`와 `--project-dir`는 필요한 경우만 지정한다. 기존 Run에 연결하려면 `--run-id`를 추가한다. `--evidence`는 이미 존재하는 폴더 안의 새 JSON 경로이며, 소스 범위와 겹치거나 기존 파일을 덮어쓸 수 없다.
+
+명령은 `--` 뒤의 명시 argv로 실행한다. shell 문자열이나 Run 본문에서 명령을 자동 추출하지 않는다. Windows에서는 `.cmd`/`.bat` 대신 실제 실행 파일/인터프리터를 사용한다. 명령 출력은 터미널로 전달되며 상세 테스트 로그/HTML은 기존 테스트 도구에서 별도로 남긴다. JSON은 로그를 대체하는 QA 결과서가 아니라 소스 식별 증적이다.
+
+`tested_commit`은 지정 소스가 Git 기준과 일치하고 실행 전후 안정적으로 식별된 경우에만 채워진다. 미커밋/새 파일을 포함하면 실제 내용 fingerprint와 범위를 확인한다. Git clean이어도 필터/줄바꿈 변환으로 실제 바이트가 index와 다르면 커밋 대신 관측한 내용을 기준으로 남긴다. exit code 0만으로 `identity_complete`, `source_changed`, 환경/테스트 범위 또는 QA 승인을 생략하지 않는다. 수집은 관측 전후 비교이며 실행 중 잠깐 바뀌었다 복원된 모든 변경을 감시하는 장치는 아니다. 전체 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다.
+
 ## 6. 구현과 Build Wave
 
 | 목적 | 명령 |
@@ -130,6 +144,19 @@ native subagent, thread, native branch agent에게 넘기기 전에는 Orchestra
 Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 Product 원장에서 관련 `REQ/API/DATA/UI/REG`를 추천한다. 원장 전체 정독 대신 worker guide와 대상 계약 ID/섹션을 입력으로 사용한다. 생성된 Run의 수정 경로와 검증 명령 TBD는 실제 프로젝트 기준으로 확정한 뒤 preflight를 통과시킨다. 원장만으로 계약이 부족하면 `docs/templates/product/PRODUCT_*_TEMPLATE.md`의 경량 상세 문서를 `docs/artifacts/02-design/...`에 둔다. 추적표/최종 결과 정리는 Orchestrator가 맡으며, 증적 재사용과 재실행 조건은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 
 `BW-000 implementation-scaffold`는 skeleton/build smoke만 검증한다. 업무 요구사항, 테스트, UI 상태를 `Implemented`, `Verified`, `Pass`로 확정하지 않는다.
+
+### 6.1 누적 문서의 계약 구간 조회
+
+```text
+python vulcan.py trace-context --id API-001,PGM-001 --sections --emit json
+python vulcan.py trace-context --id API-001 --sections --document docs/product/PRODUCT_CONTRACTS.md --max-chars 12000 --emit yaml
+```
+
+기존 그래프 조회는 `--sections` 없이 사용한다. 구간 조회의 기본 탐색은 `docs/product/`와 `docs/artifacts/02-design/`의 Markdown이며, 추가 변경 계약은 `--document`로 정확한 상대경로를 지정한다. 이 옵션은 자동 탐색에 더하는 것이 아니라 입력 문서 선택을 대체하므로 필요한 공통 보안/오류 계약 문서도 함께 지정한다.
+
+결과의 경로/제목/줄 범위/문서 해시를 기준으로 필요한 원문을 읽는다. 현재/후보/이력 표식이 없는 절은 `unclassified`이고, 여러 현재 계약이나 누락 링크는 Orchestrator가 판단한다. 공통 조건 조회는 제목 기반 읽기 보조이며 의미상 모든 연관 계약을 입증하지 않는다. 링크는 자동으로 따라 읽지 않는다. 출력 제한으로 빠진 절과 `incomplete`/경고를 확인하고 문서를 좁혀 다시 조회한다. 생성된 Run의 `section_lookup`은 이 조회 안내이지 계약 확정이나 원문 복사본이 아니다.
+
+구간 모드의 `--emit yaml`은 추가 라이브러리 없이 읽을 수 있는 JSON 호환 YAML 1.2 형식으로 출력한다. `--max-chars`는 본문 문자 수 제한이며 출처/경고 metadata를 포함한 전체 JSON 바이트나 모델 토큰 수 제한이 아니다.
 
 ## 7. QA와 릴리즈
 
