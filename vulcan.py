@@ -5219,7 +5219,7 @@ def product_verification_records(content):
 
     def explicit_status(value):
         match = status_pattern.match(value)
-        status = match.group(1).lower().replace("_", " ") if match else None
+        status = match.group(1).lower().replace("_", " ").replace("-", " ") if match else None
         if match and re.match(r"\s*(?:/|or\b|또는)", value[match.end():], re.I):
             return None
         if status in {"passed", "통과", "성공"}:
@@ -5297,6 +5297,7 @@ def product_verification_records(content):
 
 def product_verification_result_findings(content, gate, warnings=None):
     issues, notices, planned, optional, results, explicit_current = product_verification_records(content)
+    pending_at_gate3 = set()
     for result_id, records in results.items():
         statuses = {status for status, _, _, _ in records if status}
         if "pass" in statuses and len(statuses) > 1:
@@ -5306,10 +5307,16 @@ def product_verification_result_findings(content, gate, warnings=None):
             if is_optional or (result_id in optional and result_id not in planned):
                 if status != "pass":
                     notices.append(f"Product optional verification {result_id}: manual review of {value!r}; no failure inferred.")
+            elif gate == "gate3" and status in {"not run", "not executed", "미실행"}:
+                # A precreated QA sheet is not an execution obligation at test-plan approval.
+                pending_at_gate3.add(result_id)
             elif status in {"fail", "blocked", "not run", "not executed", "environment blocked", "미실행", "환경 차단"}:
                 issues.append(f"Product verification {result_id}: {value} blocks completion.")
             elif status != "pass":
                 notices.append(f"Product verification {result_id}: ambiguous/incomplete result {value!r}; manual review required.")
+    if pending_at_gate3:
+        notices.append("Product Gate 3 pending verification: " + ", ".join(sorted(pending_at_gate3))
+                       + "; not promoted to Pass. Actual execution is required for Gate 4 completion.")
     if gate in {"gate4", "gate5", "completed"}:
         current = {
             result_id: [status for status, kind, _, _ in records if not explicit_current or kind == "current"]

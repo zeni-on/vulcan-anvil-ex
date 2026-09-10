@@ -195,6 +195,52 @@ class ProductWorkflowTests(unittest.TestCase):
         self.assertEqual(vulcan.product_verification_result_findings(self.report(execution=False), "impl"), [])
         self.assertTrue(vulcan.product_verification_result_findings("REG-001 SEC-REG-001", "gate4"))
 
+    def test_gate3_precreated_not_run_results_are_pending_not_failures(self):
+        for value in ("Not Run", "not_run", "not-run", "not_executed", "미실행"):
+            with self.subTest(value=value):
+                warnings = []
+                report = self.report(result=value, security=value)
+                self.assertEqual(vulcan.product_verification_result_findings(report, "gate3", warnings), [])
+                self.assertEqual(len(warnings), 1, warnings)
+                self.assertIn("REG-001, SEC-REG-001", warnings[0])
+                self.assertIn("Gate 4", warnings[0])
+                for gate in ("impl", "gate4", "gate5", "completed"):
+                    self.assertTrue(vulcan.product_verification_result_findings(report, gate, []), gate)
+
+    def test_gate3_real_failures_and_conflicting_results_remain_blocking(self):
+        for value in ("Fail", "Blocked", "environment_blocked", "environment-blocked"):
+            with self.subTest(value=value):
+                issues = vulcan.product_verification_result_findings(
+                    self.report(result=value, security="Not Run"), "gate3", [],
+                )
+                self.assertTrue(any("REG-001:" in i and "blocks completion" in i for i in issues), issues)
+        conflicting = self.report(result="Not Run") + self.result_table("Pass")
+        self.assertTrue(any("contradictory" in i for i in
+                            vulcan.product_verification_result_findings(conflicting, "gate3", [])))
+        columns = "# Current Results\n| REG ID | Result | Status |\n| --- | --- | --- |\n| REG-001 | Not Run | Fail |\n"
+        self.assertTrue(any("conflicting Result/Status" in i for i in
+                            vulcan.product_verification_result_findings(columns, "gate3", [])))
+
+    def test_gate3_inline_and_linked_not_run_results_reach_transition_without_rewriting(self):
+        for split in (False, True):
+            with self.subTest(split=split):
+                root = self.project(gate="gate3")
+                report = self.report(result="Not Run", security="Not Run")
+                relative = "docs/artifacts/04-review/not-run/results.md" if split else "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+                self.write(root / relative, report)
+                if split:
+                    self.write(root / "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                               "# Report\n[results](../artifacts/04-review/not-run/results.md)\n")
+                before = {p: p.read_bytes() for p in root.rglob("*.md")}
+                session = (root / "session.json").read_bytes()
+                code, output = self.transition(root)
+                self.assertEqual(code, 0, output)
+                self.assertEqual(before, {p: p.read_bytes() for p in before})
+                self.assertEqual(session, (root / "session.json").read_bytes())
+                counts = vulcan._product_test_status_counts(str(root))
+                self.assertEqual((counts["passed"], counts["pending"], counts["security"]["pending"]), (0, 1, 1))
+                self.assertTrue(vulcan.collect_product_profile_findings(str(root), "gate4")[0])
+
     def test_completed_product_uses_output_checks_not_historical_readiness(self):
         root = self.project()
         path = self.run_file(root, body="\n```yaml\nverification:\n  cwd: removed-worktree\n  commands:\n    - TBD\n```\n")

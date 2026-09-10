@@ -84,12 +84,13 @@
 
 ### Now: testing-first stabilization
 
-#### Product 문서 구조와 작성 책임 (2026-09-10, 조회·검사 머지/작성 경로 보강)
+#### Product 문서 구조와 작성 책임 (2026-09-10, 작성 경로 머지/확장 회귀 검증)
 
 - [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
 - 원본 밖 기능 파일럿에서 요구/AC 7쌍, 공통 조건 본문 16줄, Pending 9개 행을 보존했고 23개 탐색 링크를 대조했다. 미수집 참조 3개와 기존 조회의 공통 조건 누락을 드러냈다. 속도/토큰 절감 또는 제품 QA 통과를 입증한 것은 아니다.
 - 설계 #27에 이어 [조회 #28](https://github.com/zeni-on/vulcan-anvil-ex/pull/28), [내용 검사·추적·통계 #29](https://github.com/zeni-on/vulcan-anvil-ex/pull/29)를 Windows/Linux Python 및 Dashboard CI 통과 후 머지했다. 명시적 상세 링크, legacy/split/mixed 호환, 중복/충돌·누락 진단과 계획/현재 결과 분리를 검증했다. [조회 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp), [검사 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)를 따른다.
-- 후속 브랜치에서 [Product 문서 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md)를 Core/Codex/Gemini에 연결하고 선택형 요구 상세·시험 계획·실행 결과 템플릿을 추가했다. 기존 설계 템플릿의 중복 정의/실행 결과 혼합을 정리하며, init의 필수 6종과 upgrade의 기존 원본 보존을 회귀 검증한다(병합 전).
+- [작성 경로 #30](https://github.com/zeni-on/vulcan-anvil-ex/pull/30)을 머지했다. [Product 문서 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md)를 Core/Codex/Gemini에 연결하고 선택형 요구 상세·시험 계획·실행 결과 템플릿을 추가했다. 기존 설계 템플릿의 중복 정의/실행 결과 혼합을 정리하며, init의 필수 6종과 upgrade의 기존 원본 보존을 회귀 검증했다.
+- 후속 브랜치에서 **Product Gate 3의 선작성 Not Run 결과 오탐 수정과 문서 기능 확장 회귀**를 완료했다(병합 전). 3개 시나리오→댓글 추가→기존 제목 제한 변경을 합성 예시와 자동 테스트로 확인했다. 원장 6종은 유지하고 현재 원본/과거 결과/당시 시험 정의를 분리한다. 실제 실패·환경 차단·상충 결과와 Gate 4 이후의 필수 실행 판정은 유지한다. [확장 검증 결과와 한계](reference/PRODUCT-DOCUMENT-GROWTH-REGRESSION.md)를 따른다.
 - 다음은 **남은 승인/소스 비교·릴리즈·Dashboard 소비자 호환 검증**, 그 뒤 실제 기능 하나의 승인된 이동이다. 작성 지침이 배포되어도 기존 승인 문서를 자동 이동하거나 6종 진입점을 삭제하지 않는다.
 - 실행 정책/필수 6종/Dashboard와 사용자 프로젝트 원본은 유지한다. Audit/PoC 검사 기준도 바꾸지 않는다.
 
