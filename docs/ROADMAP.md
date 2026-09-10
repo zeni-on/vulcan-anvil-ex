@@ -84,16 +84,24 @@
 
 ### Now: testing-first stabilization
 
-#### Product 결과 중심 실행 정리 (2026-09-09, 로컬 검증 완료 / PR 검토 대기)
+#### Product 문서 구조와 작성 책임 (2026-09-10, 설계/로컬 파일럿 완료)
+
+- [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
+- 원본 밖 기능 파일럿에서 요구/AC 7쌍, 공통 조건 본문 16줄, Pending 9개 행을 보존했고 23개 탐색 링크를 대조했다. 미수집 참조 3개와 기존 조회의 공통 조건 누락을 드러냈다. 속도/토큰 절감 또는 제품 QA 통과를 입증한 것은 아니다.
+- 다음 구현은 새 폴더/템플릿 일괄 생성이 아니라 **관련 원본/공통 조건 조회와 legacy/split/mixed 내용 검사 호환**이다. 그 뒤 Core/Codex/Gemini 작성 경로, Dashboard, 실제 기능 하나의 승인된 이동 순으로 진행한다.
+- 이번 설계 PR은 실행 정책/필수 6종/설치 템플릿/CLI/Dashboard와 사용자 프로젝트 원본을 바꾸지 않는다. Audit/PoC 기준도 유지한다.
+
+#### Product 결과 중심 실행 정리 (2026-09-09, main 반영 완료)
 
 - [Product 기준 7절](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 일반 작업/이슈 요약 기반으로 정리했다. Run/Wave와 새 worker는 선택하고, 승인 범위·보안·실제 검증·현재 계약 현행화는 유지한다. 외부 CLI는 기존 Run/preflight 계약을 유지한다.
 - `status`의 새 Wave 생성 강제 안내, 과거 완료 Run의 입력 사전검사 반복, 계획 문장 속 BW 번호의 실행 Wave 오인을 보정했다. Git 승인 조회는 변경 후보를 찾아 일괄 읽으며, 실제 미완료 작업과 근거 없는 미래 Gate 산출물은 계속 진단한다.
 - Codex/Core/Gemini/사용자 안내를 같은 기준에 맞췄다. unit 130건 중 127건 통과/Windows symlink 권한 관련 3건 skip, init smoke 12단계와 fixture smoke 84단계가 통과했다. 새 문맥 리뷰에서 과거/현재 결과 혼합, 승인 조회 비용, 결과 컬럼 충돌과 손상된 승인 기록을 보정했고 재검토에서 남은 지적은 없었다.
 - 기존 프로젝트의 읽기 전용 관찰에서 계획 참조와 실행 Wave를 구분하고 승인된 과거 Run을 재검사에서 제외함을 확인했다. 실제 미완료 작업/승인 근거가 불명확한 기록은 유지한다. 기존 산출물 자동 삭제·재작성, 사용자 프로젝트 upgrade, Dashboard 재구성은 이번 변경에 포함하지 않는다.
-- 후속: PR 검토 후 작은 실제 변경 한 건에서 문서 생성 수, 재검사 횟수, 입력 범위와 누락/보정량을 비교한다. 속도나 크레딧 절감은 실측 전 보장하지 않는다.
+- [PR #26](https://github.com/zeni-on/vulcan-anvil-ex/pull/26)을 Windows/Linux Python 및 Dashboard CI 통과 후 main으로 머지했다. 후속은 작은 실제 변경 한 건의 문서 생성 수, 재검사 횟수, 입력 범위와 누락/보정량 비교다. 속도나 크레딧 절감은 실측 전 보장하지 않는다.
 
 #### 역할별 작업 협업 정책 (2026-09-09)
 
+- [PR #25](https://github.com/zeni-on/vulcan-anvil-ex/pull/25)를 CI 통과 후 main으로 머지했다.
 - [공통 협업 규칙](core/COLLABORATION_PROTOCOL.md)과 [Codex 작업 연결](adapters/codex-gpt/PERSONA_DELEGATION.md)을 추가/정리했다. 역할별 문서 소유권, 개별 업무 전달/회수, 실제 작업공간/소스 확인, 총괄의 단일 상태 관리와 새 문맥 review를 기존 Run/Profile/Gate 체계에 연결한다.
 - Codex의 오래된 전체 Core 일괄 입력 예시와 병렬 구현 안내를 현재 Product worker 입력 및 단일 active Wave 규칙에 맞췄다. 역할 수 고정, 새 필수 registry/Run 필드, 자동 dispatcher/App Server 또는 다중 Wave는 추가하지 않는다.
 - 검증 완료: 합성 프로젝트 init/upgrade 지침 설치·기존 산출물 보존·문서 링크 3건, 전체 unit 95건 중 92건 통과/Windows symlink 권한에 따른 3건 skip, init smoke 12단계, fixture smoke 84단계. 새 문맥 리뷰에서 차단 지적은 없었다.

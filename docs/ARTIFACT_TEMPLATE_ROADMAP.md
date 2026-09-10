@@ -12,6 +12,8 @@
 
 따라서 이 문서의 "다음 작업"은 최신 실행 우선순위가 아니라, 산출물 템플릿 설계의 배경 메모로 본다. 현재 작업 우선순위는 `docs/ROADMAP.md`를 따른다.
 
+Product의 장기 개발 문서 구조는 [Product Document Architecture Strategy](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md)와 [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md)에서 별도로 설계한다. 2026-09-10 기준 설계/로컬 파일럿 단계이며, 현재 설치되는 6종 템플릿과 검사 정책을 대체하지 않는다.
+
 ## 1. 기본 방향
 
 Vulcan-Anvil Ex의 산출물 템플릿은 책상 위에서 새로 만든 양식이 아니라, 실제 프로젝트와 감리 대응에서 검증된 문서를 기반으로 만든다.
