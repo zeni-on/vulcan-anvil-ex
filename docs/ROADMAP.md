@@ -84,6 +84,13 @@
 
 ### Now: testing-first stabilization
 
+#### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)
+
+- [진행 가이드와 표준 연결](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md), [요청 보드 대화 연습](reference/PRODUCT-DISCOVERY-PILOT-REQUEST-BOARD.md)을 추가했다. IIBA/IREB의 업무·요구 분석 관점과 Example Mapping을 참고하여 문제/경계, 액터·흐름, 규칙·예시·질문, REQ/AC로 연결하는 절차를 제안한다. 표준 준수 인증이나 새로운 필수 Gate/Run은 아니다.
+- 합성 예시에서 반려 후 재신청이 정의되지 않은 점을 확인했고, 사용자는 기존 요청에서 재제출하며 반려 당시 내용·사유도 보존하는 방향을 선택했다. 여기서 인수조건 후보 두 개를 도출했으며, 남은 권한·상태·이력 정책 질문과 구분한다. 실제 프로젝트 원본·승인·구현·QA는 변경하지 않았다.
+- 다음 순서: **한 흐름의 사용자 합의와 REQ/AC 후보까지 파일럿 완료**, 유용한 질문·작성 원본 경로를 Core/Codex/Gemini와 선택형 양식에 반영, 분리 원본의 AC/REQ 전체 조회를 프로그램으로 제공. 전체 목록의 수동 복제 원장은 만들지 않는다.
+- 이번 단계는 reference 설계/대화 연습이다. init/upgrade에 자동 적용되는 운영 지침, 새 경로의 조회·검사 호환, 전체 AC 목록/화면 구현은 후속이다. 기존 문서 구조 호환·회귀 검증 작업도 유지한다.
+
 #### Product 문서 구조와 작성 책임 (2026-09-10, 조회·검사 머지/작성 경로 보강)
 
 - [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
