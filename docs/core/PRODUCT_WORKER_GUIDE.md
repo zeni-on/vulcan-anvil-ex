@@ -10,6 +10,9 @@ it defines the approved goal, writable paths, contracts and completion checks.
   inspect selected session fields only if that context is missing or inconsistent.
 - Read the assigned contract IDs/sections and their enclosing constraints from
   the referenced source documents. Follow API, data, UI, and security rules.
+- Follow the linked detail as the contract source, not a duplicate ledger summary.
+  If documentation is assigned, use `PRODUCT_DOCUMENT_WRITING.md` for the existing
+  source location; do not relocate approved documents or copy detail into a Run.
 - Always check shared authorization, input validation, sensitive-data/logging,
   and compatibility constraints relevant to the change. An absent SEC seed does
   not exempt the implementation from the project's security baseline.

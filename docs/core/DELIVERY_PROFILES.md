@@ -106,7 +106,7 @@ PoC Profile에서는 `--trace-depth`가 명시되지 않으면 depth 1을 기본
 - Program Design은 모든 private method까지 요구하지 않고 public API, service/usecase, DTO, persistence adapter 경계를 중심으로 작성한다.
 - QA는 릴리즈 후보 기준의 회귀 테스트, 주요 화면/API 증적, release note와 backlog 연결을 우선한다.
 - UI Pass는 기본적으로 `@playwright/test` runner 증적을 사용한다. 단, 프로젝트가 UI 자동화 대상이 아니거나 환경 차단이 승인되면 `Not Run`, `Skipped`, `environment_blocked`로 정직하게 기록한다.
-- Product 구현 Run은 `wave-start --trace-seed SCN-001`처럼 Product Scenario ID를 seed로 만들 수 있다. 이때 Run은 `docs/product/` 문서 세트를 기준으로 `SCN -> REQ/API/DATA/UI/REG` 연결을 추천하고, audit용 `docs/artifacts/` 산출물을 worker 입력 문서로 끌고 오지 않는다.
+- Product 구현 Run은 `wave-start --trace-seed SCN-001`처럼 Product Scenario ID를 seed로 만들 수 있다. Product 원장과 명시적으로 연결한 상세에서 `SCN -> REQ/API/DATA/UI/REG` 연결을 추천한다. 같은 `docs/artifacts/` 아래여도 Product 원본인지 확인하며 Audit 산출물 전체를 입력으로 가져오지 않는다. 최종 handoff에는 실제 원본 경로·ID/절을 지정한다.
 - Product Gate 5의 `release-pr --dry-run`은 Product 원장 문서와 Gate 5 승인서를 evidence 기준으로 삼는다. audit용 QA Finding/Test Result/Traceability Matrix가 없다는 이유만으로 Product release candidate를 누락으로 표시하지 않는다.
 - Product worker 입력/역할/검증 반복은 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절과 [PRODUCT_WORKER_GUIDE.md](PRODUCT_WORKER_GUIDE.md)를 따른다. 비차단 경고 정리만을 위해 제품 테스트를 반복하지 않는다.
 
@@ -225,8 +225,7 @@ docs/product/REGRESSION_AND_RELEASE_REPORT.md
 
 이 문서들은 Gate별 제출 폴더가 아니라 제품 운영 문서 세트다.
 각 문서의 `gate_scope`와 본문 섹션이 Gate 1~5 역할에 대응한다.
-상세 설계가 필요해지면 audit 폴더 구조를 재사용하되, 템플릿은 Product용 경량 상세 템플릿을 사용한다.
-Product 원장은 상세 문서의 복사본이 아니라 링크와 핵심 계약, 릴리즈 판단을 유지한다.
+상세가 필요해지면 공통 `docs/artifacts/` 구조를 재사용하고 [PRODUCT_DOCUMENT_WRITING.md](PRODUCT_DOCUMENT_WRITING.md)의 Product 선택 템플릿을 따른다. 요구/설계/시험/실행은 원본 한 곳에 쓰고 원장은 개요, 상대 Markdown 링크와 릴리즈 판단을 유지한다.
 
 ```text
 docs/product/
@@ -255,7 +254,7 @@ docs/product/
 
 Product에서 위 상세 산출물은 기본 필수가 아니다.
 원장 6종만으로 충분하면 상세 문서를 만들지 않는다.
-API/DB/UI/보안/개발표준이 worker 구현이나 릴리즈 판단에 부족할 때만 Product 경량 상세 문서로 분리한다.
+요구/설계/시험/실행이 독립 변경·검토를 필요로 할 때 해당 상세를 작성한다. 요구사항 상세, 테스트 계획, 실행 결과 템플릿도 선택 제공하지만 init에서 추가 산출물을 일괄 생성하지 않는다. 기존 승인 문서는 자동 이동하지 않는다.
 `profile-gap`은 Product 문서 세트의 존재 여부와 현재 Gate의 핵심 내용 보완 필요 여부를 분리해 보여준다.
 예를 들어 `PRODUCT_BRIEF.md`의 목표, 주요 사용자, 성공 기준이 `TBD`이면 Phase 0 완료 전 `status --check`에서 차단된다.
 Product Profile에서는 Gate 시작 시 Orchestrator Plan Run을 자동 생성하지 않는다.

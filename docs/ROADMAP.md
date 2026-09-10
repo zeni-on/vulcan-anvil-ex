@@ -84,14 +84,14 @@
 
 ### Now: testing-first stabilization
 
-#### Product 문서 구조와 작성 책임 (2026-09-10, 설계 머지/조회 호환 MVP)
+#### Product 문서 구조와 작성 책임 (2026-09-10, 조회·검사 머지/작성 경로 보강)
 
 - [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
 - 원본 밖 기능 파일럿에서 요구/AC 7쌍, 공통 조건 본문 16줄, Pending 9개 행을 보존했고 23개 탐색 링크를 대조했다. 미수집 참조 3개와 기존 조회의 공통 조건 누락을 드러냈다. 속도/토큰 절감 또는 제품 QA 통과를 입증한 것은 아니다.
-- 설계 PR #27을 머지했고, 조회 호환 MVP는 별도 브랜치/PR에서 구현과 로컬 검증을 완료했다. `trace-context --sections`에 요구/시험 폴더와 명시적 링크의 제한적 조회를 추가했다. 합성 legacy/split/mixed 문서의 동일 조건 보존과 미수집/충돌 후보/경로 경계를 검사하며, Python 158건 중 155건 통과/3건 skip 및 기존 fixture 84단계 통과를 확인했다. [운영 기준과 제한](core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp)을 따른다.
-- 후속 브랜치에서 **내용/Gate 검사·추적/통계의 legacy/split/mixed 호환**을 구현하고 로컬 검증했다(병합 전). 기존 원장에서 연결한 소유 상세 읽기, 입력 누락 차단, 정의 행/참조 구분과 중복·충돌 집계, 계획/현재 결과 분리 회귀를 고정했다. 신규 합성 회귀 20건을 포함한 Python 178건 중 175건 통과/3건 skip, init smoke 12단계와 fixture smoke 84단계 통과를 확인했다. [범위와 제한](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)을 따른다.
-- 그다음은 Core/Codex/Gemini 작성 경로/템플릿, 남은 승인/릴리즈·Dashboard 소비자 검증, 실제 기능 하나의 승인된 이동 순이다. 현재 검사 호환만으로 기존 6종을 삭제하거나 작성 경로가 바뀐 것으로 보지 않는다.
-- 현재 범위는 실행 정책/필수 6종/설치 템플릿/Dashboard와 사용자 프로젝트 원본을 바꾸지 않는다. Audit/PoC 검사 기준도 유지한다.
+- 설계 #27에 이어 [조회 #28](https://github.com/zeni-on/vulcan-anvil-ex/pull/28), [내용 검사·추적·통계 #29](https://github.com/zeni-on/vulcan-anvil-ex/pull/29)를 Windows/Linux Python 및 Dashboard CI 통과 후 머지했다. 명시적 상세 링크, legacy/split/mixed 호환, 중복/충돌·누락 진단과 계획/현재 결과 분리를 검증했다. [조회 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp), [검사 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)를 따른다.
+- 후속 브랜치에서 [Product 문서 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md)를 Core/Codex/Gemini에 연결하고 선택형 요구 상세·시험 계획·실행 결과 템플릿을 추가했다. 기존 설계 템플릿의 중복 정의/실행 결과 혼합을 정리하며, init의 필수 6종과 upgrade의 기존 원본 보존을 회귀 검증한다(병합 전).
+- 다음은 **남은 승인/소스 비교·릴리즈·Dashboard 소비자 호환 검증**, 그 뒤 실제 기능 하나의 승인된 이동이다. 작성 지침이 배포되어도 기존 승인 문서를 자동 이동하거나 6종 진입점을 삭제하지 않는다.
+- 실행 정책/필수 6종/Dashboard와 사용자 프로젝트 원본은 유지한다. Audit/PoC 검사 기준도 바꾸지 않는다.
 
 #### Product 결과 중심 실행 정리 (2026-09-09, main 반영 완료)
 

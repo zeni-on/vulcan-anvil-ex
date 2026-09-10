@@ -25,6 +25,7 @@ related_documents:
 
 Product 추적은 감리용 전체 추적표가 아니라 릴리즈 판단을 위한 연결이다.
 핵심 시나리오가 어떤 계약, 구현, 회귀 테스트, 릴리즈 근거로 이어지는지 확인한다.
+요구/계약/시험의 본문을 복사하지 않고 ID와 원본/실행 증적을 연결한다. 시나리오의 상태는 확인한 구현·검증 근거로 갱신하며 코드 경로나 링크 존재만으로 Implemented/Verified를 쓰지 않는다. 관계 행을 기능별로 분리할 때도 아래 열 구조를 유지하고 원장에는 상대 Markdown 링크로 연결한다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
 
 ## 2. Scenario Trace
 

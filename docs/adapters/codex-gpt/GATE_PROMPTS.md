@@ -18,6 +18,8 @@ Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필
 
 출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
 
+Product에서는 `docs/core/PRODUCT_PROFILE_BASELINE.md`의 Run 선택 정책과 `docs/core/PRODUCT_DOCUMENT_WRITING.md`의 작성 경로를 우선 적용한다. 6종은 진입점이며 필요한 상세의 단일 원본을 연결한다. Run/상세 파일을 일괄 생성하거나 기존 승인 문서를 자동 이동하지 않는다.
+
 ## 2. 공통 체크
 
 - `session.json.current_gate`, 사용자 요청, 관련 Run을 먼저 확인한다.

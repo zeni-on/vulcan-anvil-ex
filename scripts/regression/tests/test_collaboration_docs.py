@@ -23,6 +23,7 @@ ROUTING_DOCS = (
     "GEMINI.md",
     "docs/core/PRODUCT_PROFILE_BASELINE.md",
     "docs/core/PRODUCT_WORKER_GUIDE.md",
+    "docs/core/PRODUCT_DOCUMENT_WRITING.md",
     "docs/core/AGENT_RUN_PROTOCOL.md",
     "docs/core/ORCHESTRATOR_PROTOCOL.md",
     "docs/core/ORCHESTRATOR_CLI_GUIDE.md",
@@ -32,6 +33,9 @@ ROUTING_DOCS = (
     "docs/core/DELIVERY_PROFILES.md",
     ".agents/skills/vulcan-impl-wave/SKILL.md",
     ".agents/skills/vulcan-qa/SKILL.md",
+    ".agents/skills/vulcan-design/SKILL.md",
+    "docs/adapters/codex-gpt/GATE_PROMPTS.md",
+    "docs/adapters/gemini/GATE_PROMPTS_GEMINI.md",
     "docs/adapters/codex-gpt/skills/build-wave.md",
     "docs/adapters/gemini/README_GEMINI.md",
 )
@@ -87,6 +91,11 @@ class CollaborationDocsTests(unittest.TestCase):
         root = self.project("product")
         authored = {
             "docs/product/PRODUCT_CONTRACTS.md": "# Authored contracts\n\nSCN-901 / REQ-901\n",
+            "docs/artifacts/01-requirements/feature.md": "# Authored requirements\n\nREQ-901 existing scope.\n",
+            "docs/artifacts/02-design/api/feature.md": "# Authored API\n\nAPI-901 existing contract.\n",
+            "docs/artifacts/03-test/feature.md": "# Authored test definition\n\nREG-901 expected input/output.\n",
+            "docs/artifacts/04-review/batch/results.md": "# Authored execution\n\nREG-901 Fail retained.\n",
+            "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md": "# Existing release approval\n\nPreserve original scope.\n",
             "docs/runs/RUN-901_authored.md": "# Authored Run fixture\n\nKeep scoped evidence.\n",
             "app/service.py": "def value():\n    return 901\n",
         }

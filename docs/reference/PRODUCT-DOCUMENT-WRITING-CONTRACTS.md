@@ -1,6 +1,6 @@
 # Product Document Writing Contracts
 
-> 상태: 설계용 작성 기준. 설치용 템플릿/필수 검사로 활성화하지 않았다.
+> 상태: 설계 근거. 설치되는 실행용 작성 경로와 선택 템플릿은 [Product Document Writing](../core/PRODUCT_DOCUMENT_WRITING.md)에 반영했다. 아래 모든 항목이 새 필수 파일/검사로 활성화된 것은 아니다.
 > 작성일: 2026-09-09
 > 상위 설계: [Product Document Architecture Strategy](PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md)
 

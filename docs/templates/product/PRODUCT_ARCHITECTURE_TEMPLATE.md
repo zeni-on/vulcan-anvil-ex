@@ -22,6 +22,8 @@ related_documents:
 
 ## 1. Architecture Overview
 
+시스템 경계, 책임과 실행/배포 뷰를 중심으로 작성한다. 상세 API/컬럼/화면/시험은 해당 원본을 상대 Markdown 링크로 연결한다. 보안/개발 기준을 상세로 작성했다면 아래 대응 절에는 동일 원본과 적용 범위를 연결하고 전문을 중복 유지하지 않는다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
+
 ```mermaid
 flowchart LR
   User["User"] --> UI["UI / Client"]

@@ -110,7 +110,7 @@ Product profile은 `docs/product/`에 Product Brief, Architecture, ADR Log, Cont
 
 Product의 일반 수정은 기존 요구사항/이슈/작업 요약으로 진행할 수 있습니다. Run/Wave와 새 worker는 매번 필수가 아니며, 사용자 역할 배정과 작업 위험에 맞게 선택합니다. 승인된 범위·보안 계약·실제 테스트·릴리즈 승인은 유지하고, 구현 후 현재 문서를 현행화합니다. [Product 실행 기준](docs/core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)을 참고하세요.
 이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
-API, 데이터 모델/ERD, UI 계약, 보안 체크리스트, 개발/빌드/배포 기준이 더 필요하면 audit 폴더 구조인 `docs/artifacts/02-design/...`를 재사용하되 Product 전용 경량 템플릿(`docs/templates/product/PRODUCT_*_TEMPLATE.md`)으로 작성합니다.
+6종은 모든 내용을 담는 제한이 아니라 진입점입니다. 요구사항·설계·시험 정의·실행 결과가 커지면 해당 상세 원본을 한 곳에 쓰고 원장에서 링크합니다. [Product 문서 작성 안내](docs/core/PRODUCT_DOCUMENT_WRITING.md)에 위치와 선택형 템플릿을 정리했습니다. `upgrade`가 기존 프로젝트 문서를 자동 이동하거나 재작성하지는 않습니다.
 중요한 아키텍처 의사결정이 아직 없다면 ADR Log는 `ADR-NONE`을 유지합니다.
 Gate 5의 `release-pr --dry-run`도 Product profile에서는 audit 산출물 대신 `docs/product/` 원장과 backlog, Gate 5 승인서를 evidence 기준으로 사용합니다.
 

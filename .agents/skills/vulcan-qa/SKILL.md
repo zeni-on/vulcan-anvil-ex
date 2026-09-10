@@ -30,6 +30,10 @@ review and repeat-check decisions. Execute the approved release-candidate checks
 do not replace them with Impl self-checks. Subsequent report-only edits do not
 require running the same product tests again. Record remaining warnings honestly.
 
+Use `docs/core/PRODUCT_DOCUMENT_WRITING.md` for Product test-plan and execution-result
+templates. Preserve each execution with its source/test-definition basis; link only
+applicable current results from the ledger and retain unresolved obligations.
+
 ## Failure Handling
 
 - QA workers execute tests and collect evidence; they do not fix code immediately.
