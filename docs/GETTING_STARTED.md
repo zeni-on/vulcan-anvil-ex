@@ -392,6 +392,8 @@ Gate 4 QA는 한 번에 몰아서 하지 않고 다음 단계로 나눕니다.
 python vulcan.py trace-context --id API-001 --sections --emit json
 ```
 
+기본 조회는 Product 원장뿐 아니라 `docs/artifacts/01-requirements/`, `02-design/`, `03-test/`도 찾습니다. 선택된 절의 Markdown 링크는 제한된 범위에서 따라 읽고, 없는 파일/앵커나 제한으로 빠진 내용은 `references`와 `incomplete`로 알려줍니다. 미수집 내용을 확인한 뒤 필요한 원문을 읽으세요. 조회 지원만으로 기존 원장을 이동하거나 필수 문서를 없애도 된다는 뜻은 아닙니다.
+
 검증 대상 커밋과 결과 문서를 저장한 커밋은 다를 수 있습니다. 필요한 검증에는 선택형 `execute --verify`로 소스/테스트/lockfile 범위의 실행 전후 상태를 남기고, 기존 QA 증적 칸에서 JSON을 연결합니다. 요구사항마다 SHA를 반복하지 않습니다. 명령 성공만으로 QA 승인이나 소스 식별 성공을 확정하지 않습니다.
 
 명령 예시와 제약은 [CLI Guide](core/ORCHESTRATOR_CLI_GUIDE.md), 현재 계약/이력 및 Git 의미는 [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md)를 참고합니다.

@@ -157,12 +157,12 @@ class DocumentContextTests(unittest.TestCase):
         self.assertEqual(len(result["omitted_sections"]), 8)
         self.assertLessEqual(result["excerpt_chars"], 12000)
 
-    def test_links_reported_not_crawled(self):
+    def test_bad_anchor_does_not_fall_back_to_whole_document(self):
         self.write("# API-001\n[detail](detail.md#part) [missing](missing.md) [web](https://example.invalid/x.md)\n")
         self.write("# Linked only\nnot included\n", "docs/product/detail.md")
         result = self.lookup()
         links = result["sections"][0]["source_links"]
-        self.assertEqual([x["status"] for x in links], ["available", "missing_or_unsafe"])
+        self.assertEqual([x["status"] for x in links], ["missing_anchor", "missing_or_unsafe"])
         self.assertTrue(all(not x["followed"] for x in links))
         self.assertEqual(len(result["sections"]), 1)
         self.assertTrue(result["incomplete"])
