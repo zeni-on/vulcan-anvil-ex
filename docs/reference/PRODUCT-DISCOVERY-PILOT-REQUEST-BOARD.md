@@ -4,6 +4,8 @@
 - 작성일: 2026-09-10
 - 진행 기준: [Product Discovery And Validation Guide](PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md)
 
+2026-09-11 보강: 아래 두 업무 결정과 미정 사항은 유지한다. 운영 방식은 [3구간 시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)로 연결하며, 기존 Gate별 진행을 추가로 연습하는 것은 아니다. 실제 프로젝트 상태는 바꾸지 않았다.
+
 ## 1. 목적과 범위
 
 문서 예시 프로젝트 `sample-ex-product-docs-0910-1`의 가상 팀 요청 보드로 업무 질문부터 요구 도출까지 연습한다. 고객 자료나 PMTool 업무를 사용하지 않는다. 실제 서비스·구현·QA 증적은 없으며, 예시의 초안도 사용자 승인 기준선이 아니다.
