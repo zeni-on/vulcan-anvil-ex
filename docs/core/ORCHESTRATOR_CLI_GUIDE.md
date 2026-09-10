@@ -165,6 +165,12 @@ python vulcan.py trace-context --id API-001 --sections --document docs/product/P
 
 구간 모드의 `--emit yaml`은 추가 라이브러리 없이 읽을 수 있는 JSON 호환 YAML 1.2 형식으로 출력한다. `--max-chars`는 본문 문자 수 제한이며 출처/경고 metadata를 포함한 전체 JSON 바이트나 모델 토큰 수 제한이 아니다.
 
+### 6.2 Product 분리 문서의 검사와 통계
+
+새 명령은 추가하지 않는다. `status --check`/`check-trace`는 기존 Product 원장에서 명시적으로 연결된 소유 상세 문서를 함께 검사한다. 기존 원장/혼합/분리 형식 모두 원본 표의 SCN/REQ/계약/REG 연결을 유지해야 한다. 상세 파일을 만들기만 하고 원장에서 연결하지 않으면 현재 검사 원본으로 자동 채택하지 않는다.
+
+`sync-session`의 Product 통계와 Product seed 추천도 같은 원본을 참조한다. 계획/결과 중복, SEC-REG를 REG로 잘못 세는 경우, 상세 REQ를 부모로 잘라 세는 경우를 방지한다. 누락·상충 여부는 `product.document_diagnostics`와 Gate 진단에서 확인한다. `trace-context`의 기존 그래프 모드나 Dashboard 문서 구조 전체를 새 체계로 바꾼 것은 아니다. 소유 범위/미수집 처리 기준은 [Current Context And Evidence 3.2](CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)를 따른다.
+
 ## 7. QA와 릴리즈
 
 Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다.
