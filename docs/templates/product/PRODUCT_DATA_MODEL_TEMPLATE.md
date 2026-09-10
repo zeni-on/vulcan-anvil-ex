@@ -24,6 +24,7 @@ related_documents:
 
 이 문서는 Product profile의 선택 상세 산출물이다.
 `PRODUCT_CONTRACTS.md`의 Data Contracts만으로 데이터 의미, 보안 분류, persistence shape, ERD 근거가 부족할 때 작성한다.
+원장에는 이 원본의 ID·제목·상대 Markdown 링크만 연결한다. 생성 DDL/schema와 수동 표에 같은 전문을 중복 유지하지 않는다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
 
 ## 2. Data Entities
 
@@ -46,6 +47,8 @@ related_documents:
 | Export / Image | docs/artifacts/02-design/data/erd/exports/ | PNG, SVG, PDF 등 검토용 export |
 
 ## 5. Data Rules
+
+키/제약/관계, 수명주기·보존, 이관/복구와 실패 시 처리 기준을 실제 제품 범위에 맞춰 적는다. 비적용이면 이유를 밝힌다.
 
 | Rule ID | 규칙 | 적용 대상 | 검증 |
 | --- | --- | --- | --- |

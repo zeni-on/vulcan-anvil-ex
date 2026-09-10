@@ -36,7 +36,7 @@ related_documents:
 
 ## 3. ADR 상세 템플릿
 
-새 ADR을 추가할 때 아래 형식을 복사해 사용한다.
+새 ADR을 추가할 때 아래 형식을 사용한다. 길어진 결정은 `docs/artifacts/02-design/architecture/`에 건별로 둘 수 있으며 색인에서는 실제 상대 Markdown 링크로 연결한다. 본문은 원장 또는 상세 한 곳에만 쓴다. 이전 결정을 현재 명세에 계속 붙이지 말고 대체 결정/승인 근거를 연결한다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
 
 | 항목 | 내용 |
 | --- | --- |

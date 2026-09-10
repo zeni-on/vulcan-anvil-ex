@@ -29,6 +29,8 @@ updated_at: {{GENERATED_DATE}}
 
 ## 2. Core Scenarios
 
+개요/이번 범위는 이 원장에 둔다. 요구 동작과 AC가 길어지면 `PRODUCT_REQUIREMENTS_TEMPLATE.md`로 `docs/artifacts/01-requirements/<feature>.md`에 작성하고 실제 상대 Markdown 링크로 연결한다. 상세를 만든 기능은 요구 본문을 여기 다시 복사하지 않는다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
+
 | Scenario ID | 시나리오 | 사용자 가치 | 우선순위 | 관련 REQ |
 | --- | --- | --- | --- | --- |
 | SCN-001 | TBD | TBD | Must | REQ-001 |

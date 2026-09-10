@@ -14,6 +14,7 @@ Use this for Gate 2 design and design iteration.
 3. Run `python vulcan.py status` when current Gate, profile, branch, or next action is unclear.
 4. Confirm the delivery profile with `python vulcan.py profile-status` only when profile detail is needed beyond `status`.
 5. Apply profile-specific design depth from `docs/core/DELIVERY_PROFILES.md`.
+   For Product, use `docs/core/PRODUCT_DOCUMENT_WRITING.md` for owned source paths and optional templates. Keep detailed contracts in one source and link from the ledger, without auto-relocating approved documents.
 6. Prefer `docs/core/GATE2_DESIGN_SEQUENCE.md` when the design order is unclear.
 
 ## Workflow

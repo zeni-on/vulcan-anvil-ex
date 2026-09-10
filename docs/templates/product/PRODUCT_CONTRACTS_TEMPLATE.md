@@ -23,7 +23,7 @@ related_documents:
 ## 1. Contract Policy
 
 이 문서는 상세 설계서 복사본이 아니라 Product profile의 구현 계약 진입점이다.
-상세 API/DB/UI/보안 설계가 필요한 경우 `docs/artifacts/02-design/` 산출물로 분리하고, 이 문서에서는 링크와 핵심 계약만 유지한다.
+상세 API/DB/UI/보안 설계가 필요한 경우 `docs/artifacts/02-design/`의 선택 상세 원본을 사용한다. 분야별로 아래 인라인 계약 표 또는 상세 링크 색인 중 하나를 선택한다. 분리한 분야의 표/본문은 ID·제목·상대 Markdown 링크로 바꾸고 상세 정의를 다시 복사하지 않는다. 쓰지 않는 예시 행은 제거하며 필수 계약 자체를 생략하지 않는다. 기존 승인 문서의 이동은 별도 확인/승인이 필요하다. 작성 기준은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`다.
 
 승인된 변경은 해당 현재 계약에 반영하고, 변경 이유와 과거 내용은 기존 CR/ADR/Run 또는 Git 이력으로 연결한다. 날짜순 Delta를 앞뒤로 계속 붙여 현재 규격을 추론하게 하지 않는다. 선택형 절 상태 표식과 출처 조회 기준은 `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md`를 따른다. 상태 표식은 Gate 승인이나 구현 완료를 대신하지 않는다.
 

@@ -66,7 +66,7 @@
 | Codex model/effort | `docs/core/CODEX_MODEL_POLICY.md`, `docs/core/INDEPENDENT_EXECUTION_PROCESS.md` |
 
 `profile: product`의 Gate 2 이후 산출물에서는 `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG`를 확인한다. Product 보안은 OWASP ASVS/Top 10/API Top 10/CWE 기준을 기본으로 하며, KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
-Product 기본 문서는 `docs/product/`의 6종 원장이다. API/DB/UI/보안/개발표준 상세가 필요하면 audit 템플릿을 그대로 쓰지 말고 `docs/templates/product/PRODUCT_*_TEMPLATE.md`를 사용해 `docs/artifacts/02-design/...` 아래에 Product 경량 상세 문서로 만든다.
+Product 문서 작성은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`를 따른다. `docs/product/`의 6종은 진입점이며, 요구/설계/시험/실행 상세는 필요한 원본 한 곳에 쓰고 상대 Markdown 링크로 연결한다. 기존 승인 문서를 자동 이동하거나 상세 본문을 원장에 재복사하지 않는다.
 Product worker는 `docs/core/PRODUCT_WORKER_GUIDE.md`를 사용한다. 입력 축소와 조건부 재검증은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따르며, worker가 Orchestrator 절차까지 반복 수행하지 않는다.
 
 ## 5. Codex Skill과 Custom Agent

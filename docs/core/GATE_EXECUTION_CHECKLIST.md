@@ -8,6 +8,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 ## 1. 공통 원칙
 
 - `session.json.current_gate`, 사용자 최신 지시와 현재 작업 요약 또는 Run을 확인한다. Product의 Run/Wave 선택 기준은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
+- Product 문서를 작성/현행화할 때는 [PRODUCT_DOCUMENT_WRITING.md](PRODUCT_DOCUMENT_WRITING.md)의 원본 위치와 선택 템플릿을 따른다. 6종 원장에 모든 상세를 누적하지 않으며 요구/설계, 시험 정의, 실행 결과의 수명주기를 구분한다.
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.
 - Gate 전환은 문서의 `gate:` 값으로 완료되지 않는다. 현재 위치는 `python vulcan.py status`로 확인하고, 전환 가능성은 기본적으로 `python vulcan.py status --check`로 진단한다. 실제 상태 갱신은 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py sync-session`으로 수행한다.
 - `prepare-transition`은 상세/호환 전환 진단이 필요할 때 직접 실행하는 원자 명령이다. `check-trace`는 추적성 오류를 디버깅하거나 회귀 검증에서 추적성만 확인할 때 직접 실행한다.

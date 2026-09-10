@@ -35,9 +35,8 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 | 감리, 고객 검수, 인수인계, 강한 QA 증적 | 기본값 `audit` |
 
 Product profile은 `docs/product/`에 6종 문서를 생성합니다.
-Gate별 산출물 폴더를 늘리는 대신 Product 문서 안의 `gate_scope`와 섹션을 Gate 진행에 맞춰 갱신합니다.
-API/DB/UI/보안/개발표준이 Product 원장만으로 부족해지면 `docs/artifacts/02-design/...` 아래에 Product 전용 경량 상세 문서를 선택적으로 추가합니다.
-예: `PRODUCT_API_CONTRACT.md`, `PRODUCT_DATA_MODEL.md`, `PRODUCT_UI_CONTRACT.md`, `PRODUCT_SECURITY_CHECKLIST.md`, `PRODUCT_ENGINEERING_GUIDE.md`.
+6종은 개요와 상세로 들어가는 진입점입니다. 원장만으로 충분하면 그대로 쓰고, 기능별 요구/AC는 `01-requirements/`, 설계는 `02-design/`, 시험 정의는 `03-test/`, 실행 결과는 `04-review/` 아래 선택 상세로 작성할 수 있습니다. 모두 `docs/artifacts/` 아래이며 원장에서 실제 상대 Markdown 링크로 연결합니다.
+파일마다 내용을 중복 작성하지 않도록 [Product 문서 작성 안내](core/PRODUCT_DOCUMENT_WRITING.md)의 위치·책임·선택 템플릿을 따릅니다. 기존 승인 문서의 이동은 별도 확인/승인을 거치며 `upgrade`가 자동으로 옮기지 않습니다.
 중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
 Product에서는 일반 수정마다 Run/Wave를 만들지 않아도 됩니다. 기존 요구사항·이슈·작업 대화에서 목표, 범위, 관련 계약과 완료 검증을 확인하고 진행합니다. 역할별로 작업한다면 총괄은 기존 개발 담당에게 묶어 전달할 수 있습니다. 장기 위임이나 재현 가능한 작업지시가 필요해 Run을 선택하면 preflight를 통과시킨 뒤 실행합니다. 담당자는 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)를 따르고, 결과는 기존 보고서/PR에 한 번 남깁니다. [Product 실행 기준](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)에 따라 현재 계약을 현행화하며, 문서 정리만으로 제품 테스트를 반복하거나 모델을 자동 변경하지 않습니다.
 Gate 5에서 `release-pr --dry-run`을 실행하면 Product profile은 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다.
@@ -106,6 +105,7 @@ Product Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다
 
 ```text
 이 프로젝트는 Product profile이야.
+문서 작성은 docs/core/PRODUCT_DOCUMENT_WRITING.md를 따라 필요한 상세 원본 한 곳에 쓰고 원장에서 연결해줘. 기존 승인 문서를 자동 이동하거나 본문을 두 곳에 복사하지 마.
 일반 제품/업무 앱 수준으로 요구사항, 주요 설계, API/DB/UI 계약, 릴리즈 회귀 기준을 남겨줘.
 감리 제출 수준의 과도한 증적보다는 제품 품질과 유지보수성을 우선해줘.
 아직 아키텍처 의사결정이 없다면 ADR은 ADR-NONE으로 두고, 실제 결정이 생길 때 ADR-001부터 작성해줘.
