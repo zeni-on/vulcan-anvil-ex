@@ -17,7 +17,7 @@ class DocumentLookupTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        self.root = Path(temp.name)
+        self.root = Path(temp.name).resolve()
         provenance = mock.patch.object(dc, "_git", return_value={"observed_head": None, "worktree_state": "unknown"})
         provenance.start()
         self.addCleanup(provenance.stop)
