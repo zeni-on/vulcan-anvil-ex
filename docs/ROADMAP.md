@@ -89,7 +89,8 @@
 - [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
 - 원본 밖 기능 파일럿에서 요구/AC 7쌍, 공통 조건 본문 16줄, Pending 9개 행을 보존했고 23개 탐색 링크를 대조했다. 미수집 참조 3개와 기존 조회의 공통 조건 누락을 드러냈다. 속도/토큰 절감 또는 제품 QA 통과를 입증한 것은 아니다.
 - 설계 PR #27을 머지했고, 조회 호환 MVP는 별도 브랜치/PR에서 구현과 로컬 검증을 완료했다. `trace-context --sections`에 요구/시험 폴더와 명시적 링크의 제한적 조회를 추가했다. 합성 legacy/split/mixed 문서의 동일 조건 보존과 미수집/충돌 후보/경로 경계를 검사하며, Python 158건 중 155건 통과/3건 skip 및 기존 fixture 84단계 통과를 확인했다. [운영 기준과 제한](core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp)을 따른다.
-- 다음은 **내용/Gate 검사·추적/통계의 legacy/split/mixed 호환**이다. 그 뒤 Core/Codex/Gemini 작성 경로/템플릿, Dashboard, 실제 기능 하나의 승인된 이동 순으로 진행한다. 조회만 통과한 상태에서 기존 6종을 빈 색인으로 바꾸지 않는다.
+- 후속 브랜치에서 **내용/Gate 검사·추적/통계의 legacy/split/mixed 호환**을 구현하고 로컬 검증했다(병합 전). 기존 원장에서 연결한 소유 상세 읽기, 입력 누락 차단, 정의 행/참조 구분과 중복·충돌 집계, 계획/현재 결과 분리 회귀를 고정했다. 신규 합성 회귀 20건을 포함한 Python 178건 중 175건 통과/3건 skip, init smoke 12단계와 fixture smoke 84단계 통과를 확인했다. [범위와 제한](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)을 따른다.
+- 그다음은 Core/Codex/Gemini 작성 경로/템플릿, 남은 승인/릴리즈·Dashboard 소비자 검증, 실제 기능 하나의 승인된 이동 순이다. 현재 검사 호환만으로 기존 6종을 삭제하거나 작성 경로가 바뀐 것으로 보지 않는다.
 - 현재 범위는 실행 정책/필수 6종/설치 템플릿/Dashboard와 사용자 프로젝트 원본을 바꾸지 않는다. Audit/PoC 검사 기준도 유지한다.
 
 #### Product 결과 중심 실행 정리 (2026-09-09, main 반영 완료)

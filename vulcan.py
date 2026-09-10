@@ -43,6 +43,7 @@ import threading
 import time
 from datetime import date, datetime, timedelta
 from vulcan_core.document_context import lookup_sections
+from vulcan_core.product_documents import ProductDocuments, substantive as product_substantive
 
 # Windows 콘솔 UTF-8 출력 보장
 if sys.platform == "win32":
@@ -3195,25 +3196,43 @@ def _ids_from_text(pattern, content):
     return sorted(set(re.findall(pattern, content or "")))
 
 
-def parse_product_trace_rows(project_dir="."):
-    path = os.path.join(project_dir, "docs", "product", "PRODUCT_TRACEABILITY.md")
-    if not os.path.exists(path):
-        return []
-    try:
-        with open(path, encoding="utf-8") as f:
-            content = f.read()
-    except OSError:
-        return []
+def product_definition_ids(documents, name, pattern):
+    defined = {
+        r["id"] for r in documents.records(name, pattern, parse_markdown_tables)
+        if any(product_substantive(cell) and not re.fullmatch(r"(?i)(tbd|planned|n/a|-)", cell.strip()) for cell in r["cells"][1:])
+    }
+    for document in documents.documents(name):
+        sections = document["sections"]
+        for i, section in enumerate(sections):
+            match = re.match(r"^(" + pattern + r")(?![\w-])", section["heading"])
+            if not match:
+                continue
+            body = section["visible"]
+            for child in sections[i+1:]:
+                if child["level"] <= section["level"]:
+                    break
+                body += child["visible"]
+            if product_substantive(body):
+                defined.add(match[1])
+    return defined
 
+
+def product_requirement_ids(documents):
+    req_ids = product_definition_ids(documents, "PRODUCT_BRIEF.md", r"REQ-\d{3}(?:-\d{2})?")
+    for record in documents.records("PRODUCT_BRIEF.md", r"SCN-\d{3}", parse_markdown_tables):
+        req_ids.update(re.findall(r"\bREQ-\d{3}(?:-\d{2})?(?![\w-])", " ".join(record["cells"][1:])))
+    return req_ids
+
+
+def parse_product_trace_rows(project_dir=".", documents=None):
+    documents = documents or ProductDocuments(project_dir, ["PRODUCT_TRACEABILITY.md"])
     rows = []
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|") or "SCN-" not in stripped:
+    for record in documents.records("PRODUCT_TRACEABILITY.md", r"SCN-\d{3}", parse_markdown_tables):
+        cells = record["cells"]
+        if len(cells) < 8:
+            documents.issues.append(f"Product trace row incomplete: {record['id']} at {record['source']}")
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if len(cells) < 8 or not re.fullmatch(r"SCN-\d{3}", cells[0]):
-            continue
-        req_ids = sorted(set(re.findall(r"\bREQ-\d{3}\b", cells[1])))
+        req_ids = sorted(set(re.findall(r"\bREQ-\d{3}(?:-\d{2})?(?![\w-])", cells[1])))
         if len(cells) >= 9:
             implementation_cell = cells[5]
             regression_cell = cells[6]
@@ -3234,60 +3253,77 @@ def parse_product_trace_rows(project_dir="."):
                 "status": status_cell,
             }
         )
+    occurrences = {}
+    for row in rows:
+        occurrences[row["scenario"]] = occurrences.get(row["scenario"], 0) + 1
+    for row in rows:
+        if occurrences[row["scenario"]] > 1:
+            row["ambiguous"] = True
     return rows
 
 
 def _product_row_is_implemented(row):
     implementation = (row.get("implementation") or "").strip()
     status = (row.get("status") or "").strip()
-    if not implementation or re.fullmatch(r"(?i)(tbd|planned|not run|n/a|-)", implementation):
+    if row.get("ambiguous") or not implementation or re.fullmatch(r"(?i)(tbd|planned|not run|n/a|-)", implementation):
+        return False
+    if re.search(r"(?i)\b(planned|pending|blocked|fail(?:ed)?|not\s+(?:run|implemented|verified)|tbd)\b", status):
         return False
     implemented_status = re.search(
         r"(?i)\b(impl self-check passed|implemented|verified|done|pass|passed)\b",
         status,
     )
-    return bool(implemented_status or re.search(r"`[^`]+`", implementation))
+    return bool(implemented_status)
 
 
-def _product_test_status_counts(project_dir="."):
-    path = os.path.join(project_dir, "docs", "product", "REGRESSION_AND_RELEASE_REPORT.md")
-    if not os.path.exists(path):
-        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
-    try:
-        with open(path, encoding="utf-8") as f:
-            content = f.read()
-    except OSError:
-        content = ""
-    counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|") or "REG-" not in stripped:
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if len(cells) < 3 or not re.fullmatch(r"REG-\d{3}", cells[0]):
-            continue
-        counts["total"] += 1
-        result_text = " ".join(cells[1:4]).lower()
-        if re.search(r"\bpass(?:ed)?\b|verified", result_text):
-            counts["passed"] += 1
-        elif re.search(r"\bfail(?:ed)?\b", result_text):
-            counts["failed"] += 1
-        elif re.search(r"\bskip(?:ped)?\b", result_text):
-            counts["skipped"] += 1
-        else:
-            counts["pending"] += 1
+def _product_test_status_counts(project_dir=".", documents=None):
+    documents = documents or ProductDocuments(project_dir, ["REGRESSION_AND_RELEASE_REPORT.md"])
+    issues, notices, planned, optional, results, explicit_current = product_verification_records(
+        documents.texts("REGRESSION_AND_RELEASE_REPORT.md"))
+    documents.issues.extend(issues)
+    documents.warnings.extend(notices)
+
+    def counts_for(prefix):
+        counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
+        for result_id in sorted(planned | optional | results.keys()):
+            if not result_id.startswith(prefix):
+                continue
+            records = results.get(result_id, [])
+            statuses = {status for status, kind, _, _ in records if not explicit_current or kind == "current"}
+            if "fail" in statuses:
+                bucket = "failed"
+            elif statuses == {"pass"}:
+                bucket = "passed"
+            elif statuses and statuses <= {"skip", "skipped"}:
+                bucket = "skipped"
+            else:
+                bucket = "pending"
+            if "pass" in statuses and len(statuses) > 1:
+                documents.issues.append(f"Product conflicting verification results: {result_id}")
+            counts["total"] += 1
+            counts[bucket] += 1
+        return counts
+
+    counts = counts_for("REG-")
+    counts["security"] = counts_for("SEC-REG-")
     return counts
 
 
 def compute_product_stats(project_dir="."):
-    rows = parse_product_trace_rows(project_dir)
-    req_ids = sorted({req_id for row in rows for req_id in row.get("requirements", [])})
+    documents = ProductDocuments(project_dir)
+    rows = parse_product_trace_rows(project_dir, documents)
+    definitions = product_requirement_ids(documents)
+    req_ids = sorted(definitions | {req_id for row in rows for req_id in row.get("requirements", [])})
     implemented_req_ids = sorted({
         req_id
         for row in rows
         if _product_row_is_implemented(row)
         for req_id in row.get("requirements", [])
     })
+    # A contradictory or incomplete trace must not inflate implemented counts.
+    unresolved = {req_id for row in rows if not _product_row_is_implemented(row) for req_id in row.get("requirements", [])}
+    implemented_req_ids = [req_id for req_id in implemented_req_ids if req_id not in unresolved]
+    tests_stats = _product_test_status_counts(project_dir, documents)
     try:
         docs_stats = count_docs(project_dir)
     except Exception:
@@ -3317,7 +3353,7 @@ def compute_product_stats(project_dir="."):
         "completed_ids": implemented_req_ids,
     }
     requirements_stats = {
-        "groups": len(rows),
+        "groups": len({row["scenario"] for row in rows}),
         "total": len(req_ids),
         "implemented": len(implemented_req_ids),
         "pending": max(0, len(req_ids) - len(implemented_req_ids)),
@@ -3327,13 +3363,14 @@ def compute_product_stats(project_dir="."):
     return {
         "requirements": requirements_stats,
         "implementation": implementation_stats,
-        "tests": _product_test_status_counts(project_dir),
+        "tests": tests_stats,
         "docs": docs_stats,
         "backlog": backlog_stats,
         "updated_at": date.today().isoformat(),
         "product": {
-            "scenarios": {"total": len(rows), "ids": [row["scenario"] for row in rows]},
+            "scenarios": {"total": len({row["scenario"] for row in rows}), "ids": sorted({row["scenario"] for row in rows})},
             "requirements": {"total": len(req_ids), "implemented": len(implemented_req_ids), "ids": req_ids, "implemented_ids": implemented_req_ids},
+            "document_diagnostics": documents.diagnostics(),
         },
     }
 
@@ -5047,7 +5084,7 @@ def collect_poc_profile_findings(project_dir=".", gate=None):
     return issues, warnings
 
 
-def collect_product_profile_findings(project_dir=".", gate=None):
+def collect_product_profile_findings(project_dir=".", gate=None, documents=None):
     if load_delivery_profile(project_dir) != "product":
         return [], []
 
@@ -5056,19 +5093,22 @@ def collect_product_profile_findings(project_dir=".", gate=None):
     issues = []
     warnings = []
     required = product_required_artifacts_for_gate(gate)
+    documents = documents or ProductDocuments(project_dir, required)
 
     for rel_path in required:
         abs_path = os.path.join(project_dir, rel_path)
         if not os.path.isfile(abs_path):
             issues.append(f"Product 필수 산출물 없음: {rel_path}")
             continue
-        content = read_project_text(project_dir, rel_path)
+        content = documents.text(rel_path) if os.path.basename(rel_path) in documents.groups else read_project_text(project_dir, rel_path)
+        if not product_substantive(content):
+            issues.append(f"Product required content missing (empty document/index): {rel_path}")
         if HARD_TEMPLATE_PLACEHOLDER_RE.search(content):
             issues.append(f"{rel_path}에 치환되지 않은 템플릿 값이 남아 있습니다.")
         elif SOFT_TBD_PLACEHOLDER_RE.search(content):
             warnings.append(f"{rel_path}에 TBD/확정필요 항목이 남아 있습니다. Product 판단에 필요한 항목인지 확인하세요.")
 
-    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
+    brief_content = documents.text("PRODUCT_BRIEF.md")
     if "docs/product/PRODUCT_BRIEF.md" in required and brief_content:
         for label in ("목표", "주요 사용자", "성공 기준"):
             if table_value_is_tbd(brief_content, label):
@@ -5076,7 +5116,7 @@ def collect_product_profile_findings(project_dir=".", gate=None):
         if mostly_placeholder_row(brief_content, r"SCN-\d{3}"):
             warnings.append("docs/product/PRODUCT_BRIEF.md에 placeholder 중심의 Scenario 행이 남아 있습니다.")
 
-    architecture_content = read_project_text(project_dir, "docs/product/PRODUCT_ARCHITECTURE.md")
+    architecture_content = documents.text("PRODUCT_ARCHITECTURE.md")
     if "docs/product/PRODUCT_ARCHITECTURE.md" in required and architecture_content:
         if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
             for label in ("Runtime", "Data Store"):
@@ -5093,12 +5133,12 @@ def collect_product_profile_findings(project_dir=".", gate=None):
         if mostly_placeholder_row(architecture_content, r"CMP-\d{3}") or mostly_placeholder_row(architecture_content, r"GAP-\d{3}"):
             warnings.append("docs/product/PRODUCT_ARCHITECTURE.md에 placeholder 중심의 Component/Gap 행이 남아 있습니다.")
 
-    adr_content = read_project_text(project_dir, "docs/product/ADR_LOG.md")
+    adr_content = documents.text("ADR_LOG.md")
     if "docs/product/ADR_LOG.md" in required and adr_content:
         if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(adr_content, r"ADR-\d{3}"):
             warnings.append("docs/product/ADR_LOG.md에 placeholder 중심의 ADR 행이 남아 있습니다.")
 
-    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
+    contracts_content = documents.text("PRODUCT_CONTRACTS.md")
     if "docs/product/PRODUCT_CONTRACTS.md" in required and contracts_content:
         if gate in ("gate2", "gate3", "impl", "gate4", "gate5", "completed"):
             if mostly_placeholder_row(contracts_content, r"API-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:DATA|DB)-\d{3}") and mostly_placeholder_row(contracts_content, r"(?:UI|SCR)-\d{3}"):
@@ -5107,10 +5147,14 @@ def collect_product_profile_findings(project_dir=".", gate=None):
                 issues.append("docs/product/PRODUCT_CONTRACTS.md에 SEC-ID 기반 보안 계약이 없습니다.")
             elif mostly_placeholder_row(contracts_content, r"SEC-\d{3}"):
                 issues.append("docs/product/PRODUCT_CONTRACTS.md의 Security Contract가 placeholder입니다.")
+            if "PRODUCT_CONTRACTS.md" in documents.linked and not product_definition_ids(documents, "PRODUCT_CONTRACTS.md", r"SEC-\d{3}"):
+                issue = "Product security definition missing: linked SEC-ID/index is not a substantive Security Contract."
+                issues.append(issue)
+                documents.issues.append(issue)
         if mostly_placeholder_row(contracts_content, r"GAP-\d{3}"):
             warnings.append("docs/product/PRODUCT_CONTRACTS.md에 placeholder 중심의 Contract Gap 행이 남아 있습니다.")
 
-    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
+    trace_content = documents.text("PRODUCT_TRACEABILITY.md")
     if "docs/product/PRODUCT_TRACEABILITY.md" in required and trace_content:
         if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
             if mostly_placeholder_row(trace_content, r"SCN-\d{3}"):
@@ -5120,9 +5164,9 @@ def collect_product_profile_findings(project_dir=".", gate=None):
             if re.search(r"\|\s*SCN-\d{3}\s*\|[^\n]*\|\s*Planned\s*\|", trace_content, re.IGNORECASE) and gate in ("gate4", "gate5", "completed"):
                 warnings.append("docs/product/PRODUCT_TRACEABILITY.md에 Gate 4 이후에도 Planned 추적 상태가 남아 있습니다.")
 
-    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+    release_content = documents.text("REGRESSION_AND_RELEASE_REPORT.md")
     if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
-        issues.extend(product_verification_result_findings(release_content, gate))
+        issues.extend(product_verification_result_findings(documents.texts("REGRESSION_AND_RELEASE_REPORT.md"), gate, warnings))
         if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
             issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
         if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
@@ -5141,16 +5185,28 @@ def collect_product_profile_findings(project_dir=".", gate=None):
                 if table_value_is_tbd(release_content, label):
                     issues.append(f"docs/product/REGRESSION_AND_RELEASE_REPORT.md의 {label}가 TBD입니다.")
 
-    return issues, warnings
+    for name, pattern in (("PRODUCT_BRIEF.md", r"(?:REQ|SCN)-\d{3}(?:-\d{2})?"),
+                          ("PRODUCT_CONTRACTS.md", r"(?:API|DATA|DB|UI|SCR|SEC)-\d{3}")):
+        documents.records(name, pattern, parse_markdown_tables)
+    parse_product_trace_rows(project_dir, documents)
+    issues.extend(documents.diagnostics()["issues"])
+    warnings.extend(documents.diagnostics()["warnings"])
+    return list(dict.fromkeys(issues)), list(dict.fromkeys(warnings))
 
 
-def product_verification_result_findings(content, gate, warnings=None):
+def product_verification_records(content):
     """Check scoped current results; legacy ambiguity is not an invented failure."""
     from vulcan_core.document_context import _sections
 
     issues, notices = [], []
     planned, optional, results = set(), set(), {}
-    sections = _sections(content)
+    sections = []
+    for source in content if isinstance(content, list) else [content]:
+        group = _sections(source)
+        offset = len(sections)
+        for section in group:
+            section["parents"] = [i + offset for i in section["parents"]]
+        sections.extend(group)
     explicit_current = False
     status_pattern = re.compile(
         r"^(environment[_ -]blocked|not[_ -]run|not_executed|pass(?:ed)?|fail(?:ed)?|"
@@ -5233,6 +5289,11 @@ def product_verification_result_findings(content, gate, warnings=None):
                 for result_id in ids:
                     results.setdefault(result_id, []).append((status, kind, value, is_optional))
 
+    return issues, notices, planned, optional, results, explicit_current
+
+
+def product_verification_result_findings(content, gate, warnings=None):
+    issues, notices, planned, optional, results, explicit_current = product_verification_records(content)
     for result_id, records in results.items():
         statuses = {status for status, _, _, _ in records if status}
         if "pass" in statuses and len(statuses) > 1:
@@ -5287,17 +5348,19 @@ def validate_poc_trace(project_dir=".", gate=None):
 
 
 def validate_product_trace(project_dir=".", gate=None):
-    issues, warnings = collect_product_profile_findings(project_dir, gate=gate)
     if load_delivery_profile(project_dir) != "product":
-        return issues, warnings
+        return [], []
+    gate = gate or load_session(project_dir).get("current_gate", "phase0")
+    documents = ProductDocuments(project_dir, product_required_artifacts_for_gate(gate))
+    issues, warnings = collect_product_profile_findings(project_dir, gate=gate, documents=documents)
 
-    brief_content = read_project_text(project_dir, "docs/product/PRODUCT_BRIEF.md")
-    contracts_content = read_project_text(project_dir, "docs/product/PRODUCT_CONTRACTS.md")
-    trace_content = read_project_text(project_dir, "docs/product/PRODUCT_TRACEABILITY.md")
-    release_content = read_project_text(project_dir, "docs/product/REGRESSION_AND_RELEASE_REPORT.md")
+    brief_content = documents.text("PRODUCT_BRIEF.md")
+    contracts_content = documents.text("PRODUCT_CONTRACTS.md")
+    trace_content = documents.text("PRODUCT_TRACEABILITY.md")
+    release_content = documents.text("REGRESSION_AND_RELEASE_REPORT.md")
 
     scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", brief_content))
-    req_ids = set(re.findall(r"\bREQ-\d{3}(?:-\d{2})?\b", brief_content))
+    req_ids = product_requirement_ids(documents)
     downstream_scenario_ids = set(re.findall(r"\bSCN-\d{3}\b", "\n".join([contracts_content, trace_content, release_content])))
 
     if gate in ("phase0", "gate1") and not scenario_ids:
@@ -5316,7 +5379,7 @@ def validate_product_trace(project_dir=".", gate=None):
             if trace_content and req_id not in trace_content:
                 warnings.append(f"Product trace warning: {req_id}가 PRODUCT_TRACEABILITY.md에 연결되지 않았습니다.")
 
-    return issues, warnings
+    return list(dict.fromkeys(issues + documents.issues)), list(dict.fromkeys(warnings + documents.warnings))
 
 
 def is_markdown_separator_row(line):
@@ -8995,14 +9058,13 @@ def product_related_ids_for_seeds(project_dir, seeds, base_ids=None):
         "docs/product/PRODUCT_TRACEABILITY.md",
         "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
     ]
+    documents = ProductDocuments(project_dir, [name for name in product_docs if os.path.lexists(os.path.join(project_dir, name))])
+    if documents.issues:
+        print("Product trace sources incomplete: " + "; ".join(documents.diagnostics()["issues"]), file=sys.stderr)
+        return ids
     product_rows = []
-    for rel_path in product_docs:
-        path = os.path.join(project_dir, rel_path)
-        try:
-            with open(path, encoding="utf-8") as f:
-                content = f.read()
-        except OSError:
-            continue
+    for document in [doc for name in product_docs for doc in documents.documents(name)]:
+        content = document["content"]
         for _headers, rows in parse_markdown_tables(content):
             for row in rows:
                 row_text = " ".join(str(value) for key, value in row.items() if not key.startswith("__"))
