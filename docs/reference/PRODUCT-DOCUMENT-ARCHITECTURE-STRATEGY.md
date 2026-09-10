@@ -154,7 +154,7 @@ OpenAPI, DB migration, 테스트 코드/리포트가 있으면 파일을 연결�
 | 설치/필수 경로 | `vulcan.py`: `PRODUCT_ARTIFACT_TEMPLATES`, `PRODUCT_REQUIRED_ARTIFACTS_BY_GATE`, `install_product_artifacts` | 기존 6종 기본 유지, 명시적 새 배치 지원; upgrade 원본 보존 |
 | 내용/Gate 검사 | `collect_product_profile_findings`, `validate_product_trace`, `product_verification_result_findings` | 파일 수 대신 요구/계약/검증 내용 확인; 링크만 있는 빈 색인으로 통과 금지 |
 | 추적/통계/Run 입력 | `parse_product_trace_rows`, `compute_product_stats`, `build_trace_graph`, `build_product_worker_preset` | 원본/참조 구분, 여러 문서의 동일 ID 중복 집계 방지, Run 선택 유지 |
-| 절 조회 | `vulcan_core/document_context.py`: `lookup_sections` | 현재는 링크를 보고할 뿐 자동 추적하지 않음; 명시적/제한된 참조 조회와 공통 조건 누락 표시 |
+| 절 조회 | `vulcan_core/document_context.py`: `lookup_sections` | 조회 호환 MVP: 요구/시험 폴더, 명시적/제한된 참조 조회, 공통 조건 미수집 표시; 의미상 완전성/승인 판정은 별도 |
 | 승인/소스 비교 | `product_gate_approval_snapshot`, `product_run_matches_approval` | 문서 경로 이동과 내용/승인 범위 변화 구분, 과거 승인 전체 승격 금지 |
 | 릴리즈 | `vulcan_core/release.py` | 현재 결과/미완료 의무/릴리즈 승인 연결; 모든 과거 실행을 새 필수검사로 반복하지 않음 |
 | Dashboard | `dashboard/src/app/projects/[id]/page.tsx`, `DocList.tsx`, `CurrentGatePanel.tsx` | `Product docs 6/6`을 그대로 새 완성도로 쓰지 않음; 종류별 원본/현재 범위/이력 탐색 |
@@ -162,7 +162,7 @@ OpenAPI, DB migration, 테스트 코드/리포트가 있으면 파일을 연결�
 
 새 DB, 별도 필수 registry, 새 CLI 명령은 선결 조건이 아니다. 기존 문서 metadata/표/명시적 링크에서 파생 가능한 조회 모델을 먼저 검토한다. 참조 조회는 프로젝트 내 허용 경로만 사용하고 깊이/양 제한, 순환, 누락, 잘림, 충돌을 보고해야 한다.
 
-현재 절 조회의 기본 탐색 위치는 `docs/product`와 `docs/artifacts/02-design`이다. 새 요구사항/시험 경로는 명시적인 `--document`로 선택하지 않으면 탐색되지 않을 수 있다. 공통 조건 제목에 특정 키워드를 붙여 우연히 읽히게 하는 방법을 새 문서 작성 규칙으로 삼지 않는다.
+설계 파일럿 당시 기본 탐색은 `docs/product`와 `docs/artifacts/02-design`뿐이었다. 후속 조회 호환 MVP는 요구사항/시험 경로와 제한된 명시적 참조 조회를 추가한다. [현재 조회 범위/제한](../core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp)을 기준으로 확인한다. 공통 조건 제목에 특정 키워드를 붙여 우연히 읽히게 하는 방법을 새 문서 작성 규칙으로 삼지 않는다.
 
 ### C. 실제 기능 하나를 승인 후 이동
 
