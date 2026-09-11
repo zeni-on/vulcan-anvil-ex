@@ -5,6 +5,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+STAGE_SKILLS = (
+    ".agents/skills/vulcan-design/SKILL.md",
+    ".agents/skills/vulcan-impl-wave/SKILL.md",
+    ".agents/skills/vulcan-qa/SKILL.md",
+    ".agents/skills/vulcan-release/SKILL.md",
+)
 
 
 class ProductPolicyTests(unittest.TestCase):
@@ -76,6 +82,44 @@ class ProductPolicyTests(unittest.TestCase):
         self.assertIn("실제 실행 명령 / cwd", template)
         output = self.read("docs/core/RUN_OUTPUT_CONTRACT.md")
         self.assertNotIn("  commit: null", output)
+
+    def test_stage_skills_route_marked_process_before_legacy_preconditions(self):
+        for path in STAGE_SKILLS:
+            with self.subTest(path=path):
+                text = self.read(path)
+                route = text.index("`process_model`")
+                self.assertIn("ORCHESTRATOR_CLI_GUIDE.md", text[route:route + 400])
+                self.assertIn("unsupported", text[route:route + 500])
+                self.assertLess(route, text.index("session.json"))
+                self.assertIn("PRODUCT_PROFILE_BASELINE.md", text)
+
+    def test_product_adapter_workflows_route_before_general_run_requirements(self):
+        for name in ("implementation-plan", "qa-fix-loop", "change-impact-analysis", "independent-review"):
+            with self.subTest(skill=name):
+                text = self.read(f"docs/adapters/codex-gpt/skills/{name}.md")
+                route = text.index("PRODUCT_PROFILE_BASELINE.md")
+                self.assertLess(route, text.index("## 필수 입력"))
+                self.assertIn("Audit/PoC", text)
+        fix = self.read("docs/adapters/codex-gpt/skills/qa-fix-loop.md")
+        self.assertNotIn("Orchestrator는 `qa-fix-loop` Run을 먼저 만들고", fix)
+        change = self.read("docs/adapters/codex-gpt/skills/change-impact-analysis.md")
+        self.assertNotIn("승인된 CR을 처리할 때는 반드시 관련 Run 문서를 만들고", change)
+
+    def test_product_gate_prompts_and_wave_checks_are_scoped(self):
+        prompt = self.read("docs/adapters/codex-gpt/GATE_PROMPTS.md")
+        self.assertNotIn("필수 Core:", prompt.splitlines())
+        self.assertIn("## 2. Product", prompt)
+        wave = self.read("docs/adapters/codex-gpt/skills/build-wave.md")
+        verification = wave.split("## 검증 경계", 1)[1].split("## Orchestrator", 1)[0]
+        self.assertNotIn("worker 테스트를 재실행하고", verification)
+        self.assertIn("Product", verification)
+        self.assertIn("Audit/PoC", verification)
+
+    def test_qa_skill_records_command_results_without_source_identity(self):
+        qa = self.read(".agents/skills/vulcan-qa/SKILL.md")
+        self.assertIn("execute --verify", qa)
+        self.assertNotIn("tested-source identity", qa)
+        self.assertNotIn("command success, source identity", qa)
 
 
 if __name__ == "__main__":

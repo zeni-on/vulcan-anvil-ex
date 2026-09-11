@@ -4,6 +4,14 @@
 
 Gate 종료 전, 작성 세션과 분리된 독립 검수가 필요할 때 사용한다.
 
+## Product native review
+
+Product는 [PRODUCT_PROFILE_BASELINE.md](../../../core/PRODUCT_PROFILE_BASELINE.md) 7절과 [AGENT_RUN_PROTOCOL.md](../../../core/AGENT_RUN_PROTOCOL.md) 5.4절로 호출 여부와 새 문맥을 정한다. 담당 계약/변경/실제 증적을 검토하고 후보 의견을 기존 결과 요약으로 반환한다. 리뷰 때문에 RV 요청서나 Run을 새로 만들거나 아래 Core 목록을 일괄 읽지 않는다.
+
+native model/effort는 [CODEX_MODEL_POLICY.md](../../../core/CODEX_MODEL_POLICY.md) 3.1절을 따른다. 아래 외부 CLI 기본값을 native 호출에 적용하지 않는다. 사용자/고객이 지정한 공식 검수와 Audit/PoC의 기존 검수 요건은 유지한다. 공식 요청서 또는 외부 CLI 검수를 선택했을 때만 아래 요청/결과 파일 절차를 사용한다.
+
+## 공식 요청서 기반 검수
+
 특히 다음 상황에서 사용한다.
 
 - Gate 2 설계 산출물이 충분히 구체적인지 독립 검토할 때

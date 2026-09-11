@@ -7,6 +7,11 @@ description: Use for Vulcan implementation phase work, BW-000 scaffold, Build Wa
 
 Use this for `impl` Gate execution and follow-up implementation iterations.
 
+For projects with `process_model`, follow `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
+section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope and
+authority; do not add the marker or reinterpret an unsupported model as legacy.
+Unmarked projects keep the existing flow.
+
 This is an Orchestrator routing skill. If you are an assigned Product worker,
 follow the assigned summary or Run and `docs/core/PRODUCT_WORKER_GUIDE.md`; do not perform the
 planning, delegation, session, or completion commands below.
@@ -45,7 +50,7 @@ Product does not inherit the general direct-edit exception bookkeeping below.
 7. In Product, if separate handoff review adds value, consider `run-drafter`; Run creation alone does not require a helper. Other profiles use `run-drafter` for important, newly generated or previously problematic Runs.
 8. Confirm `run-preflight` passes before native worker delegation. A passing `execute --dry-run` includes that check; repeat after the Run, contracts, scope, or project state changes. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
 9. Run `python vulcan.py doctor` before retrying a worker when failure looks like local runtime readiness, for example unsupported runner, missing npm/Node, missing Playwright browser cache, locked port, or Dashboard/runtime confusion.
-10. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
+10. Select Product executors through section 7 and the user's role assignments. Outside Product, use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
 11. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
 12. After worker output, assess whether separate review adds value for runtime/API/DB/UI drift or other risk. Follow `AGENT_RUN_PROTOCOL.md` section 5.4: a new reviewer must not inherit the implementation conversation. Do not call all helpers for every Product Wave; preserve required reviews.
 13. Integrate worker output only after diff/scope verification.

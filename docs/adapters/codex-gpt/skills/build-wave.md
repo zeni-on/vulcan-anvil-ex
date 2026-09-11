@@ -6,15 +6,15 @@
 
 Product는 `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 Run/Wave를 선택한 경우에만 이 절차를 사용한다. 일반 수정에 아래 계획 Run, 시간별 분할, 직접 수정 예외를 강제하지 않는다. Product worker는 [PRODUCT_WORKER_GUIDE.md](../../../core/PRODUCT_WORKER_GUIDE.md)의 작업 요약/Run을 따르며 Orchestrator 정리를 반복하지 않는다.
 
-Build Wave는 전체 구현이 아니라 하나의 검증 가능한 구현 배치다. Wave가 끝나면 코드, 테스트케이스, Orchestrator가 재실행할 검증 명령, 문서/추적표 갱신 필요 항목, 커밋 후보가 함께 남아야 한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 갱신해야 할 ID와 증적 후보를 보고한다.
+Build Wave는 전체 구현이 아니라 하나의 검증 가능한 구현 배치다. Wave가 끝나면 코드, 테스트케이스, 실제 검증 명령과 결과, 문서/추적표 갱신 필요 항목, 커밋 후보가 함께 남아야 한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 갱신해야 할 ID와 증적 후보를 보고한다.
 
-Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다. 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 15분을 넘길 것으로 예상되면 개발을 중간에 끊지 말고 더 작은 `FUNC/PGM/API/DB/SEC/TEST` 계약 묶음으로 다시 나눈다.
+Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다. Audit/PoC의 시간별 분할 권장과 직접 수정 예외는 아래 별도 기준을 따른다.
 
 ## 필수 입력
 
 - `AGENTS.md`
 - 현재 Build Wave Run
-- Implementation Plan Run
+- Implementation Plan Run (Product는 기존 작업 계획을 사용할 수 있음)
 - 현재 Wave의 `BW-ID`
 - 현재 Run의 `target_contracts`
 - 관련 개발표준정의서
@@ -51,7 +51,8 @@ Build Wave는 전체 Gate 4 QA가 아니다.
 | 구분 | 수행자 | Wave에서의 의미 |
 | --- | --- | --- |
 | worker self-check | worker | 자기 수정 범위의 단위 테스트, API/컴포넌트 테스트, lint/build를 가능한 만큼 실행한다. Node/Playwright는 보조 검증이다. |
-| Wave 종료 검증 | Orchestrator | worker 테스트를 재실행하고, 현재까지 가능한 build/run-check/회귀 검증으로 통합 깨짐을 확인한다. |
+| Product Wave 종료 검증 | Orchestrator | `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 diff/scope와 실제 결과를 확인하고 변경·실패·불확실성이 있을 때 관련 검증을 다시 실행한다. |
+| Audit/PoC Wave 종료 검증 | Orchestrator | worker 테스트 재실행과 현재까지 가능한 build/run-check/회귀 검증으로 통합 깨짐을 확인한다. |
 | Gate 4 QA | QA/review/evidence | 전체 사용자 시나리오, Playwright 화면 증적, Test Result, QA Finding을 확정한다. |
 
 Wave가 전체 사용자 시나리오를 완성하지 않았다면 전체 E2E나 최종 화면 증적을 Wave 완료 조건으로 요구하지 않는다.
@@ -62,10 +63,14 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 
 ## Orchestrator와 subagent 책임
 
-- Orchestrator는 Build Wave Run 작업지시서 작성, native worker(subagent/thread/native branch agent) 위임, 결과 검토, 통합, worker 테스트케이스 재실행, 상태 갱신을 담당한다.
+- Orchestrator는 선택한 Run 작성, 실행자 배정, 결과 검토, 통합, profile에 따른 검증과 상태 갱신을 담당한다.
 - Orchestrator는 Build Wave Run을 worker에게 넘기기 전에 `--trace-seed` 추천값을 확인하고, `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 실제 구현 범위에 맞게 확정한다.
-- 기능 구현의 주 작성자는 `build` persona의 native worker다. `agent-run --mode work`와 `run-exec`는 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
+- Product 실행자는 `PRODUCT_PROFILE_BASELINE.md` 7절과 사용자 역할 배정으로 정한다. Audit/PoC의 기능 구현 주 작성자는 `build` persona의 native worker다. `agent-run --mode work`와 `run-exec`는 외부 CLI가 필요할 때 선택한다.
 - subagent/thread 위임은 외부 프로세스 실행 기록이 없을 수 있으므로 `delegation_records`로 책임 추적을 남긴다. `delegation_records`가 있으면 Orchestrator는 해당 변경을 재검증한 뒤 Wave 상태를 갱신한다.
+
+### Audit/PoC의 분할·직접 수정 기준
+
+- 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 15분을 넘길 것으로 예상되면 개발을 중간에 끊지 말고 더 작은 기능/계약 묶음으로 다시 나눈다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 바로 구현 완료 처리하지 않는다. 단일 worker Run으로 위임하거나 직접 수정 예외를 기록한다.
 - Orchestrator가 직접 수정할 수 있는 범위는 작은 연결 수정, 충돌 해결, 문서/추적표/session 갱신, 검증 보정으로 제한한다.
 - 사용자가 worker 사용을 명시하지 않았다는 점은 직접 수정 예외 사유가 아니다. 구현 승인이 있으면 native worker 위임을 기본값으로 둔다.
@@ -73,6 +78,9 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 - 직접 수정 예외가 필요하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
 - 직접 구현 예외는 2개 이하 파일, 약 30 LOC 이하, public API/PGM/IF/MTH/DTO/schema/DB/security/SCR/UI contract 변경 없음, 기존 테스트 또는 작은 테스트 보정으로 검증 가능한 경우로 제한한다.
 - 이 기준을 넘으면 직접 구현하지 않고 Build Wave Run 또는 worker Run으로 분리한다.
+
+### Run/Wave를 선택했을 때의 공통 경계
+
 - 한 Wave를 여러 runner에게 나누어 동시에 구현시키지 않는다. backend/frontend처럼 작업지시서가 분리되어야 하면 서로 다른 `build-wave` Run, 보통 서로 다른 `BW-ID`로 나눈 뒤 순차 실행한다.
 - 다른 Wave의 코드 수정은 현재 Wave가 완료될 때까지 금지한다.
 - subagent, `codex-cli`, `claude-cli` 같은 작업자 runner는 Gate 전환, `session.json` Gate 상태 변경, 최종 승인 판단을 하지 않는다.

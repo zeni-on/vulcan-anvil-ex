@@ -34,9 +34,15 @@ ROUTING_DOCS = (
     ".agents/skills/vulcan-impl-wave/SKILL.md",
     ".agents/skills/vulcan-qa/SKILL.md",
     ".agents/skills/vulcan-design/SKILL.md",
+    ".agents/skills/vulcan-release/SKILL.md",
     "docs/adapters/codex-gpt/GATE_PROMPTS.md",
     "docs/adapters/gemini/GATE_PROMPTS_GEMINI.md",
     "docs/adapters/codex-gpt/skills/build-wave.md",
+    "docs/adapters/codex-gpt/skills/implementation-plan.md",
+    "docs/adapters/codex-gpt/skills/qa-fix-loop.md",
+    "docs/adapters/codex-gpt/skills/qa-execution.md",
+    "docs/adapters/codex-gpt/skills/change-impact-analysis.md",
+    "docs/adapters/codex-gpt/skills/independent-review.md",
     "docs/adapters/gemini/README_GEMINI.md",
 )
 

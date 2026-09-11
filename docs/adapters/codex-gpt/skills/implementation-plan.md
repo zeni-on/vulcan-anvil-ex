@@ -4,7 +4,9 @@
 
 Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사용한다.
 
-구현 계획은 코드를 작성하는 Run이 아니다. Orchestrator가 승인된 요구사항, 설계, 테스트 기준을 읽고 구현을 `Implementation Scaffold`, 여러 `Build Wave`, 또는 단일 worker Run으로 나누는 운영 Run이다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](../../../core/PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 작업 계획을 사용한다. 필요한 계약/범위/검증 기준과 실행자를 정하고, Run/Wave를 선택한 경우에만 아래 작성 항목을 사용한다. Audit/PoC의 필수 입력 목록, 시간별 분할과 직접 수정 예외는 Product에 적용하지 않는다.
+
+아래는 Audit/PoC의 Implementation Plan Run 절차다. Orchestrator가 승인된 요구사항, 설계, 테스트 기준을 읽고 구현을 `Implementation Scaffold`, 여러 `Build Wave`, 또는 단일 worker Run으로 나누는 운영 Run이며 코드를 작성하는 Run은 아니다.
 
 ## 필수 입력
 
@@ -53,7 +55,7 @@ Gate 3 테스트 설계가 끝나고 구현 단계로 들어가기 직전에 사
 | 관련 ID | `REQ/AC/FUNC/PGM/API/SCR/DB/SEC/UT/IT/UI` 중 해당 ID를 연결한다. |
 | target_contracts | 이번 Wave/worker Run이 실제로 닫을 `FUNC/PGM/API/DB/SEC/TEST` 계약 묶음을 적는다. |
 | 수정 범위 | 예상 파일 또는 디렉터리를 적는다. |
-| 테스트 | worker가 작성/갱신할 테스트케이스와 Orchestrator가 재실행할 명령을 적는다. |
+| 테스트 | 담당 테스트와 검증 명령을 적는다. Product의 결과 확인/재실행 조건은 7절, Audit/PoC는 기존 Orchestrator 재실행 기준을 따른다. |
 | 추적표 갱신 | 상태 후보, 증적 후보, 테스트 결과 갱신 필요 항목을 적는다. 실제 `Implemented`/`Verified` 반영은 Orchestrator 재검증 후 통합 단계에서 한다. |
 | 커밋 후보 | Wave 완료 후 사용할 커밋 메시지 후보를 적는다. |
 | 위임 | subagent/runner 위임 여부, 권장 runner, 책임 범위를 적는다. |

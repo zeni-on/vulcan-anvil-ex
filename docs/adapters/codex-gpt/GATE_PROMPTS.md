@@ -1,119 +1,38 @@
 # Codex/GPT Gate Prompts
 
-> 목적: Codex/GPT runner가 Vulcan-Anvil Ex Core 규칙을 실행할 때 사용할 얇은 Gate별 체크리스트를 제공한다.
+> 목적: Codex/GPT가 현재 작업에 필요한 Core/skill로 이동하는 짧은 안내다. 정책 원문을 이 문서에 복제하지 않는다.
 
 ## 1. 사용 방식
 
 이 문서는 Core 규칙을 대체하지 않는다.
-Codex/GPT 실행 시에는 먼저 현재 Gate와 Run 입력을 확인하고, 필요한 Core 문서와 skill 카드만 읽는다.
+Codex/GPT는 `AGENTS.md`와 사용자 최신 지시, 현재 작업 범위를 확인한다. Run은 사용하는 경우에 읽는다.
 
-필수 Core:
+`process_model`이 있으면 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절로 이동한다. 아래 기존 Gate 절차를 새 프로세스에 적용하거나 표식을 임의로 추가하지 않는다.
 
-- `docs/core/ORCHESTRATOR_PROTOCOL.md`
-- `docs/core/GATE_EXECUTION_CHECKLIST.md`
-- `docs/core/AGENT_RUN_PROTOCOL.md`
-- `docs/core/TRACEABILITY_RULES.md`
-- `docs/core/AGENT_PERSONAS.md`
-- `docs/core/INDEPENDENT_EXECUTION_PROCESS.md`
+Run을 사용하면 출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
 
-출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
+## 2. Product
 
-Product에서는 `docs/core/PRODUCT_PROFILE_BASELINE.md`의 Run 선택 정책과 `docs/core/PRODUCT_DOCUMENT_WRITING.md`의 작성 경로를 우선 적용한다. 6종은 진입점이며 필요한 상세의 단일 원본을 연결한다. Run/상세 파일을 일괄 생성하거나 기존 승인 문서를 자동 이동하지 않는다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](../../core/PRODUCT_PROFILE_BASELINE.md) 7절과 현재 작업의 관련 원본부터 읽는다. Run/Wave 선택, 실행자, 수정·재시험 권한, 조건부 재검증은 7절을 따른다. Audit/PoC의 worker 필수·직접 수정 예외·QA 재승인 절차를 가져오지 않는다.
 
-## 2. 공통 체크
+문서 위치는 [PRODUCT_DOCUMENT_WRITING.md](../../core/PRODUCT_DOCUMENT_WRITING.md)를 따른다. 6종은 진입점이며 필요한 상세의 단일 원본을 연결한다. 승인된 작업을 수행하고 현재 계약과 실제 결과를 갱신하며, 작은 변경마다 Run/상세 파일을 만들거나 기존 승인 문서를 자동 이동하지 않는다.
 
-- `session.json.current_gate`, 사용자 요청, 관련 Run을 먼저 확인한다.
-- 현재 Gate보다 앞선 산출물, 구현, 테스트, 증적을 사용자 승인 없이 만들지 않는다.
-- 의미 있는 변경은 관련 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI/FIND/CR/RUN`과 연결한다.
-- 실행하지 않은 테스트를 Pass로 기록하지 않는다.
-- 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 프로젝트의 근거로 사용하지 않는다. 현재 `session.json`, Run 문서, Gate 산출물, 사용자 최신 지시로 다시 확인한다.
-- Gate 산출물 완료 후에는 요약, 미해결 항목, 다음 제안, 사용자 승인 질문을 남기고 멈춘다.
-- `docs/ref-docs/`는 민감 자료일 수 있으므로 커밋하거나 원문 인용하지 않는다.
-- Claude 전용 `.claude/` 문서는 Codex 실행 계약으로 보지 않는다.
+## 3. 기존 Gate 절차의 상세 참조
 
-## 3. Gate별 체크리스트
+Gate의 최소 확인·승인·worker 경계는 [GATE_EXECUTION_CHECKLIST.md](../../core/GATE_EXECUTION_CHECKLIST.md), 운영은 [ORCHESTRATOR_PROTOCOL.md](../../core/ORCHESTRATOR_PROTOCOL.md)의 해당 절을 따른다. Audit/PoC의 기존 Run/worker 및 필수 검수 기준은 유지한다. 아래 문서는 현재 작업에 필요한 경우에만 추가로 읽는다.
 
-| Gate | 목표 | 확인할 Core/Skill |
-| --- | --- | --- |
-| Phase 0 | 목표, 사용자, 제약, 질문, 위험, 가정을 정리한다 | `AGENT_RUN_PROTOCOL.md`, `DELIVERY_PROFILES.md` |
-| Gate 1 | 테스트 가능한 `REQ/NREQ/AC`와 추적표를 만든다 | `TRACEABILITY_RULES.md`, `ID_SYSTEM.md` |
-| Gate 2 | 요구사항을 아키텍처, 화면, 기능, API, DB, 보안, 개발표준으로 전개한다 | `GATE2_DESIGN_SEQUENCE.md`, `screen-design`, `security-review`, `development-standard-review`, `data-standard-review` |
-| Gate 3 | 요구사항, 보안, UI 계약을 검증 가능한 테스트와 증적 기준으로 전개한다 | `TRACEABILITY_RULES.md`, `RUN_INPUT_CONTRACT.md` |
-| Impl | 승인된 Build Wave 범위 안에서 구현하고 테스트, 증적, 추적성 delta를 남긴다 | `implementation-plan`, `implementation-scaffold`, `build-wave`, `TECH_STACK_BASELINES.md` |
-| Gate 4 | 테스트 결과, Playwright 증적, 추적성, FIND/CR/ISSUE를 검수한다 | `CHANGE_CONTROL_PROCESS.md`, `traceability-review`, `ui-review` |
-| Gate 5 | 릴리즈 승인 근거, 잔여 위험, 인수인계 항목을 정리한다 | `DOCUMENT_METADATA.md`, `CHANGE_CONTROL_PROCESS.md` |
+| 필요한 판단 | 참조 |
+| --- | --- |
+| profile별 산출물/검사 강도 | [DELIVERY_PROFILES.md](../../core/DELIVERY_PROFILES.md) |
+| 요구사항/시험/추적 연결 | [TRACEABILITY_RULES.md](../../core/TRACEABILITY_RULES.md) |
+| 설계 순서와 계약 | [GATE2_DESIGN_SEQUENCE.md](../../core/GATE2_DESIGN_SEQUENCE.md) |
+| Run 기반 구현 계획/실행 | [implementation-plan](skills/implementation-plan.md), [build-wave](skills/build-wave.md) |
+| QA 실행/승인 범위 안의 수정 | [qa-execution](skills/qa-execution.md), [qa-fix-loop](skills/qa-fix-loop.md) |
+| 계약 변경과 CR | [CHANGE_CONTROL_PROCESS.md](../../core/CHANGE_CONTROL_PROCESS.md) |
+| 독립 검수 | [AGENT_RUN_PROTOCOL.md 5.4절](../../core/AGENT_RUN_PROTOCOL.md#54-새-문맥의-native-review), 공식 요청서/외부 CLI를 쓰면 [independent-review](skills/independent-review.md) |
 
-## 4. Gate별 핵심 주의
+## 4. Codex 실행과 보고
 
-### Phase 0
+native 모델/effort는 [CODEX_MODEL_POLICY.md](../../core/CODEX_MODEL_POLICY.md) 3.1절을 따른다. 외부 CLI 설정을 native 호출에 적용하지 않는다. 역할별 기존 작업은 [PERSONA_DELEGATION.md](PERSONA_DELEGATION.md)로 연결한다.
 
-- 즉시 구현하지 않는다.
-- 확정되지 않은 내용은 질문, 가정, 위험, Backlog 후보로 분리한다.
-
-### Gate 1
-
-- 요구사항과 인수기준을 설계/구현 상세로 밀어 넣지 않는다.
-- `Given/When/Then`, 선행조건, 테스트 데이터는 Gate 3 입력으로 넘긴다.
-
-### Gate 2
-
-- `docs/core/GATE2_DESIGN_SEQUENCE.md`의 순서를 따른다.
-- SW Architecture는 Draft로 시작하고 상세 설계를 거쳐 Baseline 후보로 보강한다.
-- 화면 퍼블리싱 산출물이나 UIREF가 있으면 단순 참고인지 구현 기준인지 분류하고, 구현 기준이면 UI Implementation Contract를 작성한다.
-- 보안가이드와 개발표준은 구현자가 바로 사용할 수 있는 정책값, 적용 위치, 검증 명령을 가진다.
-
-### Gate 3
-
-- UI 테스트는 화면 단위가 아니라 상태/시나리오 단위로 나눈다.
-- 명령 기반 테스트는 cwd, Windows/POSIX 명령, 성공 기준, 로그/증적 경로를 가진다.
-- 보안가이드에 없는 정책값을 테스트가 새로 만들지 않는다.
-
-### Impl
-
-- Orchestrator는 구현 주 작성자가 아니다.
-- 작은 기능, 단일 파일, 단일 테스트 변경이라도 먼저 worker Run 또는 Build Wave Run을 만들고 native worker(subagent/thread/native branch agent)에게 위임한다. `agent-run --mode work`와 `run-exec`는 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택한다.
-- Orchestrator가 직접 코드를 수정해야 하면 `orchestrator_direct_edit_reason`, `direct_edit_scope.files`, `direct_edit_scope.estimated_loc`, `direct_edit_scope.contract_changed`, 실행 검증, 후속 검수 필요 여부를 Run에 남긴다.
-- Build Wave가 있으면 현재 `BW-ID` 범위만 수행한다.
-- 신규 개발 또는 빌드 가능한 골격이 없으면 feature 구현 전 `implementation-scaffold`로 class/interface/method/DTO skeleton과 build smoke를 먼저 만든다.
-- `build-wave` Run은 Program Design의 public signature를 `target_contracts.interface_contract`로 가져온 뒤 실행한다.
-- 개발표준, 보안가이드, 테스트케이스가 비어 있으면 구현 완료로 선언하지 않는다.
-- 화면 구현 전 UI Implementation Contract와 Gate 3 UI 테스트 기준을 확인한다.
-
-### Gate 4
-
-- 테스트 실행과 증적 수집은 가능하면 `qa-execution` worker Run으로 분리한다.
-- Gate 4 QA는 `QA-000` 환경 준비/스모크, `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적, `QA-003` 결과 정리/판정 후보 순서로 나눈다.
-- `QA-000`에서 통합 소스, 의존성, DB/포트/환경변수, backend/frontend 기동, Playwright 설치 가능성을 먼저 확인하고 후속 QA Run이 재사용할 QA workspace 경로를 기록한다. 기본 workspace는 `workflow.integration_branch`의 현재 작업공간이다.
-- `QA-001`, `QA-002`, `QA-003`은 `QA-000`이 기록한 같은 QA workspace에서 실행한다.
-- Orchestrator는 실패를 발견해도 즉시 코드를 수정하지 않고 원인, 재현 명령, 로그, 영향 ID를 기록한 뒤 사용자와 처리 방향을 협의한다.
-- 수정이 승인된 설계 범위 안이면 별도 `qa-fix-loop` Run으로 처리한다.
-- 화면 증적 Pass는 Playwright 결과를 기준으로 한다.
-- CDP 캡처, 브라우저 수동 캡처, Preview 캡처만으로 UI Pass를 확정하지 않는다.
-- 승인된 범위 안의 결함은 `FIND`, 기준선 변경은 `CR`, 판단 보류는 `ISSUE`로 남긴다.
-
-### Gate 5
-
-- Release Approval과 CR을 혼동하지 않는다.
-- 미해결 Open 항목이 있으면 승인 완료로 선언하지 않는다.
-
-## 5. 완료 응답 형식
-
-```text
-완료 요약:
-- ...
-
-변경 파일:
-- ...
-
-검증:
-- cwd / command / exit code / result / evidence
-
-미해결:
-- ...
-
-다음 제안:
-- ...
-
-승인 질문:
-- ...
-```
+완료 보고는 변경, 실제 검증 결과, 미해결 항목과 필요한 다음 승인만 간결하게 적는다. 실행하지 않은 검증이나 확인되지 않은 모델/effort를 사실로 기록하지 않는다.
