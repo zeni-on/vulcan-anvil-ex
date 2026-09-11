@@ -138,6 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
+from vulcan_core import product_process
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -2914,11 +2915,25 @@ def load_session(project_dir="."):
         print("오류: session.json을 찾을 수 없습니다. 프로젝트 디렉토리에서 실행하세요.")
         sys.exit(1)
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        session = json.load(f)
+    guard_legacy_process(session)
+    return session
+
+
+def guard_legacy_process(session):
+    try:
+        product_process.require_legacy(session)
+    except product_process.ProcessContractError as error:
+        print(f"오류: {error}. Use status for read-only diagnostics.")
+        sys.exit(2)
 
 
 def save_session(session, project_dir="."):
+    guard_legacy_process(session)
     path = os.path.join(project_dir, "session.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            guard_legacy_process(json.load(f))
     with open(path, "w", encoding="utf-8") as f:
         json.dump(session, f, ensure_ascii=False, indent=2)
 
@@ -15787,6 +15802,19 @@ def capture_trace_detail_summary(project_dir="."):
 
 
 def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
+    path = os.path.join(project_dir, "session.json")
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            session = json.load(f)
+        if "process_model" in session:
+            summary = product_process.describe(session)
+            if check or trace_detail:
+                summary["check"] = "not_enabled: scoped readiness/QA consumers are not connected"
+            print(json.dumps(summary, ensure_ascii=False, indent=2) if emit_json
+                  else "\n".join(f"{key}: {value}" for key, value in summary.items()))
+            if check or trace_detail or summary["status"] != "experimental":
+                sys.exit(2)
+            return
     summary = collect_status_summary(project_dir)
 
     if emit_json:
@@ -16794,6 +16822,14 @@ def main():
     p_release.add_argument("--target", required=True, help="배포 대상 경로 (예: ../Vulcan-Anvil)")
 
     args = parser.parse_args()
+
+    # Until every state consumer supports the prototype, never run old writers
+    # or old Gate checks against a marked session. status has a diagnostic path.
+    if args.command not in {"init", "status", "version", None}:
+        session_path = os.path.join(getattr(args, "project_dir", None) or ".", "session.json")
+        if os.path.isfile(session_path):
+            with open(session_path, encoding="utf-8") as f:
+                guard_legacy_process(json.load(f))
 
     if args.command == "init":
         init(

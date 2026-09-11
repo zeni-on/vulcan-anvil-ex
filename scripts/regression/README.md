@@ -18,6 +18,8 @@ Product 결과 중심 운영 회귀는 `python -m unittest scripts.regression.te
 
 ### 1. 최소 init smoke
 
+Product 반복 프로세스의 단계 1 계약은 `python -m unittest scripts.regression.tests.test_product_process scripts.regression.tests.test_product_policy`로 검사한다. 상태/범위/승인/증적의 기계적 연결과 legacy CLI의 실험 상태 보호를 검증하며 실제 사용자 권한 인증, 문서 준비 판정, Dashboard나 프로젝트 이행은 아직 포함하지 않는다. 지침 검사는 알려진 중복·충돌의 재발 검사이며 모든 자연어를 판정하지 않는다. 새 Product 충돌 사례가 발견되면 해당 사례를 추가한다. 전체 `unittest discover`와 GitHub Actions가 이 테스트도 자동 실행한다.
+
 ```powershell
 python scripts/regression/run_audit_smoke.py
 ```
