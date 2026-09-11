@@ -130,9 +130,9 @@ CR 승격 예시:
 
 ## 6. 승인된 CR의 Gate 진행
 
-CR이 승인되면 전체 프로젝트를 처음부터 다시 진행하지 않는다. `vulcan.py gate-start <gate>`로 필요한 Gate를 다시 진행 상태로 만들고, 승인된 CR의 영향 범위를 Run 문서에 기록한 뒤 해당 범위의 산출물만 갱신한다.
+CR이 승인되면 전체 프로젝트를 처음부터 다시 진행하지 않는다. `vulcan.py gate-start <gate>`로 필요한 Gate를 다시 진행 상태로 만들고, 승인된 CR의 영향 범위를 현재 작업 기록에 연결한 뒤 해당 범위의 산출물만 갱신한다.
 
-Gate를 다시 진행할 때는 Run 문서가 필수다. Run은 다음을 남긴다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 CR/이슈/작업 요약을 사용하며 Run은 선택한다. Audit/PoC에서 Gate를 다시 진행할 때는 Run 문서가 필수다. 작업 기록은 다음을 남긴다.
 
 - 관련 `CR-ID`
 - 영향받는 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI`
@@ -148,13 +148,13 @@ Gate를 다시 진행할 때는 Run 문서가 필수다. Run은 다음을 남긴
 | 구현/증적 | G4 | 코드, 테스트 결과, 화면/로그 증적 |
 | 승인/릴리즈 | G5 | 승인본, 릴리즈 기록 |
 
-영향 범위는 별도 되돌림 명령으로 관리하지 않는다. CR 상세서와 Run 문서의 scope로 관리한다.
+영향 범위는 별도 되돌림 명령으로 관리하지 않는다. CR 상세서와 현재 작업 기록의 scope로 관리한다.
 
 ```text
 scope: REQ-005, AC-008, FUNC-005, PGM-005, SEC-002, UT-008
 ```
 
-테스트는 범위를 좁히되 회귀 안전성을 포기하지 않는다.
+Product의 검증 선택과 재실행은 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 실행 기준은 Audit/PoC에 적용한다.
 
 | 테스트 | 기준 |
 | --- | --- |
@@ -170,7 +170,7 @@ Backlog는 CR 자체가 아니며, Gate 밖에 있는 단순 TODO도 아니다. 
 | 상황 | 처리 |
 | --- | --- |
 | Phase 0 아이디어가 아직 요구사항으로 확정되지 않음 | `IDEA`로 Backlog 등록 후 Gate 1 후보로 정리 |
-| CR 승인, 즉시 반영 | 바로 Run 생성 |
+| CR 승인, 즉시 반영 | Product는 기존 작업 기록으로 진행, Audit/PoC는 Run 생성 |
 | CR 승인, 다음 배치 반영 | `CR`로 Backlog 등록 |
 | CR 반려 | CR 상태를 Rejected로 기록 |
 | CR 보류 | CR 상태를 Deferred로 기록하고 필요하면 `ISSUE` 또는 Backlog에 보류 사유 기록 |
@@ -178,7 +178,7 @@ Backlog는 CR 자체가 아니며, Gate 밖에 있는 단순 TODO도 아니다. 
 | 판단이 불명확함 | `ISSUE`로 Backlog 등록 후 사용자 의사결정 요청 |
 | 기술부채 또는 운영 개선 | `DEBT`로 Backlog 등록 |
 
-Backlog 항목은 `유형`, `관련 ID`, `다시 진행할 Gate`, `관련 Run`, `우선순위`를 함께 가져야 한다. G4에서 Blocker 또는 Major 결함은 Backlog로 넘기지 않는다. 현재 Gate 안에서 해결하거나 CR로 승격해야 한다.
+Backlog 항목은 `유형`, `관련 ID`, `다시 진행할 Gate`, `관련 Run`(Product에서 Run 미사용 시 기존 작업 참조), `우선순위`를 함께 가져야 한다. G4에서 Blocker 또는 Major 결함은 Backlog로 넘기지 않는다. 현재 Gate 안에서 해결하거나 CR로 승격해야 한다.
 
 ## 8. 에이전트 판단 규칙
 

@@ -18,7 +18,10 @@ Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project
    - In `poc`, prefer subagent/result-summary flow for short experiments; create compact Runs only for external workers, independent review, long delegation, or reproducible experiment records.
    - In `poc`, do not create Gate-level Orchestrator Plan Runs by habit. Use `docs/poc` plus `python vulcan.py status --check` unless a Run is needed for handoff or replay.
    - In `poc`, allow `TBD` only with reason and next decision timing. Do not leave goals, success criteria, or actual execution results as `TBD`.
-6. If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.
+6. For Product execution, start with `PRODUCT_PROFILE_BASELINE.md` section 7 and the
+   current task sources. Read the relevant `ORCHESTRATOR_PROTOCOL.md` section only
+   when routing or authority remains unclear. Other profiles read that protocol
+   for non-trivial orchestration.
 7. Use `docs/core/ORCHESTRATOR_CLI_GUIDE.md` for CLI usage; use `python vulcan.py branch-status` only when branch detail is needed beyond `status`.
 8. Run `python vulcan.py doctor` only when local runtime readiness matters: after init/upgrade on an unfamiliar machine, before first worker if toolchain state is unknown, before Gate 4 QA-000/UI evidence, or after npm/Playwright/runner/Dashboard/environment-blocked failures.
 
