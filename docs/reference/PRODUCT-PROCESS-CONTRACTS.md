@@ -186,4 +186,6 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 새 문맥의 native contract-reviewer가 다른 `--project-dir`을 지정할 때 호출 위치의 branch 정책을 검사하던 오류와 `main~1` 같은 revision을 branch로 인정하던 문제를 찾았다. 대상 workspace/config와 정확한 Git ref 확인으로 보정하고 실제 Git/CLI 재현 시험을 추가했다. 재검토에서 잔여 지적은 없었다.
 - Dashboard 담당 native worker는 schema/loader/화면/시험을 변경했고, Orchestrator는 diff와 저장 상태 표시·미지원 모델 차단을 확인했다. 최종 typecheck/production build와 Jest 300개가 통과했다. 전체 E2E 41개 통과 후 캡처에서 모바일 높이 제한을 발견해 보정했으며, A/A2/B 모바일 확인을 포함한 최종 Product E2E 20개도 통과했다. 390px/1440px 캡처를 직접 확인했다.
 - UI fixture는 저장 상태 표시 시험이며, 실행 권한/실제 증적의 유효성은 Python 계약/명령 시험이 검증한다. 화면 자체가 사용자 승인이나 전체 제품 릴리즈를 인증하지 않는다. 실제 PMTool/샘플 프로젝트는 변경하지 않았다.
-- 기존 pathlib/caniuse-lite 경고가 남았다. production dependency audit의 high 이상 기준은 통과했지만 DOMPurify/Mermaid의 moderate advisory 2건은 별도 의존성 보강 대상으로 남긴다. 이번 PR은 의존성 버전을 바꾸지 않는다.
+- 초기 production dependency audit에 남았던 moderate 2건은 병합 전 Mermaid `11.16.0 -> 11.16.1`, DOMPurify `3.4.11 -> 3.4.15` 갱신으로 해소했다. 개발 의존성에서 추가 확인한 5개 패키지의 advisory도 기존 의존성 범위 안에서 갱신했으며, 잠금 파일 기준 전체 `npm audit` 결과는 0건이다. Next/React의 주요 버전과 기존 audit 차단 기준은 변경하지 않았다.
+- 갱신 후 `npm ci`, typecheck, production build, Jest 300개, 전체 E2E 45개가 통과했다. 애니메이션 완료 대기를 보강한 최종 Mermaid E2E 2개도 통과했고 390px/1440px 캡처에서 노드·연결·글자를 확인했다. 설치된 의존성 전체 `npm audit --audit-level=low`도 0건이다.
+- 남은 관찰: Python의 기존 pathlib 경고는 별도이다. Mermaid 캡처 과정에서 기존 DocDrawer의 `min-w-[480px]` 때문에 390px 화면에서는 문서 패널 왼쪽이 잘리는 현상도 확인했다. 다이어그램 자체는 표시되며 이 의존성 보강에서는 기존 패널 레이아웃을 변경하지 않는다.
