@@ -34,15 +34,15 @@ if a Wave is chosen, use the Wave lifecycle below. Required QA and approvals rem
 Apply this when a Run/Wave is required by the profile or deliberately selected.
 Product does not inherit the general direct-edit exception bookkeeping below.
 
-1. Create or review an implementation plan Run when scope is more than a tiny change.
+1. Review the chosen scope. Audit/PoC use an implementation plan Run when scope is more than a tiny change; Product may use the existing task plan.
 2. If buildable skeleton is missing, check the delivery profile before starting `BW-000`.
    - In `poc`, do not create `BW-000` by default. Let the first native worker create the environment, hello/build smoke, and the core feature together unless the user asks for stricter separation.
    - In `product` or `audit`, prefer an earlier Environment Readiness Track when possible; use `BW-000 implementation-scaffold` when official contract skeleton or build smoke must be isolated.
 3. Create one active Build Wave at a time.
 4. Prefer `wave-start <BW-ID> --trace-seed <detailed-id>` or `run-new ... --trace-seed <id>`.
 5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.
-6. If related IDs/source documents are unclear, use `trace-scout` before finalizing the Run.
-7. If the Run is important, newly generated, or previously problematic, use `run-drafter` before worker handoff.
+6. In Product, if related IDs/source documents need separate investigation, consider `trace-scout`. Other profiles use `trace-scout` when those references are unclear.
+7. In Product, if separate handoff review adds value, consider `run-drafter`; Run creation alone does not require a helper. Other profiles use `run-drafter` for important, newly generated or previously problematic Runs.
 8. Confirm `run-preflight` passes before native worker delegation. A passing `execute --dry-run` includes that check; repeat after the Run, contracts, scope, or project state changes. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
 9. Run `python vulcan.py doctor` before retrying a worker when failure looks like local runtime readiness, for example unsupported runner, missing npm/Node, missing Playwright browser cache, locked port, or Dashboard/runtime confusion.
 10. Use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.

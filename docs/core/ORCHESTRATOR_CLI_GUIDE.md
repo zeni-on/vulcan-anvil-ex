@@ -97,6 +97,21 @@ Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때�
 Product profile은 Gate별 폴더를 늘리기보다 `docs/product/` 문서 세트의 `gate_scope`와 본문 섹션을 갱신한다.
 Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하지 않는다.
 
+### 4.1 개발용 Product 반복 프로세스
+
+`process_model: product-iterative-v1`을 사용하는 별도 실험 파일럿에서는 `status --check`와 `session --process-request`를 사용한다. 기존 Gate 명령을 새 구간 이름으로 호출하지 않는다. 상태 요청은 기본 미리보기이고 `--apply`일 때만 범위/권한/증적과 상태 revision을 검사해 저장한다. 상세 기계 계약과 제한은 프레임워크 저장소의 [Product Process Contracts](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 따른다.
+
+일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다. 기존 Product/Audit/PoC 세션에 표식을 수동 추가하거나 이 명령으로 이행하지 않는다. 실험 모델도 Run/자동 Git commit/릴리즈를 추가로 강제하지 않으며, 기존 프로젝트에는 위의 Gate 라이프사이클이 그대로 적용된다.
+
+| 실험 모델의 운영 작업 | 연결된 경로와 경계 |
+| --- | --- |
+| 현재 위치/범위/작업공간 | `status`, `branch-status`. `planning`/`impl`/`acceptance`를 그대로 읽으며 과거 Gate 키로 바꾸지 않는다. |
+| 환경 확인/인수 시험 | `doctor` 후 필요한 명시 명령만 `execute --verify`로 실행한다. 인수 시험은 합의한 통합 브랜치의 현재 작업공간을 사용하고 QA worktree를 새로 만들지 않는다. 환경 진단은 인수 승인이 아니다. |
+| 릴리즈 후보 확인 | `release-pr --dry-run`은 현재 범위 인수/증적/브랜치를 재확인하며 미처리 의무를 표시한다. 파일·PR·push를 만들지 않으며 후보가 나와도 발행 권한은 없다. |
+| 화면 확인 | 지원 Dashboard는 저장된 3구간과 이번 작업 범위를 읽기 전용으로 표시한다. `completed`는 이번 범위 인수이며 제품 전체 완료나 배포 완료가 아니다. |
+
+실험 모델의 `branch-start`, 기존 Gate/QA Run 자동화, 실제 `release-pr` 발행은 아직 지원하지 않는다. 브랜치 준비는 사용자가 합의한 Git 작업으로 명시 수행한다. `session --process-request`로 상태를 저장해도 브랜치는 자동 전환되지 않는다. 기존 모델의 운영 명령은 변경되지 않는다.
+
 ## 5. Run 생성과 검증
 
 | 목적 | 명령 |

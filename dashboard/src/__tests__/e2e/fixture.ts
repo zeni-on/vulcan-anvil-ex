@@ -58,7 +58,7 @@ export function prepareE2EFixture(): void {
   )
   fs.writeFileSync(
     path.join(E2E_PROJECT_ROOT, 'docs', 'artifacts', '02-design', 'DESIGN.md'),
-    '# Design\n\nRepository-contained test data.\n',
+    '# Design\n\nRepository-contained test data.\n\n```mermaid\nflowchart LR\n  A[Request] --> B[Review]\n```\n',
     'utf-8',
   )
 }

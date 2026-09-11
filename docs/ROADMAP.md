@@ -84,14 +84,34 @@
 
 ### Now: testing-first stabilization
 
-#### Product 문서 구조와 작성 책임 (2026-09-10, 작성 경로 머지/확장 회귀 검증)
+#### Product 3구간 반복 프로세스 (2026-09-11, 운영 소비자 연결/일반 활성화 전)
+
+- 최우선 방향은 **기획·설계 ↔ 구현 ↔ 인수 검증**이다. [운영 설계](reference/PRODUCT-ITERATIVE-PROCESS-DESIGN.md)에 사용자 결정/자율 진행, 범위별 문서 책임, 반복·수용·배포 경계와 현재 코드의 결합 지점을 정리했다. 화면만 묶거나 내부에서 기존 7단계를 자동 순회하는 접근은 제외한다.
+- [운영 시나리오와 후속 회귀 기준](reference/PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)은 신규/확장, 인수 중 결함·업무 변경·환경 차단, 병렬 기획, 완료 후 재진입 등을 다룬다. 아직 runtime 실행 시험이 아니라 설계 검토용 기대 행동이다.
+- 새 문맥의 native contract reviewer가 범위/상태, 승인·증적 재사용, legacy 호환과 숨은 Gate 반복 여부를 읽기 전용 검토했고 지적은 없었다. 총괄은 로컬 문서 링크와 변경 범위를 확인했다. 이는 새 프로세스의 실행 검증이나 사용자 최종 승인이 아니다.
+- Product 지침의 Run 필수/직접 수정 제한/QA 재승인 충돌을 적용 profile별로 정리했다. `test_product_policy`로 발견한 재발 패턴을 고정하며, 후속 Product 변경에서도 실제 충돌 사례를 계속 보강한다. 모든 자연어 지침의 정합성이 자동 보장된다는 뜻은 아니다.
+- [단계 1 상태·작업 범위·승인 계약](reference/PRODUCT-PROCESS-CONTRACTS.md)을 내부 API와 합성 계약 테스트로 구현했다. 범위 revision/승인/실제 증적의 분리, 읽기 전용 진단, 미지원·실험 모델의 legacy 쓰기 차단을 포함한다. 일반 init/upgrade 활성화나 실제 프로젝트 이행은 하지 않는다.
+- 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건, 실제 명령 증적과 소스/환경 명세의 일치를 확인한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
+- 단계 2b: [실험 상태 저장 CLI](reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 기존 `session`에 연결했다. 기본 미리보기, 명시 apply, scoped 검사/승인·실행 근거, 상태 revision 충돌·배타 잠금·원자 저장을 포함한다. 별도 임시 프로젝트에서 실제 CLI 상태 반복과 `execute --verify` 연결을 시험하며 기존 프로젝트를 이행하지 않는다.
+- 단계 2c: [PR #36](https://github.com/zeni-on/vulcan-anvil-ex/pull/36)을 머지했다. 지원 Dashboard의 3구간/현재 범위 읽기, `status`/`branch-status`의 실제 브랜치 조회, `doctor` 환경 진단, 합의한 통합 작업공간의 인수 시험과 무부작용 `release-pr --dry-run`을 연결했다. 범위 수용과 제품 전체 릴리즈 권한은 분리한다. 상세 제한과 [검증 결과](reference/PRODUCT-PROCESS-CONTRACTS.md#64-단계-2c)는 [운영 소비자 계약](reference/PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)에 둔다.
+- 다음 순서: 실제 branch/QA 위임/릴리즈 발행 계약과 adapter/선택 양식의 운영 라우팅 마무리 → 확장된 합성 프로젝트 반복/명시 이행 보존 검증 → 실제 적용 판단. 자동 branch-start/PR 발행과 일반 init/upgrade는 이번 읽기 연결의 완료로 보지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
+- Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
+
+#### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)
+
+- [진행 가이드와 표준 연결](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md), [요청 보드 대화 연습](reference/PRODUCT-DISCOVERY-PILOT-REQUEST-BOARD.md)을 추가했다. IIBA/IREB의 업무·요구 분석 관점과 Example Mapping을 참고하여 문제/경계, 액터·흐름, 규칙·예시·질문, REQ/AC로 연결하는 절차를 제안한다. 표준 준수 인증이나 새로운 필수 Gate/Run은 아니다.
+- 합성 예시에서 반려 후 재신청이 정의되지 않은 점을 확인했고, 사용자는 기존 요청에서 재제출하며 반려 당시 내용·사유도 보존하는 방향을 선택했다. 여기서 인수조건 후보 두 개를 도출했으며, 남은 권한·상태·이력 정책 질문과 구분한다. 실제 프로젝트 원본·승인·구현·QA는 변경하지 않았다.
+- 다음은 한 흐름의 사용자 합의와 REQ/AC 후보까지 파일럿을 마무리하되, 운영 지침 배포는 위 3구간 프로세스 구현과 맞춘다. 기획 활동별 별도 Gate/승인을 늘리지 않는다. 분리 원본의 AC/REQ 전체 조회를 프로그램으로 제공하는 후속도 유지하며 수동 복제 원장은 만들지 않는다.
+- 이번 단계는 reference 설계/대화 연습이다. init/upgrade에 자동 적용되는 운영 지침, 새 경로의 조회·검사 호환, 전체 AC 목록/화면 구현은 후속이다. 기존 문서 구조 호환·회귀 검증 작업도 유지한다.
+
+#### Product 문서 구조와 작성 책임 (2026-09-11, 작성 경로/확장 회귀 정리)
 
 - [문서 지도와 점진 이행](reference/PRODUCT-DOCUMENT-ARCHITECTURE-STRATEGY.md), [문서별 작성 계약](reference/PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), [파일럿 결과/한계](reference/PRODUCT-DOCUMENT-ARCHITECTURE-PILOT.md)를 정리했다. 6개 파일 제한 대신 필요한 문서의 원본 위치/책임을 정하고 기능별 분할, 공통 기준 참조, 현재 명세/결정/실행 기록 분리를 제안한다.
 - 원본 밖 기능 파일럿에서 요구/AC 7쌍, 공통 조건 본문 16줄, Pending 9개 행을 보존했고 23개 탐색 링크를 대조했다. 미수집 참조 3개와 기존 조회의 공통 조건 누락을 드러냈다. 속도/토큰 절감 또는 제품 QA 통과를 입증한 것은 아니다.
 - 설계 #27에 이어 [조회 #28](https://github.com/zeni-on/vulcan-anvil-ex/pull/28), [내용 검사·추적·통계 #29](https://github.com/zeni-on/vulcan-anvil-ex/pull/29)를 Windows/Linux Python 및 Dashboard CI 통과 후 머지했다. 명시적 상세 링크, legacy/split/mixed 호환, 중복/충돌·누락 진단과 계획/현재 결과 분리를 검증했다. [조회 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#31-분리-문서-조회-호환-mvp), [검사 범위](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)를 따른다.
 - [작성 경로 #30](https://github.com/zeni-on/vulcan-anvil-ex/pull/30)을 머지했다. [Product 문서 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md)를 Core/Codex/Gemini에 연결하고 선택형 요구 상세·시험 계획·실행 결과 템플릿을 추가했다. 기존 설계 템플릿의 중복 정의/실행 결과 혼합을 정리하며, init의 필수 6종과 upgrade의 기존 원본 보존을 회귀 검증했다.
-- 후속 브랜치에서 **Product Gate 3의 선작성 Not Run 결과 오탐 수정과 문서 기능 확장 회귀**를 완료했다(병합 전). 3개 시나리오→댓글 추가→기존 제목 제한 변경을 합성 예시와 자동 테스트로 확인했다. 원장 6종은 유지하고 현재 원본/과거 결과/당시 시험 정의를 분리한다. 실제 실패·환경 차단·상충 결과와 Gate 4 이후의 필수 실행 판정은 유지한다. [확장 검증 결과와 한계](reference/PRODUCT-DOCUMENT-GROWTH-REGRESSION.md)를 따른다.
-- 다음은 **남은 승인/소스 비교·릴리즈·Dashboard 소비자 호환 검증**, 그 뒤 실제 기능 하나의 승인된 이동이다. 작성 지침이 배포되어도 기존 승인 문서를 자동 이동하거나 6종 진입점을 삭제하지 않는다.
+- [PR #31](https://github.com/zeni-on/vulcan-anvil-ex/pull/31)의 **Product Gate 3 선작성 Not Run 오탐 수정과 문서 기능 확장 회귀**를 PR #36 이후 main 기준으로 통합했다. 3개 시나리오→댓글 추가→기존 제목 제한 변경을 합성 예시와 자동 테스트로 확인한다. 원장 6종은 유지하고 현재 원본/과거 결과/당시 시험 정의를 분리한다. 실제 실패·환경 차단·상충 결과와 Gate 4 이후의 필수 실행 판정은 유지한다. [확장 검증 결과와 한계](reference/PRODUCT-DOCUMENT-GROWTH-REGRESSION.md)를 따른다.
+- 다음은 위 3구간 프로세스의 **남은 실행 라우팅·실제 발행 승인 계약과 반복/이행 보존 검증**이다. 상태·승인·소스 비교와 Dashboard 읽기/릴리즈 미리보기는 이미 연결했으며 이를 전체 운영 완료로 확대하지 않는다. 실제 기능 원본 이동은 별도 승인 대상으로 두고 기존 승인 문서를 자동 이동하거나 6종 진입점을 삭제하지 않는다.
 - 실행 정책/필수 6종/Dashboard와 사용자 프로젝트 원본은 유지한다. Audit/PoC 검사 기준도 바꾸지 않는다.
 
 #### Product 결과 중심 실행 정리 (2026-09-09, main 반영 완료)
@@ -114,7 +134,7 @@
 
 기준: [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md). [PR #24](https://github.com/zeni-on/vulcan-anvil-ex/pull/24)를 2026-09-09에 main으로 머지했다.
 
-1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. Moderate production advisory 2건은 남아 있다.
+1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. 당시 남았던 moderate production advisory 2건도 2026-09-11 PR #36에서 해소했으며, 개발 의존성을 포함한 전체 npm audit 결과는 0건이었다.
 2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
 3. 완료: 선택형 `execute --verify`가 명시한 소스/테스트/lockfile 범위의 Git 기준, 파일 해시, 미커밋/실행 중 변경, 명령 exit code를 JSON으로 기록한다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다.
 4. 완료: 선택형 `trace-context --sections`가 정확한 ID, 출처/줄 범위/해시, 적용 상태와 공통 제약을 반환한다. Run에는 짧은 `section_lookup`만 추가한다. 기존 그래프/원장을 자동 수정하지 않는다.

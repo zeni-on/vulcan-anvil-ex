@@ -20,6 +20,7 @@ import { execSync } from 'child_process'
 import {
   DataSource,
   SessionData,
+  DataSourceError,
   ProjectRuntime,
   RuntimeDelegationRecord,
   DocNode,
@@ -112,12 +113,16 @@ export class LocalDataSource implements DataSource {
       const result = SessionDataSchema.safeParse(parsed)
 
       if (!result.success) {
+        if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'process_model')) {
+          throw new DataSourceError('Unsupported or malformed process session')
+        }
         console.warn('[LocalDataSource] session.json 스키마 오류:', result.error.message)
         return null
       }
 
       return result.data as SessionData
     } catch (err) {
+      if (err instanceof DataSourceError) throw err
       console.warn('[LocalDataSource] session.json 읽기 실패:', err)
       return null
     }

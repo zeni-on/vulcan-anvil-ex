@@ -4,7 +4,7 @@
 
 Gate 4에서 승인된 구현물을 실제로 실행 검증하고, 테스트 결과서, 로그, 화면 증적, 후보 발견사항을 만드는 데 사용한다.
 
-이 skill은 결함을 고치는 절차가 아니다. 결함 수정은 Orchestrator가 사용자와 처리 방향을 정한 뒤 별도 `qa-fix-loop` Run으로 수행한다.
+이 skill은 검증 전용 `qa-execution` Run을 위임받은 worker의 계약이다. 해당 Run의 쓰기 범위를 넘어 결함을 수정하지 않는다. Product가 Run 없이 수정·재시험까지 위임하는 경우의 권한과 기록은 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 그 외 결함 수정은 Orchestrator가 사용자와 처리 방향을 정한 뒤 별도 `qa-fix-loop` Run으로 수행한다.
 
 ## 필수 입력
 

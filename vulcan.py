@@ -138,6 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
+from vulcan_core import product_process, product_readiness, product_session, product_consumers
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -2914,11 +2915,25 @@ def load_session(project_dir="."):
         print("오류: session.json을 찾을 수 없습니다. 프로젝트 디렉토리에서 실행하세요.")
         sys.exit(1)
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        session = json.load(f)
+    guard_legacy_process(session)
+    return session
+
+
+def guard_legacy_process(session):
+    try:
+        product_process.require_legacy(session)
+    except product_process.ProcessContractError as error:
+        print(f"오류: {error}. Use status for read-only diagnostics.")
+        sys.exit(2)
 
 
 def save_session(session, project_dir="."):
+    guard_legacy_process(session)
     path = os.path.join(project_dir, "session.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            guard_legacy_process(json.load(f))
     with open(path, "w", encoding="utf-8") as f:
         json.dump(session, f, ensure_ascii=False, indent=2)
 
@@ -15408,6 +15423,10 @@ def workflow_branch_guard(project_dir, gate, command_name, strict=None):
 def cmd_branch_status(project_dir="."):
     project_abs = os.path.abspath(project_dir)
     workflow = workflow_policy(project_abs)
+    pilot = product_consumers.load(project_abs)
+    if pilot is not None:
+        print(product_consumers.render_branch(product_consumers.branch_context(project_abs, pilot, workflow)))
+        return
     session_path = os.path.join(project_abs, "session.json")
     session = {}
     if os.path.exists(session_path):
@@ -15736,6 +15755,7 @@ def collect_doctor_checks(project_dir="."):
 
 def cmd_doctor(project_dir=".", emit_json=False):
     project_abs = os.path.abspath(project_dir)
+    product_consumers.load(project_abs)
     exit_code = run_doctor(
         project_abs,
         delivery_profile=load_delivery_profile(project_abs),
@@ -15794,6 +15814,30 @@ def capture_trace_detail_summary(project_dir="."):
 
 
 def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
+    path = os.path.join(project_dir, "session.json")
+    if os.path.isfile(path):
+        with open(path, "rb") as f:
+            raw = f.read()
+            session = json.loads(raw)
+        if "process_model" in session:
+            summary = product_process.describe(session)
+            summary["session_revision"] = product_session.revision(raw)
+            exit_code = 0 if summary["status"] == "experimental" else 2
+            if check and not exit_code:
+                summary["scoped_check"] = product_readiness.collect(project_dir, session, parse_markdown_tables)
+                if summary["scoped_check"]["status"] != "ready":
+                    exit_code = 1
+            if not exit_code or summary.get("status") == "experimental":
+                summary["branch"] = product_consumers.branch_context(project_dir, session, workflow_policy(project_dir))
+            if trace_detail:
+                summary["trace_detail"] = "not_enabled: legacy trace diagnostics cannot interpret iterative states"
+                exit_code = 2
+            print(json.dumps(summary, ensure_ascii=False, indent=2) if emit_json
+                  else "\n".join(product_readiness.render(value) if key == "scoped_check"
+                                 else f"{key}: {value}" for key, value in summary.items()))
+            if exit_code:
+                sys.exit(exit_code)
+            return
     summary = collect_status_summary(project_dir)
 
     if emit_json:
@@ -16234,6 +16278,17 @@ def gh_open_release_pr(project_dir, base_branch, head_branch, title, body_path, 
 def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, project_dir="."):
     project_abs = os.path.abspath(project_dir)
     workflow = workflow_policy(project_abs)
+    pilot = product_consumers.load(project_abs)
+    if pilot is not None:
+        if not dry_run:
+            print("오류: 실험 Product는 release-pr --dry-run만 지원합니다. 범위 인수는 릴리즈/PR 발행 승인이 아닙니다.")
+            sys.exit(2)
+        preview = product_consumers.release_preview(project_abs, pilot, workflow, parse_markdown_tables,
+                                                     base=base, head=head, title=title)
+        print(product_consumers.render_release(preview))
+        if preview["status"] != "candidate":
+            sys.exit(1)
+        return
     if workflow.get("branch_mode") in ("none", "single", "disabled") or not workflow.get("impl_uses_integration_branch", True):
         print("Release PR 생략: workflow가 통합 브랜치 기반이 아닙니다.")
         return
@@ -16626,12 +16681,17 @@ def main():
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
     p_gate_start.add_argument("--feature", default="", help="작업 기능명")
 
-    p_session = subparsers.add_parser("session", help="Gate 상태 업데이트 + git commit")
-    p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
-    p_session.add_argument("--status", required=True, choices=["done", "pending", "awaiting-approval"], help="상태")
+    p_session = subparsers.add_parser("session", help="Gate 상태 갱신 / 실험 Product 상태 요청")
+    p_session.add_argument("--gate", choices=list(GATE_LABELS.keys()), help="기존 Gate 이름")
+    p_session.add_argument("--status", choices=["done", "pending", "awaiting-approval"], help="기존 Gate 상태")
     p_session.add_argument("--feature", default="", help="작업 기능명")
     p_session.add_argument("--approved", action="store_true", help="사용자 명시 승인 후 Gate 완료/다음 Gate 전환 허용")
     p_session.add_argument("--approval-evidence", default="", help="사용자 승인 근거 또는 대화 메모")
+    p_session.add_argument("--process-request", help="실험 Product 요청 JSON 경로 또는 stdin(-); 기본 미리보기")
+    p_session_apply = p_session.add_mutually_exclusive_group()
+    p_session_apply.add_argument("--apply", action="store_true", help="검사 후 실험 Product 상태를 원자적으로 저장; 승인 대체 아님")
+    p_session_apply.add_argument("--dry-run", action="store_true", help="실험 Product 상태 요청 미리보기")
+    p_session.add_argument("--json", action="store_true", help="실험 Product 요청 결과 JSON")
 
     subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
 
@@ -16802,6 +16862,35 @@ def main():
 
     args = parser.parse_args()
 
+    process_request = args.command == "session" and args.process_request is not None
+    if args.command == "session":
+        if process_request:
+            if args.gate or args.status or args.feature or args.approved or args.approval_evidence:
+                parser.error("--process-request cannot be combined with legacy Gate/approval flags")
+        elif args.apply or args.dry_run or args.json or not args.gate or not args.status:
+            parser.error("legacy session requires --gate/--status; --apply/--dry-run/--json require --process-request")
+
+    # Explicit Product consumers validate their model before bypassing old Gates.
+    # Legacy state writers and PR publication remain unavailable in the pilot.
+    if args.command not in {"init", "status", "version", None} and not process_request:
+        session_path = os.path.join(getattr(args, "project_dir", None) or ".", "session.json")
+        if os.path.isfile(session_path):
+            try:
+                with open(session_path, encoding="utf-8") as f:
+                    session = json.load(f)
+                if "process_model" in session:
+                    session = product_consumers.load(os.path.dirname(session_path))
+                if "process_model" in session and args.command in {"branch-status", "doctor", "release-pr"}:
+                    product_process._validate(session)
+                elif "process_model" in session and args.command == "execute" and args.verify:
+                    product_session.require_verification_permission(session)
+                    project_dir = getattr(args, "project_dir", None) or "."
+                    product_consumers.require_qa_workspace(project_dir, session, workflow_policy(project_dir))
+                else:
+                    guard_legacy_process(session)
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                parser.error(str(error))
+
     if args.command == "init":
         init(
             target_dir=os.path.abspath(args.target_dir),
@@ -16860,6 +16949,16 @@ def main():
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
+        if process_request:
+            try:
+                request = product_session.read_request(".", args.process_request, sys.stdin.buffer)
+                result = product_session.transact(".", request, parse_markdown_tables, apply=args.apply)
+            except (OSError, ValueError) as error:
+                result = {"status": "invalid", "applied": False, "message": str(error)}
+            print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else
+                  "\n".join(product_readiness.render(value) if key == "checks" and value else f"{key}: {value}"
+                            for key, value in result.items()))
+            sys.exit(0 if result["status"] in {"ready", "applied"} else 1 if result["status"] == "blocked" else 2)
         cmd_session(
             gate=args.gate,
             status=args.status,

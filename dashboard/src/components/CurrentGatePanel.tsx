@@ -20,6 +20,7 @@
 import Link from 'next/link'
 import { FileText, CheckCircle, AlertCircle } from 'lucide-react'
 import { SessionData, ProjectStats, DocEntry, DocNode } from '@/lib/types'
+import ProductProcessPanel from './ProductProcessPanel'
 
 // ── Gate 메타데이터 ───────────────────────────────────────────────────────────
 
@@ -136,6 +137,7 @@ export default function CurrentGatePanel({
   docs,
   onDocSelect,
 }: CurrentGatePanelProps) {
+  if (session.process_model) return <ProductProcessPanel session={session} />
   const gate = session.current_gate
   const meta = GATE_META[gate]
 

@@ -87,6 +87,29 @@ test.describe('REQ-010: DocDrawer E2E 테스트', () => {
     })
   })
 
+  for (const width of [390, 1440]) {
+    test(`Mermaid document renders nodes and an edge at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 })
+      await page.locator('[data-testid="doc-item"]').filter({ hasText: 'DESIGN' }).first().click()
+
+      const drawer = page.getByRole('dialog')
+      await expect(drawer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+      const diagram = drawer.locator('svg[id^="mermaid-"]')
+      await expect(diagram).toBeVisible()
+      await expect(diagram.locator('g.node')).toHaveCount(2)
+      await expect(diagram.locator('g.node').filter({ hasText: 'Request' })).toBeVisible()
+      await expect(diagram.locator('g.node').filter({ hasText: 'Review' })).toBeVisible()
+      await expect(diagram.locator('path.flowchart-link')).toHaveCount(1)
+      await expect(drawer.getByText('mermaid 렌더 실패:', { exact: false })).toHaveCount(0)
+
+      const bounds = await diagram.boundingBox()
+      expect(bounds?.width).toBeGreaterThan(100)
+      expect(bounds?.height).toBeGreaterThan(20)
+      await expect(diagram).toBeInViewport({ ratio: 1 })
+      await page.screenshot({ path: testInfo.outputPath(`mermaid-${width}.png`), animations: 'disabled' })
+    })
+  }
+
   /**
    * TST-010-03: ESC 키로 DocDrawer 닫기
    */

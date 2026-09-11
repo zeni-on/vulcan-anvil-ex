@@ -40,7 +40,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 | Gate 1 | 상세 `REQ/NREQ/AC`가 테스트 가능한 문장이고 추적표 행과 연결되어 있는가 |
 | Gate 2 | 아키텍처, 기능, 프로그램, API, DB, 보안, 화면/개발표준이 구현자가 따를 계약으로 전개되어 있는가 |
 | Gate 3 | 테스트케이스가 요구사항, 보안, UI 상태/시나리오, 명령, 성공 기준, 증적 경로와 연결되어 있는가 |
-| Impl | 승인된 Build Wave 범위 안에서 구현하고, worker Run 결과와 Orchestrator 재검증 명령이 남아 있는가 |
+| Impl | Product는 승인된 현재 작업 범위의 구현·실제 검증 근거가 있는가. Audit/PoC는 승인된 Build Wave와 worker Run 결과·Orchestrator 재검증 명령이 남아 있는가 |
 | Gate 4 | 테스트 결과, 로그, 화면 증적, FIND/CR/ISSUE 후보, QA 결과서가 실제 실행 결과를 기준으로 정리되어 있는가 |
 | Gate 5 | 릴리즈 승인 근거, 잔여 위험, backlog, release note, 인수인계 항목이 정리되어 있는가 |
 

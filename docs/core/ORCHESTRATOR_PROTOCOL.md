@@ -8,6 +8,8 @@ Orchestrator는 별도 persona가 아니다. Orchestrator는 현재 단계의 �
 
 ## 2. 기본 원칙
 
+`process_model: product-iterative-v1`인 별도 실험 Product는 [CLI Guide 4.1절](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 아래의 기존 Gate 순서/Run 자동화로 우회하지 않으며, 표식이 없는 프로젝트는 기존 절차를 유지한다.
+
 - Orchestrator는 사용자의 최신 요청과 현재 Gate 상태를 먼저 확인한다.
 - Orchestrator는 새 프로젝트의 첫 대화에서 컨시어지 역할을 한다. 사용자가 인사, 방향 문의, 짧은 목표만 말한 경우에는 자신의 역할과 현재 Gate 진행 방식을 짧게 안내하고, 필요한 입력을 물어본다.
 - Orchestrator는 `session.json.current_gate`를 작업 가능한 상한선으로 본다. 현재 Gate보다 앞선 Run, 코드, 테스트, 증적을 만들려면 이전 Gate 완료와 사용자 승인이 필요하다.
@@ -86,6 +88,10 @@ Product 이외의 구현 단계에서 Orchestrator는 기능 구현의 주 작�
 Orchestrator는 작업지시, 결과 검토, 통합, worker 테스트케이스 재실행, 추적성 갱신을 책임진다.
 Product에서는 이 문서의 테스트 재실행 지시를 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절의 조건부 재검증으로 적용한다. diff/scope와 실제 증적 확인 책임은 유지하며, 동일 대상의 성공 검증을 문서 정리 때문에 반복하지 않는다.
 
+### Product 이외의 직접 구현 제한
+
+이 절의 직접 수정 제한과 예외 기록은 Audit/PoC에 적용한다. Product 실행자 선택은 위의 Product 기준을 따른다.
+
 Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로 제한한다.
 
 - worker Run 작성과 실행 지시
@@ -107,7 +113,11 @@ Orchestrator 직접 구현 예외는 다음 조건을 모두 만족할 때만 �
 
 사용자가 "구현 진행"만 승인하고 worker 사용을 따로 말하지 않았다는 점은 직접 구현 사유가 아니다. Orchestrator는 구현 승인을 받으면 별도 지시가 없어도 native worker(subagent/thread/native branch agent) 위임을 기본 절차로 적용한다. 직접 구현 예외는 worker/subagent/thread 실행 불가, worker 결과 통합 중 충돌 해결에 필요한 최소 수정, 긴급한 1~2줄 연결 수정, 사용자의 명시적 직접 구현 승인에 한해 허용한다.
 
-Gate 4에서도 Orchestrator는 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 실제 검증 명령, Playwright 증적, 로그, 후보 FIND/CR/ISSUE를 수집한다. 실패가 나오면 즉시 코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 사용자에게 보고한 뒤 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다. 수정하기로 결정한 항목만 별도 `qa-fix-loop` Run으로 넘긴다.
+### QA 실행 경로
+
+Product QA의 실행자, 수정 허가, Run 선택과 재검증은 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. QA-000~003은 환경 확인/시험/증적/정리의 작업 구분이며, Product에서 네 개의 Run 생성을 요구하지 않는다. 합의한 인수 시험과 실제 결과 기록은 유지한다.
+
+Product 이외의 Gate 4에서는 Orchestrator가 테스트 실행자와 수정자를 겸하지 않는다. 가능하면 `qa-execution` worker Run으로 실제 검증 명령, Playwright 증적, 로그, 후보 FIND/CR/ISSUE를 수집한다. 실패가 나오면 즉시 코드를 수정하지 않고 원인 가설, 재현 명령, 로그 경로, 영향 ID를 사용자에게 보고한 뒤 `FIND` 수정, `CR` 승격, 재실행, 보류 중 하나를 결정한다. 수정하기로 결정한 항목만 별도 `qa-fix-loop` Run으로 넘긴다.
 
 Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator는 먼저 통합된 소스가 실제로 실행 가능한지 `QA-000` 환경 준비/스모크 Run으로 확인한다. `QA-000`은 기본적으로 `workflow.integration_branch`의 현재 작업공간을 Gate 4 전체에서 재사용할 QA workspace로 기록한다. QA worktree는 프로젝트 정책에서 명시적으로 활성화한 경우에만 사용한다. 그 다음 `QA-001` 명령 기반 검증, `QA-002` UI/E2E 증적 수집, `QA-003` 결과 정리/판정 후보 Run을 순차로 진행하되 모두 `QA-000`이 기록한 같은 workspace에서 실행한다. `QA-000`이 차단되면 후속 QA Run을 진행하지 말고 사용자에게 환경 차단 사유와 재현 명령을 보고한다.
 
@@ -123,11 +133,11 @@ Gate 4는 하나의 거대한 QA Run으로 처리하지 않는다. Orchestrator�
 
 Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다. Gate 5에서 릴리즈 승인 문서, QA 결과, 잔여 Backlog를 확인한 뒤 `python vulcan.py release-pr`로 `workflow.integration_branch`에서 `workflow.release_merge_to` 또는 `main`으로 가는 Release PR을 만든다. Release PR은 검토 단위이며 자동 merge 권한을 갖지 않는다. merge는 사용자 명시 승인 또는 프로젝트의 Gate 5 승인 절차 뒤에 수행한다. `release-pr`는 PR body를 `.vulcan/release/release-pr-body.md`에 만들고, 현재 브랜치, base/head 브랜치 존재 여부, dirty worktree를 먼저 확인한다.
 
-## 5.1 Build Wave 오케스트레이션
+## 5.1 Build Wave 오케스트레이션 (Wave 사용 시)
 
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
 
-- Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다.
+- Audit/PoC의 Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다. Product는 선택한 Wave 범위를 기존 작업 요약에 연결할 수 있다.
 - 3개 이상 파일, 대략 100 LOC 이상, 15분 이상 예상, 새 API/메소드/DTO/DB/SCR/PGM 계약 추가, backend/frontend 동시 변경, 테스트 본문 대량 추가가 예상되면 반드시 Build Wave Run으로 분리한다.
 - Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
 - 단, PoC profile에서는 `BW-000 implementation-scaffold`를 기본 생성하지 않는다. 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행할 수 있다.
