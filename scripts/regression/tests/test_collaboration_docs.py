@@ -85,7 +85,10 @@ class CollaborationDocsTests(unittest.TestCase):
     def test_init_installs_collaboration_routing_for_all_profiles(self):
         for profile in ("poc", "product", "audit"):
             with self.subTest(profile=profile):
-                self.assert_routing(self.project(profile))
+                root = self.project(profile)
+                self.assert_routing(root)
+                self.assertNotIn("process_model", json.loads((root / "session.json").read_bytes()))
+                self.assertFalse((root / "scripts/regression/product_execution_fixture.py").exists())
 
     def test_upgrade_refreshes_routing_and_preserves_authored_product_state(self):
         root = self.project("product")

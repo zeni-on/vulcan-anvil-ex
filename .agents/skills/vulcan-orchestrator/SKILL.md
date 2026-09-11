@@ -7,6 +7,10 @@ description: Use for Vulcan-Anvil Ex project orchestration, Gate status checks, 
 
 Use this as the entry skill for Vulcan-Anvil Ex work. Keep Core rules in project documents; this skill is only a short routing card.
 
+If `session.json` contains `process_model`, route to `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
+section 4.1 before the legacy Gate instructions below. Do not add the marker or
+reinterpret an unsupported model as legacy. Unmarked projects keep the existing flow.
+
 ## Start
 
 1. Read `AGENTS.md` and the user's latest request when Codex is the primary runner. Inspect current Gate/profile/branch fields or `status`; do not print the full accumulated `session.json` by default.
