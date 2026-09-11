@@ -133,6 +133,19 @@ python vulcan.py session --process-request - --json
 
 결과는 `ready`(미리보기 가능), `applied`(저장됨), `blocked`(현재 준비/권한/증적 부족), `conflict`(revision/잠금 충돌), `invalid`(요청·저장·상태 계약 오류)로 구분한다. CLI exit는 앞의 두 상태가 0, blocked가 1, 나머지가 2다. 미리보기의 `current_gate`/`scope_key`/`session_revision`은 저장된 현재 값이며, 후보는 `proposed_gate`/`proposed_scope_key`/`proposed_session_revision`으로 구분한다. `--apply` 요청이 실패해도 과거 승인·상태를 맞춰서 지우지 않는다.
 
+### 4.4 운영 소비자 연결 (단계 2c)
+
+`process_model`이 있는 세션은 소비자가 지원 모델/형태를 검증한 뒤 읽는다. 표식이 없는 기존 Product/Audit/PoC는 기존 처리 경로이며 미지원·손상 모델을 legacy로 바꿔 읽지 않는다.
+
+- Dashboard는 3구간과 현재 작업 ref/revision·관련 ID를 읽기 전용으로 표시한다. 기존 7개 Gate를 만들거나 진행 완료를 릴리즈로 해석하지 않는다. 화면은 저장 상태의 표시이며 원본 파일/시험/승인 신원을 독립 인증하는 검사기가 아니다.
+- `status`/`branch-status`는 실제 Git 작업공간과 설정한 `workflow.integration_branch`를 조회한다. session의 과거 `branch_state`를 사실로 사용하지 않는다. 루트가 Git 저장소가 아니면 unmanaged로 표시하며, 상위 저장소를 상속한 하위 폴더나 Git 관측 실패는 확인 불가로 구별한다.
+- `doctor`는 기존 환경 진단기를 재사용한다. 도구 설치/환경 결과와 제품 결함·수용 판단을 합치지 않으며 상태를 바꾸지 않는다.
+- `execute --verify`의 구현 self-check는 구현 권한이 있을 때 worker branch에서도 가능하다. acceptance에서는 verify 권한과 설정한 통합 브랜치를 확인한다. single/disabled 정책 또는 명시적으로 해제한 branch guard는 존중한다. 독립 Git 저장소가 없는 합성 파일럿도 명시된 시험을 실행할 수 있으나, 모호한 Git 루트는 인수 실행 전에 차단한다. 새 QA worktree는 만들지 않는다.
+- `release-pr --dry-run`은 이번 범위 completed, 현재 계약/증적 재검사, clean Git 작업공간, 실제 current/head/base 브랜치를 확인한다. 기존 Gate 5 승인서를 억지로 요구하지 않는다. 관련 없는 미처리 의무는 누락하지 않고 수량으로 노출하며 릴리즈 포함/제외 판단을 요청한다. 통과한 결과는 후보일 뿐 `release_authorized: false`, `publication_enabled: false`다.
+- 미리보기는 PR body 파일도 쓰지 않고 `gh`/push/merge를 실행하지 않는다. 인수 당시 증적이 stale이면 후보를 차단한다. 현재 범위 밖 기능·과거 수용 전체의 배포 적합성을 인증하지 않는다.
+
+이번에는 **조회와 명시 시험/미리보기**까지만 연결한다. `branch-start`의 상태/Git 복합 변경, native QA 위임·결과 회수, 실제 릴리즈 발행의 별도 승인/대상 revision 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
+
 ## 5. 지속 점검
 
 Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 확인한다. 매 사용자 작업에 새 체크리스트를 채우라는 뜻이 아니다.
@@ -166,3 +179,11 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 전체 Python 회귀는 보정 전 241개 실행, 4개 skip으로 통과했다. 깊은 JSON과 권한 구분 회귀를 추가한 Product 회귀는 135개 실행, 1개 skip으로 통과했다. 상태 저장/CLI 시험은 17개이며 초기화 smoke 12단계와 기존 profile fixture smoke 84단계도 통과했다.
 - 새 문맥의 native contract-reviewer가 깊은 JSON의 traceback을 발견해 구조화된 invalid 응답으로 보정했다. 구현 self-check 관측과 인수 verify 권한의 구분도 계약·시험에 명시했다. 해당 경로 재검토에서 잔여 지적과 verify/accept 우회 사례는 없었다.
 - Orchestrator는 최종 미리보기의 현재/제안 상태 구분, 승인 없는 인계 차단, revision 충돌, 동시 적용 1건만 저장, 쓰기 실패·잠금 정리 경고, 기존 profile 보존을 확인했다. 기존 pathlib deprecation warning은 남아 있다. Dashboard 로컬 실행과 일반 이행은 이번 검증 범위가 아니다.
+
+### 6.4 단계 2c
+
+- 전체 Python 회귀 254개 실행, 4개 skip으로 통과했다. 독립 리뷰 보정/호환 시험 추가 후 최종 소비자 시험 14개를 통과했다. 초기화 smoke 12단계와 기존 profile fixture smoke 84단계도 통과했다.
+- 새 문맥의 native contract-reviewer가 다른 `--project-dir`을 지정할 때 호출 위치의 branch 정책을 검사하던 오류와 `main~1` 같은 revision을 branch로 인정하던 문제를 찾았다. 대상 workspace/config와 정확한 Git ref 확인으로 보정하고 실제 Git/CLI 재현 시험을 추가했다. 재검토에서 잔여 지적은 없었다.
+- Dashboard 담당 native worker는 schema/loader/화면/시험을 변경했고, Orchestrator는 diff와 저장 상태 표시·미지원 모델 차단을 확인했다. 최종 typecheck/production build와 Jest 300개가 통과했다. 전체 E2E 41개 통과 후 캡처에서 모바일 높이 제한을 발견해 보정했으며, A/A2/B 모바일 확인을 포함한 최종 Product E2E 20개도 통과했다. 390px/1440px 캡처를 직접 확인했다.
+- UI fixture는 저장 상태 표시 시험이며, 실행 권한/실제 증적의 유효성은 Python 계약/명령 시험이 검증한다. 화면 자체가 사용자 승인이나 전체 제품 릴리즈를 인증하지 않는다. 실제 PMTool/샘플 프로젝트는 변경하지 않았다.
+- 기존 pathlib/caniuse-lite 경고가 남았다. production dependency audit의 high 이상 기준은 통과했지만 DOMPurify/Mermaid의 moderate advisory 2건은 별도 의존성 보강 대상으로 남긴다. 이번 PR은 의존성 버전을 바꾸지 않는다.

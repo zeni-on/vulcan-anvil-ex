@@ -1,10 +1,13 @@
 import fs from 'fs'
 import path from 'path'
+import { ProductSessionDataSchema } from './schemas'
+import type { ProductSessionData } from './types'
 
 // dashboard/의 부모 디렉토리 = 프로젝트 루트
 export const PROJECT_ROOT = path.join(process.cwd(), '..')
 
-export interface Session {
+interface LegacySession {
+  process_model?: undefined
   project: string
   vulcan_version?: string
   current_gate: string
@@ -15,6 +18,7 @@ export interface Session {
   pending: string[]
   blocked: string[]
 }
+export type Session = LegacySession | ProductSessionData
 
 export interface DocNode {
   name: string
@@ -25,8 +29,9 @@ export interface DocNode {
 
 export function readSession(): Session {
   const p = path.join(PROJECT_ROOT, 'session.json')
+  let value: unknown
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf-8'))
+    value = JSON.parse(fs.readFileSync(p, 'utf-8'))
   } catch {
     return {
       project: 'Unknown Project',
@@ -46,6 +51,11 @@ export function readSession(): Session {
       blocked: [],
     }
   }
+  // Marked sessions must not enter the legacy default-state catch above.
+  if (value && Object.prototype.hasOwnProperty.call(value, 'process_model')) {
+    return ProductSessionDataSchema.parse(value)
+  }
+  return value as LegacySession
 }
 
 export function buildDocTree(dir: string, slugPrefix: string[] = []): DocNode[] {

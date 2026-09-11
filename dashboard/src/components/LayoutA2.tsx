@@ -526,7 +526,7 @@ export default function LayoutA2({
 
   return (
     <div
-      className="grid min-w-0 grid-cols-1 xl:grid-cols-[28fr_50fr_22fr] gap-5 h-full"
+      className={`grid min-w-0 grid-cols-1 xl:grid-cols-[28fr_50fr_22fr] gap-5 ${session?.process_model ? 'h-auto xl:h-full' : 'h-full'}`}
       data-testid="layout-a2"
     >
       <section
@@ -571,7 +571,7 @@ export default function LayoutA2({
           className="rounded-xl border border-[#1D4ED8]/60 bg-[#08111F] p-4"
         >
           <SectionLabel>
-            <span id="layout-a2-gate-label">Gate 진행 현황</span>
+            <span id="layout-a2-gate-label">{session?.process_model ? 'Product 진행 현황' : 'Gate 진행 현황'}</span>
           </SectionLabel>
 
           {sessionLoading && <SectionSkeleton rows={2} />}
@@ -589,7 +589,7 @@ export default function LayoutA2({
           )}
         </section>
 
-        {session?.stats ? (
+        {session?.process_model ? null : session?.stats ? (
           <>
             {session.current_gate === 'impl' ? (
               <A2ImplementationPanel stats={session.stats} />

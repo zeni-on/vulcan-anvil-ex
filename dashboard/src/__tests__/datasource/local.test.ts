@@ -66,6 +66,7 @@ describe('UT-002-04: LocalDataSource.getSession() — 파일 존재 시 정상 �
     expect(result).not.toBeNull()
     expect(result?.project).toBe('TestProject')
     expect(result?.current_gate).toBe('gate2')
+    if (result?.process_model) throw new Error('Expected legacy session')
     expect(result?.gate_status.gate1).toBe('done')
     expect(result?.completed).toEqual(['Gate 1 완료'])
   })

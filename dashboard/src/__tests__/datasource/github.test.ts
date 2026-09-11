@@ -104,6 +104,7 @@ describe('UT-002-01: GitHubDataSource.getSession() — 정상 Base64 디코드 �
     expect(result).not.toBeNull()
     expect(result?.project).toBe('TestProject')
     expect(result?.current_gate).toBe('gate2')
+    if (result?.process_model) throw new Error('Expected legacy session')
     expect(result?.gate_status.gate1).toBe('done')
 
     // fetch가 올바른 URL로 호출되었는지 확인

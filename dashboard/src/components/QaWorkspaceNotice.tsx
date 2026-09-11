@@ -14,6 +14,7 @@ function shortPath(value?: string) {
 }
 
 export default function QaWorkspaceNotice({ session }: { session: SessionData }) {
+  if (session.process_model) return null
   const workspace = getQaWorkspace(session)
   const status = (workspace?.status ?? '').toLowerCase()
 

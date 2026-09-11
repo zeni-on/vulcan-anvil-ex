@@ -148,4 +148,6 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 
 2026-09-11 단계 2a: [범위별 문서·실행 증적 검사](PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 기획 중 Planned 시험과 인수 시 필수 실행을 구별하며 검사/승인/릴리즈는 별개로 표시한다.
 
-단계 2b: [상태 저장 CLI](PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)와 허가된 `execute --verify`를 연결했다. 별도 파일럿에서 미리보기/명시 저장·반복·충돌 보존을 시험한다. 일반 프로젝트 이행, QA 위임/branch/release 소비자, Dashboard 및 init/upgrade 기본 활성화는 아직 연결하지 않았다.
+단계 2b: [상태 저장 CLI](PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)와 허가된 `execute --verify`를 연결했다. 별도 파일럿에서 미리보기/명시 저장·반복·충돌 보존을 시험한다.
+
+단계 2c: [운영 소비자 연결](PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)은 Dashboard/브랜치 상태 읽기, 환경 진단과 인수 명령, 릴리즈 후보 미리보기다. 브랜치 자동 전환·QA 위임 자동화·실제 PR 발행·일반 프로젝트 이행과 init/upgrade 기본 활성화는 여전히 후속이다.

@@ -42,6 +42,7 @@ function branchRoleLabel(branch: string | null | undefined, runtime: ProjectRunt
 }
 
 function needsIntegrationBranch(session: SessionData | null | undefined, runtime: ProjectRuntime | null | undefined): boolean {
+  if (session?.process_model) return false
   const gate = session?.current_gate
   if (gate !== 'impl' && gate !== 'gate4') return false
   return runtime?.workflow?.impl_uses_integration_branch !== false
@@ -128,7 +129,7 @@ function ProfileArtifactBanner({
   const missingProductDocs = PRODUCT_PROFILE_DOCS.filter((path) => !docPaths.has(path))
   const productDocCount = PRODUCT_PROFILE_DOCS.length - missingProductDocs.length
 
-  if (!session) return null
+  if (!session || session.process_model) return null
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -268,7 +269,7 @@ export default function ProjectDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-[92vw] mx-auto px-6 py-6 h-[calc(100vh-56px)] flex flex-col overflow-hidden">
+      <main className={`max-w-[92vw] mx-auto px-6 py-6 flex flex-col ${session?.process_model ? 'min-h-[calc(100vh-56px)] xl:h-[calc(100vh-56px)] overflow-visible xl:overflow-hidden' : 'h-[calc(100vh-56px)] overflow-hidden'}`}>
         {/* 브레드크럼 + LayoutToggle + 새로고침 버튼 (REQ-012-03) */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <Link
@@ -296,7 +297,7 @@ export default function ProjectDetailPage() {
           {session ? (
             <>
               <h1 className="text-2xl font-bold text-[#F9FAFB] mb-1">
-                {session.project}
+                {session.project ?? 'Product 실험'}
               </h1>
               {session.feature && (
                 <p className="text-sm text-[#9CA3AF] mb-1">{session.feature}</p>
@@ -323,7 +324,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* 콘텐츠 영역 — template 값에 따라 LayoutA, LayoutA2 또는 LayoutB 조건부 렌더링 (REQ-012) */}
-        <div className="flex-1 overflow-hidden">
+        <div className={`flex-1 ${session?.process_model ? 'overflow-visible xl:overflow-hidden' : 'overflow-hidden'}`}>
           {template === 'A' ? (
             <LayoutA {...layoutProps} />
           ) : template === 'A2' ? (

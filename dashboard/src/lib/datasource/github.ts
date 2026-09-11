@@ -98,6 +98,9 @@ export class GitHubDataSource implements DataSource {
 
       const result = SessionDataSchema.safeParse(parsed)
       if (!result.success) {
+        if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'process_model')) {
+          throw new DataSourceError('Unsupported or malformed process session')
+        }
         // 스키마 오류 시 null 반환 — UI에서 "데이터 없음" 표시 (REQ-009-06)
         console.warn('[GitHubDataSource] session.json 스키마 오류:', result.error.message)
         return null

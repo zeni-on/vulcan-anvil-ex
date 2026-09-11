@@ -4,6 +4,7 @@ import ExportButton from './ExportButton'
 import DocTreeClient from './DocTreeClient'
 import { LayoutDashboard } from 'lucide-react'
 import AnvilIcon from './AnvilIcon'
+import { PRODUCT_STAGE_LABELS } from './ProductProcessPanel'
 
 const GATE_LABELS: Record<string, string> = {
   gate1: 'Gate 1 — 요구사항',
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export default function Sidebar({ session, docs, rootDocs = [] }: Props) {
-  const currentLabel = GATE_LABELS[session.current_gate] ?? session.current_gate
+  const currentLabel = session.process_model ? PRODUCT_STAGE_LABELS[session.current_gate] : GATE_LABELS[session.current_gate] ?? session.current_gate
 
   return (
     <aside className="w-60 bg-gray-900 border-r border-gray-800 flex flex-col h-full overflow-hidden flex-shrink-0">
@@ -31,8 +32,9 @@ export default function Sidebar({ session, docs, rootDocs = [] }: Props) {
           <AnvilIcon className="w-4 h-4 text-amber-500" />
           Vulcan Anvil
         </div>
-        <div className="text-sm font-bold text-white mt-1 truncate">{session.project}</div>
-        <div className="text-xs text-blue-400 mt-0.5 truncate">{currentLabel}</div>
+        <div className="text-sm font-bold text-white mt-1 break-words">{session.project ?? 'Product 실험'}</div>
+        <div className="text-xs text-blue-400 mt-0.5 break-words">{currentLabel}</div>
+        {session.process_model && <p className="text-xs text-amber-300 mt-1">릴리즈 별도 승인 필요</p>}
       </div>
 
       {/* 네비게이션 */}

@@ -138,7 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
-from vulcan_core import product_process, product_readiness, product_session
+from vulcan_core import product_process, product_readiness, product_session, product_consumers
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -15416,6 +15416,10 @@ def workflow_branch_guard(project_dir, gate, command_name, strict=None):
 def cmd_branch_status(project_dir="."):
     project_abs = os.path.abspath(project_dir)
     workflow = workflow_policy(project_abs)
+    pilot = product_consumers.load(project_abs)
+    if pilot is not None:
+        print(product_consumers.render_branch(product_consumers.branch_context(project_abs, pilot, workflow)))
+        return
     session_path = os.path.join(project_abs, "session.json")
     session = {}
     if os.path.exists(session_path):
@@ -15744,6 +15748,7 @@ def collect_doctor_checks(project_dir="."):
 
 def cmd_doctor(project_dir=".", emit_json=False):
     project_abs = os.path.abspath(project_dir)
+    product_consumers.load(project_abs)
     exit_code = run_doctor(
         project_abs,
         delivery_profile=load_delivery_profile(project_abs),
@@ -15815,6 +15820,8 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
                 summary["scoped_check"] = product_readiness.collect(project_dir, session, parse_markdown_tables)
                 if summary["scoped_check"]["status"] != "ready":
                     exit_code = 1
+            if not exit_code or summary.get("status") == "experimental":
+                summary["branch"] = product_consumers.branch_context(project_dir, session, workflow_policy(project_dir))
             if trace_detail:
                 summary["trace_detail"] = "not_enabled: legacy trace diagnostics cannot interpret iterative states"
                 exit_code = 2
@@ -16264,6 +16271,17 @@ def gh_open_release_pr(project_dir, base_branch, head_branch, title, body_path, 
 def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, project_dir="."):
     project_abs = os.path.abspath(project_dir)
     workflow = workflow_policy(project_abs)
+    pilot = product_consumers.load(project_abs)
+    if pilot is not None:
+        if not dry_run:
+            print("오류: 실험 Product는 release-pr --dry-run만 지원합니다. 범위 인수는 릴리즈/PR 발행 승인이 아닙니다.")
+            sys.exit(2)
+        preview = product_consumers.release_preview(project_abs, pilot, workflow, parse_markdown_tables,
+                                                     base=base, head=head, title=title)
+        print(product_consumers.render_release(preview))
+        if preview["status"] != "candidate":
+            sys.exit(1)
+        return
     if workflow.get("branch_mode") in ("none", "single", "disabled") or not workflow.get("impl_uses_integration_branch", True):
         print("Release PR 생략: workflow가 통합 브랜치 기반이 아닙니다.")
         return
@@ -16845,20 +16863,26 @@ def main():
         elif args.apply or args.dry_run or args.json or not args.gate or not args.status:
             parser.error("legacy session requires --gate/--status; --apply/--dry-run/--json require --process-request")
 
-    # Only the explicit Product transaction and verification routes may bypass
-    # the legacy guard. Their own validators run before any mutation/execution.
+    # Explicit Product consumers validate their model before bypassing old Gates.
+    # Legacy state writers and PR publication remain unavailable in the pilot.
     if args.command not in {"init", "status", "version", None} and not process_request:
         session_path = os.path.join(getattr(args, "project_dir", None) or ".", "session.json")
         if os.path.isfile(session_path):
-            with open(session_path, encoding="utf-8") as f:
-                session = json.load(f)
-            if "process_model" in session and args.command == "execute" and args.verify:
-                try:
+            try:
+                with open(session_path, encoding="utf-8") as f:
+                    session = json.load(f)
+                if "process_model" in session:
+                    session = product_consumers.load(os.path.dirname(session_path))
+                if "process_model" in session and args.command in {"branch-status", "doctor", "release-pr"}:
+                    product_process._validate(session)
+                elif "process_model" in session and args.command == "execute" and args.verify:
                     product_session.require_verification_permission(session)
-                except (ValueError, TypeError, KeyError) as error:
-                    parser.error(str(error))
-            else:
-                guard_legacy_process(session)
+                    project_dir = getattr(args, "project_dir", None) or "."
+                    product_consumers.require_qa_workspace(project_dir, session, workflow_policy(project_dir))
+                else:
+                    guard_legacy_process(session)
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                parser.error(str(error))
 
     if args.command == "init":
         init(

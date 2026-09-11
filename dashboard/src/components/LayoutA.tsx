@@ -77,7 +77,7 @@ export default function LayoutA({
 }: LayoutProps) {
   return (
     <div
-      className="grid min-w-0 grid-cols-1 lg:grid-cols-[23fr_57fr_20fr] gap-6 h-full"
+      className={`grid min-w-0 grid-cols-1 lg:grid-cols-[23fr_57fr_20fr] gap-6 ${session?.process_model ? 'h-auto xl:h-full' : 'h-full'}`}
       data-testid="layout-a"
     >
       {/* 좌측 (23%): 산출물 문서 — 내부 스크롤 */}
@@ -118,7 +118,7 @@ export default function LayoutA({
         {/* Gate 진행 현황 */}
         <section aria-labelledby="layout-a-gate-label">
           <SectionLabel>
-            <span id="layout-a-gate-label">Gate 진행 현황</span>
+            <span id="layout-a-gate-label">{session?.process_model ? 'Product 진행 현황' : 'Gate 진행 현황'}</span>
           </SectionLabel>
 
           {sessionLoading && <SectionSkeleton rows={2} />}
@@ -137,7 +137,7 @@ export default function LayoutA({
         </section>
 
         {/* CurrentGatePanel + StatsCards — session.stats 있을 때만 렌더링 */}
-        {session?.stats && (
+        {session?.stats && !session.process_model && (
           <>
             <CurrentGatePanel
               session={session}

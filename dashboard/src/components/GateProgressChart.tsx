@@ -24,6 +24,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { SessionData, GateKey, GateStatusKey, GateStatus } from '@/lib/types'
+import ProductProcessPanel from './ProductProcessPanel'
 
 /** Gate 상태별 색상 — ui-design.md 디자인 토큰 기준 */
 const STATUS_COLOR: Record<GateStatus, string> = {
@@ -103,6 +104,7 @@ function CustomTooltip({
  * GateStatusStepper의 스텝 바와 병렬 제공하여 전체 완료율 비교를 지원한다.
  */
 export default function GateProgressChart({ session }: GateProgressChartProps) {
+  if (session.process_model) return <ProductProcessPanel session={session} />
   const data: ChartDatum[] = GATE_ORDER.map((key) => ({
     key,
     label: GATE_LABEL[key] ?? key,

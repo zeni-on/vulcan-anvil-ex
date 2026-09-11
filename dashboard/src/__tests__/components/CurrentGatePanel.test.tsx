@@ -15,7 +15,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import CurrentGatePanel from '@/components/CurrentGatePanel'
-import { SessionData, ProjectStats, DocEntry } from '@/lib/types'
+import { LegacySessionData as SessionData, ProjectStats, DocEntry } from '@/lib/types'
 
 // ── 공통 픽스처 ──────────────────────────────────────────────────────────────
 

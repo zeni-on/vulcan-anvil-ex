@@ -31,7 +31,9 @@ export function useProjectSession(id: string) {
   )
 
   return {
-    session: data?.session ?? null,
+    // Do not keep advertising a cached accepted scope after a failed state read.
+    session: error && (data?.session?.process_model || error.message === 'Unsupported or malformed process session')
+      ? null : data?.session ?? null,
     fetchedAt: data?.fetchedAt,
     isLoading,
     error,

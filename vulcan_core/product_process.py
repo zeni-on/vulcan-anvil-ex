@@ -300,8 +300,10 @@ def describe(session):
         work = _validate(session)
         return {"process_model": model, "runtime_enabled": False, "checks_enabled": True,
                 "session_writes_enabled": True, "status": "experimental",
+                "dashboard_read_enabled": True, "operating_preview_enabled": True,
+                "publication_enabled": False,
                 "current_gate": session["current_gate"], "scope_key": work["scope_key"],
                 "work": deepcopy(work["scope"]["work"]), "history_count": len(session["work_history"]),
-                "message": "Experimental session --process-request and status --check are available; general init/migration/Dashboard are not enabled."}
+                "message": "Experimental state, scoped checks, Dashboard reads and operating previews are available; general init/migration and PR publication are not enabled."}
     except ProcessContractError as error:
         return {"status": "unsupported_or_invalid", "runtime_enabled": False, "message": str(error)}
