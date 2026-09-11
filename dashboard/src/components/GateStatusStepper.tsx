@@ -11,6 +11,7 @@
  */
 
 import { SessionData, GateStatusKey, GateStatus } from '@/lib/types'
+import ProductProcessPanel from './ProductProcessPanel'
 
 type StepKey = 'phase0' | GateStatusKey
 
@@ -78,6 +79,7 @@ interface GateStatusStepperProps {
  * current_gate가 'completed'이면 모든 Gate를 완료(초록색)로 표시한다.
  */
 export default function GateStatusStepper({ session }: GateStatusStepperProps) {
+  if (session.process_model) return <ProductProcessPanel session={session} />
   const isAllCompleted = session.current_gate === 'completed'
   const currentIndex = GATES.findIndex((g) => g.key === session.current_gate)
 

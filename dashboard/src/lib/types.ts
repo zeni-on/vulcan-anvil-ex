@@ -343,7 +343,8 @@ export interface ProjectStats {
 // ── session.json 타입 ─────────────────────────────────────────────────────────
 
 /** session.json 전체 구조 */
-export interface SessionData {
+export interface LegacySessionData {
+  process_model?: undefined
   project: string
   vulcan_src?: string
   vulcan_version: string
@@ -370,6 +371,23 @@ export interface SessionData {
   /** check-trace 실행 시 계산된 프로젝트 통계 (REQ-011-02). 없을 수 있으므로 optional. */
   stats?: ProjectStats
 }
+
+export type ProductStage = 'planning' | 'impl' | 'acceptance'
+export type ProductState = ProductStage | 'completed'
+export interface ProductReference { ref: string; revision: string }
+export interface ProductSessionData extends Partial<Omit<LegacySessionData, 'process_model' | 'profile' | 'current_gate' | 'gate_status'>> {
+  process_model: 'product-iterative-v1'
+  profile: 'product'
+  current_gate: ProductState
+  gate_status: Record<ProductStage, 'done' | 'in-progress' | 'pending'>
+  current_work: {
+    scope: { work: ProductReference; related_ids: string[]; contracts: ProductReference[]; tests: ProductReference[]; required_checks: string[] }
+    scope_key: string
+    decisions: Record<string, unknown>[]
+  }
+  work_history: Record<string, unknown>[]
+}
+export type SessionData = LegacySessionData | ProductSessionData
 
 export interface QaWorkspaceState {
   path?: string

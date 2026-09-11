@@ -53,9 +53,9 @@ export default function LayoutB({
   onExternalOpen,
 }: LayoutProps) {
   return (
-    <div data-testid="layout-b" className="min-w-0 h-full flex flex-col overflow-hidden">
+    <div data-testid="layout-b" className={`min-w-0 flex flex-col ${session?.process_model ? 'h-auto xl:h-full overflow-visible xl:overflow-hidden' : 'h-full overflow-hidden'}`}>
       {/* 상단 풀 width — session.stats 있을 때만 렌더링 */}
-      {session?.stats && (
+      {session?.stats && !session.process_model && (
         <div className="space-y-6 mb-8 flex-shrink-0" data-testid="layout-b-stats">
           <CurrentGatePanel
             session={session}
@@ -74,7 +74,7 @@ export default function LayoutB({
           {/* Gate 진행 현황 섹션 */}
           <section aria-labelledby="layout-b-gate-label">
             <SectionLabel>
-              <span id="layout-b-gate-label">Gate 진행 현황</span>
+              <span id="layout-b-gate-label">{session?.process_model ? 'Product 진행 현황' : 'Gate 진행 현황'}</span>
             </SectionLabel>
 
             {sessionLoading && <SectionSkeleton rows={2} />}

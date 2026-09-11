@@ -331,7 +331,8 @@ export const ProjectStatsSchema = z.object({
   updated_at:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 })
 
-export const SessionDataSchema = z.object({
+export const LegacySessionDataSchema = z.object({
+  process_model: z.undefined().optional(),
   project: z.string().min(1),
   vulcan_src: z.string().optional(),
   vulcan_version: z.string().min(1),
@@ -360,6 +361,53 @@ export const SessionDataSchema = z.object({
   }).optional(),
   /** check-trace 실행 시 계산된 프로젝트 통계. stats 없는 session.json도 유효하다. */
   stats: ProjectStatsSchema.optional(),
+})
+
+const ProductText = z.string().min(1).max(8192).refine(value => value.trim().length > 0)
+const ProductReferenceSchema = z.object({ ref: ProductText, revision: ProductText }).strict()
+const ProductStrings = z.array(ProductText).max(4096)
+const ProductStageStatusSchema = z.enum(['done', 'in-progress', 'pending'])
+export const ProductSessionDataSchema = z.object({
+  process_model: z.literal('product-iterative-v1'),
+  profile: z.literal('product'),
+  current_gate: z.enum(['planning', 'impl', 'acceptance', 'completed']),
+  gate_status: z.object({ planning: ProductStageStatusSchema, impl: ProductStageStatusSchema, acceptance: ProductStageStatusSchema }).strict(),
+  current_work: z.object({
+    scope: z.object({
+      work: ProductReferenceSchema,
+      related_ids: ProductStrings,
+      contracts: z.array(ProductReferenceSchema).max(4096),
+      tests: z.array(ProductReferenceSchema).max(4096),
+      required_checks: ProductStrings,
+    }).strict(),
+    scope_key: z.string().regex(/^[a-f0-9]{64}$/),
+    decisions: z.array(z.record(z.string(), z.unknown())).max(4096),
+  }).passthrough(),
+  work_history: z.array(z.record(z.string(), z.unknown())).max(4096),
+  project: ProductText.optional(),
+  feature: z.string().optional(),
+  vulcan_version: ProductText.optional(),
+  started: z.string().optional(),
+  stats: ProjectStatsSchema.optional(),
+}).superRefine((session, ctx) => {
+  // Validate display consistency only; Python owns authority and evidence validation.
+  const stages = ['planning', 'impl', 'acceptance'] as const
+  const current = session.current_gate === 'completed' ? 3 : stages.indexOf(session.current_gate)
+  stages.forEach((stage, index) => {
+    const expected = index < current ? 'done' : index === current ? 'in-progress' : 'pending'
+    if (session.gate_status[stage] !== expected) ctx.addIssue({ code: 'custom', path: ['gate_status', stage], message: 'Stage conflicts with current_gate' })
+  })
+})
+
+// A present marker must never be stripped and retried as a legacy session.
+export const SessionDataSchema = z.unknown().transform((value, ctx) => {
+  const marked = typeof value === 'object' && value !== null && Object.prototype.hasOwnProperty.call(value, 'process_model')
+  const result = (marked ? ProductSessionDataSchema : LegacySessionDataSchema).safeParse(value)
+  if (!result.success) {
+    ctx.addIssue({ code: 'custom', message: marked ? 'Unsupported or malformed process session' : 'Invalid legacy session' })
+    return z.NEVER
+  }
+  return result.data
 })
 
 // ── 추론 타입 내보내기 ─────────────────────────────────────────────────────────

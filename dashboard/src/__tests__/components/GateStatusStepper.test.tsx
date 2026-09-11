@@ -18,7 +18,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import GateStatusStepper from '@/components/GateStatusStepper'
-import { SessionData } from '@/lib/types'
+import { LegacySessionData as SessionData } from '@/lib/types'
 
 /** 모든 상태를 포함한 테스트용 SessionData */
 const mockSession: SessionData = {

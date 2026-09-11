@@ -1,4 +1,5 @@
 import { Session } from '@/lib/project'
+import ProductProcessPanel from './ProductProcessPanel'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 
 const GATES = [
@@ -11,6 +12,7 @@ const GATES = [
 ]
 
 export default function GateProgress({ session }: { session: Session }) {
+  if (session.process_model) return <ProductProcessPanel session={session} />
   return (
     <div className="space-y-10">
       {/* 프로젝트 헤더 */}
