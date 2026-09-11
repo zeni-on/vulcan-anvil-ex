@@ -138,7 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
-from vulcan_core import product_process
+from vulcan_core import product_process, product_readiness
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -15808,12 +15808,19 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
             session = json.load(f)
         if "process_model" in session:
             summary = product_process.describe(session)
-            if check or trace_detail:
-                summary["check"] = "not_enabled: scoped readiness/QA consumers are not connected"
+            exit_code = 0 if summary["status"] == "experimental" else 2
+            if check and not exit_code:
+                summary["scoped_check"] = product_readiness.collect(project_dir, session, parse_markdown_tables)
+                if summary["scoped_check"]["status"] != "ready":
+                    exit_code = 1
+            if trace_detail:
+                summary["trace_detail"] = "not_enabled: legacy trace diagnostics cannot interpret iterative states"
+                exit_code = 2
             print(json.dumps(summary, ensure_ascii=False, indent=2) if emit_json
-                  else "\n".join(f"{key}: {value}" for key, value in summary.items()))
-            if check or trace_detail or summary["status"] != "experimental":
-                sys.exit(2)
+                  else "\n".join(product_readiness.render(value) if key == "scoped_check"
+                                 else f"{key}: {value}" for key, value in summary.items()))
+            if exit_code:
+                sys.exit(exit_code)
             return
     summary = collect_status_summary(project_dir)
 
