@@ -16,6 +16,14 @@ python -m unittest scripts.regression.tests.test_evidence scripts.regression.tes
 
 Product 결과 중심 운영 회귀는 `python -m unittest scripts.regression.tests.test_product_workflow scripts.regression.tests.test_product_history scripts.regression.tests.test_status`로 실행한다. Run/Wave 선택 여부와 별개로 실제 미완료 작업, 승인/검증 경계가 보존되는지 확인한다. 현재/과거 Gate 및 실행 Wave 식별은 합성 문서/Git 이력으로 검증하며 개인 프로젝트 산출물을 fixture로 복사하지 않는다. 승인 조회는 실제 중첩 Git 프로젝트와 200건을 넘는 합성 이력으로 검사한다. Product/Core/Codex/Gemini 지침의 init/upgrade 배포도 `test_collaboration_docs`에 포함한다.
 
+실험 Product의 실제 Git/CLI 실패·복구 반복은 다음으로 실행한다. 매 테스트가 별도 임시 저장소를 만들고 정리하며 CI의 기존 discovery에도 포함된다.
+
+```powershell
+python -B -m unittest discover -s scripts/regression/tests -p test_product_execution.py -v
+```
+
+`product_execution_fixture.py`는 표준 라이브러리만 사용하는 요청 재제출 예시를 생성하는 테스트 보조 코드다. 의도한 이력 보존 결함과 실제 assertion을 포함하고, native QA 연습용으로 `python -B scripts/regression/product_execution_fixture.py prepare <새로운-임시-폴더>`를 실행할 수도 있다. `prepare`는 비어 있는 폴더에서만 실행되며 해당 폴더에 Git 브랜치/합성 상태/가짜 승인 근거를 생성한다. **실제 프로젝트나 사용자 승인으로 사용하지 않는다.** 수동 연습 폴더는 증적 확인을 위해 남긴다. 이 스크립트는 init/upgrade로 설치하지 않으며 자동 회귀는 모델을 호출하지 않는다. 실제 native QA 호출과 한계는 [실행 검증 기록](../../docs/reference/PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)에 별도로 남긴다.
+
 ### 1. 최소 init smoke
 
 Product 반복 프로세스의 단계 1 계약은 `python -m unittest scripts.regression.tests.test_product_process scripts.regression.tests.test_product_policy`로 검사한다. 상태/범위/승인/증적의 기계적 연결과 legacy CLI의 실험 상태 보호를 검증하며 실제 사용자 권한 인증, 문서 준비 판정, Dashboard나 프로젝트 이행은 아직 포함하지 않는다. 지침 검사는 알려진 중복·충돌의 재발 검사이며 모든 자연어를 판정하지 않는다. 새 Product 충돌 사례가 발견되면 해당 사례를 추가한다. 전체 `unittest discover`와 GitHub Actions가 이 테스트도 자동 실행한다.

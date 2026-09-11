@@ -94,6 +94,7 @@
 - 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건, 실제 명령 증적과 소스/환경 명세의 일치를 확인한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
 - 단계 2b: [실험 상태 저장 CLI](reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 기존 `session`에 연결했다. 기본 미리보기, 명시 apply, scoped 검사/승인·실행 근거, 상태 revision 충돌·배타 잠금·원자 저장을 포함한다. 별도 임시 프로젝트에서 실제 CLI 상태 반복과 `execute --verify` 연결을 시험하며 기존 프로젝트를 이행하지 않는다.
 - 단계 2c: [PR #36](https://github.com/zeni-on/vulcan-anvil-ex/pull/36)을 머지했다. 지원 Dashboard의 3구간/현재 범위 읽기, `status`/`branch-status`의 실제 브랜치 조회, `doctor` 환경 진단, 합의한 통합 작업공간의 인수 시험과 무부작용 `release-pr --dry-run`을 연결했다. 범위 수용과 제품 전체 릴리즈 권한은 분리한다. 상세 제한과 [검증 결과](reference/PRODUCT-PROCESS-CONTRACTS.md#64-단계-2c)는 [운영 소비자 계약](reference/PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)에 둔다.
+- 실행 회귀 보강: [임시 Git/실제 native QA 검증](reference/PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)을 진행했다. 실제 실패→허가된 수정→재시험, 과거 증적/승인 재사용 차단, 완료 후 재진입, 환경 차단, 발행 거부와 fixture Git 격리를 자동 회귀로 고정한다. Codex/Gemini 시작점은 실험 표식이 있을 때 같은 Core 안내로 먼저 라우팅한다. 실제 Codex QA 위임·회수는 확인했으며 Agy runtime, 자동 dispatcher/branch-start/성공적인 발행은 검증 완료로 보지 않는다.
 - 다음 순서: 실제 branch/QA 위임/릴리즈 발행 계약과 adapter/선택 양식의 운영 라우팅 마무리 → 확장된 합성 프로젝트 반복/명시 이행 보존 검증 → 실제 적용 판단. 자동 branch-start/PR 발행과 일반 init/upgrade는 이번 읽기 연결의 완료로 보지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 

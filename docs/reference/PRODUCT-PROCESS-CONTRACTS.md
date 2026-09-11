@@ -83,7 +83,7 @@ revision 예시는 실제 값이 아니다. 호출자는 기존 작업/결정/�
 
 ### 4.2 실행 증적의 실제 연결
 
-합성 검증의 인수 수집기는 기존 `evidence.record_verification`이 작성한 `kind: explicit_verification`, `schema_version: 1` JSON을 사용한다. 모든 기존 Product에 새 로그 형식을 강제하는 변경이 아니다. 다른 native QA 결과를 이 계약으로 연결하는 운영 경로는 후속에서 결정한다.
+합성 검증의 인수 수집기는 기존 `evidence.record_verification`이 작성한 `kind: explicit_verification`, `schema_version: 1` JSON을 사용한다. 모든 기존 Product에 새 로그 형식을 강제하는 변경이 아니다. native QA가 명시 `execute --verify`로 만든 결과를 총괄이 회수하는 경로는 [실제 위임/복구 시험](PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)에서 확인했다. 임의 형식의 native 결과 자동 변환이나 dispatcher를 구현한 것은 아니다.
 
 - `current_work.verification`은 4절의 구조를 유지한다. 결과의 `evidence.ref/revision`은 실제 JSON 파일과 해시이며 필수 시험 여러 개를 실행한 하나의 suite 보고서를 함께 참조할 수 있다. 시험별 실행 범위·assertion의 충분성은 검토자가 확인한다.
 - 구현 인계에서는 `current_work.basis`, 인수에서는 `verification.basis`의 명시 `source.sources`를 다시 관측한다. 앱 코드, 실제 테스트, lockfile/의존성 정의 등을 누락하지 않는 책임은 호출자에게 있다. 범위를 스스로 추론해 확장하지 않는다.
@@ -147,6 +147,8 @@ python vulcan.py session --process-request - --json
 이번에는 **조회와 명시 시험/미리보기**까지만 연결한다. `branch-start`의 상태/Git 복합 변경, native QA 위임·결과 회수, 실제 릴리즈 발행의 별도 승인/대상 revision 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
 
 ## 5. 지속 점검
+
+[실행 회귀 기록](PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)은 실제 Git/명령 실패와 native QA 회수에 대한 후속 검증이다. 범위 수용 이후 발행 거부를 확인한 것이며 실제 발행 계약이나 일반 활성화 완료로 해석하지 않는다.
 
 Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 확인한다. 매 사용자 작업에 새 체크리스트를 채우라는 뜻이 아니다.
 

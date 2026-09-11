@@ -33,6 +33,8 @@
 
 현재 프로젝트의 사실 근거는 반드시 `session.json`, 현재 산출물, 현재 Run, `docs/core/`, 그리고 사용자의 최신 지시에서만 확인한다.
 
+`process_model`이 있는 실험 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 표식이 없는 프로젝트는 기존 흐름이며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
+
 ---
 
 ## 3. 핵심 Guardrails

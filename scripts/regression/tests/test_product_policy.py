@@ -54,6 +54,19 @@ class ProductPolicyTests(unittest.TestCase):
         self.assertIn("For Product execution, start with", bootstrap)
         self.assertNotIn("If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.", bootstrap)
 
+    def test_marked_pilot_routes_before_legacy_in_codex_and_gemini(self):
+        for path in ("AGENTS.md", "GEMINI.md", ".agents/skills/vulcan-orchestrator/SKILL.md"):
+            with self.subTest(path=path):
+                text = self.read(path)
+                route = text.index("`process_model`")
+                self.assertIn("ORCHESTRATOR_CLI_GUIDE.md", text[route:route + 260])
+                legacy = text.find("gate-start")
+                if legacy >= 0:
+                    self.assertLess(route, legacy)
+        guide = self.read("docs/core/ORCHESTRATOR_CLI_GUIDE.md").split("### 4.1", 1)[1].split("## 5.", 1)[0]
+        self.assertIn("검증 전용 위임으로 코드나 상태를 수정하지 않는다", guide)
+        self.assertIn("일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다", guide)
+
 
 if __name__ == "__main__":
     unittest.main()
