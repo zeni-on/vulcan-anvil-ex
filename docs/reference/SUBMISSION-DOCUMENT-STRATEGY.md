@@ -168,7 +168,7 @@ python vulcan.py export-doc traceability --format xlsx
 3. 필요한 섹션을 추출하거나 요약한다.
 4. Mermaid 다이어그램은 이미지 또는 원문 코드블록으로 변환한다.
 5. 표는 DOCX/XLSX 표로 변환한다.
-6. 원천 문서 ID, 버전, Git commit SHA를 제출본 메타데이터에 기록한다.
+6. 원천 문서 ID와 버전을 제출본 메타데이터에 기록한다. 별도 Git commit SHA 증적은 요구하지 않는다.
 7. 생성 결과를 `docs/exports/`에 저장한다.
 8. 제출본 생성 로그를 `docs/runs/` 또는 별도 export log에 남긴다.
 

@@ -1,5 +1,7 @@
 # Product Process Execution Verification
 
+> 정책 변경 (2026-09-11): 이 문서는 당시 실제 시험과 관측을 보존한 이력이다. 아래 Git/소스 지문 신선도 차단과 시험 전 커밋 권고는 폐기된 요구이며 현재 운영에 적용하지 않는다. 현재 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](../core/CURRENT_CONTEXT_AND_EVIDENCE.md)와 [PRODUCT-PROCESS-CONTRACTS.md](PRODUCT-PROCESS-CONTRACTS.md)를 따른다. 과거 로그·수치·결과는 재생성하지 않는다.
+
 - 기준: 2026-09-11, main `1384c15` 이후 실행 회귀 보강.
 - 범위: 별도 합성 Git 프로젝트의 실제 CLI/시험 실행, Codex native QA 위임·회수, 기존 profile 회귀.
 - 상태: 실제 native QA 실패·복구·회수 및 로컬 회귀 확인. 일반 활성화/실제 발행은 보류.

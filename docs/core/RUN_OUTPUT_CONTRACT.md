@@ -43,7 +43,7 @@ Adapter는 각 runner의 stdout, last message, result file, activity log를 이 
 
 ## 3. 선택 필드
 
-검증 증적의 Git 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md) 4~5절을 따른다. `evidence.commit`이 소스 기준인지 결과 문서 저장 커밋인지 불명확한 과거 기록은 추정하지 않는다. 자동 수집한 검증 JSON을 기존 `evidence`/`verification_results`에서 링크하고, 각 요구사항 행에 같은 SHA를 복제하지 않는다. 명령 성공, 미커밋 소스 식별, QA 승인과 릴리즈 대상 일치는 별도 사실이다.
+검증 기록은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md) 4~5절을 따른다. 별도 Git 증적은 요구하지 않으며 `evidence.commit` 등 과거 기록의 의미를 추정하거나 재작성하지 않는다. 명령 실행 JSON과 실제 테스트 로그를 기존 `evidence`/`verification_results`에서 링크한다. Orchestrator는 구현·환경 변경에 따른 관련 재시험을 판단하며 명령 성공을 QA 승인이나 릴리즈 허가로 바꾸지 않는다.
 
 | 필드 | 넣는 경우 |
 | --- | --- |
@@ -132,7 +132,6 @@ evidence:
   logs: []
   ui: []
   ui_contract_diffs: []
-  commit: null
 
 standard_compliance_report:
   - standard_id: DEV-DIR-001

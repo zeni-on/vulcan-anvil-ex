@@ -13,7 +13,6 @@ import unittest
 from unittest import mock
 
 from vulcan_core import product_process as process
-from vulcan_core.evidence import capture_source_snapshot
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -34,10 +33,8 @@ def scope(number=1):
             "tests": [ref("docs/tests.md#resubmit")], "required_checks": ["REG-001", "SEC-REG-001"]}
 
 
-def basis(fingerprint="a", environment="snapshot:001"):
-    return {"source": {"complete": True, "errors": [], "fingerprint": fingerprint * 64,
-                       "sources": ["app", "tests", "requirements.txt"]},
-            "environment": ref("qa-environment", environment)}
+def basis(environment="snapshot:001"):
+    return {"environment": ref("qa-environment", environment)}
 
 
 def ready(session, purpose="implementation"):
@@ -176,18 +173,15 @@ class ProductProcessTests(unittest.TestCase):
             self.assertFalse(process.assess_transition(session, "completed", verification=failed,
                                                       current_basis=basis(), decision=accept)["allowed"])
 
-    def test_stale_source_environment_or_test_evidence_invalidates_acceptance(self):
+    def test_changed_environment_or_test_evidence_invalidates_acceptance(self):
         session = self.acceptance()
         report = verification(session)
         accept = decision(session, ["accept"], verification_key=process.verification_key(scope(), report, basis()))
-        for current in (basis("b"), basis(environment="snapshot:002")):
-            self.denied(session, "completed", "stale verification", verification=report, current_basis=current, decision=accept)
+        self.denied(session, "completed", "stale verification", verification=report,
+                    current_basis=basis(environment="snapshot:002"), decision=accept)
         changed_log = deepcopy(report)
         changed_log["results"][0]["evidence"]["revision"] = "snapshot:002"
         self.denied(session, "completed", "missing scoped accept", verification=changed_log, current_basis=basis(), decision=accept)
-        incomplete = basis()
-        incomplete["source"]["complete"] = False
-        self.denied(session, "completed", "incomplete source", verification=report, current_basis=incomplete, decision=accept)
 
     def test_replanning_and_new_work_preserve_history_and_unresolved_obligations(self):
         session = self.acceptance()
@@ -253,21 +247,23 @@ class ProductProcessTests(unittest.TestCase):
         with self.assertRaises(process.ProcessContractError):
             process.open_work(self.completed(), scope(2), reason=ref("new-work"), target=[])
 
-    def test_actual_snapshot_detects_dirty_changes_without_requiring_git_commit_ids(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "app.py").write_text("value = 1\n", encoding="utf-8")
-            first = {"source": capture_source_snapshot(root, ["app.py"]), "environment": ref("local-env")}
-            session = self.acceptance()
-            report = verification(session, first)
-            key = process.verification_key(scope(), report, first)
-            (root / "notes.md").write_text("wording only", encoding="utf-8")
-            same = {"source": capture_source_snapshot(root, ["app.py"]), "environment": ref("local-env")}
-            self.assertEqual(key, process.verification_key(scope(), report, same))
-            (root / "app.py").write_text("value = 2\n", encoding="utf-8")
-            changed = {"source": capture_source_snapshot(root, ["app.py"]), "environment": ref("local-env")}
-            with self.assertRaises(process.ProcessContractError):
-                process.verification_key(scope(), report, changed)
+    def test_legacy_approval_key_is_preserved_without_rechecking_source(self):
+        session = self.acceptance()
+        legacy_basis = dict(basis(), source={
+            "fingerprint": "a" * 64, "complete": True, "errors": [],
+            "sources": ["app", "requirements.txt", "tests"]})
+        report = verification(session, legacy_basis)
+        expected = process._digest({"scope_key": process.scope_key(scope()),
+                                    "basis": legacy_basis,
+                                    "results": sorted(report["results"], key=lambda row: row["id"])})
+        changed = dict(basis(), source={"complete": False, "errors": ["Git unavailable"]})
+        self.assertEqual(process.verification_key(scope(), report, changed), expected)
+        completed = process.advance(session, "completed", verification=report, current_basis=legacy_basis,
+                                    decision=decision(session, ["accept"], verification_key=expected))
+        before = deepcopy(completed)
+        self.assertEqual(process.describe(completed)["status"], "experimental")
+        self.assertEqual(completed, before)
+        self.assertEqual(completed["current_work"]["verification_key"], expected)
 
     def test_status_is_read_only_and_legacy_cli_refuses_marked_sessions(self):
         with tempfile.TemporaryDirectory() as temp:

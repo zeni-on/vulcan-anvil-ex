@@ -37,7 +37,7 @@ Product 문서를 새로 쓰거나 보완할 때 사용하는 작성 경로다. 
 | 보안 / 설계·보안 | Architecture와 Contracts의 해당 진입 절 | `docs/artifacts/02-design/security/*.md` | `PRODUCT_SECURITY_CHECKLIST_TEMPLATE.md`: 신뢰 경계, 보호 정책, SEC 계약, 검증 대상 |
 | 개발 기준 / 개발 | Architecture와 Contracts의 해당 진입 절 | `docs/artifacts/02-design/development-standard/*.md` | `PRODUCT_ENGINEERING_GUIDE_TEMPLATE.md`: 도구 기준, 코드 관례, 시험/빌드/배포 절차 |
 | 시험 정의 / 품질 | `REGRESSION_AND_RELEASE_REPORT.md` | `docs/artifacts/03-test/*.md` | `PRODUCT_TEST_PLAN_TEMPLATE.md`: REG/SEC-REG, 선행조건, 입력/행동/기대값, 방법 |
-| 실제 실행 / 품질 | `REGRESSION_AND_RELEASE_REPORT.md` | `docs/artifacts/04-review/<batch>/*.md` | `PRODUCT_VERIFICATION_RESULT_TEMPLATE.md`: 소스·시험 정의 기준, 실행/관측, 증적, 미완료 의무 |
+| 실제 실행 / 품질 | `REGRESSION_AND_RELEASE_REPORT.md` | `docs/artifacts/04-review/<batch>/*.md` | `PRODUCT_VERIFICATION_RESULT_TEMPLATE.md`: 시험 범위·정의, 실행/관측, 증적, 미완료 의무 |
 | 관계·현재 판단 / 총괄 | `PRODUCT_TRACEABILITY.md` | 필요 시 `docs/artifacts/02-traceability/*.md` | 기존 Traceability 양식: SCN/REQ/계약/구현/시험/증적 연결과 판단 근거 |
 | 결정 / 결정 담당·총괄 | `ADR_LOG.md` | 필요 시 `docs/artifacts/02-design/architecture/*.md` | 기존 ADR 양식: 배경, 선택, 대안, 영향, 승인/대체 근거 |
 
@@ -64,7 +64,7 @@ Product 문서를 새로 쓰거나 보완할 때 사용하는 작성 경로다. 
 - 요구/설계에는 현재 승인 범위의 조건을 적는다. 작업 일지, 로그 전문, 자기평가, 과거 Delta는 붙이지 않는다. 변경 이유는 기존 CR/ADR/Git에 연결한다.
 - 테스트 정의의 기대값과 실제 결과는 별개다. 계획에 있는 `Planned`를 실행 대신 `Pass`로 고치지 않는다.
 - Gate 3에서 미리 만든 결과 표의 `Not Run`은 시험 계획 완료를 단독으로 차단하지 않으며 미실행 안내로 남는다. 실제 `Fail`, `Blocked`, `environment_blocked`와 상충된 결과는 유지한다. Gate 4 이후에는 필요한 실제 실행/성공 결과를 요구한다. 이 예외는 Product Gate 3에만 적용하며 Impl self-check와 다른 profile의 기준을 완화하지 않는다.
-- 실행 묶음에는 당시 소스와 테스트 정의의 Git 기준 또는 보존 스냅샷을 한 번 연결한다. 미커밋 변경을 포함했다면 HEAD만 검증했다고 하지 않는다. 검증 JSON은 기존 증적 칸으로 연결한다.
+- 실행 묶음에는 시험 대상과 당시 테스트 정의, 실제 명령·결과·로그를 연결한다. 테스트 정의의 revision은 유지하되 별도 Git 기준이나 소스 스냅샷은 요구하지 않는다. 검증 JSON은 기존 증적 칸으로 연결한다.
 - 현재 실행 파일의 원본 결과는 보존한다. 재시험은 새 실행 묶음에 적고, 원장은 적용 대상/범위가 일치하는 현재 결과를 가리킨다. 과거 링크는 `history`로 표시한 절로 옮긴다. 모든 과거 실행을 현재 검사로 다시 읽게 하지 않는다.
 - `current`는 현재 비교 대상으로 선택했다는 뜻이지 승인/Pass가 아니다. 현재 Fail/Not Run/환경 차단은 그대로 보고한다. 미완료 시험/결함은 기존 FIND/ISSUE/CR의 관리 원본과 연결하고 범위 축소만으로 종료하지 않는다.
 

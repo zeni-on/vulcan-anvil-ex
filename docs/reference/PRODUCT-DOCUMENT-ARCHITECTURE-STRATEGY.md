@@ -11,7 +11,7 @@ Product를 6개 파일 안에서 운영하는 제한을 풀고, 제품 개발에
 - 기본 구분은 제품/요구사항, 설계, 개발, 검증, 배포/운영, 결정, 사용자 안내다. 아래 12개 문서 영역은 정보의 자리이며 모든 파일을 init에서 빈칸으로 생성하라는 뜻이 아니다.
 - 파일 분할 단위는 독립적으로 변경하고 검토할 기능/도메인/서비스다. 모든 REQ/API/테스트 ID마다 파일 하나를 강제하지 않는다.
 - 현재 명세는 해당 위치에서 현행화하고 변경 이유는 CR/ADR에 연결한다. 실제 실행 결과는 실행별 증적으로 보존한다.
-- 기존 ID, 승인, 미완료 의무, Git 기준과 링크를 유지한다. 문서 재배치 자체는 계약 변경 승인이나 Gate 통과가 아니다.
+- 기존 ID, 승인, 미완료 의무와 링크를 유지한다. 별도 Git 증적은 요구하지 않는다. 문서 재배치 자체는 계약 변경 승인이나 Gate 통과가 아니다.
 - 이번 작업은 설계와 원본 밖 파일럿까지다. 실행 정책, 사용자 프로젝트 원본, CLI, Dashboard, 필수 산출물 목록을 즉시 바꾸지 않는다.
 
 작성 항목의 기준은 [문서별 작성 계약](PRODUCT-DOCUMENT-WRITING-CONTRACTS.md), 현재 실행 중인 조회/증적 정책은 [Current Context And Evidence](../core/CURRENT_CONTEXT_AND_EVIDENCE.md)다.
@@ -157,7 +157,7 @@ OpenAPI, DB migration, 테스트 코드/리포트가 있으면 파일을 연결�
 | 내용/Gate 검사 | `collect_product_profile_findings`, `validate_product_trace`, `product_verification_result_findings` | 파일 수 대신 요구/계약/검증 내용 확인; 링크만 있는 빈 색인으로 통과 금지 |
 | 추적/통계/Run 입력 | `parse_product_trace_rows`, `compute_product_stats`, `build_trace_graph`, `build_product_worker_preset` | 원본/참조 구분, 여러 문서의 동일 ID 중복 집계 방지, Run 선택 유지 |
 | 절 조회 | `vulcan_core/document_context.py`: `lookup_sections` | 조회 호환 MVP: 요구/시험 폴더, 명시적/제한된 참조 조회, 공통 조건 미수집 표시; 의미상 완전성/승인 판정은 별도 |
-| 승인/소스 비교 | `product_gate_approval_snapshot`, `product_run_matches_approval` | 문서 경로 이동과 내용/승인 범위 변화 구분, 과거 승인 전체 승격 금지 |
+| 승인 이력 확인 | session의 `gate_status`, `approval_evidence`, `approved_at` | 완료·승인 기록과 현재 Run을 구분. Git 과거 blob 비교 없이 Orchestrator가 실제 승인 범위를 확인하며 세션 메타데이터를 포렌식 증명으로 보지 않음. 새 미승인 Run의 미래 Gate 권한으로 확대 금지 |
 | 릴리즈 | `vulcan_core/release.py` | 현재 결과/미완료 의무/릴리즈 승인 연결; 모든 과거 실행을 새 필수검사로 반복하지 않음 |
 | Dashboard | `dashboard/src/app/projects/[id]/page.tsx`, `DocList.tsx`, `CurrentGatePanel.tsx` | `Product docs 6/6`을 그대로 새 완성도로 쓰지 않음; 종류별 원본/현재 범위/이력 탐색 |
 | 회귀/지침 | `run_fixture_smoke.py`, Product 관련 unit, Core/Codex/Gemini/사용자 안내 | legacy/split/mixed fixture의 같은 의미 검사; 설치 동작과 안내 동시 반영 |

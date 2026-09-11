@@ -67,6 +67,16 @@ class ProductPolicyTests(unittest.TestCase):
         self.assertIn("검증 전용 위임으로 코드나 상태를 수정하지 않는다", guide)
         self.assertIn("일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다", guide)
 
+    def test_worker_and_result_template_do_not_restore_git_evidence(self):
+        worker = self.read("docs/core/PRODUCT_WORKER_GUIDE.md")
+        self.assertIn("No Git evidence or pre-test commit is required", worker)
+        self.assertNotIn("storage commit as the tested source commit", worker)
+        template = self.read("docs/templates/product/PRODUCT_VERIFICATION_RESULT_TEMPLATE.md")
+        self.assertNotIn("Git 또는 스냅샷", template)
+        self.assertIn("실제 실행 명령 / cwd", template)
+        output = self.read("docs/core/RUN_OUTPUT_CONTRACT.md")
+        self.assertNotIn("  commit: null", output)
+
 
 if __name__ == "__main__":
     unittest.main()

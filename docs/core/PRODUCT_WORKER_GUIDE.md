@@ -29,13 +29,12 @@ it defines the approved goal, writable paths, contracts and completion checks.
   Preserve other agents' changes. Do not create a Run merely to restate the handoff.
 - Implement the assigned code and tests; run the agreed checks (`verification.commands`
   when using a Run) from their specified directories. Report command, cwd, exit status, results,
-  and source/environment identity when observable. Never invent missing metadata.
+  and relevant environment details. Never invent missing metadata.
 - If dependencies or the environment block a required command, report
   environment_blocked/not_run with the failed command and evidence. Do not mark Pass.
-- When assigned `execute --verify`, include code/tests/lockfiles in its explicit
-  source scope and link its JSON evidence. It records observed source identity,
-  not environment equivalence, test coverage or QA approval. Do not use a report
-  storage commit as the tested source commit.
+- When assigned `execute --verify`, link its command-result JSON and actual test logs.
+  `--source` is optional descriptive context, not a source inventory or fingerprint.
+  No Git evidence or pre-test commit is required; command success is not QA approval.
 - Stop after required scoped checks pass. Repeat or broaden checks only for a new
   relevant change, failure, or unresolved concern. Metadata-only edits do not
   require product tests again. Report nonblocking warnings instead of chasing zero.

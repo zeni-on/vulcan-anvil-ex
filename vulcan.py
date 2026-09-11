@@ -6603,81 +6603,28 @@ def detect_early_implementation_files(project_dir="."):
     return found
 
 
-def git_json_snapshots(project_dir, refs):
-    """Read immutable session blobs in one Git process, including missing parents."""
-    result = subprocess.run(
-        ["git", "cat-file", "--batch"], cwd=project_dir, capture_output=True,
-        input="".join(f"{ref}:./session.json\n" for ref in refs).encode("utf-8"),
-    )
-    if result.returncode:
-        return {}
-    stream = io.BytesIO(result.stdout)
-    snapshots = {}
-    for ref in refs:
-        header = stream.readline().split()
-        if len(header) == 2 and header[-1] == b"missing":
-            continue
-        if len(header) != 3 or header[1] != b"blob" or not header[2].isdigit():
-            return {}
-        body = stream.read(int(header[2]))
-        if stream.read(1) != b"\n":
-            return {}
-        try:
-            parsed = json.loads(body)
-            if isinstance(parsed, dict):
-                snapshots[ref] = parsed
-        except (ValueError, UnicodeError):
-            continue
-    return snapshots
+def product_run_is_approved_history(session, record):
+    """Use recorded completion/approval, not Git blobs as separate evidence.
 
-
-def product_gate_approval_snapshot(project_dir, session, gate):
-    """Find the existing approval-introducing snapshot, not a dated Run claim."""
-    approvals = session.get("approvals", {})
-    approval = approvals.get(gate) if isinstance(approvals, dict) else None
-    if not isinstance(approval, dict) or not approval.get("approval_evidence"):
-        return ""
+    The Orchestrator owns historical classification and renewed work permissions.
+    This does not prove when a Run changed or grant approval to new work.
+    """
+    gate = record.get("gate")
+    approvals = session.get("approvals")
+    statuses = session.get("gate_status")
+    if not isinstance(approvals, dict) or not isinstance(statuses, dict):
+        return False
+    approval = approvals.get(gate)
+    if (statuses.get(gate) != "done" or not isinstance(approval, dict)
+            or not isinstance(approval.get("approval_evidence"), str)
+            or not approval["approval_evidence"].strip()
+            or str(record.get("status", "")).strip().lower() not in {"completed", "verified", "done"}):
+        return False
     try:
         datetime.fromisoformat(approval.get("approved_at", ""))
     except (TypeError, ValueError):
-        return ""
-
-    try:
-        # Search approval changes, not every Wave/session update since approval.
-        commits = git_text(
-            ["log", "--first-parent", "--format=%H", "-G", re.escape(approval["approved_at"]), "--", "session.json"], project_dir,
-        ).splitlines()
-        if not commits:
-            return ""
-        snapshots = git_json_snapshots(project_dir, [ref for commit in commits for ref in (commit, f"{commit}^")])
-        for commit in commits:
-            saved = snapshots.get(commit, {})
-            saved_approvals = saved.get("approvals", {})
-            saved_gates = saved.get("gate_status", {})
-            if not isinstance(saved_approvals, dict) or saved_approvals.get(gate) != approval:
-                continue
-            if not isinstance(saved_gates, dict) or saved_gates.get(gate) != "done":
-                continue
-            # Later commits carrying the same approval cannot approve new Runs.
-            parent = snapshots.get(f"{commit}^", {})
-            parent_approvals = parent.get("approvals", {})
-            if not parent or not isinstance(parent_approvals, dict) or parent_approvals.get(gate) == approval:
-                continue
-            return commit
-    except OSError:
-        pass
-    return ""
-
-
-def product_run_matches_approval(project_dir, record, snapshot):
-    if not snapshot or record["status"].strip().lower() not in {"completed", "verified", "done"}:
         return False
-    try:
-        historical = git_text(["show", f"{snapshot}:./{record['path'].replace(os.sep, '/')}"], project_dir)
-        with open(os.path.join(project_dir, record["path"]), encoding="utf-8") as f:
-            return bool(historical and historical == f.read().strip())
-    except (OSError, UnicodeError):
-        return False
+    return True
 
 
 def validate_gate_progression(project_dir=".", current_gate="phase0"):
@@ -6693,17 +6640,12 @@ def validate_gate_progression(project_dir=".", current_gate="phase0"):
     ]
     product_iteration = load_delivery_profile(project_dir) == "product" and current_gate in {"gate2", "gate3", "impl"}
     session = load_session(project_dir) if product_iteration and future_runs else {}
-    approval_snapshots = {}
     for record in future_runs:
         diagnostic = ""
         if product_iteration and record["gate"] in {"gate4", "gate5"}:
-            gate = record["gate"]
-            if gate not in approval_snapshots:
-                approval_snapshots[gate] = product_gate_approval_snapshot(project_dir, session, gate)
-            snapshot = approval_snapshots[gate]
-            if product_run_matches_approval(project_dir, record, snapshot):
+            if product_run_is_approved_history(session, record):
                 continue
-            diagnostic = " [Product approval history unproved: requires an unchanged completed Run in the approval-introducing Git snapshot; new/changed Runs remain unauthorized]"
+            diagnostic = " [Product completed history requires recorded Gate completion and approval; active/unapproved Runs remain unauthorized]"
         issues.append(
             f"  X 프로세스 위반: 현재 Gate는 {current_gate}인데 앞선 Gate Run이 존재합니다 "
             f"({record['gate']}, {record['path']}){diagnostic}"
@@ -7697,16 +7639,14 @@ def cmd_prepare_transition(project_dir="."):
     preflight_records = []
     preflight_skills = {"build-wave", "implementation-scaffold", "qa-execution", "qa-fix-loop"}
     preflight_statuses = {"completed", "verified", "completedwithissues"}
-    completed_snapshot = ""
     if profile == "product":
         preflight_statuses.add("done")
-        completed_snapshot = product_gate_approval_snapshot(project_dir, session, current_gate)
     for record in collect_run_gate_records(project_dir):
         if record["gate"] != current_gate:
             continue
         if record["status"].strip().lower() not in preflight_statuses:
             continue
-        if profile == "product" and product_run_matches_approval(project_dir, record, completed_snapshot):
+        if profile == "product" and product_run_is_approved_history(session, record):
             continue
         run_abs = os.path.join(project_dir, record["path"])
         try:
@@ -16742,7 +16682,7 @@ def main():
     p_execute.add_argument("--dry-run", action="store_true", help="실제 worker 호출 없이 실행 계획만 출력")
     p_execute.add_argument("--json", action="store_true", help="실행 계획 dry-run을 JSON으로 출력")
     p_execute.add_argument("--verify", action="store_true", help="Record explicit argv verification without worker/Gate mutations")
-    p_execute.add_argument("--source", action="append", help="Relative source scope (repeatable)")
+    p_execute.add_argument("--source", action="append", help="Optional descriptive source path (repeatable; no hashing)")
     p_execute.add_argument("--evidence", help="New relative .json evidence path")
     p_execute.add_argument("--cwd", help="Relative verification working directory")
     p_execute.add_argument("verify_command", nargs=argparse.REMAINDER, help="-- executable args...")
@@ -17009,8 +16949,8 @@ def main():
         if args.verify:
             if args.dry_run or args.json or args.runner != "native":
                 parser.error("--verify cannot be combined with dry-run/JSON/runner options")
-            if not args.source or not args.evidence or not args.verify_command or args.verify_command[0] != "--":
-                parser.error("--verify requires --source, --evidence and -- executable args...")
+            if not args.evidence or not args.verify_command or args.verify_command[0] != "--":
+                parser.error("--verify requires --evidence and -- executable args...")
             try:
                 _, exit_code = record_verification(
                     args.project_dir, args.source, args.evidence, args.verify_command[1:],

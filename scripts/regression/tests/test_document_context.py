@@ -52,7 +52,7 @@ class DocumentContextTests(unittest.TestCase):
         result = self.lookup()
         self.assertEqual(result["kind"], "derived_reference")
         self.assertFalse(result["authority"])
-        self.assertEqual(result["sections"][0]["git"]["worktree_state"], "unknown")
+        self.assertNotIn("git", result["sections"][0])
         self.assertFalse((self.root / "session.json").exists())
 
     def test_exact_multi_seed_and_table_ids(self):
@@ -207,46 +207,19 @@ class DocumentContextTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.lookup(documents=["junction/contracts.md"])
 
-    def test_git_clean_dirty_and_untracked(self):
+    def test_lookup_does_not_collect_git_identity(self):
         self.write("# API-001\n")
         self.git("init", "--quiet")
         self.git("add", ".")
         self.git("commit", "--quiet", "-m", "fixture")
-        first = self.lookup()["sections"][0]["git"]
-        self.assertEqual(first["observed_head"], self.git("rev-parse", "HEAD"))
-        self.assertEqual(first["worktree_state"], "clean")
         self.write("# API-001\nchanged\n")
-        self.assertEqual(self.lookup()["sections"][0]["git"]["worktree_state"], "dirty")
-        self.write("# API-002\n", "docs/product/new.md")
-        self.assertEqual(self.lookup("API-002")["sections"][0]["git"]["worktree_state"], "dirty")
-
-    def test_git_failure_optional(self):
-        self.write("# API-001\n")
-        with mock.patch.object(dc.subprocess, "run", side_effect=FileNotFoundError):
-            self.assertEqual(self.lookup()["sections"][0]["git"]["worktree_state"], "unknown")
-
-    def test_git_environment_cannot_point_document_to_another_repository(self):
-        self.write("# API-001\n")
-        self.git("init", "--quiet")
-        self.git("add", ".")
-        self.git("commit", "--quiet", "-m", "fixture")
-        with tempfile.TemporaryDirectory() as other:
-            project = Path(other).resolve()
-            source = project / "docs/product/contracts.md"
-            source.parent.mkdir(parents=True)
-            source.write_text("# API-001\nUnrelated document\n", encoding="utf-8")
-            with mock.patch.dict(os.environ, {"GIT_DIR": str(self.root / ".git"),
-                                              "GIT_WORK_TREE": str(self.root)}):
-                provenance = dc.lookup_sections(project, "API-001")["sections"][0]["git"]
-            self.assertEqual(provenance, {"observed_head": None, "worktree_state": "unknown"})
-
-    def test_nested_directory_does_not_claim_parent_repository_identity(self):
-        self.git("init", "--quiet")
-        self.write("# API-001\n", "nested/docs/product/contracts.md")
-        self.git("add", ".")
-        self.git("commit", "--quiet", "-m", "fixture")
-        provenance = dc.lookup_sections(self.root / "nested", "API-001")["sections"][0]["git"]
-        self.assertEqual(provenance, {"observed_head": None, "worktree_state": "unknown"})
+        with mock.patch.object(subprocess, "run", side_effect=AssertionError("no Git query")):
+            first = self.lookup()["sections"][0]
+            self.write("# API-002\n", "docs/product/new.md")
+            second = self.lookup("API-002")["sections"][0]
+        for item in (first, second):
+            self.assertNotIn("git", item)
+            self.assertIn("document_sha256", item)
 
     def test_cli_json_yaml_and_repeat_documents(self):
         self.write("# API-001\n")

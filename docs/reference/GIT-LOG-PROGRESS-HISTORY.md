@@ -13,7 +13,7 @@ Vulcan-Anvil Ex는 이미 `session.json.stats`로 현재 상태 통계를 가진
 - 날짜별 진행 이력은 Git commit 날짜와 commit message에서 파생한다.
 - 진행 중 통계는 일부 흔들릴 수 있음을 허용한다.
 - 감리/보고 관점에서 중요한 것은 "언제 어떤 상태 변화가 있었는가"를 설명할 수 있는 것이다.
-- 파생 이력은 보조 관찰 자료이며, Gate 완료/승인 사실의 최종 근거는 `session.json`, Run 문서, QA 문서, Git commit이다.
+- 파생 이력은 선택적인 진행 조회 자료이며 Gate 완료·승인을 증명하지 않는다. Orchestrator가 `session.json`의 완료·승인 기록과 Run/QA 원본에서 실제 범위를 확인한다. 세션 메타데이터도 포렌식 증명은 아니며 Git commit이나 과거 blob 일치를 별도 승인 증적으로 요구하지 않는다.
 
 ## 3. 입력 데이터
 

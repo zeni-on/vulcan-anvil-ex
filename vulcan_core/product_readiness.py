@@ -178,17 +178,13 @@ def document_readiness(project_dir, scope, parse_tables):
 
 
 def observe_basis(project_dir, basis):
-    """Observe explicit source scopes and a local environment manifest, not live services."""
+    """Check the declared environment reference, not Git or source freshness."""
     declared = process._basis(basis)
     root = evidence._root(project_dir)
     environment = local_reference(root, declared["environment"]["ref"])
     if environment != declared["environment"]:
         raise ValueError("environment manifest revision changed")
-    observed = evidence.capture_source_snapshot(root, declared["source"]["sources"])
-    env_path = evidence._relative(unquote(urlsplit(environment["ref"]).path))
-    if not any(row["path"] == env_path for row in observed["files"]):
-        raise ValueError("source observation must include the environment manifest (not ignored/excluded)")
-    return process._basis({"source": observed, "environment": environment})
+    return declared
 
 
 def check_execution(project_dir, scope, verification, current_basis):
@@ -201,19 +197,15 @@ def check_execution(project_dir, scope, verification, current_basis):
         if "sha256:" + hashlib.sha256(raw).hexdigest() != ref["revision"]:
             raise ValueError(row["id"] + ": execution artifact revision changed")
         report = json.loads(raw)
-        if not isinstance(report, dict) or report.get("kind") != "explicit_verification" or report.get("schema_version") != 1:
+        if (not isinstance(report, dict) or report.get("kind") != "explicit_verification"
+                or type(report.get("schema_version")) is not int or report["schema_version"] not in {1, 2}):
             raise ValueError(row["id"] + ": expected an explicit_verification JSON report")
         command = report.get("command")
         if (not isinstance(command, dict) or command.get("argv") != row["command"]
                 or type(command.get("exit_code")) is not int or command["exit_code"] != 0
                 or command.get("launch_error") is not None
-                or not command.get("started_at") or not command.get("finished_at")
-                or report.get("identity_complete") is not True or report.get("source_changed") is not False):
+                or not command.get("started_at") or not command.get("finished_at")):
             raise ValueError(row["id"] + ": unsuccessful, incomplete or mismatched command observation")
-        for when in ("source_pre", "source_post"):
-            tested = process._basis({"source": report.get(when), "environment": current_basis["environment"]})
-            if tested != current_basis:
-                raise ValueError(row["id"] + ": stale or incomplete execution source observation")
     return key
 
 
@@ -232,6 +224,7 @@ def collect(project_dir, session, parse_tables):
         "execution": "not_required_at_this_stage", "release_authorized": False,
         "limitations": ["Scoped mechanical checks do not prove semantic completeness or review quality.",
                         "Approval provenance and revocation require the trusted Orchestrator.",
+                        "Source changes are not detected here; the Orchestrator decides relevant retests.",
                         "Environment manifests describe the environment; they do not observe live services."],
         "unresolved_obligations": len(session.get("open_issues", [])) if isinstance(session.get("open_issues", []), (list, dict)) else "unknown"}
     readiness = {"scope_key": work["scope_key"], "ready": docs["ready"],
@@ -242,7 +235,6 @@ def collect(project_dir, session, parse_tables):
         try:
             basis = work.get("verification", {}).get("basis") if stage in {"acceptance", "completed"} else work.get("basis")
             current = observe_basis(project_dir, basis)
-            result["limitations"].extend(evidence.LIMITATIONS[:6])
             if stage in {"acceptance", "completed"}:
                 verified = check_execution(project_dir, work["scope"], work.get("verification"), current)
                 result.update(execution="verified_observations", verification_key=verified)
