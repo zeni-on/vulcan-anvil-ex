@@ -1,14 +1,14 @@
 # Product Iterative Process Design
 
-- 상태: Product 운영 설계안 / 단계 1 상태 계약 프로토타입 구현, 운영 runtime 미연결
+- 상태: Product 운영 설계 / 단계 1~2c 상태·검사·저장·Dashboard 읽기/운영 미리보기 구현, 일반 활성화 전
 - 작성일: 2026-09-11
-- 검토 기준: `aacbf7c` main과 PR #32의 업무 분석 파일럿
+- 초기 검토 기준: `aacbf7c` main과 PR #32의 업무 분석 파일럿. 구현 현황은 PR #36까지의 상태 계약과 운영 소비자 검증을 반영한다.
 - 범위: Product만. Audit/PoC의 단계·검사·문서 정책은 이번에 변경하거나 재설계하지 않는다.
 - 연계: [업무 분석 가이드](PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md), [운영 시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
 
-이 문서는 앞으로 구현할 동작을 정의한다. 현재 프로젝트에서는 [기존 Product 운영 기준](../core/PRODUCT_PROFILE_BASELINE.md)이 계속 유효하다. 아래 단계 이름이나 상태값을 `session.json`에 수동으로 넣거나 기존 Gate 검사를 우회하지 않는다.
+이 문서는 목표 동작과 단계별 구현 경계를 정의한다. 일반 프로젝트에서는 [기존 Product 운영 기준](../core/PRODUCT_PROFILE_BASELINE.md)이 계속 유효하다. 새 모델의 합성 파일럿은 아래 상태 계약에 명시된 경로만 사용하며, 기존 프로젝트의 `session.json`에 단계 이름이나 상태값을 수동으로 넣거나 기존 Gate 검사를 우회하지 않는다.
 
-단계 1의 구체적 직렬화·내부 API·조회/쓰기 차단·신뢰 경계는 [상태 계약 구현 범위](PRODUCT-PROCESS-CONTRACTS.md)에 정리했다. 설계 자료 전체를 프로젝트 에이전트의 필수 읽기 목록에 추가하지 않는다.
+현재 직렬화·내부 API·조회/저장·검사·운영 소비자의 지원 범위와 신뢰 경계는 [상태 계약 구현 범위](PRODUCT-PROCESS-CONTRACTS.md)에 정리했다. 설계 자료 전체를 프로젝트 에이전트의 필수 읽기 목록에 추가하지 않는다.
 
 ## 1. 결정과 목적
 

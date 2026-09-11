@@ -1,12 +1,12 @@
 # Product Process Contract Prototype
 
-- 상태: 2026-09-11 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI 구현. 일반 init/이행/Dashboard는 미연결.
+- 상태: 2026-09-11 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI + 단계 2c Dashboard 읽기/운영 미리보기 구현. 일반 init/기존 프로젝트 이행/실제 릴리즈 발행은 미활성화.
 - 원본 설계: [3구간 운영](PRODUCT-ITERATIVE-PROCESS-DESIGN.md), [시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
-- 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py).
+- 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py), [product_consumers.py](../../vulcan_core/product_consumers.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py), [운영 소비자 시험](../../scripts/regression/tests/test_product_consumers.py).
 
 이 문서는 프레임워크 개발·검토용이다. 프로젝트 에이전트의 시작 입력에 추가하지 않는다.
 일반 init/upgrade는 새 모델을 활성화하지 않는다. 현재 Product의 기존 Gate 운영은 유지한다.
-**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI로 상태를 실제 저장하며 반복 흐름을 시험할 수 있다. Dashboard·branch/release 소비자·이행 검증 후 일반 적용 여부를 결정한다.
+**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI 상태 저장·검사·시험 실행과 Dashboard 표시/릴리즈 후보 미리보기를 사용할 수 있다. 남은 branch/QA 위임/실제 발행 계약과 반복·이행 보존 검증 후 일반 적용 여부를 결정한다.
 
 ## 1. 이번 단계의 경계
 
@@ -15,9 +15,9 @@
 - `process_model`이 없으면 Product/Audit/PoC 모두 기존 경로다. 명시된 미지원 값, 잘못된 profile이나 상태는 거부한다.
 - 표식이 있는 유효한 세션의 `status --check`는 현재 범위의 문서/증적을 읽고 `scoped_check`를 반환한다. 검사 통과는 exit 0, 미완성·누락·불일치는 exit 1이다. 승인 여부는 `transition.allowed/reasons`로 별도 표시하므로 exit 0을 승인으로 해석하지 않는다.
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
-- 기존 CLI의 상태 변경·검사는 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 예외는 자체 검증을 거치는 `session --process-request`와 허가된 구간의 `execute --verify`뿐이다.
+- 아직 연결하지 않은 legacy 명령은 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 지원하는 조회·진단·미리보기는 4.4절을 따르며, 상태 저장은 자체 검증을 거치는 `session --process-request`, 명령 증적 수집은 허가된 구간의 `execute --verify`로 수행한다.
 - `status --check`와 상태 요청 미리보기는 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다. 단계 2b의 명시 `--apply`는 검증한 상태만 저장하며 Git commit/push, Run, branch 생성, release는 수행하지 않는다.
-- 전체 QA 위임 라우팅, branch/release 소비자, Dashboard, 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
+- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. branch-start의 상태/Git 복합 변경, QA 위임·결과 회수, 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
 
 ## 2. 범위의 직렬화
 
