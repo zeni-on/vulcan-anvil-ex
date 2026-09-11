@@ -280,7 +280,7 @@ class ProductProcessTests(unittest.TestCase):
                             ["gate-start", "impl"], ["upgrade"], ["export"]):
                 result = subprocess.run([sys.executable, str(ROOT / "vulcan.py"), *command], cwd=root,
                                         capture_output=True, text=True, encoding="utf-8", timeout=30)
-                expected = 0 if command == ["status", "--json"] else 2
+                expected = 0 if command == ["status", "--json"] else 1 if "--check" in command else 2
                 self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
                 self.assertEqual(path.read_bytes(), original)
                 self.assertEqual(sorted(p.name for p in root.iterdir()), ["session.json"])

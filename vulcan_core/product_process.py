@@ -86,7 +86,7 @@ def process_model(session):
 def require_legacy(session):
     """Stop legacy consumers before treating a new state as an old Gate."""
     model = process_model(session)
-    _require(model == "legacy", "product-iterative-v1 is experimental; operational writes/checks are not enabled")
+    _require(model == "legacy", "product-iterative-v1 is experimental; legacy writes/checks are disabled; use status --check for scoped diagnostics")
 
 
 def new_session(scope):
@@ -298,9 +298,9 @@ def describe(session):
         if model == "legacy":
             return {"process_model": "legacy", "use_legacy": True}
         work = _validate(session)
-        return {"process_model": model, "runtime_enabled": False, "status": "experimental",
+        return {"process_model": model, "runtime_enabled": False, "checks_enabled": True, "status": "experimental",
                 "current_gate": session["current_gate"], "scope_key": work["scope_key"],
                 "work": deepcopy(work["scope"]["work"]), "history_count": len(session["work_history"]),
-                "message": "Contract prototype only; CLI transitions and Dashboard are not enabled."}
+                "message": "Scoped status --check is available; CLI transitions and Dashboard are not enabled."}
     except ProcessContractError as error:
         return {"status": "unsupported_or_invalid", "runtime_enabled": False, "message": str(error)}
