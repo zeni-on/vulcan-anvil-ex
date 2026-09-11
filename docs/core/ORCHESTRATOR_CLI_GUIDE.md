@@ -97,6 +97,12 @@ Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때�
 Product profile은 Gate별 폴더를 늘리기보다 `docs/product/` 문서 세트의 `gate_scope`와 본문 섹션을 갱신한다.
 Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하지 않는다.
 
+### 4.1 개발용 Product 반복 프로세스
+
+`process_model: product-iterative-v1`을 사용하는 별도 실험 파일럿에서는 `status --check`와 `session --process-request`를 사용한다. 기존 Gate 명령을 새 구간 이름으로 호출하지 않는다. 상태 요청은 기본 미리보기이고 `--apply`일 때만 범위/권한/증적과 상태 revision을 검사해 저장한다. 상세 기계 계약과 제한은 프레임워크 저장소의 [Product Process Contracts](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 따른다.
+
+일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다. 기존 Product/Audit/PoC 세션에 표식을 수동 추가하거나 이 명령으로 이행하지 않는다. 실험 모델도 Run/자동 Git commit/릴리즈를 추가로 강제하지 않으며, 기존 프로젝트에는 위의 Gate 라이프사이클이 그대로 적용된다.
+
 ## 5. Run 생성과 검증
 
 | 목적 | 명령 |
