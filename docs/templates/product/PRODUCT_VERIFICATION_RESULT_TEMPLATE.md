@@ -9,15 +9,15 @@ owner_role: QA Owner
 created_at: {{GENERATED_DATE}}
 ---
 
-<!-- 선택 상세: docs/artifacts/04-review/<batch>/results.md. 보고서의 현재 결과 절에서 연결한다. 작성 기준: docs/core/PRODUCT_DOCUMENT_WRITING.md. 같은 실행 묶음에 한 번만 소스/시험 정의 기준을 적고 실제 실행 후 결과를 채운다. -->
+<!-- 선택 상세: docs/artifacts/04-review/<batch>/results.md. 보고서의 현재 결과 절에서 연결한다. 작성 기준: docs/core/PRODUCT_DOCUMENT_WRITING.md. 같은 실행 묶음에 한 번만 시험 범위와 테스트 정의를 연결하고 실제 실행 후 결과를 채운다. 별도 Git 증적은 요구하지 않는다. -->
 
 ## 1. Verification Scope
 
 | 항목 | 기준 / 원본 |
 | --- | --- |
 | 대상 기능 / 릴리즈 / 환경 | TBD |
-| 검증한 소스 / 미커밋 범위 | TBD |
-| 당시 테스트 정의 / Git 또는 스냅샷 | TBD |
+| 시험 대상 / 확인한 동작 | TBD |
+| 당시 테스트 정의 / 버전 | TBD |
 | 실제 실행 명령 / cwd | TBD |
 
 ## 2. Current Execution Results

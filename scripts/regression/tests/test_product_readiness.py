@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from vulcan_core import product_process as process, product_readiness as checks
-from vulcan_core.evidence import capture_source_snapshot, record_verification
+from vulcan_core.evidence import record_verification
 from test_product_process import ROOT, decision, ready, vulcan
 
 
@@ -72,7 +72,7 @@ class ScopedReadinessTests(unittest.TestCase):
         return checks.local_reference(self.root, path, markdown=".md" in path)
 
     def basis(self):
-        return {"source": capture_source_snapshot(self.root, self.sources), "environment": self.ref("environment.json")}
+        return {"environment": self.ref("environment.json")}
 
     def session(self):
         return process.new_session(self.scope)
@@ -216,7 +216,7 @@ class ScopedReadinessTests(unittest.TestCase):
         self.scope["contracts"] = [{"ref": "docs/x" + str(i) + ".md", "revision": "snapshot:1"} for i in range(33)]
         self.assert_blocked(self.collect(), "reference_limit")
 
-    def test_handoff_observes_sources_but_is_not_acceptance(self):
+    def test_handoff_checks_environment_but_is_not_acceptance(self):
         session = self.session()
         session = process.advance(session, "impl", readiness=ready(session), decision=decision(session))
         self.assert_blocked(self.collect(session), "verification basis")
@@ -246,19 +246,24 @@ class ScopedReadinessTests(unittest.TestCase):
         self.assertFalse(checked["release_authorized"])
         self.assertIsNone(checked["transition"])
 
-    def test_source_test_dependency_and_environment_changes_block_old_evidence(self):
+    def test_source_changes_need_orchestrator_review_not_automatic_hash_gating(self):
         session = self.execution_session()
-        for path in ("app.py", "tests/check.py", "requirements.txt", "environment.json"):
+        for path in ("app.py", "tests/check.py", "requirements.txt"):
             original = (self.root / path).read_bytes()
             self.write(path, "changed")
-            self.assert_blocked(self.collect(session), "invalid_execution_basis")
+            result = self.collect(session)
+            self.assertEqual(result["status"], "ready")
+            self.assertIn("Orchestrator decides relevant retests", str(result["limitations"]))
             (self.root / path).write_bytes(original)
         self.write("unrelated-notes.md", "Unrelated wording correction.")
         self.assertEqual(self.collect(session)["status"], "ready")
 
-    def test_environment_manifest_must_be_part_of_execution_observation(self):
+    def test_environment_reference_does_not_require_source_inventory(self):
         self.sources.remove("environment.json")
-        self.assert_blocked(self.collect(self.execution_session()), "include the environment manifest")
+        session = self.execution_session()
+        self.assertEqual(self.collect(session)["status"], "ready")
+        self.write("environment.json", "changed environment declaration")
+        self.assert_blocked(self.collect(session), "environment manifest revision changed")
 
     def test_missing_failed_and_incomplete_results_never_pass(self):
         session = self.execution_session()
@@ -280,7 +285,7 @@ class ScopedReadinessTests(unittest.TestCase):
         original = json.loads(report_path.read_text())
         self.write("evidence/execution.json", "Pass")
         self.assert_blocked(self.collect(session), "revision changed")
-        for value in ("Pass", [], {}, dict(original, source_changed=True), dict(original, identity_complete=False),
+        for value in ("Pass", [], {}, dict(original, schema_version=True), dict(original, schema_version=3),
                       dict(original, command=dict(original["command"], exit_code=1)),
                       dict(original, command=dict(original["command"], exit_code=False)),
                       dict(original, command=dict(original["command"], argv=["NEVER_EXECUTE_THIS"]))):
@@ -308,6 +313,19 @@ class ScopedReadinessTests(unittest.TestCase):
         result = subprocess.run(command, cwd=self.root, capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertEqual(json.loads(result.stdout)["scoped_check"]["status"], "blocked")
+
+    def test_legacy_execution_reports_remain_readable_without_git_fields_gating(self):
+        session = self.execution_session()
+        path = self.root / "evidence/execution.json"
+        report = json.loads(path.read_bytes())
+        report.update(schema_version=1, tested_commit=None, identity_complete=False,
+                      source_changed=True, source_pre={}, source_post={})
+        self.write("evidence/execution.json", json.dumps(report))
+        for row in session["current_work"]["verification"]["results"]:
+            row["evidence"] = self.ref("evidence/execution.json")
+        original = path.read_bytes()
+        self.assertEqual(self.collect(session)["status"], "ready")
+        self.assertEqual(path.read_bytes(), original)
 
 
 if __name__ == "__main__":

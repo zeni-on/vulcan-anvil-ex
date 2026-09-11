@@ -14,7 +14,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from vulcan_core import evidence, product_process as process, product_readiness as readiness, product_session
+from vulcan_core import product_process as process, product_readiness as readiness, product_session
 
 
 BROKEN_APP = '''from copy import deepcopy
@@ -140,8 +140,7 @@ class ExecutionProject:
         return readiness.local_reference(self.root, name, markdown=name.endswith(".md"))
 
     def basis(self):
-        return {"source": evidence.capture_source_snapshot(self.root, self.sources),
-                "environment": self.ref("environment.json")}
+        return {"environment": self.ref("environment.json")}
 
     def request(self, action, **values):
         path = self.root / "session.json"
@@ -189,10 +188,7 @@ class ExecutionProject:
         self.commit("fixture: acceptance handoff (synthetic)")
 
     def verification_args(self, name):
-        args = ["execute", "--verify"]
-        for source in self.sources:
-            args.extend(["--source", source])
-        return [*args, "--evidence", "evidence/" + name + ".json", "--", *self.command]
+        return ["execute", "--verify", "--evidence", "evidence/" + name + ".json", "--", *self.command]
 
     def verify(self, name):
         result = self.cli(*self.verification_args(name))
@@ -202,7 +198,7 @@ class ExecutionProject:
     def results(self, name, status="Pass"):
         report = json.loads((self.root / "evidence" / (name + ".json")).read_bytes())
         return {"scope_key": self.state()["current_work"]["scope_key"],
-                "basis": {"source": report["source_pre"], "environment": self.ref("environment.json")},
+                "basis": self.basis(),
                 "results": [{"id": identifier, "status": status, "command": report["command"]["argv"],
                              "evidence": self.ref("evidence/" + name + ".json")}
                             for identifier in self.state()["current_work"]["scope"]["required_checks"]]}
@@ -217,9 +213,6 @@ class ExecutionProject:
             raise ValueError("only the known deliberate fixture defect may be fixed")
         self.apply(self.request("advance", target="impl", reason={"ref": "fixture:qa-failure", "revision": "snapshot:1"}))
         self.write("app.py", FIXED_APP)
-        # Final acceptance observes the committed integration source, not a
-        # pre-commit index that would legitimately have a different fingerprint.
-        self.commit("fixture: correct rejected snapshot (synthetic authorized fix)")
         self.apply(self.request("advance", target="acceptance", basis=self.basis()))
 
 

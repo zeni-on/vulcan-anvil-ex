@@ -91,10 +91,11 @@
 - 새 문맥의 native contract reviewer가 범위/상태, 승인·증적 재사용, legacy 호환과 숨은 Gate 반복 여부를 읽기 전용 검토했고 지적은 없었다. 총괄은 로컬 문서 링크와 변경 범위를 확인했다. 이는 새 프로세스의 실행 검증이나 사용자 최종 승인이 아니다.
 - Product 지침의 Run 필수/직접 수정 제한/QA 재승인 충돌을 적용 profile별로 정리했다. `test_product_policy`로 발견한 재발 패턴을 고정하며, 후속 Product 변경에서도 실제 충돌 사례를 계속 보강한다. 모든 자연어 지침의 정합성이 자동 보장된다는 뜻은 아니다.
 - [단계 1 상태·작업 범위·승인 계약](reference/PRODUCT-PROCESS-CONTRACTS.md)을 내부 API와 합성 계약 테스트로 구현했다. 범위 revision/승인/실제 증적의 분리, 읽기 전용 진단, 미지원·실험 모델의 legacy 쓰기 차단을 포함한다. 일반 init/upgrade 활성화나 실제 프로젝트 이행은 하지 않는다.
-- 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건, 실제 명령 증적과 소스/환경 명세의 일치를 확인한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
+- 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건과 실제 명령 증적을 확인한다. 별도 Git/소스 신선도 검사는 폐기하고 환경 명세 참조와 Orchestrator의 변경 영향·재시험 판단을 유지한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
 - 단계 2b: [실험 상태 저장 CLI](reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 기존 `session`에 연결했다. 기본 미리보기, 명시 apply, scoped 검사/승인·실행 근거, 상태 revision 충돌·배타 잠금·원자 저장을 포함한다. 별도 임시 프로젝트에서 실제 CLI 상태 반복과 `execute --verify` 연결을 시험하며 기존 프로젝트를 이행하지 않는다.
 - 단계 2c: [PR #36](https://github.com/zeni-on/vulcan-anvil-ex/pull/36)을 머지했다. 지원 Dashboard의 3구간/현재 범위 읽기, `status`/`branch-status`의 실제 브랜치 조회, `doctor` 환경 진단, 합의한 통합 작업공간의 인수 시험과 무부작용 `release-pr --dry-run`을 연결했다. 범위 수용과 제품 전체 릴리즈 권한은 분리한다. 상세 제한과 [검증 결과](reference/PRODUCT-PROCESS-CONTRACTS.md#64-단계-2c)는 [운영 소비자 계약](reference/PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)에 둔다.
 - 실행 회귀 보강: [임시 Git/실제 native QA 검증](reference/PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)을 진행했다. 실제 실패→허가된 수정→재시험, 과거 증적/승인 재사용 차단, 완료 후 재진입, 환경 차단, 발행 거부와 fixture Git 격리를 자동 회귀로 고정한다. Codex/Gemini 시작점은 실험 표식이 있을 때 같은 Core 안내로 먼저 라우팅한다. 실제 Codex QA 위임·회수는 확인했으며 Agy runtime, 자동 dispatcher/branch-start/성공적인 발행은 검증 완료로 보지 않는다.
+- Git 증적 제거: 검증·문서 조회의 Git/소스 지문 수집과 그에 따른 인수 차단을 제거했다. 테스트 후 staging/커밋은 결과를 무효화하지 않으며, 실제 실패·필수 시험 누락·범위/승인 연결 검사는 유지한다. 구현 변경의 재시험 판단은 총괄이 맡는다. 기존 로그는 보존하고 새 기록은 명령·시간·종료 코드만 남긴다.
 - 다음 순서: 실제 branch/QA 위임/릴리즈 발행 계약과 adapter/선택 양식의 운영 라우팅 마무리 → 확장된 합성 프로젝트 반복/명시 이행 보존 검증 → 실제 적용 판단. 자동 branch-start/PR 발행과 일반 init/upgrade는 이번 읽기 연결의 완료로 보지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 
@@ -131,13 +132,15 @@
 - 검증 완료: 합성 프로젝트 init/upgrade 지침 설치·기존 산출물 보존·문서 링크 3건, 전체 unit 95건 중 92건 통과/Windows symlink 권한에 따른 3건 skip, init smoke 12단계, fixture smoke 84단계. 새 문맥 리뷰에서 차단 지적은 없었다.
 - 다음 운영 확인은 사용자가 선택한 기존 역할 작업에서 읽기 전용 업무 한 건의 전달/회수다. 실제 메시징/비용 절감 검증과 문서 설치 검증은 구분한다. 실제 사용자 프로젝트와 역할 작업창 설정은 변경하지 않았다.
 
-#### 현재 계약 조회와 Git 증적 연결 (2026-09-08)
+#### 현재 계약 조회와 검증 명령 기록 (2026-09-08)
 
 기준: [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md). [PR #24](https://github.com/zeni-on/vulcan-anvil-ex/pull/24)를 2026-09-09에 main으로 머지했다.
 
+2026-09-11 정책 변경: 별도 Git 증적·소스 지문 수집과 신선도 차단 요구는 폐기한다. 현재 `execute --verify`는 명시 argv/cwd/시간/exit code를 기록하며 `--source`는 선택적 설명용 경로다. 아래 완료 항목과 시험 수치는 당시 사실이며 새 정책의 검증으로 재작성하지 않는다.
+
 1. 완료: PR #23 머지. Dashboard high production advisory 수정과 Windows/Linux Python, Dashboard/E2E CI를 확인했다. 당시 남았던 moderate production advisory 2건도 2026-09-11 PR #36에서 해소했으며, 개발 의존성을 포함한 전체 npm audit 결과는 0건이었다.
-2. 완료: 현재 계약/후보/이력/미분류와 승인 기준/검증 대상/증적 저장 커밋의 의미를 정의했다.
-3. 완료: 선택형 `execute --verify`가 명시한 소스/테스트/lockfile 범위의 Git 기준, 파일 해시, 미커밋/실행 중 변경, 명령 exit code를 JSON으로 기록한다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다.
+2. 당시 완료: 현재 계약/후보/이력/미분류와 커밋별 의미를 정의했다. 커밋 증적 요구는 이후 폐기했다.
+3. 당시 완료: 선택형 `execute --verify`가 소스 범위의 Git 기준, 파일 해시와 명령 exit code를 기록했다. 전용/기존 worker 테스트 47건 중 45건 통과, Windows symlink 권한에 따른 2건 skip을 확인했다. 소스 관측 방식은 현재 운영 지침이 아니다.
 4. 완료: 선택형 `trace-context --sections`가 정확한 ID, 출처/줄 범위/해시, 적용 상태와 공통 제약을 반환한다. Run에는 짧은 `section_lookup`만 추가한다. 기존 그래프/원장을 자동 수정하지 않는다.
 5. 완료: 로컬 unit 92건 중 89건 통과/Windows symlink 권한에 따른 3건 skip, init smoke 12단계, fixture smoke 84단계를 확인했다. 새 문맥 review의 Git 식별/Markdown 표식 지적 3건을 보정했고 reviewer 재검사 9건도 통과했다. [파일럿 관찰과 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#61-로컬-조회-파일럿-2026-09-08)를 남겼으며 원본 프로젝트 변경이나 사적 문서 공개는 하지 않았다. [PR #24](https://github.com/zeni-on/vulcan-anvil-ex/pull/24)의 Windows/Linux Python 및 Dashboard 회귀 CI 통과 후 머지했다.
 

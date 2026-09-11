@@ -6,7 +6,6 @@ import os
 from pathlib import Path, PureWindowsPath
 import re
 import stat
-import subprocess
 from urllib.parse import unquote, urlsplit
 
 
@@ -125,26 +124,6 @@ def _sections(text):
     return result
 
 
-def _git(root, path):
-    env = os.environ.copy()
-    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
-                 "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-                 "GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS", "GIT_ICASE_PATHSPECS"):
-        env.pop(name, None)
-    env.update(GIT_OPTIONAL_LOCKS="0", GIT_LITERAL_PATHSPECS="1", GIT_NO_REPLACE_OBJECTS="1")
-
-    def run(*args):
-        return subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(root), *args], env=env, capture_output=True,
-                              timeout=5, check=True).stdout.decode("utf-8", "replace").strip()
-    try:
-        if Path(run("rev-parse", "--show-toplevel")).resolve() != root:
-            return {"observed_head": None, "worktree_state": "unknown"}
-        head = run("rev-parse", "HEAD")
-        status = run("status", "--porcelain=v1", "--untracked-files=all", "--", path)
-        ignored = run("ls-files", "--cached", "--others", "--exclude-standard", "--", path)
-        return {"observed_head": head, "worktree_state": "dirty" if status else "clean" if ignored else "unknown"}
-    except (OSError, subprocess.SubprocessError):
-        return {"observed_head": None, "worktree_state": "unknown"}
 
 
 def _reference_definitions(text):
@@ -411,7 +390,7 @@ def lookup_sections(project_dir, seed_ids, documents=None, max_chars=12000):
         current = [s for s in all_sections if s["reasons"] and seed in s["matching_ids"] and s["state"] == "current"]
         if len(current) > 1:
             warnings.append(f"Multiple current matches for {seed}; potential conflict requires Orchestrator review; no winner selected.")
-    selected, omitted, used, provenance = [], [], 0, {}
+    selected, omitted, used = [], [], 0
     omitted_total = 0
     omitted_constraints = 0
     # Source order is only a stable tie-breaker, never a lifecycle preference.
@@ -434,9 +413,6 @@ def lookup_sections(project_dir, seed_ids, documents=None, max_chars=12000):
             if len(omitted) < MAX_SECTIONS:
                 omitted.append({k: item[k] for k in ("path", "heading", "start_line", "end_line", "matching_ids", "reasons")})
             continue
-        if item["path"] not in provenance:
-            provenance[item["path"]] = _git(root, item["path"])
-        item["git"] = provenance[item["path"]]
         item["truncated"] = False
         selected.append(item)
         used += len(item["excerpt"])
@@ -460,7 +436,7 @@ def lookup_sections(project_dir, seed_ids, documents=None, max_chars=12000):
     if warning_total > 48:
         warnings = warnings[:45] + warnings[-2:] + [f"Warning list bounded; {warning_total - 47} additional warnings omitted."]
     return {"schema_version": 1, "kind": "derived_reference", "authority": False,
-            "notice": "Reading aid only; not authority, approval, or a complete contract. Git is observed provenance only. State is author classification. Review ambiguity with the Orchestrator.",
+            "notice": "Reading aid only; not authority, approval, or a complete contract. State is author classification. Review ambiguity with the Orchestrator.",
             "seed_ids": seeds, "limits": {"max_chars": max_chars, "max_sections": MAX_SECTIONS,
                                           "max_documents": MAX_DOCUMENTS, "max_link_documents": MAX_LINK_DOCUMENTS,
                                           "max_link_depth": MAX_LINK_DEPTH, "max_links": MAX_LINKS},

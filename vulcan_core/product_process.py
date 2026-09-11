@@ -128,16 +128,17 @@ def _validate(session):
 
 
 def _basis(value):
-    """Use complete evidence.capture_source_snapshot observations plus environment revision."""
+    """Keep the declared environment, without collecting a source identity."""
     value = _object(value, "verification basis")
-    source = _object(value.get("source"), "source snapshot")
-    _require(source.get("complete") is True and source.get("errors") == [], "incomplete source snapshot")
-    fingerprint = source.get("fingerprint")
-    _require(isinstance(fingerprint, str) and len(fingerprint) == 64
-             and all(c in "0123456789abcdef" for c in fingerprint), "invalid source fingerprint")
-    return {"source": {"fingerprint": fingerprint, "complete": True, "errors": [],
-                       "sources": _strings(source.get("sources"), "source scopes")},
-            "environment": _reference(value.get("environment"))}
+    result = {"environment": _reference(value.get("environment"))}
+    # Preserve the original digest of saved v1 approvals, not a freshness check.
+    # New execution records and requests do not need this legacy field.
+    if isinstance(value.get("source"), dict):
+        source = value["source"]
+        result["source"] = {key: deepcopy(source.get(key)) for key in ("fingerprint", "complete", "errors", "sources")}
+        if isinstance(result["source"]["sources"], list):
+            result["source"]["sources"] = _strings(result["source"]["sources"], "legacy source scopes", False)
+    return result
 
 
 def _validate_decision(decision, key):
@@ -178,12 +179,12 @@ def _ready(work, readiness, purpose):
 
 
 def verification_key(scope, verification, current_basis):
-    """Bind all required results to this scope and the observed current source/environment."""
+    """Bind required results to the agreed scope and declared environment."""
     scope = normalize_scope(scope)
     verification = _object(verification, "verification")
     _require(verification.get("scope_key") == scope_key(scope), "verification belongs to another scope")
     tested = _basis(verification.get("basis"))
-    _require(tested == _basis(current_basis), "stale verification source/environment")
+    _require(tested["environment"] == _basis(current_basis)["environment"], "stale verification environment")
     rows = verification.get("results")
     _require(isinstance(rows, list) and bool(rows), "verification results are missing")
     normalized = []

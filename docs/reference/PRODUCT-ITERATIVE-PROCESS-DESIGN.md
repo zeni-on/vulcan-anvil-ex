@@ -100,7 +100,7 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 
 `process_model`이 없는 기존 Product는 legacy 운영을 유지한다. profile 이름이나 도구 버전만으로 상태를 재해석하지 않는다. 지원하지 않는 모델은 새 읽기/쓰기 경로에서 명확히 진단하고 상태 변경을 거부한다. 기존 구버전 도구가 이 표식을 이해한다고 가정하지 말고 이행 전에 총괄·열린 담당 작업·Dashboard의 지원 버전을 확인한다.
 
-현재 작업 범위는 기존 작업/이슈/PR과 관련 원본을 참조한다. 후속 상태 구현에서는 **이 참조와 기준 revision을 승인·진행·검증에서 같은 대상으로 식별**해야 한다. 자유로운 `feature` 제목이나 브랜치명만으로 과거 승인/증적을 연결하지 않는다. 정확한 직렬화는 상태 구현 PR에서 기존 승인/소스 식별 API와 함께 고정하며 별도 수동 관리 문서를 만들지 않는다.
+현재 작업 범위는 기존 작업/이슈/PR과 관련 원본을 참조한다. 후속 상태 구현에서는 **이 참조와 기준 revision을 승인·진행·검증에서 같은 대상으로 식별**해야 한다. 자유로운 `feature` 제목이나 브랜치명만으로 과거 승인/증적을 연결하지 않는다. 정확한 직렬화는 상태 구현 PR에서 승인·시험 정의와 실행 기록 계약으로 고정하며 별도 Git 증적이나 수동 관리 문서를 만들지 않는다.
 
 ### 6.2 현재 코드의 결합과 후속 수정 위치
 
@@ -110,7 +110,7 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 | --- | --- |
 | [vulcan.py](../../vulcan.py): `GATE_ORDER`, `cmd_session`, `require_gate_start_sequence`, parser choices | 고정 7단계, 단계별 승인, 순차 이동. process model별 상태/허용 행동/반복 규칙으로 분리하고 숨은 7단계 순회를 없앰 |
 | `vulcan.py`: `PRODUCT_REQUIRED_ARTIFACTS_BY_GATE`, `collect_product_profile_findings`, `validate_product_trace` | Gate별 문서/내용/실행 검사. 작성 중 진단, 구현 준비, 인수 결과, 릴리즈 준비의 판단 목적과 현재 범위를 구분 |
-| `vulcan.py`: `validate_gate_progression`, `product_gate_approval_snapshot` | 초기 단계에서 기존 코드/후속 Run을 미래 작업으로 오인할 수 있음. 기존 제품·과거 승인 기록과 이번 무허가 변경을 구별 |
+| `vulcan.py`: `validate_gate_progression`과 session 승인 이력 | `gate_status: done`과 기존 승인 기록으로 완료 이력을 분류. Git blob 비교는 하지 않고 InProgress·승인 누락은 차단. 새 완료 Run이나 본문 변경의 실제 승인 범위는 Orchestrator가 확인 |
 | [vulcan_core/status.py](../../vulcan_core/status.py) | 단계·다음 명령 표시. 현재 구간/범위, 준비 여부, 사용자 결정 대기, 차단 이유를 구분. 준비 완료를 승인 완료로 표시하지 않음 |
 | `vulcan.py`: `workflow_branch_guard`, QA workspace/Run 경로; [vulcan_core/release.py](../../vulcan_core/release.py) | impl/Gate 4/Gate 5 명칭 의존. 구현·QA는 합의한 integration branch/작업공간을 유지하고 릴리즈 허가는 별도 판단 |
 | [vulcan_core/product_documents.py](../../vulcan_core/product_documents.py)와 소스/증적 조회 | 현재 원본/공통 조건/이력 구분을 재사용. 단순 ID 필터로 공통 규칙이나 범위 밖 영향·미완료 의무를 숨기지 않음 |

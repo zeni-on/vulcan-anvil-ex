@@ -396,9 +396,9 @@ python vulcan.py trace-context --id API-001 --sections --emit json
 
 Product의 `status --check`와 통계도 원장에서 명시적으로 연결한 상세 문서를 읽습니다. 같은 시나리오/시험을 여러 표에 반복했다고 두 번 세지 않으며, 빈 원본·누락 링크·현재 결과 충돌은 진단에 남깁니다. 아직 여섯 원장의 진입 경로는 유지합니다. 새 문서 작성·실제 프로젝트 이동 전에는 [호환 범위와 한계](core/CURRENT_CONTEXT_AND_EVIDENCE.md#32-product-내용-검사추적통계-호환)를 확인하세요.
 
-검증 대상 커밋과 결과 문서를 저장한 커밋은 다를 수 있습니다. 필요한 검증에는 선택형 `execute --verify`로 소스/테스트/lockfile 범위의 실행 전후 상태를 남기고, 기존 QA 증적 칸에서 JSON을 연결합니다. 요구사항마다 SHA를 반복하지 않습니다. 명령 성공만으로 QA 승인이나 소스 식별 성공을 확정하지 않습니다.
+별도 Git 증적은 요구하지 않습니다. 필요한 검증에는 선택형 `execute --verify`로 명시 argv, cwd, 실행 시간과 exit code를 남기고 기존 QA 증적 칸에서 JSON과 실제 테스트 로그를 연결합니다. `--source`는 선택적인 설명용 경로이며 소스 스냅샷을 만들지 않습니다. 구현·환경 변경에 따른 관련 재시험은 Orchestrator가 판단하며 명령 성공만으로 QA 승인을 확정하지 않습니다.
 
-명령 예시와 제약은 [CLI Guide](core/ORCHESTRATOR_CLI_GUIDE.md), 현재 계약/이력 및 Git 의미는 [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md)를 참고합니다.
+명령 예시와 제약은 [CLI Guide](core/ORCHESTRATOR_CLI_GUIDE.md), 현재 계약/이력과 검증 기록은 [Current Context And Evidence](core/CURRENT_CONTEXT_AND_EVIDENCE.md)를 참고합니다.
 
 ### Run 생성 예시
 

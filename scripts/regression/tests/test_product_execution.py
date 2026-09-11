@@ -62,8 +62,8 @@ class ProductExecutionTests(unittest.TestCase):
         # A rejected completion never stored these fields in the first place.
         for field in ("verification", "verification_key"):
             self.assertNotIn(field, self.project.state()["current_work"])
-        stale = self.project.completion(forged)
-        self.assertIn("stale", str(self.submit(stale, 1)))
+        still_failed = self.project.completion(forged)
+        self.assertIn("unsuccessful", str(self.submit(still_failed, 1)))
         passed = self.project.verify("retest")
         self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
         self.assertIn("Ran 3 tests", passed.stderr)
@@ -117,15 +117,13 @@ class ProductExecutionTests(unittest.TestCase):
         self.project.apply(request)
         self.assertEqual(self.project.state()["current_gate"], "impl")
 
-    def test_clean_committed_mutations_do_not_restore_release_readiness(self):
+    def test_changed_contract_environment_or_execution_record_blocks_release_readiness(self):
         self.pass_and_accept()
         accepted = self.session_bytes()
         mutations = {
-            "app.py": FIXED_APP + "\n# A source change still requires a current observation.\n",
             "environment.json": '{"python": "different"}',
             "docs/contracts.md": "# A changed requirement\n",
-            "tests/test_requests.py": "raise AssertionError('changed test definition')\n",
-            "requirements.txt": "# dependency specification changed\n",
+            "docs/tests.md": "# A changed test definition\n",
             "evidence/passing.json": "{}\n",
         }
         for path, replacement in mutations.items():
@@ -143,7 +141,7 @@ class ProductExecutionTests(unittest.TestCase):
                 restored = self.project.cli("release-pr", "--dry-run")
                 self.assertEqual(restored.returncode, 0, restored.stdout + restored.stderr)
 
-    def test_post_test_source_commit_changes_observation_but_not_test_truth(self):
+    def test_post_test_staging_and_commit_do_not_invalidate_test_result(self):
         self.project.apply(self.project.request("advance", target="impl",
                                               reason={"ref": "fixture:fix", "revision": "snapshot:1"}))
         self.project.write("app.py", FIXED_APP)
@@ -151,13 +149,16 @@ class ProductExecutionTests(unittest.TestCase):
         self.assertEqual(self.project.verify("uncommitted").returncode, 0)
         verification = self.project.results("uncommitted")
         report_before = (self.root / "evidence/uncommitted.json").read_bytes()
+        self.project.git("add", "app.py")
+        staged = self.project.cli("session", "--process-request", "-", "--json",
+                                  request=self.project.completion(verification))
+        self.assertEqual(staged.returncode, 0, staged.stdout + staged.stderr)
         self.project.commit("fixture: commit source after testing")
-        blocked = self.submit(self.project.completion(verification), 1)
-        self.assertIn("stale", str(blocked))
+        self.submit(self.project.completion(verification), 0)
         self.assertEqual((self.root / "evidence/uncommitted.json").read_bytes(), report_before)
         self.assertEqual(json.loads(report_before)["command"]["exit_code"], 0)
-        self.assertEqual(self.project.verify("committed").returncode, 0)
-        self.project.apply(self.project.completion(self.project.results("committed")))
+        self.assertEqual(self.project.state()["current_gate"], "completed")
+        self.assertNotIn("tested_commit", json.loads(report_before))
 
     def test_failed_branch_switch_preserves_dirty_content_and_session(self):
         before = self.session_bytes()
@@ -182,7 +183,7 @@ class ProductExecutionTests(unittest.TestCase):
         self.assertEqual(result.returncode, 127, result.stdout + result.stderr)
         report = json.loads((self.root / "evidence/environment-blocked.json").read_bytes())
         self.assertEqual(report["command"]["launch_error"], "FileNotFoundError")
-        self.assertFalse(report["source_changed"])
+        self.assertNotIn("source_changed", report)
         self.assertEqual(self.session_bytes(), before)
         forged = self.project.results("environment-blocked")
         self.assertIn("unsuccessful", str(self.submit(self.project.completion(forged), 1)))

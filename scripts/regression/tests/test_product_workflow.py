@@ -266,11 +266,10 @@ class ProductWorkflowTests(unittest.TestCase):
         ))
         self.assertEqual(self.transition(root)[0], 0)
 
-    def test_proven_approved_current_run_does_not_repeat_output_validation(self):
+    def test_recorded_approved_current_run_does_not_repeat_output_validation(self):
         root = self.project()
         self.run_file(root)
-        with mock.patch.object(vulcan, "product_gate_approval_snapshot", return_value="approved"), \
-                mock.patch.object(vulcan, "product_run_matches_approval", return_value=True), \
+        with mock.patch.object(vulcan, "product_run_is_approved_history", return_value=True), \
                 mock.patch.object(vulcan, "product_run_completion_findings", side_effect=AssertionError("historical revalidation")) as output_check:
             code, output = self.transition(root)
         self.assertEqual(code, 0, output)
@@ -397,70 +396,42 @@ class ProductWorkflowTests(unittest.TestCase):
 
     def history(self, root, gate="gate4"):
         session = vulcan.load_session(str(root))
-        approval = {"approved_at": "2026-08-01T10:00:00", "approval_evidence": "Explicit user approval"}
         session["gate_status"] = {gate: "done"}
-        session["approvals"] = {gate: approval}
-        session["completed"] = ["A long human label, not a Gate identifier"]
+        session["approvals"] = {gate: {"approved_at": "2026-08-01T10:00:00",
+                                     "approval_evidence": "Explicit user approval"}}
         self.write(root / "session.json", json.dumps(session))
-        approved = dict(session, current_gate="gate5" if gate == "gate4" else "completed")
-        parent = dict(session, approvals={})
-        path = self.run_file(root, gate=gate, skill="qa-execution" if gate == "gate4" else "release-approval", bw="")
-        original = path.read_text(encoding="utf-8").strip()
+        return self.run_file(root, gate=gate, skill="qa-execution" if gate == "gate4" else "release-approval", bw="")
 
-        def git(args, project_dir):
-            if args[0] == "log":
-                return "later\napproved"
-            if args == ["rev-parse", "--verify", "later^"]:
-                return "approved"
-            if args == ["rev-parse", "--verify", "approved^"]:
-                return "parent"
-            values = {
-                "later:./session.json": json.dumps(session),
-                "later^:./session.json": json.dumps(approved),
-                "approved:./session.json": json.dumps(approved),
-                "approved^:./session.json": json.dumps(parent),
-                "approved:./docs/runs/RUN-001.md": original,
-            }
-            return values.get(args[1], "") if args[0] == "show" else ""
-        return path, git
-
-    def test_unchanged_approved_future_runs_are_history_in_product_iterations(self):
+    def test_recorded_approved_future_runs_are_history_without_git(self):
         for current in ("impl", "gate2", "gate3"):
             for gate in ("gate4", "gate5"):
                 with self.subTest(current=current, gate=gate):
                     root = self.project(gate=current)
-                    _, git = self.history(root, gate)
-                    with mock.patch.object(vulcan, "git_text", side_effect=git), mock.patch.object(
-                        vulcan, "git_json_snapshots", create=True,
-                        side_effect=lambda project_dir, refs: {
-                            ref: json.loads(git(["show", ref + ":./session.json"], root) or "{}") for ref in refs
-                        },
-                    ):
+                    self.history(root, gate)
+                    with mock.patch.object(vulcan, "git_text", side_effect=AssertionError("no history lookup")):
                         self.assertEqual(vulcan.validate_gate_progression(str(root), current), [])
 
-    def test_new_changed_and_ambiguous_future_runs_are_not_approved(self):
-        for variant in ("new", "changed", "inprogress", "no-history", "no-evidence", "bad-timestamp"):
+    def test_active_or_unapproved_future_runs_are_not_approved(self):
+        for variant in ("inprogress", "no-approval", "no-evidence", "bad-timestamp", "not-done"):
             with self.subTest(variant=variant):
                 root = self.project()
-                path, git = self.history(root)
-                if variant == "new":
-                    self.run_file(root, name="RUN-002.md", gate="gate4", bw="", body="created_at: 2000-01-01\n")
-                elif variant in {"changed", "inprogress"}:
+                path = self.history(root)
+                if variant == "inprogress":
                     content = path.read_text(encoding="utf-8")
-                    self.write(path, content + "New result\n" if variant == "changed" else content.replace("status: Completed", "status: InProgress"))
-                elif variant in {"no-evidence", "bad-timestamp"}:
+                    self.write(path, content.replace("status: Completed", "status: InProgress"))
+                else:
                     session = vulcan.load_session(str(root))
-                    session["approvals"]["gate4"]["approval_evidence" if variant == "no-evidence" else "approved_at"] = ""
+                    if variant == "no-approval":
+                        session["approvals"] = {}
+                    elif variant == "not-done":
+                        session["gate_status"]["gate4"] = "in-progress"
+                    else:
+                        field = "approval_evidence" if variant == "no-evidence" else "approved_at"
+                        session["approvals"]["gate4"][field] = ""
                     self.write(root / "session.json", json.dumps(session))
-                with mock.patch.object(vulcan, "git_text", side_effect=(lambda *args: "") if variant == "no-history" else git), mock.patch.object(
-                    vulcan, "git_json_snapshots", create=True,
-                    side_effect=lambda project_dir, refs: {
-                        ref: json.loads(git(["show", ref + ":./session.json"], root) or "{}") for ref in refs
-                    },
-                ):
-                    issues = vulcan.validate_gate_progression(str(root), "impl")
+                issues = vulcan.validate_gate_progression(str(root), "impl")
                 self.assertTrue(issues)
-                self.assertTrue(any("approval history unproved" in issue for issue in issues))
+                self.assertTrue(any("recorded Gate completion and approval" in issue for issue in issues))
 
     def test_audit_poc_discovery_merge_and_future_gate_rules_are_unchanged(self):
         for profile in ("audit", "poc"):

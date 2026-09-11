@@ -165,7 +165,7 @@ class ProductConsumerTests(unittest.TestCase):
         self.git("checkout", "-b", "dev-happy")
         self.complete()
         self.commit()
-        self.fixture.fixture.write("app.py", "value = 2\n")
+        self.fixture.fixture.write("environment.json", '{"python": "different"}')
         result = consumers.release_preview(self.root, self.fixture.read(), self.workflow, self.fixture.parse)
         self.assertEqual(result["status"], "blocked")
         self.assertEqual(result["checks"]["execution"], "missing_stale_or_failed")

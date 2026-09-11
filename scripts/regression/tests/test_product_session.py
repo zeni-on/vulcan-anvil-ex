@@ -224,14 +224,14 @@ class ProductSessionTests(unittest.TestCase):
         self.assertNotEqual(result["status"], "applied")
         self.assertEqual(self.path.read_bytes(), before)
 
-    def test_changed_source_or_environment_blocks_acceptance_write(self):
+    def test_changed_environment_reference_blocks_acceptance_write(self):
         self.acceptance()
         verification = self.observed_results()
         key = process.verification_key(self.fixture.scope, verification, self.fixture.basis())
         request = self.request("advance", target="completed", verification=verification,
                                decision=helpers.decision(self.read(), ["accept"], verification_key=key))
         before = self.path.read_bytes()
-        self.fixture.write("app.py", "value = 2\n")
+        self.fixture.write("environment.json", '{"python": "different"}')
         result = store.transact(self.root, request, self.parse, apply=True)
         self.assertEqual(result["status"], "blocked", result)
         self.assertEqual(self.path.read_bytes(), before)

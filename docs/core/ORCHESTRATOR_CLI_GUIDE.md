@@ -133,19 +133,19 @@ Run을 사용하는 native subagent/thread/branch agent에게 넘기기 전에�
 
 자동화나 Dashboard 연동처럼 기계가 읽어야 하는 경우에는 `--json`을 붙인다. 이 JSON에는 `delegation_sidecar` 후보, `planned_flow`, `run_check`, `preflight`, `scope`, `verification.commands`가 포함된다. 이 출력도 dry-run 계획일 뿐이며 worker 실행, Gate 승인, Wave 완료를 수행하지 않는다.
 
-### 5.1 검증 대상 Git 기록
+### 5.1 명시 검증 명령 기록
 
-이미 승인된 검증 명령의 소스 기준을 남기려면 `execute --verify`를 사용한다. `execute --dry-run`의 worker 계획과는 별개이며 worker 호출, Run 자동 실행, Gate 전환을 하지 않는다.
+이미 승인된 검증 명령의 실행 기록을 남기려면 `execute --verify`를 사용한다. `execute --dry-run`의 worker 계획과는 별개이며 worker 호출, Run 자동 실행, Gate 전환을 하지 않는다.
 
 ```text
-python vulcan.py execute --verify --source app --source tests --source requirements.txt --evidence docs/product/evidence/REG-001-source.json -- python -m pytest tests -q
+python vulcan.py execute --verify --evidence docs/product/evidence/REG-001-command.json -- python -m pytest tests -q
 ```
 
-경로는 실제 프로젝트에 맞게 선택한다. `--source`에는 코드/테스트/lockfile 등 실제 검증 입력을 반복 지정하고, `--cwd`와 `--project-dir`는 필요한 경우만 지정한다. 기존 Run에 연결하려면 `--run-id`를 추가한다. `--evidence`는 이미 존재하는 폴더 안의 새 JSON 경로이며, 소스 범위와 겹치거나 기존 파일을 덮어쓸 수 없다.
+경로는 실제 프로젝트에 맞게 선택한다. `--source`는 선택적인 설명용 경로이며 소스 스냅샷이나 Git 식별자를 수집하지 않는다. `--cwd`와 `--project-dir`는 필요한 경우만 지정한다. 기존 Run에 연결하려면 `--run-id`를 추가한다. `--evidence`는 이미 존재하는 폴더 안의 새 JSON 경로이며 기존 파일을 덮어쓸 수 없다.
 
-명령은 `--` 뒤의 명시 argv로 실행한다. shell 문자열이나 Run 본문에서 명령을 자동 추출하지 않는다. Windows에서는 `.cmd`/`.bat` 대신 실제 실행 파일/인터프리터를 사용한다. 명령 출력은 터미널로 전달되며 상세 테스트 로그/HTML은 기존 테스트 도구에서 별도로 남긴다. JSON은 로그를 대체하는 QA 결과서가 아니라 소스 식별 증적이다.
+명령은 `--` 뒤의 명시 argv로 실행한다. shell 문자열이나 Run 본문에서 명령을 자동 추출하지 않는다. Windows에서는 `.cmd`/`.bat` 대신 실제 실행 파일/인터프리터를 사용한다. 명령 출력은 터미널로 전달되며 상세 테스트 로그/HTML은 기존 테스트 도구에서 별도로 남긴다. schema 2 JSON은 argv, cwd, 실행 시간과 exit code를 담는 실행 기록이지 로그를 대체하는 QA 결과서가 아니다.
 
-`tested_commit`은 지정 소스가 Git 기준과 일치하고 실행 전후 안정적으로 식별된 경우에만 채워진다. 미커밋/새 파일을 포함하면 실제 내용 fingerprint와 범위를 확인한다. Git clean이어도 필터/줄바꿈 변환으로 실제 바이트가 index와 다르면 커밋 대신 관측한 내용을 기준으로 남긴다. exit code 0만으로 `identity_complete`, `source_changed`, 환경/테스트 범위 또는 QA 승인을 생략하지 않는다. 수집은 관측 전후 비교이며 실행 중 잠깐 바뀌었다 복원된 모든 변경을 감시하는 장치는 아니다. 전체 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다.
+별도 Git 증적이나 소스 신선도 검사는 하지 않는다. 과거 관측 JSON은 재작성하지 않고 읽을 수 있다. Orchestrator가 구현·환경 변경과 시험 범위를 확인해 관련 재시험을 판단하며, exit code 0만으로 QA 승인을 대신하지 않는다. 전체 기준은 [CURRENT_CONTEXT_AND_EVIDENCE.md](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다.
 
 ## 6. 구현과 Build Wave
 
