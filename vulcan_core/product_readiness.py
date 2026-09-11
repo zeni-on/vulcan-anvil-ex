@@ -251,6 +251,8 @@ def collect(project_dir, session, parse_tables):
             result["execution"] = "missing_stale_or_failed"
     if result["issues"]:
         result["status"] = "blocked"
+    result["readiness"] = readiness
+    result["current_basis"] = current
     target = {"planning": "impl", "impl": "acceptance", "acceptance": "completed"}.get(stage)
     result["transition"] = process.assess_transition(session, target, readiness=readiness,
         current_basis=current, verification=work.get("verification")) if target else None

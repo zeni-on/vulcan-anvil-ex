@@ -138,7 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
-from vulcan_core import product_process, product_readiness
+from vulcan_core import product_process, product_readiness, product_session
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -15804,10 +15804,12 @@ def capture_trace_detail_summary(project_dir="."):
 def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False):
     path = os.path.join(project_dir, "session.json")
     if os.path.isfile(path):
-        with open(path, encoding="utf-8") as f:
-            session = json.load(f)
+        with open(path, "rb") as f:
+            raw = f.read()
+            session = json.loads(raw)
         if "process_model" in session:
             summary = product_process.describe(session)
+            summary["session_revision"] = product_session.revision(raw)
             exit_code = 0 if summary["status"] == "experimental" else 2
             if check and not exit_code:
                 summary["scoped_check"] = product_readiness.collect(project_dir, session, parse_markdown_tables)
@@ -16654,12 +16656,17 @@ def main():
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
     p_gate_start.add_argument("--feature", default="", help="작업 기능명")
 
-    p_session = subparsers.add_parser("session", help="Gate 상태 업데이트 + git commit")
-    p_session.add_argument("--gate", required=True, choices=list(GATE_LABELS.keys()), help="Gate 이름")
-    p_session.add_argument("--status", required=True, choices=["done", "pending", "awaiting-approval"], help="상태")
+    p_session = subparsers.add_parser("session", help="Gate 상태 갱신 / 실험 Product 상태 요청")
+    p_session.add_argument("--gate", choices=list(GATE_LABELS.keys()), help="기존 Gate 이름")
+    p_session.add_argument("--status", choices=["done", "pending", "awaiting-approval"], help="기존 Gate 상태")
     p_session.add_argument("--feature", default="", help="작업 기능명")
     p_session.add_argument("--approved", action="store_true", help="사용자 명시 승인 후 Gate 완료/다음 Gate 전환 허용")
     p_session.add_argument("--approval-evidence", default="", help="사용자 승인 근거 또는 대화 메모")
+    p_session.add_argument("--process-request", help="실험 Product 요청 JSON 경로 또는 stdin(-); 기본 미리보기")
+    p_session_apply = p_session.add_mutually_exclusive_group()
+    p_session_apply.add_argument("--apply", action="store_true", help="검사 후 실험 Product 상태를 원자적으로 저장; 승인 대체 아님")
+    p_session_apply.add_argument("--dry-run", action="store_true", help="실험 Product 상태 요청 미리보기")
+    p_session.add_argument("--json", action="store_true", help="실험 Product 요청 결과 JSON")
 
     subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
 
@@ -16830,13 +16837,28 @@ def main():
 
     args = parser.parse_args()
 
-    # Until every state consumer supports the prototype, never run old writers
-    # or old Gate checks against a marked session. status has a diagnostic path.
-    if args.command not in {"init", "status", "version", None}:
+    process_request = args.command == "session" and args.process_request is not None
+    if args.command == "session":
+        if process_request:
+            if args.gate or args.status or args.feature or args.approved or args.approval_evidence:
+                parser.error("--process-request cannot be combined with legacy Gate/approval flags")
+        elif args.apply or args.dry_run or args.json or not args.gate or not args.status:
+            parser.error("legacy session requires --gate/--status; --apply/--dry-run/--json require --process-request")
+
+    # Only the explicit Product transaction and verification routes may bypass
+    # the legacy guard. Their own validators run before any mutation/execution.
+    if args.command not in {"init", "status", "version", None} and not process_request:
         session_path = os.path.join(getattr(args, "project_dir", None) or ".", "session.json")
         if os.path.isfile(session_path):
             with open(session_path, encoding="utf-8") as f:
-                guard_legacy_process(json.load(f))
+                session = json.load(f)
+            if "process_model" in session and args.command == "execute" and args.verify:
+                try:
+                    product_session.require_verification_permission(session)
+                except (ValueError, TypeError, KeyError) as error:
+                    parser.error(str(error))
+            else:
+                guard_legacy_process(session)
 
     if args.command == "init":
         init(
@@ -16896,6 +16918,16 @@ def main():
     elif args.command == "gate-start":
         cmd_gate_start(gate=args.gate, feature=args.feature)
     elif args.command == "session":
+        if process_request:
+            try:
+                request = product_session.read_request(".", args.process_request, sys.stdin.buffer)
+                result = product_session.transact(".", request, parse_markdown_tables, apply=args.apply)
+            except (OSError, ValueError) as error:
+                result = {"status": "invalid", "applied": False, "message": str(error)}
+            print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else
+                  "\n".join(product_readiness.render(value) if key == "checks" and value else f"{key}: {value}"
+                            for key, value in result.items()))
+            sys.exit(0 if result["status"] in {"ready", "applied"} else 1 if result["status"] == "blocked" else 2)
         cmd_session(
             gate=args.gate,
             status=args.status,

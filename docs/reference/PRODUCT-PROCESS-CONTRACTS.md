@@ -1,12 +1,12 @@
 # Product Process Contract Prototype
 
-- 상태: 2026-09-11 단계 1 상태 계약 + 단계 2a 범위별 읽기 전용 검사 구현. 일반 운영 전환은 미연결.
+- 상태: 2026-09-11 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI 구현. 일반 init/이행/Dashboard는 미연결.
 - 원본 설계: [3구간 운영](PRODUCT-ITERATIVE-PROCESS-DESIGN.md), [시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
-- 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [계약 시험](../../scripts/regression/tests/test_product_process.py), [범위별 검사 시험](../../scripts/regression/tests/test_product_readiness.py)
+- 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py).
 
 이 문서는 프레임워크 개발·검토용이다. 프로젝트 에이전트의 시작 입력에 추가하지 않는다.
 일반 init/upgrade는 새 모델을 활성화하지 않는다. 현재 Product의 기존 Gate 운영은 유지한다.
-**병합과 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 합성 세션으로 상태 계약과 실제 문서·증적 검사를 시험할 수 있으며, 상태 저장 CLI·Dashboard·이행 검증 이후 적용 여부를 결정한다.
+**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI로 상태를 실제 저장하며 반복 흐름을 시험할 수 있다. Dashboard·branch/release 소비자·이행 검증 후 일반 적용 여부를 결정한다.
 
 ## 1. 이번 단계의 경계
 
@@ -15,8 +15,9 @@
 - `process_model`이 없으면 Product/Audit/PoC 모두 기존 경로다. 명시된 미지원 값, 잘못된 profile이나 상태는 거부한다.
 - 표식이 있는 유효한 세션의 `status --check`는 현재 범위의 문서/증적을 읽고 `scoped_check`를 반환한다. 검사 통과는 exit 0, 미완성·누락·불일치는 exit 1이다. 승인 여부는 `transition.allowed/reasons`로 별도 표시하므로 exit 0을 승인으로 해석하지 않는다.
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
-- 기존 CLI의 상태 변경·검사는 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다.
-- 실제 상태 저장 명령, QA 실행 라우팅, 릴리즈 판단, Dashboard, 사용자 프로젝트 이행은 후속이다. 세션에 표식을 수동 추가하여 운영하지 않는다. 이번 연결은 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다.
+- 기존 CLI의 상태 변경·검사는 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 예외는 자체 검증을 거치는 `session --process-request`와 허가된 구간의 `execute --verify`뿐이다.
+- `status --check`와 상태 요청 미리보기는 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다. 단계 2b의 명시 `--apply`는 검증한 상태만 저장하며 Git commit/push, Run, branch 생성, release는 수행하지 않는다.
+- 전체 QA 위임 라우팅, branch/release 소비자, Dashboard, 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
 
 ## 2. 범위의 직렬화
 
@@ -47,6 +48,7 @@ revision 예시는 실제 값이 아니다. 호출자는 기존 작업/결정/�
 
 - 준비 통과만으로 구현 허가는 생기지 않는다.
 - 기존 결정이 현재 범위의 verify/fix까지 포함하면 같은 허가를 다시 요구하지 않는다.
+- implement에는 합의한 구현 범위의 빌드/자체 테스트와 그 소스 관측 기록이 포함된다. 별도 verify 결정은 인수 검증으로의 인계·실행 권한이다. 명령 이름 `execute --verify`는 소스/명령 관측기이므로, impl에서 사용했다고 인수 검증 권한이나 Pass·수용 결정을 생성하지 않는다. 합의한 범위 밖 명령 실행은 별도 권한이 필요하다.
 - 검증만 맡은 담당자에게 코드 수정 권한을 추가하지 않는다.
 - accept는 실행 허가와 분리하며 해당 `verification_key`를 명시한다. 다른 결과에 대한 수용을 재사용하지 않는다.
 - merge/push/deploy/release는 이 계약의 actions가 아니다. 인수가 해당 권한을 만들지 않는다.
@@ -85,10 +87,51 @@ revision 예시는 실제 값이 아니다. 호출자는 기존 작업/결정/�
 
 - `current_work.verification`은 4절의 구조를 유지한다. 결과의 `evidence.ref/revision`은 실제 JSON 파일과 해시이며 필수 시험 여러 개를 실행한 하나의 suite 보고서를 함께 참조할 수 있다. 시험별 실행 범위·assertion의 충분성은 검토자가 확인한다.
 - 구현 인계에서는 `current_work.basis`, 인수에서는 `verification.basis`의 명시 `source.sources`를 다시 관측한다. 앱 코드, 실제 테스트, lockfile/의존성 정의 등을 누락하지 않는 책임은 호출자에게 있다. 범위를 스스로 추론해 확장하지 않는다.
+- 상태·잠금·생성 증적은 테스트 입력 소스 범위에서 분리한다. `--source .`로 프레임워크 상태까지 묶으면 정상 상태 저장도 소스 변경으로 잡힐 수 있으므로 실제 코드/시험/의존성/환경 명세 경로를 지정한다.
 - `basis.environment`는 실제 로컬 환경 명세 파일의 고정 참조다. 이 파일도 명시 소스 스냅샷에 포함되어야 시험 당시 버전과 현재 버전을 비교할 수 있다. 런타임/서비스/브라우저 등의 관측값을 기록하는 내용은 프로젝트별로 정하며, 파일이 같다고 실행 중 환경이 같다고 인증하지 않는다.
 - 명령 argv 불일치, 실패/기동 오류, 불완전 관측, 시험 중 소스 변경, 현재 소스/환경 명세 변경, 수정된 증적, 필수 결과 누락은 차단한다. `Pass` 한 줄이나 기존 Markdown 결과만으로 실제 실행을 추정하지 않는다.
 - 파일/명령 기록은 서명된 감사 로그가 아니다. 조작 방지·실제 권한 인증·시험 의미 분석까지 수행한다고 주장하지 않는다. 명령과 원본의 관련성, 제외 환경/비밀 설정, 현재 운영 조건은 별도로 확인한다.
 - `open_issues`는 지우지 않고 `unresolved_obligations`로 남은 수를 표시한다. 현재 범위의 검사 통과로 과거 실패를 삭제하거나 범위 밖 이슈를 완료 처리하지 않는다.
+
+### 4.3 상태 저장 CLI (단계 2b)
+
+새 최상위 명령을 늘리지 않고 기존 `session`에 별도 실험 경로를 둔다. 아래 입력은 프레임워크/어댑터 개발용 기계 계약이며, 사용자에게 매번 JSON이나 새 Run을 작성하라는 운영 규칙이 아니다. stdin을 쓰면 별도 요청 문서를 만들 필요가 없다.
+
+```text
+python vulcan.py session --process-request request.json --json
+python vulcan.py session --process-request request.json --apply --json
+python vulcan.py session --process-request - --json
+```
+
+기본 및 `--dry-run`은 미리보기다. `--apply`만 상태를 저장한다. 두 옵션을 함께 지정하거나 기존 `--gate/--status/--approved/--approval-evidence`와 섞으면 거부한다. 기존 profile의 `session --gate ... --status ...` 동작은 유지한다.
+
+요청 공통 필드는 `process_model: product-iterative-v1`, `action`, `expected_session_revision`이다. 상태 revision은 읽기 전용 `status --json`이 현재 `session.json` bytes에서 계산해 반환한다. 사람이 Git SHA나 새 승인 ID를 만드는 방식이 아니다.
+
+| action | 입력 | 동작 |
+| --- | --- | --- |
+| `start` | `scope`, `expected_session_revision: null` | session.json이 없는 **별도 실험 폴더**에서 planning 세션 생성. 기존 init 프로젝트의 profile/상태를 전환하지 않음 |
+| `advance` | `target`, 해당 경계에 필요한 `decision`/`basis`/`verification`/`reason` | 현재 범위로 인접 구간 진행 또는 허가된 수정/기획 복귀 |
+| `open-work` | `scope`, `target`, `reason`, 필요한 경우 `decision` | 새 범위를 열고 이전 결과/판정 보존. 기획 재정의 또는 완료 후 다음 작업 |
+
+- planning → impl은 실제 문서 준비 검사와 scoped implement 결정이 필요하다.
+- impl → acceptance는 명시 `basis`를 현재 파일에서 재관측하고 verify 권한을 확인한다. 아직 실행 결과를 Pass로 만들지 않는다.
+- acceptance → completed는 명시 `verification`의 실제 증적/현재 소스 검사를 통과하고, 그 `verification_key`에 대한 별도의 accept 결정이 있어야 한다. 수용 결정이 없으면 미리보기에서 결과 키와 차단 이유를 반환하되 저장하지 않는다.
+- acceptance → impl은 사유와 fix 권한이 필요하다. 이미 허가된 fix 권한은 재사용하지만 verify만 위임된 실행자는 수정 권한을 얻지 않는다. impl/acceptance → planning은 사유를 남기고 이전 실행 허가를 초기화한다.
+- `open-work`로 바로 impl에 들어가려면 이전 범위가 completed이고 새 범위의 준비 검사·구현 결정이 있어야 한다. 진행 중 작업을 새 범위로 바꿀 때에는 planning으로 돌아간다.
+- 준비 결과는 저장 직전에 검사기가 생성한다. 입력의 임의 `ready: true`, `approved: true`, `readiness`나 사용하지 않는 필드는 허용하지 않는다. 승인 결정의 원본 확인·권한 철회 여부는 여전히 신뢰할 수 있는 호출자의 책임이다.
+
+**저장과 충돌**
+
+- 미리보기는 파일/잠금/폴더를 만들지 않는다. apply는 `.vulcan/product-process.lock`의 배타 잠금을 잡고 현재 상태·문서·증적을 다시 읽는다. 과거 미리보기 결과를 그대로 저장하지 않는다.
+- `expected_session_revision`이 달라졌으면 재시도 요청을 자동 작성하지 않고 `conflict`로 반환한다. 같은 요청을 두 실행자가 동시에 적용해도 하나만 저장된다.
+- 새 상태를 임시 파일에 완전히 기록·flush한 후 `session.json`을 원자 교체한다. 저장 전 상태 변경을 다시 확인하며, 교체 실패 시 이전 상태를 보존하고 임시 파일을 정리한다. 일반적인 프로세스 중단에서도 이전 또는 새 JSON 전체가 남도록 하며 전원 장애까지의 내구성을 인증하지는 않는다.
+- 잠금은 이 경로를 사용하는 writer 사이의 약속이다. 별도 편집기/worker의 직접 파일 변경이나 소스 전체를 동결하는 장치가 아니다. 호출자는 작업자 변경을 회수·정리한 뒤 전환하며, 소스 관측의 비원자적 한계는 유지한다.
+- 남은 잠금은 PID와 활성 작업을 확인한 뒤 복구한다. 자동으로 잠금을 제거하거나 프로세스를 종료하지 않는다. 저장 후 잠금 정리에 실패하면 `applied: true`와 경고를 반환해 미저장으로 오인하지 않게 한다.
+- 요청은 2MB, 세션은 8MB로 제한하고 중복 JSON 키·비유한 수·비정상 경로를 거부한다. 한도를 넘는 누적 이력의 별도 보존/정리는 일반 활성화 전 후속 검토 대상이며 과거 결과를 자동 삭제하지 않는다.
+
+실험 세션의 `execute --verify`는 impl의 implement 권한(구현 self-check) 또는 acceptance의 verify 권한이 있을 때만 연결한다. 기존 명시 argv/소스/새 증적 파일 계약을 유지하고, planning/completed 또는 잘못된 모델에서는 실행 전에 차단한다. 검증 명령 자체가 상태를 전환하거나 수용 권한을 만들지 않는다.
+
+결과는 `ready`(미리보기 가능), `applied`(저장됨), `blocked`(현재 준비/권한/증적 부족), `conflict`(revision/잠금 충돌), `invalid`(요청·저장·상태 계약 오류)로 구분한다. CLI exit는 앞의 두 상태가 0, blocked가 1, 나머지가 2다. 미리보기의 `current_gate`/`scope_key`/`session_revision`은 저장된 현재 값이며, 후보는 `proposed_gate`/`proposed_scope_key`/`proposed_session_revision`으로 구분한다. `--apply` 요청이 실패해도 과거 승인·상태를 맞춰서 지우지 않는다.
 
 ## 5. 지속 점검
 
@@ -116,3 +159,10 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 초기화 smoke 12단계, 기존 Product/PoC/Audit fixture smoke 84단계 통과. 변경은 Python 검사/문서에 한정되며 Dashboard 로컬 실행 검증은 하지 않았다.
 - 새 문맥의 native contract-reviewer가 주석 내부 표의 잘못된 정의 인정과 링크 검사 한도 초과의 무진단 누락을 발견했다. 주석 보정의 후속 검토에서는 inline code의 주석 예시가 공통 보안 조건을 가리는 경우도 찾아 수정했다. 주석/코드 예시/링크 한도 회귀를 추가했고 최종 해당 경로 재검토에서 잔여 지적은 없었다. Orchestrator는 영향 시험으로 재검증했다.
 - 증적은 source/환경 명세의 관측 일치를 확인할 뿐 실제 서비스 환경·시험 의미·사용자 신원을 인증하지 않는다. 모든 기획 의미나 보안 의무를 자동 판정하는 검사로 확대 해석하지 않는다.
+
+### 6.3 단계 2b
+
+- 임시 합성 프로젝트에서 CLI로 planning → impl → acceptance → completed → 다음 planning을 실제 저장했다. 실제 Python assertion의 소스 관측 JSON도 `execute --verify`로 수집했다. 요청 보드 업무 앱 자체의 QA나 PMTool 이행 시험은 아니다.
+- 전체 Python 회귀는 보정 전 241개 실행, 4개 skip으로 통과했다. 깊은 JSON과 권한 구분 회귀를 추가한 Product 회귀는 135개 실행, 1개 skip으로 통과했다. 상태 저장/CLI 시험은 17개이며 초기화 smoke 12단계와 기존 profile fixture smoke 84단계도 통과했다.
+- 새 문맥의 native contract-reviewer가 깊은 JSON의 traceback을 발견해 구조화된 invalid 응답으로 보정했다. 구현 self-check 관측과 인수 verify 권한의 구분도 계약·시험에 명시했다. 해당 경로 재검토에서 잔여 지적과 verify/accept 우회 사례는 없었다.
+- Orchestrator는 최종 미리보기의 현재/제안 상태 구분, 승인 없는 인계 차단, revision 충돌, 동시 적용 1건만 저장, 쓰기 실패·잠금 정리 경고, 기존 profile 보존을 확인했다. 기존 pathlib deprecation warning은 남아 있다. Dashboard 로컬 실행과 일반 이행은 이번 검증 범위가 아니다.

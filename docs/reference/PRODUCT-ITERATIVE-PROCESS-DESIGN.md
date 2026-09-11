@@ -146,4 +146,6 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 
 구현은 branch/PR 단위로 검증하며 상태 엔진만 바꾼 중간 산출물을 운영 지침만으로 실제 프로젝트에 적용하지 않는다. 전체 AC/REQ 목록 조회는 원본 탐색의 별도 후속 과제로 유지하지만 3구간 시나리오 설계의 선행 조건으로 만들지 않는다.
 
-2026-09-11 단계 2a: [범위별 문서·실행 증적 검사](PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 기획 중 Planned 시험과 인수 시 필수 실행을 구별하며 검사/승인/릴리즈는 별개로 표시한다. 아직 상태 저장 CLI, QA 실행 경로, Dashboard 및 init/upgrade 기본 활성화는 연결하지 않았다.
+2026-09-11 단계 2a: [범위별 문서·실행 증적 검사](PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 기획 중 Planned 시험과 인수 시 필수 실행을 구별하며 검사/승인/릴리즈는 별개로 표시한다.
+
+단계 2b: [상태 저장 CLI](PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)와 허가된 `execute --verify`를 연결했다. 별도 파일럿에서 미리보기/명시 저장·반복·충돌 보존을 시험한다. 일반 프로젝트 이행, QA 위임/branch/release 소비자, Dashboard 및 init/upgrade 기본 활성화는 아직 연결하지 않았다.

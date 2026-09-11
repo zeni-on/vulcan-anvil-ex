@@ -84,7 +84,7 @@
 
 ### Now: testing-first stabilization
 
-#### Product 3구간 반복 프로세스 (2026-09-11, 상태 계약·범위별 진단/운영 전환 미연결)
+#### Product 3구간 반복 프로세스 (2026-09-11, 실험 상태 CLI 연결/일반 활성화 전)
 
 - 최우선 방향은 **기획·설계 ↔ 구현 ↔ 인수 검증**이다. [운영 설계](reference/PRODUCT-ITERATIVE-PROCESS-DESIGN.md)에 사용자 결정/자율 진행, 범위별 문서 책임, 반복·수용·배포 경계와 현재 코드의 결합 지점을 정리했다. 화면만 묶거나 내부에서 기존 7단계를 자동 순회하는 접근은 제외한다.
 - [운영 시나리오와 후속 회귀 기준](reference/PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)은 신규/확장, 인수 중 결함·업무 변경·환경 차단, 병렬 기획, 완료 후 재진입 등을 다룬다. 아직 runtime 실행 시험이 아니라 설계 검토용 기대 행동이다.
@@ -92,7 +92,8 @@
 - Product 지침의 Run 필수/직접 수정 제한/QA 재승인 충돌을 적용 profile별로 정리했다. `test_product_policy`로 발견한 재발 패턴을 고정하며, 후속 Product 변경에서도 실제 충돌 사례를 계속 보강한다. 모든 자연어 지침의 정합성이 자동 보장된다는 뜻은 아니다.
 - [단계 1 상태·작업 범위·승인 계약](reference/PRODUCT-PROCESS-CONTRACTS.md)을 내부 API와 합성 계약 테스트로 구현했다. 범위 revision/승인/실제 증적의 분리, 읽기 전용 진단, 미지원·실험 모델의 legacy 쓰기 차단을 포함한다. 일반 init/upgrade 활성화나 실제 프로젝트 이행은 하지 않는다.
 - 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건, 실제 명령 증적과 소스/환경 명세의 일치를 확인한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
-- 다음 순서: 상태 저장·QA/branch/release 소비자와 Core/Codex/Gemini/선택 양식·Dashboard 연결 → 합성 프로젝트 반복/명시 이행 보존 검증 → 실제 적용 판단. main 병합은 기본 활성화를 뜻하지 않으며 새 `init` 기본값이나 기존 프로젝트 상태를 먼저 바꾸지 않는다.
+- 단계 2b: [실험 상태 저장 CLI](reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 기존 `session`에 연결했다. 기본 미리보기, 명시 apply, scoped 검사/승인·실행 근거, 상태 revision 충돌·배타 잠금·원자 저장을 포함한다. 별도 임시 프로젝트에서 실제 CLI 상태 반복과 `execute --verify` 연결을 시험하며 기존 프로젝트를 이행하지 않는다.
+- 다음 순서: QA/branch/release 소비자와 Core/Codex/Gemini/선택 양식·Dashboard 연결 → 확장된 합성 프로젝트 반복/명시 이행 보존 검증 → 실제 적용 판단. main 병합은 기본 활성화를 뜻하지 않으며 새 `init` 기본값이나 기존 프로젝트 상태를 먼저 바꾸지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 
 #### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)

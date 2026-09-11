@@ -298,9 +298,10 @@ def describe(session):
         if model == "legacy":
             return {"process_model": "legacy", "use_legacy": True}
         work = _validate(session)
-        return {"process_model": model, "runtime_enabled": False, "checks_enabled": True, "status": "experimental",
+        return {"process_model": model, "runtime_enabled": False, "checks_enabled": True,
+                "session_writes_enabled": True, "status": "experimental",
                 "current_gate": session["current_gate"], "scope_key": work["scope_key"],
                 "work": deepcopy(work["scope"]["work"]), "history_count": len(session["work_history"]),
-                "message": "Scoped status --check is available; CLI transitions and Dashboard are not enabled."}
+                "message": "Experimental session --process-request and status --check are available; general init/migration/Dashboard are not enabled."}
     except ProcessContractError as error:
         return {"status": "unsupported_or_invalid", "runtime_enabled": False, "message": str(error)}
