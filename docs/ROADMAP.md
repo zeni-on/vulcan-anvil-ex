@@ -90,6 +90,7 @@
 - [운영 시나리오와 후속 회귀 기준](reference/PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)은 신규/확장, 인수 중 결함·업무 변경·환경 차단, 병렬 기획, 완료 후 재진입 등을 다룬다. 아직 runtime 실행 시험이 아니라 설계 검토용 기대 행동이다.
 - 새 문맥의 native contract reviewer가 범위/상태, 승인·증적 재사용, legacy 호환과 숨은 Gate 반복 여부를 읽기 전용 검토했고 지적은 없었다. 총괄은 로컬 문서 링크와 변경 범위를 확인했다. 이는 새 프로세스의 실행 검증이나 사용자 최종 승인이 아니다.
 - Product 지침의 Run 필수/직접 수정 제한/QA 재승인 충돌을 적용 profile별로 정리했다. `test_product_policy`로 발견한 재발 패턴을 고정하며, 후속 Product 변경에서도 실제 충돌 사례를 계속 보강한다. 모든 자연어 지침의 정합성이 자동 보장된다는 뜻은 아니다.
+- Codex 세부 skill의 잔존 Run/worker 강제, 무조건 재시험, 제거된 Git 증적 안내를 정리했다. Gate Prompts의 중복 규칙은 Core 참조로 줄이고, 설계/구현/QA/릴리즈 skill은 `process_model`이 있으면 기존 Gate 절차보다 개발용 모델 경로를 먼저 따른다. 지침 회귀와 init/upgrade 설치·원본 보존을 검사하며, 일반 활성화·모델 기본값·Audit/PoC 실행 정책은 변경하지 않는다.
 - [단계 1 상태·작업 범위·승인 계약](reference/PRODUCT-PROCESS-CONTRACTS.md)을 내부 API와 합성 계약 테스트로 구현했다. 범위 revision/승인/실제 증적의 분리, 읽기 전용 진단, 미지원·실험 모델의 legacy 쓰기 차단을 포함한다. 일반 init/upgrade 활성화나 실제 프로젝트 이행은 하지 않는다.
 - 단계 2a: [범위별 준비·인수 검사](reference/PRODUCT-PROCESS-CONTRACTS.md#41-범위별-검사-연결-단계-2a)를 실험 세션의 `status --check`에 연결했다. 현재 계약·시험 원본, 공통 조건과 실제 명령 증적을 확인한다. 별도 Git/소스 신선도 검사는 폐기하고 환경 명세 참조와 Orchestrator의 변경 영향·재시험 판단을 유지한다. 기획 중 Planned는 허용하며 검사 통과와 승인·릴리즈를 구분한다. SHA나 새 Run을 수동 작성하는 절차는 추가하지 않는다.
 - 단계 2b: [실험 상태 저장 CLI](reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 기존 `session`에 연결했다. 기본 미리보기, 명시 apply, scoped 검사/승인·실행 근거, 상태 revision 충돌·배타 잠금·원자 저장을 포함한다. 별도 임시 프로젝트에서 실제 CLI 상태 반복과 `execute --verify` 연결을 시험하며 기존 프로젝트를 이행하지 않는다.

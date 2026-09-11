@@ -7,6 +7,11 @@ description: Use for Vulcan Gate 4 QA execution, QA-000 workspace preparation, Q
 
 Use this for Gate 4 QA and QA iterations.
 
+For projects with `process_model`, follow `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
+section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope and
+authority; do not add the marker or reinterpret an unsupported model as legacy.
+Unmarked projects keep the existing flow.
+
 ## Preconditions
 
 1. Confirm `session.json.current_gate` is `gate4`.
@@ -60,4 +65,4 @@ applicable current results from the ledger and retain unresolved obligations.
 - Run `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed.
 - Run `python vulcan.py check-trace` only if the readiness output points to traceability errors that need detailed debugging.
 - Run `python vulcan.py check-contract` when Program Design contracts are relevant.
-- When tested-source identity is needed, use the optional `execute --verify` path in `docs/core/ORCHESTRATOR_CLI_GUIDE.md`. Link its JSON through existing evidence fields; command success, source identity, and QA approval are separate facts.
+- When command-result recording is needed, use `execute --verify` as described in `docs/core/ORCHESTRATOR_CLI_GUIDE.md`. Link its JSON and actual test logs through existing evidence fields. It does not collect Git evidence or source fingerprints, and command success is not QA approval.

@@ -7,9 +7,14 @@ description: Use for Vulcan Gate 2 design work, architecture, program design, in
 
 Use this for Gate 2 design and design iteration.
 
+For projects with `process_model`, follow `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
+section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope and
+authority; do not add the marker or reinterpret an unsupported model as legacy.
+Unmarked projects keep the existing flow.
+
 ## Inputs
 
-1. Read `AGENTS.md`, `session.json`, and the current Gate 2 Run.
+1. Read `AGENTS.md` and selected `session.json` state. Product uses the assigned design scope under `PRODUCT_PROFILE_BASELINE.md` section 7; read the current Gate 2 Run only when one is used. Other profiles retain their Run requirements.
 2. Read Gate 1 requirements, acceptance criteria, and open decisions.
 3. Run `python vulcan.py status` when current Gate, profile, branch, or next action is unclear.
 4. Confirm the delivery profile with `python vulcan.py profile-status` only when profile detail is needed beyond `status`.
