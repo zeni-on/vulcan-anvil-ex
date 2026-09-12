@@ -176,7 +176,7 @@ python vulcan.py init ../my-poc "My PoC" --profile poc
 | 항목 | 현재 상태 |
 | --- | --- |
 | `audit` | 기본 Profile이며 가장 강하게 문서화/검증된다. |
-| `product` | `init --profile product`으로 선택할 수 있고, `docs/product/` 6종 산출물과 Product Overlay가 생성된다. |
+| `product` | 새 `init --profile product`는 `docs/product/` 6종과 Product Overlay, `product-iterative-v1` planning 세션을 생성한다. 첫 범위 합의와 승인은 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따른다. 표식 없는 기존 프로젝트/upgrade는 자동 이행하지 않는다. |
 | `poc` | `init --profile poc`으로 선택할 수 있고, `docs/poc/` 3종 산출물과 가설 검증 중심의 얇은 Run 입력 계약을 생성한다. |
 | `profile-status` | 현재 Profile, config Profile, 적용 Profile Rules를 출력한다. |
 | `profile-gap` | 현재 산출물을 목표 Profile 기준으로 볼 때 부족한 항목을 읽기 전용으로 진단한다. |

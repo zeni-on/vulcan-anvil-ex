@@ -7,7 +7,7 @@
 이 문서는 Core 규칙을 대체하지 않는다.
 Codex/GPT는 `AGENTS.md`와 사용자 최신 지시, 현재 작업 범위를 확인한다. Run은 사용하는 경우에 읽는다.
 
-`process_model`이 있으면 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절로 이동한다. 아래 기존 Gate 절차를 새 프로세스에 적용하거나 표식을 임의로 추가하지 않는다.
+`process_model`이 있으면 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절로 이동한다. 새 `init --profile product`는 planning 세션을 이미 생성하며 첫 합의 범위는 기존 open-work 요청으로 미리보고 적용한다. start나 Phase 0/Gate 1로 재시작하지 않는다. 아래 기존 Gate 절차를 새 프로세스에 적용하거나 표식을 임의로 추가하지 않는다. 표식 없는 기존 프로젝트와 upgrade는 자동 이행하지 않는다.
 
 Run을 사용하면 출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
 

@@ -10,6 +10,10 @@ Orchestrator로 동작 (별도 persona 아님, 계획·위임·검증·보고 �
 
 ## 2. Persona 매핑
 
+먼저 `session.json`의 `process_model`과 현재 상태를 확인한다. 표식이 있는 Product는 아래 Gate 절차보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 우선한다. 새 `init --profile product`는 planning 세션을 이미 생성하므로 첫 합의 범위는 기존 open-work 요청으로 미리보고 적용하며 start나 Phase 0/Gate 1로 재시작하지 않는다. 총괄이 JSON을 준비하고 readiness와 별도 advance 승인을 확인한다. 표식 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며 표식을 수동 추가하거나 미지원 모델을 Gate로 해석하지 않는다.
+
+아래 Gate 전환 순서와 Run 입력은 기존 Gate 흐름 또는 Run을 선택한 작업에 적용한다. Product의 Run/새 worker는 필수가 아니며 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 자동 Git 증적이나 릴리즈 권한을 만들지 않고 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업으로 남긴다.
+
 `.claude/agents/{persona}.md` 파일명 = persona명 (1:1). 사용자 요청을 받으면 persona를 판단하고 같은 이름의 agent를 invoke한다.
 
 | Persona | Claude agent |

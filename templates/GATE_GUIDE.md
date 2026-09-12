@@ -17,6 +17,10 @@ Orchestrator는 항상 현재 Gate, 입력 문서, 산출물, 검증 기준, 미
 
 ## 2. 전체 흐름
 
+새 `init --profile product`는 `product-iterative-v1`의 planning 세션을 생성한다. planning(기획·설계), impl(구현), acceptance(인수 검증)의 세 구간이며 completed는 이번 범위의 최종 인수 결과다. 초기 범위는 구현 합의가 아니므로 `status --check`가 구현을 차단한다. 총괄이 사용자와 실제 범위를 합의하고 기존 open-work 요청을 planning 대상으로 미리보고 적용한다. 사용자가 JSON을 직접 작성할 필요는 없다. readiness 확인 뒤 별도 advance 승인을 따르며, start나 Phase 0/Gate 1로 다시 시작하지 않는다. 정확한 운영 순서와 branch/QA/release 경계는 [Core CLI 4.1](docs/core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따른다.
+
+아래 도식과 Gate별 기준/명령은 표식 없는 기존 Product와 Audit/PoC용이다. upgrade는 자동 이행하지 않으며 process_model 표식을 수동 추가하지 않는다. 반복 모델에서 Run은 필수가 아니며 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업이다.
+
 ```mermaid
 flowchart LR
   P0["Phase 0<br/>탐색/방향 설정"] -->|"요구사항 후보 확정"| G1["Gate 1<br/>요구사항"]

@@ -1,12 +1,12 @@
 # Product Iterative Process Design
 
-- 상태: Product 운영 설계 / 단계 1~2c 상태·검사·저장·Dashboard 읽기/운영 미리보기 구현, 일반 활성화 전
+- 상태: Product 운영 설계 / 신규 Product init에 3구간 반복 운영 연결 (2026-09-12). 기존 프로젝트 자동 이행 없음
 - 작성일: 2026-09-11
 - 초기 검토 기준: `aacbf7c` main과 PR #32의 업무 분석 파일럿. 구현 현황은 PR #36까지의 상태 계약과 운영 소비자 검증을 반영한다.
 - 범위: Product만. Audit/PoC의 단계·검사·문서 정책은 이번에 변경하거나 재설계하지 않는다.
 - 연계: [업무 분석 가이드](PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md), [운영 시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
 
-이 문서는 목표 동작과 단계별 구현 경계를 정의한다. 일반 프로젝트에서는 [기존 Product 운영 기준](../core/PRODUCT_PROFILE_BASELINE.md)이 계속 유효하다. 새 모델의 합성 파일럿은 아래 상태 계약에 명시된 경로만 사용하며, 기존 프로젝트의 `session.json`에 단계 이름이나 상태값을 수동으로 넣거나 기존 Gate 검사를 우회하지 않는다.
+이 문서는 목표 동작과 단계별 구현 경계를 정의한다. 신규 Product는 [Core CLI 4.1절](../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)의 3구간 운영으로 시작하며 [Product 품질 기준](../core/PRODUCT_PROFILE_BASELINE.md)은 유지한다. 표식 없는 기존 Product는 기존 Gate 흐름이다. 기존 프로젝트의 `session.json`에 단계 이름이나 상태값을 수동으로 넣거나 기존 Gate 검사를 우회하지 않는다.
 
 현재 직렬화·내부 API·조회/저장·검사·운영 소비자의 지원 범위와 신뢰 경계는 [상태 계약 구현 범위](PRODUCT-PROCESS-CONTRACTS.md)에 정리했다. 설계 자료 전체를 프로젝트 에이전트의 필수 읽기 목록에 추가하지 않는다.
 
@@ -132,7 +132,7 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 
 사용 중인 worker/쓰기 작업을 먼저 정리하고, dirty/미추적 파일·미완료 Run·승인/검증 기준·사용 도구 버전을 확인한다. 이행 도구는 원본과 상태 스냅샷을 보존하고, 전체 검증 후 상태를 원자적으로 적용해야 한다. 승인 근거가 불완전하면 보류/재확인으로 남기고 값을 만들어 채우지 않는다. 이행 전후 원본 문서·코드·시험 결과·Git 이력 보존을 비교한다.
 
-이행 실패 시 이전 상태를 보존한다. 새 모델로 작업한 이후에는 예전 스냅샷을 덮어써 되돌리지 않는다. 초기 MVP는 진행 중인 실제 프로젝트 전환보다 새 합성 프로젝트 opt-in 검증을 먼저 수행한다. 일반 `init` 기본값 변경은 소비자/회귀 검증을 통과한 뒤 한다.
+이행 실패 시 이전 상태를 보존한다. 새 모델로 작업한 이후에는 예전 스냅샷을 덮어써 되돌리지 않는다. 초기 opt-in과 실제 요청 보드 반복 검증에 이어 신규 `init --profile product` 경로를 연결했다. 기존 프로젝트 이행 도구는 이번 완료 범위가 아니며 `upgrade`는 기존 모델을 보존한다.
 
 ## 7. 구현 순서와 완료 기준
 
@@ -151,3 +151,5 @@ MVP 제안은 프로젝트 `session.json`에 `process_model: product-iterative-v
 단계 2b: [상태 저장 CLI](PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)와 허가된 `execute --verify`를 연결했다. 별도 파일럿에서 미리보기/명시 저장·반복·충돌 보존을 시험한다.
 
 단계 2c: [운영 소비자 연결](PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)은 Dashboard/브랜치 상태 읽기, 환경 진단과 인수 명령, 릴리즈 후보 미리보기다. 브랜치 자동 전환·QA 위임 자동화·실제 PR 발행·일반 프로젝트 이행과 init/upgrade 기본 활성화는 여전히 후속이다.
+
+위 단계별 기록은 당시 구현 경계다. 현재는 명시 브랜치 준비·QA 전달/회수·실제 제품 CI·반복 확장 시험까지 연결했고 [신규 Product 일반 사용](PRODUCT-NEW-PROJECT-VERIFICATION.md)을 마지막 마무리 범위로 삼는다. 자동 dispatcher/발행·기존 프로젝트 이행은 현재 지원으로 포함하지 않는다.

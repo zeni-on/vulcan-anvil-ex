@@ -30,7 +30,7 @@
 6. `status`에 `dashboard_comments`가 표시되면 먼저 확인하고, 사용자 코멘트/질문/FIND 후보/CR 후보를 현재 작업 판단에 반영한다.
 7. 현재 작업과 맞는 repo-local skill 또는 Core 문서만 추가로 읽는다.
 
-`process_model`이 있는 실험 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 표식이 없는 프로젝트는 기존 흐름이며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
+`process_model`이 있는 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 새 `init --profile product`는 planning 세션을 이미 생성한다. 첫 범위 합의는 기존 `open-work` 요청으로 처리하며 `start`나 Phase 0/Gate 1로 재시작하지 않는다. 표식이 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
 
 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기록은 보조 힌트일 뿐이다. 현재 프로젝트의 사실 근거는 반드시 `session.json`, 현재 산출물, 현재 Run, `docs/core/`, 사용자의 최신 지시에서 확인한다.
 

@@ -93,7 +93,12 @@ class CollaborationDocsTests(unittest.TestCase):
             with self.subTest(profile=profile):
                 root = self.project(profile)
                 self.assert_routing(root)
-                self.assertNotIn("process_model", json.loads((root / "session.json").read_bytes()))
+                session = json.loads((root / "session.json").read_bytes())
+                if profile == "product":
+                    self.assertEqual(session["process_model"], "product-iterative-v1")
+                    self.assertEqual(session["current_gate"], "planning")
+                else:
+                    self.assertNotIn("process_model", session)
                 self.assertFalse((root / "scripts/regression/product_execution_fixture.py").exists())
 
     def test_upgrade_refreshes_routing_and_preserves_authored_product_state(self):
@@ -113,6 +118,10 @@ class CollaborationDocsTests(unittest.TestCase):
         expected_files = {relative: (root / relative).read_bytes() for relative in authored}
         session_path = root / "session.json"
         session = json.loads(session_path.read_text(encoding="utf-8"))
+        # This regression preserves a pre-activation Product project on upgrade.
+        for field in ("process_model", "current_work", "work_history"):
+            session.pop(field, None)
+        session["gate_status"] = {"impl": "in-progress"}
         session["current_gate"] = "impl"
         session["vulcan_version"] = "0.0.0"
         self.write(session_path, json.dumps(session))
@@ -129,6 +138,7 @@ class CollaborationDocsTests(unittest.TestCase):
                 self.assertEqual((root / relative).read_bytes(), expected)
         after = json.loads(session_path.read_text(encoding="utf-8"))
         self.assertEqual(after["current_gate"], "impl")
+        self.assertNotIn("process_model", after)
         self.assertEqual(after["profile"], session["profile"])
         self.assertEqual(vulcan.load_delivery_profile(str(root)), "product")
         config_after = json.loads((root / "vulcan.config.json").read_text(encoding="utf-8"))

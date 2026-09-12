@@ -3,7 +3,8 @@ import path from 'path'
 import { SessionDataSchema } from '../../lib/schemas'
 import { LocalDataSource } from '../../lib/datasource/local'
 import { GitHubDataSource } from '../../lib/datasource/github'
-import { PRODUCT_STATES, productSession, invalidProductSessions } from '../fixtures/productSession'
+import { PRODUCT_STATES, productSession, newProductSession, invalidProductSessions } from '../fixtures/productSession'
+import { BASE_SESSION } from '../e2e/fixture'
 
 let root: string
 beforeEach(() => {
@@ -23,6 +24,18 @@ test.each(PRODUCT_STATES)('minimal %s survives both loaders without legacy metad
   expect(SessionDataSchema.parse(value)).toEqual(value)
   for (const source of sources(value)) expect(await source.getSession()).toEqual(value)
   expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(JSON.stringify(value))
+})
+
+test('new Product init shape survives both loaders unchanged', async () => {
+  const value = newProductSession()
+  expect(SessionDataSchema.parse(value)).toEqual(value)
+  for (const source of sources(value)) expect(await source.getSession()).toEqual(value)
+  expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(JSON.stringify(value))
+})
+
+test.each(['product', 'audit', 'poc'])('unmarked %s stays legacy in both loaders', async profile => {
+  const value = { ...BASE_SESSION, profile }
+  for (const source of sources(value)) expect(await source.getSession()).toEqual(value)
 })
 
 test.each(invalidProductSessions())('%s is rejected by both loaders', async (_label, value) => {

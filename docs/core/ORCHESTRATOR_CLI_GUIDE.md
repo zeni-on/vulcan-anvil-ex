@@ -82,6 +82,8 @@ Product profile에서는 `docs/product/` 6종 문서 존재 여부와 현재 Gat
 
 ## 4. Gate 라이프사이클
 
+이 절의 Gate 명령은 표식 없는 기존 Product와 Audit/PoC용이다. 새 `init --profile product` 프로젝트는 아래 4.1절을 먼저 따른다.
+
 | 목적 | 명령 |
 | --- | --- |
 | Gate 시작 | `python vulcan.py gate-start <gate>` |
@@ -99,13 +101,24 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 
 ### 4.1 개발용 Product 반복 프로세스
 
-`process_model: product-iterative-v1`을 사용하는 별도 실험 파일럿에서는 `status --check`와 `session --process-request`를 사용한다. 기존 Gate 명령을 새 구간 이름으로 호출하지 않는다. 상태 요청은 기본 미리보기이고 `--apply`일 때만 범위/권한/증적과 상태 revision을 검사해 저장한다. 상세 기계 계약과 제한은 프레임워크 저장소의 [Product Process Contracts](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 따른다.
+새 `init --profile product`는 기존 `process_model: product-iterative-v1`을 활성화하고 `planning` 세션을 생성한다. `planning`(기획·설계), `impl`(구현), `acceptance`(인수 검증)의 세 작업 구간을 사용하며, `completed`는 이번 범위의 최종 인수 결과이지 네 번째 작업 구간이나 배포 완료가 아니다. 이 모델에서는 `status --check`와 `session --process-request`를 사용한다. 기존 Gate 명령을 새 구간 이름으로 호출하지 않는다. 상태 요청은 기본 미리보기이고 `--apply`일 때만 범위/권한/증적과 상태 revision을 검사해 저장한다. 상세 기계 계약과 제한은 프레임워크 저장소의 [Product Process Contracts](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 따른다.
 
-일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다. 기존 Product/Audit/PoC 세션에 표식을 수동 추가하거나 이 명령으로 이행하지 않는다. 실험 모델도 Run/자동 Git commit/릴리즈를 추가로 강제하지 않으며, 기존 프로젝트에는 위의 Gate 라이프사이클이 그대로 적용된다.
+표식 없는 기존 Product와 Audit/PoC는 기존 흐름을 유지하며 `upgrade`로 자동 이행하지 않는다. `process_model` 표식을 수동 추가하지 않고 미지원 모델을 기존 Gate로 해석하지 않는다. 새 명령이나 profile 플래그는 없다. Run은 필수가 아니며 자동 Git 증적·commit·릴리즈 기능을 추가하지 않는다. `init` 자체의 기존 Git 초기화 옵션과 이후 검증/발행 권한은 별개다.
+
+#### 처음 사용하는 Product
+
+이미 표식이 있는 Product도 기존 `python vulcan.py upgrade`로 프레임워크 파일을 갱신할 수 있다. 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신하며, 프로세스 상태·현재 범위·결정·작업 이력은 보존한다. 이는 새 세션 생성이나 승인/범위 변경이 아니며 표식 없는 프로젝트의 자동 활성화도 아니다. 저장된 세션 bytes가 바뀌면 이전 요청의 expected revision을 재사용하지 않고 `status --json`으로 현재 상태를 다시 확인한다.
+
+1. 생성된 프로젝트에서 `python vulcan.py status --json`과 `python vulcan.py status --check`를 확인한다. 초기 `scope.work`는 초기화된 `docs/product/PRODUCT_BRIEF.md`를 불변 내용 해시로 참조한다. `related_ids`, `contracts`, `tests`, `required_checks`와 `decisions`는 모두 빈 배열이다. 이 초기 범위는 구현 합의가 아니므로 `status --check`가 구현 진입을 차단하는 것이 정상이다. 문서를 수정해도 저장된 해시가 자동 갱신되거나 승인이 생기지 않는다.
+2. 사용자는 목표, 포함/제외 범위와 제약을 설명하고 총괄과 합의한다. 총괄은 실제 업무·요구/AC·설계·시험 계획의 원본을 작성하고, 실제 합의한 작업과 관련 참조/필수 검증만 scope에 연결한다. 초기 빈칸을 채우려고 REQ나 Pass를 만들어내지 않는다.
+3. 총괄은 기존 `session --process-request` 요청에 `process_model: product-iterative-v1`, `action: open-work`, `target: planning`, 실제 `scope`와 `reason`, `status --json`에서 관측한 `expected_session_revision`을 넣는다. `init`이 이미 세션을 만들었으므로 `action: start`를 다시 사용하지 않는다. `python vulcan.py session --process-request <request.json 또는 -> --json`으로 미리보고 검토한 요청을 `--apply`로 적용한다. revision 충돌 시 현재 상태와 범위를 재검토하며 값을 자동 치환하지 않는다.
+4. `status --check`로 현재 범위의 readiness를 확인한 뒤, 실제 구현 승인 근거를 연결한 기존 `action: advance`, `target: impl` 요청을 미리보고 적용한다. readiness 통과와 범위 저장은 구현 승인이 아니다. 이후에도 인수 검증과 완료 결정은 기존 advance 승인 계약을 따른다.
+
+에이전트가 운영한다면 사용자가 JSON을 손으로 작성할 필요는 없다. 총괄이 파일 또는 stdin 요청을 준비하고 미리보기 결과, 남은 질문, 승인 지점을 사용자에게 설명한다. 사용자 승인을 만들어내거나 `session.json`을 직접 편집하지 않는다.
 
 planning의 작성은 [Product Document Writing 0절](PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다)을 따른다. 이번 흐름의 문제·경계·규칙·예시를 확인한 뒤 REQ/AC와 설계·시험 원본으로 연결한다. 구현 인계의 `scope.contracts`에는 현재 채택할 REQ/AC와 적용 업무/공통 조건의 정확한 원본 절을, `scope.tests`에는 시험 계획을 지정한다. 직접 관련 정의 ID와 필수 시험만 선택하고 후보를 현재로 간주하지 않는다. 링크한 원본도 scope에 명시 연결해야 하며 전체 프로젝트 원장이나 과거 대화를 복사하지 않는다. `status --check`는 링크/ID/계획 정합성 검사이지 업무 합의 판정이 아니며, 실제 구현 허가와 인수 결정은 기존 상태 계약으로 따로 처리한다.
 
-| 실험 모델의 운영 작업 | 연결된 경로와 경계 |
+| 반복 모델의 운영 작업 | 연결된 경로와 경계 |
 | --- | --- |
 | 현재 위치/범위/작업공간 | `status`, `branch-status`. `planning`/`impl`/`acceptance`를 그대로 읽으며 과거 Gate 키로 바꾸지 않는다. |
 | 구현 통합 브랜치 준비 | `branch-start impl` 또는 `branch-start impl --dry-run`으로 미리보고, `--apply`로 적용한다. `--json`으로 결과를 읽을 수 있다. 허가된 impl 범위와 현재 계약을 확인하며 세션·승인·commit/push는 만들지 않는다. |
@@ -113,11 +126,11 @@ planning의 작성은 [Product Document Writing 0절](PRODUCT_DOCUMENT_WRITING.m
 | 릴리즈 후보 확인 | `release-pr --dry-run`은 현재 범위 인수/증적/브랜치를 재확인하며 미처리 의무를 표시한다. 파일·PR·push를 만들지 않으며 후보가 나와도 발행 권한은 없다. |
 | 화면 확인 | 지원 Dashboard는 저장된 3구간과 이번 작업 범위를 읽기 전용으로 표시한다. `completed`는 이번 범위 인수이며 제품 전체 완료나 배포 완료가 아니다. |
 
-실험 모델의 브랜치 준비는 설정된 main에서 통합 브랜치를 새로 만들거나, 현재 HEAD와 커밋된 파일 내용이 같은 기존 통합 브랜치로 전환하는 범위다. `session.json`만 미커밋이면 그대로 가져가며, 다른 변경이 섞이면 먼저 정리한다. 이미 통합 브랜치면 그대로 둔다. 기존 통합 브랜치 내용이 다르면 자동 전환/세션 덮어쓰기 없이 차단하므로 영향 검토 후 별도 Git 작업으로 처리한다. 단일 브랜치 정책에서는 이 준비 명령이 필요하지 않다.
+반복 모델의 브랜치 준비는 설정된 main에서 통합 브랜치를 새로 만들거나, 현재 HEAD와 커밋된 파일 내용이 같은 기존 통합 브랜치로 전환하는 범위다. `session.json`만 미커밋이면 그대로 가져가며, 다른 변경이 섞이면 먼저 정리한다. 이미 통합 브랜치면 그대로 둔다. 기존 통합 브랜치 내용이 다르면 자동 전환/세션 덮어쓰기 없이 차단하므로 영향 검토 후 별도 Git 작업으로 처리한다. 단일 브랜치 정책에서는 이 준비 명령이 필요하지 않다.
 
 `--apply`는 현재 조건을 다시 검사하고 기존 Product 쓰기 잠금을 사용한다. Git 실패·timeout 또는 동시 변경으로 결과가 불명확하면 `branch-status`와 세션을 확인하고 재시도한다. 자동 stash/reset/rollback은 하지 않고 checkout hook도 실행하지 않는다. 이 명령을 세션 상태 변경이나 제품 구현/인수/발행 승인으로 사용하지 않는다.
 
-기존 Gate/QA Run 자동화와 실제 `release-pr` 발행은 아직 지원하지 않는다. `session --process-request`로 상태를 저장해도 브랜치는 자동 전환되지 않는다. 표식이 없는 기존 모델의 `branch-start impl` 동작은 유지하며 새 `--apply`/`--dry-run`/`--json` 옵션은 실험 모델 전용이다.
+반복 모델에서 기존 Gate/QA Run 자동화와 실제 `release-pr` 발행은 지원하지 않는다. 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업으로 남으며 새 자동 발행 기능이 아니다. `session --process-request`로 상태를 저장해도 브랜치는 자동 전환되지 않는다. 표식이 없는 기존 모델의 `branch-start impl` 동작은 유지하며 새 `--apply`/`--dry-run`/`--json` 옵션은 반복 모델 전용이다.
 
 native QA는 다음 순서로 연결한다. 새 문서를 추가로 채우라는 뜻이 아니라 현재 작업 요약과 기존 상태 요청을 재사용하는 경로다.
 

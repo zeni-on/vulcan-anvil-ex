@@ -8,6 +8,8 @@
 
 ## 1. 포지션
 
+새 `init --profile product`의 `product-iterative-v1` planning 세션과 첫 범위 합의는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따른다. 아래 Gate별 기준은 표식 없는 기존 Product용이며, 반복 모델에는 현재 범위의 해당 계약/검증 기준만 적용한다. 기존 프로젝트/upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않는다.
+
 Product Profile은 PoC와 Audit 사이의 중간 레이어다.
 
 | Profile | 목적 |

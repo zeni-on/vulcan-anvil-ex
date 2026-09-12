@@ -1,4 +1,4 @@
-"""Read-only scoped checks for the experimental Product process.
+"""Read-only scoped checks for the iterative Product process.
 
 Local content observations are not authorization, test-coverage certification,
 or proof of the live environment. No commands from documents are executed.
@@ -212,7 +212,7 @@ def check_execution(project_dir, scope, verification, current_basis):
 def collect(project_dir, session, parse_tables):
     """Next-boundary diagnosis; checks passing never grant approval or release."""
     summary = process.describe(session)
-    if summary.get("status") != "experimental":
+    if summary.get("status") != "active":
         return {"status": "invalid", "issues": [_issue("invalid_session", summary.get("message", "requires iterative Product"))]}
     work = session["current_work"]
     docs = document_readiness(project_dir, work["scope"], parse_tables)

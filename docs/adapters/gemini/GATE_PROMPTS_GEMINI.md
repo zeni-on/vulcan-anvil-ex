@@ -7,6 +7,8 @@
 
 ## 1. 프롬프트 바인딩 규칙
 
+`process_model`이 있는 Product는 [Core CLI 4.1](../../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 먼저 따른다. 새 `init --profile product`의 planning 세션을 start나 Phase 0/Gate 1로 재시작하지 않는다. 아래 Gate 프롬프트는 표식 없는 기존 흐름용이며 planning/acceptance를 Gate 키로 바꾸지 않는다. upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않는다.
+
 * 본 문서에 정의된 프롬프트 템플릿은 단순한 읽기 전용 텍스트 가이드라인이 아닙니다.
 * 프레임워크 런타임(`vulcan.py` 등)은 API 구동 시, 지정된 게이트(`current_gate`) 및 페르소나(`persona`)에 해당하는 JSON/YAML 구조를 읽어 Gemini API의 `systemInstruction` 필드에 동적으로 세팅해야 합니다.
 

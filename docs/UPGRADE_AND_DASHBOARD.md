@@ -14,7 +14,11 @@ python vulcan.py upgrade
 
 `init`으로 만든 프로젝트는 `session.json`에 원본 Ex 저장소 경로를 기록하므로, 보통은 `upgrade` 명령에 Ex 폴더 경로를 따로 넘기지 않아도 됩니다.
 
-Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상 유효하지 않으면, 먼저 해당 값을 현재 Ex 저장소 경로로 맞춘 뒤 실행합니다.
+표식 없는 기존 프로젝트에서 Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상 유효하지 않으면, 먼저 해당 값을 현재 Ex 저장소 경로로 맞춘 뒤 실행합니다. `process_model`이 있는 Product에는 이 수동 세션 편집 안내를 적용하지 않습니다. 원본 경로가 유효하지 않으면 경로 문제를 먼저 확인하고 보고합니다.
+
+`product-iterative-v1`이 이미 활성화된 Product도 기존 `upgrade`를 사용합니다. 프레임워크 파일은 갱신하되 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신합니다. 프로세스 상태, 현재 범위, 결정과 작업 이력은 보존하며 새 planning 세션으로 초기화하지 않습니다. 세션 bytes가 바뀐 뒤에는 `status --json`으로 현재 revision을 다시 확인합니다. 첫 범위 합의와 상태 요청은 [Core CLI 4.1](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
+
+표식 없는 기존 Product/Audit/PoC는 upgrade로 자동 활성화하거나 이행하지 않습니다. `process_model`을 수동 추가하지 않습니다.
 
 ## upgrade가 갱신하는 것
 

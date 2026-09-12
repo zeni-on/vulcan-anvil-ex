@@ -11,6 +11,13 @@ If `session.json` contains `process_model`, route to `docs/core/ORCHESTRATOR_CLI
 section 4.1 before the legacy Gate instructions below. Do not add the marker or
 reinterpret an unsupported model as legacy. Unmarked projects keep the existing flow.
 
+New `init --profile product` already creates a planning session. Agree the real
+scope using the existing `open-work` request targeting planning, with reason and
+observed expected revision: preview, then apply. Do not call `start` again or route
+to Phase 0/Gate 1. Follow Core 4.1 for readiness and separate advance approval.
+The agent prepares JSON for the user; no mandatory Run, invented REQ/Pass, automatic
+Git evidence, or automatic release is added. Upgrade never migrates unmarked projects.
+
 ## Start
 
 1. Read `AGENTS.md` and the user's latest request when Codex is the primary runner. Inspect current Gate/profile/branch fields or `status`; do not print the full accumulated `session.json` by default.

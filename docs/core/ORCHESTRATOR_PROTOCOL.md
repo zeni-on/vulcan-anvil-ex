@@ -8,7 +8,7 @@ Orchestrator는 별도 persona가 아니다. Orchestrator는 현재 단계의 �
 
 ## 2. 기본 원칙
 
-`process_model: product-iterative-v1`인 별도 실험 Product는 [CLI Guide 4.1절](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 아래의 기존 Gate 순서/Run 자동화로 우회하지 않으며, 표식이 없는 프로젝트는 기존 절차를 유지한다.
+`process_model: product-iterative-v1`인 Product는 [CLI Guide 4.1절](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`는 planning에서 시작하며 첫 합의 범위를 기존 open-work 요청으로 저장한다. 아래의 기존 Gate 순서/Run 자동화로 우회하지 않으며, 표식이 없는 프로젝트와 upgrade는 기존 절차를 유지한다. 표식을 수동 추가하지 않는다.
 
 - Orchestrator는 사용자의 최신 요청과 현재 Gate 상태를 먼저 확인한다.
 - Orchestrator는 새 프로젝트의 첫 대화에서 컨시어지 역할을 한다. 사용자가 인사, 방향 문의, 짧은 목표만 말한 경우에는 자신의 역할과 현재 Gate 진행 방식을 짧게 안내하고, 필요한 입력을 물어본다.

@@ -4,6 +4,8 @@
 
 ## 1. 사용 방식
 
+`process_model`이 있는 Product는 [Core CLI 4.1](../../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 먼저 따른다. 새 `init --profile product`의 planning 세션을 start나 Phase 0/Gate 1로 재시작하지 않는다. 아래 Gate/Run 프롬프트는 기존 Gate 흐름 또는 Run을 선택한 작업용이며 Product의 Run은 필수가 아니다. 표식 없는 프로젝트와 upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않는다.
+
 이 문서는 단독 실행 규칙이 아니다.
 Claude runner에는 항상 Run 입력 계약과 Core 문서를 함께 제공한다.
 

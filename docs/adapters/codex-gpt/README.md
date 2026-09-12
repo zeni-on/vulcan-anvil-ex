@@ -5,6 +5,8 @@
 
 ## 1. 범위
 
+`process_model`이 있는 Product는 [Core CLI 4.1](../../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`의 planning 세션을 아래 Gate 순서로 재시작하지 않는다. 첫 범위 합의와 기존 open-work 요청은 총괄이 준비하며 Run은 선택이다. 표식 없는 기존 프로젝트/upgrade는 자동 이행하지 않고 표식을 수동 추가하지 않는다.
+
 Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출, 실행 지침, 출력 정규화 방식으로 변환한다.
 
 이 Adapter는 다음 작업을 우선 지원한다.

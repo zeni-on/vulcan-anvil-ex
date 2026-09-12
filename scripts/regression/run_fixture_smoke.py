@@ -1299,6 +1299,19 @@ def assert_run_integrate_config_hotfix_candidate(project_dir: Path, py: str, ste
             )
 
 
+def use_legacy_product_fixture(project_dir: Path) -> None:
+    """Keep old Gate regressions explicit; activation has its own CLI tests."""
+    path = project_dir / "session.json"
+    session = json.loads(path.read_text(encoding="utf-8"))
+    if session.get("process_model") != "product-iterative-v1" or session.get("current_gate") != "planning":
+        raise FixtureSmokeFailure("new Product init did not activate iterative planning")
+    for name in ("process_model", "current_work", "work_history"):
+        session.pop(name)
+    session["current_gate"] = "phase0"
+    session["gate_status"] = {name: "pending" for name in ("phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5")}
+    path.write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def run_fixture_smoke(args: argparse.Namespace) -> int:
     root = repo_root()
     fixture_dir = root / "scripts" / "regression" / "fixtures" / args.fixture
@@ -1335,6 +1348,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout_seconds,
             )
         )
+        use_legacy_product_fixture(profile_solution_dir)
         steps.append(
             run_step(
                 "profile-status-solution",
@@ -1354,6 +1368,7 @@ def run_fixture_smoke(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout_seconds,
             )
         )
+        use_legacy_product_fixture(profile_product_dir)
         steps.append(assert_status_model_fallback_summary(profile_product_dir, py))
         assert_product_adr_template_policy(profile_product_dir)
         steps.append(

@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from '@playwright/test'
-import { PRODUCT_STATES, productSession, invalidProductSessions } from '../fixtures/productSession'
+import { PRODUCT_STATES, productSession, newProductSession, invalidProductSessions } from '../fixtures/productSession'
+import { BASE_SESSION } from './fixture'
 
 let root: string
 let id: string
@@ -19,6 +20,30 @@ test.afterAll(async ({ request }) => {
 })
 
 for (const width of [390, 1440]) {
+  test(`new Product init empty scope at ${width}px`, async ({ page, request }) => {
+    const session = newProductSession()
+    const serialized = JSON.stringify(session)
+    fs.writeFileSync(path.join(root, 'session.json'), serialized)
+    expect((await (await request.get(`/api/projects/${id}/session`)).json()).session).toEqual(session)
+    await page.setViewportSize({ width, height: 1000 })
+    await page.addInitScript(() => localStorage.setItem('vulcan-dashboard-layout', 'A2'))
+    await page.goto(`/projects/${id}`)
+    const panel = page.getByTestId('product-process-panel')
+    await expect(page.getByRole('heading', { name: 'Product', exact: true })).toBeVisible()
+    await expect(panel.getByRole('heading', { name: '기획·설계' })).toBeVisible()
+    await expect(panel.getByText('docs/product/PRODUCT_BRIEF.md')).toBeVisible()
+    await expect(panel.getByText('아직 관련 ID, 계약, 테스트, 필수 검사가 등록되지 않았습니다.')).toBeVisible()
+    await expect(panel.getByText('Product · 읽기 전용 · 저장된 상태 · 증적 미검증')).toBeVisible()
+    await expect(panel.getByText('저장된 단계 완료: 0 / 3')).toBeVisible()
+    await expect(panel.getByText('대기', { exact: true })).toHaveCount(2)
+    await expect(panel.getByRole('button')).toHaveCount(0)
+    await expect(page.getByText(/Product 실험|Gate 5|최종 승인|이번 범위 인수 완료/)).toHaveCount(0)
+    expect(await panel.evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+    await page.screenshot({ path: test.info().outputPath(`new-product-${width}.png`), fullPage: true })
+    expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(serialized)
+  })
+
   for (const state of PRODUCT_STATES) {
     test(`${state} persisted minimal session at ${width}px`, async ({ page, request }) => {
       const serialized = JSON.stringify(productSession(state))
@@ -65,6 +90,18 @@ for (const template of ['A', 'B']) {
     const container = page.getByTestId(template === 'A' ? 'layout-a-center' : 'layout-b-left')
     expect(await container.evaluate(el => el.scrollHeight <= el.clientHeight)).toBeTruthy()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  })
+}
+
+for (const profile of ['product', 'audit', 'poc']) {
+  test(`unmarked ${profile} retains legacy Dashboard`, async ({ page, request }) => {
+    const session = { ...BASE_SESSION, profile }
+    fs.writeFileSync(path.join(root, 'session.json'), JSON.stringify(session))
+    expect((await (await request.get(`/api/projects/${id}/session`)).json()).session).toEqual(session)
+    await page.addInitScript(() => localStorage.setItem('vulcan-dashboard-layout', 'A2'))
+    await page.goto(`/projects/${id}`)
+    await expect(page.getByTestId('gate-status-stepper')).toBeVisible()
+    await expect(page.getByTestId('product-process-panel')).toHaveCount(0)
   })
 }
 

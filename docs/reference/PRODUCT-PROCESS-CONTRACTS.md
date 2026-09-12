@@ -1,12 +1,12 @@
-# Product Process Contract Prototype
+# Product Process Contracts
 
-- 상태: 2026-09-12 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI + 단계 2c 운영 소비자 + 단계 2d 명시 브랜치 준비 + 단계 2e QA 전달/회수 연결. 일반 init/기존 프로젝트 이행/실제 릴리즈 발행은 미활성화.
+- 상태: 2026-09-12 신규 `init --profile product`에 반복 프로세스 연결. 기존 프로젝트 이행과 자동 릴리즈 발행은 비활성화. 설치/첫 범위/호환 검증은 [일반 사용 검증](PRODUCT-NEW-PROJECT-VERIFICATION.md)을 따른다.
 - 원본 설계: [3구간 운영](PRODUCT-ITERATIVE-PROCESS-DESIGN.md), [시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
 - 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py), [product_consumers.py](../../vulcan_core/product_consumers.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py), [운영 소비자 시험](../../scripts/regression/tests/test_product_consumers.py).
 
 이 문서는 프레임워크 개발·검토용이다. 프로젝트 에이전트의 시작 입력에 추가하지 않는다.
-일반 init/upgrade는 새 모델을 활성화하지 않는다. 현재 Product의 기존 Gate 운영은 유지한다.
-**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI 상태 저장·검사·명시 브랜치 준비·QA 전달/시험/결과 회수와 Dashboard 표시/릴리즈 후보 미리보기를 사용할 수 있다. 실제 발행 계약과 반복·이행 보존 검증 후 일반 적용 여부를 결정한다.
+신규 Product 초기화만 `product-iterative-v1`로 시작한다. `upgrade`는 기존 모델, 현재 작업·승인·이력과 작성 문서를 보존한다. 표식 없는 Product와 Audit/PoC는 기존 Gate 운영을 유지한다.
+새 Product에서도 상태 저장·검사·브랜치 준비·QA 전달/시험/결과 회수는 명시 작업이다. `completed`는 이번 범위 인수 완료이며, 실제 PR/merge/push/배포는 별도 승인을 확인한 Orchestrator의 Git/호스팅 도구 작업이다. 자동 발행을 활성화의 전제나 완료 의무로 추가하지 않는다.
 
 ## 1. 이번 단계의 경계
 
@@ -95,7 +95,7 @@ Orchestrator는 구현·테스트·의존성·실행 환경의 변경과 실제 
 
 ### 4.3 상태 저장 CLI (단계 2b)
 
-새 최상위 명령을 늘리지 않고 기존 `session`에 별도 실험 경로를 둔다. 아래 입력은 프레임워크/어댑터 개발용 기계 계약이며, 사용자에게 매번 JSON이나 새 Run을 작성하라는 운영 규칙이 아니다. stdin을 쓰면 별도 요청 문서를 만들 필요가 없다.
+새 최상위 명령을 늘리지 않고 기존 `session`에 반복 Product 경로를 둔다. 아래 입력은 프레임워크/어댑터용 기계 계약이며, 사용자에게 매번 JSON이나 새 Run을 작성하라는 운영 규칙이 아니다. stdin을 쓰면 별도 요청 문서를 만들 필요가 없다.
 
 ```text
 python vulcan.py session --process-request request.json --json
@@ -109,9 +109,11 @@ python vulcan.py session --process-request - --json
 
 | action | 입력 | 동작 |
 | --- | --- | --- |
-| `start` | `scope`, `expected_session_revision: null` | session.json이 없는 **별도 실험 폴더**에서 planning 세션 생성. 기존 init 프로젝트의 profile/상태를 전환하지 않음 |
+| `start` | `scope`, `expected_session_revision: null` | session.json 없는 별도 합성 시험 폴더용. init 이후에는 이미 세션이 있으므로 사용하지 않으며 기존 프로젝트 전환에도 사용하지 않음 |
 | `advance` | `target`, 해당 경계에 필요한 `decision`/`basis`/`verification`/`reason` | 현재 범위로 인접 구간 진행 또는 허가된 수정/기획 복귀 |
 | `open-work` | `scope`, `target`, `reason`, 필요한 경우 `decision` | 새 범위를 열고 이전 결과/판정 보존. 기획 재정의 또는 완료 후 다음 작업 |
+
+신규 init의 `work`는 생성된 `docs/product/PRODUCT_BRIEF.md`와 당시 내용 revision을 참조한다. 나머지 범위 목록과 결정/이력은 비어 있다. `status`는 유효한 planning, `status --check`는 `incomplete_scope`를 반환하는 것이 정상이다. Orchestrator는 실제 업무 대화와 필요한 원본 작성 후 `open-work`, `target: planning`으로 첫 범위를 미리보기/적용한다. 템플릿 생성만으로 요구/계약/시험이나 승인을 만들지 않는다.
 
 - planning → impl은 실제 문서 준비 검사와 scoped implement 결정이 필요하다.
 - impl → acceptance는 명시 `basis`의 환경 명세 참조와 verify 권한을 확인한다. 아직 실행 결과를 Pass로 만들지 않는다.
@@ -127,7 +129,8 @@ python vulcan.py session --process-request - --json
 - 새 상태를 임시 파일에 완전히 기록·flush한 후 `session.json`을 원자 교체한다. 저장 전 상태 변경을 다시 확인하며, 교체 실패 시 이전 상태를 보존하고 임시 파일을 정리한다. 일반적인 프로세스 중단에서도 이전 또는 새 JSON 전체가 남도록 하며 전원 장애까지의 내구성을 인증하지는 않는다.
 - 잠금은 이 경로를 사용하는 writer 사이의 약속이다. 별도 편집기/worker의 직접 파일 변경이나 소스 전체를 동결하는 장치가 아니다. 호출자는 작업자 변경을 회수·정리하고 영향과 필요한 관련 재시험을 확인한 뒤 전환한다.
 - 남은 잠금은 PID와 활성 작업을 확인한 뒤 복구한다. 자동으로 잠금을 제거하거나 프로세스를 종료하지 않는다. 저장 후 잠금 정리에 실패하면 `applied: true`와 경고를 반환해 미저장으로 오인하지 않게 한다.
-- 요청은 2MB, 세션은 8MB로 제한하고 중복 JSON 키·비유한 수·비정상 경로를 거부한다. 한도를 넘는 누적 이력의 별도 보존/정리는 일반 활성화 전 후속 검토 대상이며 과거 결과를 자동 삭제하지 않는다.
+- 요청은 2MB, 세션은 8MB로 제한하고 중복 JSON 키·비유한 수·비정상 경로를 거부한다. 누적 이력이 한도에 도달하면 원본을 유지하고 저장을 거부한다. 자동 이력 삭제/분할은 제공하지 않으며 대규모 장기 운영의 알려진 제한으로 남긴다.
+- 반복 Product의 `upgrade`는 같은 writer 잠금 아래 최신 세션을 다시 읽고 framework source/version만 원자 갱신한다. 동시 상태 변경을 과거 사본으로 덮어쓰지 않으며 상태/승인/원본을 재생성하지 않는다. 프레임워크 파일 복사 전체가 트랜잭션인 것은 아니므로 실행 중 worker를 정리한 뒤 업그레이드한다.
 
 실험 세션의 `execute --verify`는 impl의 implement 권한(구현 self-check) 또는 acceptance의 verify 권한이 있을 때만 연결한다. 명시 argv와 새 증적 파일 계약을 유지하고, planning/completed 또는 잘못된 모델에서는 실행 전에 차단한다. 설명용 소스 경로는 선택 사항이다. 검증 명령 자체가 상태를 전환하거나 수용 권한을 만들지 않는다.
 
@@ -144,7 +147,7 @@ python vulcan.py session --process-request - --json
 - `release-pr --dry-run`은 이번 범위 completed, 현재 계약/증적 재검사, clean Git 작업공간, 실제 current/head/base 브랜치를 확인한다. 기존 Gate 5 승인서를 억지로 요구하지 않는다. 관련 없는 미처리 의무는 누락하지 않고 수량으로 노출하며 릴리즈 포함/제외 판단을 요청한다. 통과한 결과는 후보일 뿐 `release_authorized: false`, `publication_enabled: false`다.
 - 미리보기는 PR body 파일도 쓰지 않고 `gh`/push/merge를 실행하지 않는다. 필수 실행 결과·증적과 승인 연결은 확인하되 Git/소스 신선도로 후보를 차단하지 않는다. 구현·환경 변경 영향은 Orchestrator가 판단하며 현재 범위 밖 기능·과거 수용 전체의 배포 적합성을 인증하지 않는다.
 
-단계 2c는 **조회와 명시 시험/미리보기**까지 연결했다. 후속 브랜치 준비는 아래 4.5절에서 상태 변경과 분리하고 QA 전달/회수는 4.6절을 따른다. 실제 릴리즈 발행의 별도 승인/대상 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
+단계 2c의 **조회와 명시 시험/미리보기**에 4.5절 브랜치 준비와 4.6절 QA 전달/회수를 연결했다. 새 init은 이 경로를 사용하되 legacy save/session/gate-start/run-exec 차단은 유지한다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다. 실제 발행은 별도 승인/대상 확인 후 일반 Git/호스팅 도구로 수행한다.
 
 ### 4.5 명시 브랜치 준비 (단계 2d)
 

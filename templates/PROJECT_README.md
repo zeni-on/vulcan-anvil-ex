@@ -2,7 +2,7 @@
 
 이 저장소는 애플리케이션 소스와 Vulcan-Anvil Ex 산출물/운영 파일을 함께 보관합니다.
 
-Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트, 증적, 승인 기록을 Gate 단위로 남기기 위한 AI 협업 개발 프레임워크입니다. 따라서 일반 애플리케이션 저장소보다 문서와 운영 파일이 많습니다.
+Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트와 승인 기록을 연결하는 AI 협업 개발 프레임워크입니다. 신규 Product는 기획·설계, 구현, 인수 검증으로 반복하며 기존 프로젝트와 Audit/PoC는 Gate 흐름을 사용합니다.
 
 ## 폴더 구조
 
@@ -39,7 +39,7 @@ Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트, 증적, 승인 기�
 
 ## 왜 프레임워크 파일이 같이 있나요?
 
-이 프로젝트는 단순 코드 생성 결과가 아니라, Gate별 의사결정과 증적을 함께 남기는 방식으로 진행됩니다.
+이 프로젝트는 코드와 함께 현재 작업 범위의 의사결정과 실제 검증 결과를 남깁니다.
 
 - `AGENTS.md`는 Codex/GPT가 프로젝트 규칙을 읽는 진입점입니다.
 - `.agents/skills/`는 Codex가 Gate/Run/Impl/QA/Release 작업에서 필요할 때 읽는 repo-local skill 카드입니다.
@@ -52,6 +52,10 @@ Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트, 증적, 승인 기�
 처음 보는 사람은 `backend/`와 `frontend/`를 애플리케이션 코드로 보고, `docs/`, `AGENTS.md`, `.agents/`, `.codex/agents/`, `.claude/`, `session.json`, `vulcan.py`를 Vulcan-Anvil Ex 운영 파일로 보면 됩니다.
 
 ## 기본 명령
+
+먼저 `python vulcan.py status`로 현재 모델과 위치를 확인합니다. 새 `init --profile product`는 `product-iterative-v1`의 planning 세션을 이미 생성합니다. 총괄에게 목표와 범위를 설명하면 [Core CLI 4.1](docs/core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)에 따라 기존 open-work 요청을 미리보고 적용합니다. 사용자가 JSON을 손으로 작성하거나 start를 다시 호출할 필요는 없습니다. 초기 `status --check`는 구현 합의 전까지 차단하며, readiness와 별도 advance 승인 후 impl, acceptance로 진행합니다. completed는 이번 범위의 최종 인수 결과이지 배포 완료가 아닙니다.
+
+아래 Gate 명령과 Gate 2/Gate 4 검수 설명은 표식 없는 기존 Product와 Audit/PoC용입니다. upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않습니다. 반복 모델에서는 Run이 필수가 아니고 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업으로 남습니다.
 
 ```bash
 python vulcan.py gate-start gate1 --feature "기능명"

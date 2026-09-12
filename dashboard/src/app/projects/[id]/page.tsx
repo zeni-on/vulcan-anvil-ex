@@ -297,7 +297,7 @@ export default function ProjectDetailPage() {
           {session ? (
             <>
               <h1 className="text-2xl font-bold text-[#F9FAFB] mb-1">
-                {session.project ?? 'Product 실험'}
+                {session.project ?? 'Product'}
               </h1>
               {session.feature && (
                 <p className="text-sm text-[#9CA3AF] mb-1">{session.feature}</p>

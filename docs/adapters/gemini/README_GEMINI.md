@@ -7,7 +7,11 @@
 
 ## 1. 연동 개념
 
+`process_model`이 있는 Product는 [Core CLI 4.1](../../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`의 planning 세션을 아래 Gate 순서로 재시작하지 않는다. 첫 범위 합의와 기존 open-work 요청은 총괄이 준비하며 Run은 선택이다. 표식 없는 기존 프로젝트/upgrade는 자동 이행하지 않고 표식을 수동 추가하지 않는다.
+
 Gemini Adapter는 Core의 공통 규약 및 Run 입력을 Gemini 모델과 Antigravity/Agy 플랫폼 특성에 맞게 중재하고, 출력을 정규화하는 얇은 레이어입니다.
+
+primary 설치 라우팅 확인은 해당 bootstrap/adapter 파일이 선택·설치되는지에 대한 확인입니다. 이를 native AGY 런타임 실행이나 실제 worker 호출의 검증으로 보고하지 않습니다. 실제 실행 여부와 결과는 별도 런타임 증적이 있을 때만 기록합니다.
 
 Antigravity/Agy는 단순 worker runner뿐 아니라 메인 Orchestrator가 될 수 있다. Agy가 메인 Orchestrator인 경우 `GEMINI.md`, `docs/core/`, `docs/adapters/gemini/`를 기준으로 Gate 진행, Run 생성, native worker 위임, 결과 검증을 조율한다.
 

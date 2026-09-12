@@ -29,6 +29,8 @@ python vulcan.py init ../my-audit-project "My Audit Project"
 ```
 
 기본값은 `audit`입니다.
+새 Product는 `product-iterative-v1`의 `planning`에서 시작합니다. 총괄에게 이번 목표와 포함/제외 범위를 설명하면 기존 `open-work` 요청의 미리보기와 적용을 맡습니다. 사용자가 JSON을 손으로 쓸 필요는 없습니다. 초기 `status --check`의 구현 차단은 범위 합의와 별도 구현 승인이 아직 없다는 뜻입니다. 이후 `impl`, `acceptance`를 거치며 `completed`는 이번 범위의 최종 결과이지 배포 완료가 아닙니다. [첫 사용 절차](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)를 따릅니다.
+표식 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며 `process_model`을 수동 추가하지 않습니다.
 GitHub 원격 저장소와 함께 시작하려면 `--remote`를 추가합니다.
 
 ```powershell
