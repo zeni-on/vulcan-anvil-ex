@@ -2,7 +2,7 @@
 
 - 일자: 2026-09-12
 - 범위: Product 마무리 6개 중 5번. PR #47 병합 후 같은 요청 보드에서 진행한다.
-- 현재: 로컬 검증 완료. 원격 CI 확인 후 실행 링크를 추가한다. 일반 활성화는 6번이다.
+- 현재: 로컬·GitHub 제품 CI 검증 완료, [PR #48](https://github.com/zeni-on/vulcan-anvil-ex/pull/48) 병합 대기. 일반 활성화는 6번이다.
 
 ## 무엇을 확장했나
 
@@ -33,6 +33,18 @@
 - 두 작업 범위를 잇는 실제 CLI/SQLite 시나리오 통과. 하나의 통합 시험 안에서 위 허용·거부 경계를 모두 assert한다. 이를 수십 건의 독립 인수 시험으로 부풀리지 않는다.
 
 결과는 `ci-artifacts/iteration/`의 test.log, commands.json, summary.json, session.json, evidence/에 생성된다. 실행 시 해당 전용 출력만 재생성하며 임시 DB는 회수하지 않는다. GitHub CI의 기존 7일 artifact 정책을 사용한다.
+
+## 원격 결과
+
+[GitHub 실행 34687946160](https://github.com/zeni-on/vulcan-anvil-ex/actions/runs/34687946160)의 Request board quality가 **1분 27초에 성공**했다. 총괄이 `request-board-results-1` artifact를 회수하여 확인했다.
+
+- API 15건, Playwright 12건 통과. 화면 시험 18.176초, skipped/unexpected/flaky 각 0.
+- 실제 반복 CLI 시나리오 8.824초에 통과. commands.json의 25회 관측에서 기대한 종료 코드와 다른 결과 0건. 여기에는 의도적 거부/재사용 시험이 포함되어 있으며 일반 사용자가 매번 25개 명령을 실행해야 한다는 뜻은 아니다.
+- 최종 상태는 `filter:2` 범위의 completed이며, 이전 completed 범위 1개가 work_history에 남았다. 실제 발행 거부는 exit 2, publication은 not performed로 기록되었다.
+- 이전 범위/필수 결과 누락/오래된 수용 key/계약 변경은 각각 기대한 거부 사유로 확인했다. 정상 범위의 증적 검증과 합성 수용만 성공했다.
+- HTML/PNG/명령 JSON/log가 회수되었고 SQLite 파일은 artifact에 포함되지 않았다. 기존 실패 probe와 최종 mandatory step 집계도 통과했다.
+
+기존 action 버전의 Node 20 deprecation 경고는 남아 있다. 제품 실행이나 시험 실패는 아니며, action 런타임 갱신을 이번 5번의 추가 범위로 확대하지 않았다.
 
 ## 한계
 

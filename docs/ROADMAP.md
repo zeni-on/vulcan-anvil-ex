@@ -94,7 +94,7 @@
 | 2 | 업무 분석을 작성 흐름에 연결 | [PR #45](https://github.com/zeni-on/vulcan-anvil-ex/pull/45) 병합, CI 3종 통과. [Core 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다), 선택 업무 양식과 [후보 연결 예시](../scripts/regression/fixtures/product-discovery-writing/README.md). [검증/한계](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md#7-작성-연결-검증-2026-09-12): 원본→REQ/AC→시험, 미정 결정·일반 활성화 경계와 설치/조회 호환 확인 |
 | 3 | 실제 요청 보드 한 흐름 검증 | [PR #46](https://github.com/zeni-on/vulcan-anvil-ex/pull/46) 병합, CI 3종 통과. [실행 샘플/결과](../examples/product-request-board/docs/verification.md): 후속 업무 합의, 실제 UI/API/SQLite에서 반복 반려·재제출·권한·이력 보존. API 12건, desktop/mobile 10건 통과 및 고의 이력 파괴 감지. 운영 인증/인수 승인은 아님 |
 | 4 | 제품 CI 연결·실행 | [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합, CI 4종 통과. [요청 보드 CI 결과](../examples/product-request-board/docs/ci-verification.md): 실제 GitHub 실행 1분 10초 성공, API 12건/UI 10건 및 7개 차단 probe 확인·artifact 회수. 자동 merge·배포·보호 설정은 변경하지 않음 |
-| 5 | 반복 운영·릴리즈 경계 마무리 | 로컬 검증 완료, 별도 PR/원격 CI 확인 중. [같은 제품의 확장·결과](../examples/product-request-board/docs/iteration-verification.md): 상태 조회 확장, 과거 계약/수용/SQLite 이력 보존, 이전 승인·증적 재사용 거부, 릴리즈 후보와 실제 발행 분리. API 15건/UI 12건, 실제 CLI 반복 시험. 자동 발행/기존 프로젝트 이행은 추가하지 않음 |
+| 5 | 반복 운영·릴리즈 경계 마무리 | [PR #48](https://github.com/zeni-on/vulcan-anvil-ex/pull/48) 병합 대기. [같은 제품의 확장·결과](../examples/product-request-board/docs/iteration-verification.md): 상태 조회 확장, 과거 계약/수용/SQLite 이력 보존, 이전 승인·증적 재사용 거부, 릴리즈 후보와 실제 발행 분리. 로컬·원격 API 15건/UI 12건 및 실제 CLI 반복 시험 통과, GitHub 제품 CI 1분 27초·artifact 회수 확인. 자동 발행/기존 프로젝트 이행은 추가하지 않음 |
 | 6 | 신규 Product 일반 사용 마무리 | 미활성화. init/지원 adapter/Core/Dashboard의 같은 흐름과 호환 회귀를 확인한 뒤 적용 판단 |
 
 6번 이후에는 실제 사용으로 전환한다. 아래 완료 이력과 장기 후보를 모두 구현해야 이 목표가 완료되는 것은 아니다.
