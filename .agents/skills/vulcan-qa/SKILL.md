@@ -12,7 +12,7 @@ section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope a
 authority; do not add the marker or reinterpret an unsupported model as legacy.
 Unmarked projects keep the existing flow.
 
-In the marked pilot's acceptance stage, `execute --dry-run --json` without a Run
+In the Product iterative process's acceptance stage, `execute --dry-run --json` without a Run
 prepares the native QA handoff and an empty return request. Follow Core section
 4.1 for assignment and result review; it does not launch a delegate or approve QA.
 
