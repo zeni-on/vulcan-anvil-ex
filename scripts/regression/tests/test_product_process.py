@@ -85,7 +85,7 @@ class ProductProcessTests(unittest.TestCase):
         self.assertEqual(completed["current_gate"], "completed")
         self.assertEqual(completed["gate_status"], dict.fromkeys(process.STAGES, "done"))
         self.assertEqual(len(completed["work_history"]), 3)
-        self.assertEqual(process.describe(completed)["status"], "experimental")
+        self.assertEqual(process.describe(completed)["status"], "active")
         self.assertNotIn("release", completed)
         for target in ("gate5", "release", "merge", "deploy", "push"):
             self.denied(completed, target, "invalid target")
@@ -261,7 +261,7 @@ class ProductProcessTests(unittest.TestCase):
         completed = process.advance(session, "completed", verification=report, current_basis=legacy_basis,
                                     decision=decision(session, ["accept"], verification_key=expected))
         before = deepcopy(completed)
-        self.assertEqual(process.describe(completed)["status"], "experimental")
+        self.assertEqual(process.describe(completed)["status"], "active")
         self.assertEqual(completed, before)
         self.assertEqual(completed["current_work"]["verification_key"], expected)
 
@@ -273,7 +273,7 @@ class ProductProcessTests(unittest.TestCase):
             original = path.read_bytes()
             for command in (["status", "--json"], ["status", "--json", "--check"],
                             ["sync-session"], ["session", "--gate", "impl", "--status", "done"],
-                            ["gate-start", "impl"], ["upgrade"], ["export"]):
+                            ["gate-start", "impl"], ["export"]):
                 result = subprocess.run([sys.executable, str(ROOT / "vulcan.py"), *command], cwd=root,
                                         capture_output=True, text=True, encoding="utf-8", timeout=30)
                 expected = 0 if command == ["status", "--json"] else 1 if "--check" in command else 2

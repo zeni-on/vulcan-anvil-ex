@@ -301,7 +301,7 @@ class ScopedReadinessTests(unittest.TestCase):
         result = subprocess.run(command, cwd=self.root, capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         summary = json.loads(result.stdout)
-        self.assertFalse(summary["runtime_enabled"])
+        self.assertTrue(summary["runtime_enabled"])
         self.assertTrue(summary["checks_enabled"])
         self.assertFalse(summary["scoped_check"]["transition"]["allowed"])
         text = checks.render(summary["scoped_check"])

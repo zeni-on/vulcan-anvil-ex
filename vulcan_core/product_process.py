@@ -1,4 +1,4 @@
-"""Experimental Product state contracts. Pure functions; no CLI activation or writes.
+"""Product state contracts. Pure functions; persistence belongs to the caller.
 
 Decisions and observations are supplied by trusted callers. This module checks
 their binding, not the identity of a human or the truth/coverage of a test report.
@@ -86,7 +86,7 @@ def process_model(session):
 def require_legacy(session):
     """Stop legacy consumers before treating a new state as an old Gate."""
     model = process_model(session)
-    _require(model == "legacy", "product-iterative-v1 is experimental; legacy writes/checks are disabled; use status --check for scoped diagnostics")
+    _require(model == "legacy", "product-iterative-v1 uses scoped state requests; legacy writes/checks are disabled; use status --check for scoped diagnostics")
 
 
 def new_session(scope):
@@ -299,12 +299,12 @@ def describe(session):
         if model == "legacy":
             return {"process_model": "legacy", "use_legacy": True}
         work = _validate(session)
-        return {"process_model": model, "runtime_enabled": False, "checks_enabled": True,
-                "session_writes_enabled": True, "status": "experimental",
+        return {"process_model": model, "runtime_enabled": True, "checks_enabled": True,
+                "session_writes_enabled": True, "status": "active",
                 "dashboard_read_enabled": True, "operating_preview_enabled": True,
                 "publication_enabled": False,
                 "current_gate": session["current_gate"], "scope_key": work["scope_key"],
                 "work": deepcopy(work["scope"]["work"]), "history_count": len(session["work_history"]),
-                "message": "Experimental state, scoped checks, Dashboard reads and operating previews are available; general init/migration and PR publication are not enabled."}
+                "message": "New Product projects use scoped planning, implementation and acceptance. Existing projects are not migrated; acceptance does not authorize publication."}
     except ProcessContractError as error:
         return {"status": "unsupported_or_invalid", "runtime_enabled": False, "message": str(error)}

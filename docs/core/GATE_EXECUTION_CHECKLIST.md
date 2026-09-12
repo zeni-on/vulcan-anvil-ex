@@ -7,6 +7,8 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 
 ## 1. 공통 원칙
 
+`process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`의 planning을 아래 Phase 0/Gate 절차로 재시작하지 않는다. 아래 Gate 전환 명령은 표식 없는 기존 Product와 Audit/PoC용이며 upgrade는 자동 이행하지 않는다. 표식을 수동 추가하지 않는다.
+
 - `session.json.current_gate`, 사용자 최신 지시와 현재 작업 요약 또는 Run을 확인한다. Product의 Run/Wave 선택 기준은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 - Product 문서를 작성/현행화할 때는 [PRODUCT_DOCUMENT_WRITING.md](PRODUCT_DOCUMENT_WRITING.md)의 원본 위치와 선택 템플릿을 따른다. 6종 원장에 모든 상세를 누적하지 않으며 요구/설계, 시험 정의, 실행 결과의 수명주기를 구분한다.
 - 현재 Gate보다 앞선 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.

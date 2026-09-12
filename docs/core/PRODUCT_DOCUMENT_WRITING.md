@@ -91,7 +91,7 @@ Product 문서를 새로 쓰거나 보완할 때 사용하는 작성 경로다. 
 
 ## 5. Gate·인계·기존 프로젝트
 
-표식 없는 기존 Product는 Phase 0/Gate 1에서 업무 흐름·요구/AC, Gate 2에서 설계/공통 기준, Gate 3에서 시험 정의, Gate 4에서 실제 실행, Gate 5에서 릴리즈 판단을 담당자가 갱신한다. `process_model`이 있는 실험 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)에 따라 planning 안에서 업무·요구·설계·시험 계획을 반복한다. 템플릿의 legacy `gate_scope`를 추가 Gate 전환 지시로 해석하지 않는다. 일반 활성화는 별도이며 이 작성 지침으로 표식을 추가하지 않는다. 파일이 분리되어도 승인 시점과 책임은 바뀌지 않는다. 구현 담당자는 승인 범위의 코드/테스트와 문서 변경 후보를 반환하고 총괄이 공통 추적/승인 상태를 관리한다.
+표식 없는 기존 Product는 Phase 0/Gate 1에서 업무 흐름·요구/AC, Gate 2에서 설계/공통 기준, Gate 3에서 시험 정의, Gate 4에서 실제 실행, Gate 5에서 릴리즈 판단을 담당자가 갱신한다. 새 `init --profile product`로 생성된 `process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)에 따라 planning 안에서 업무·요구·설계·시험 계획을 반복한다. 템플릿의 legacy `gate_scope`를 추가 Gate 전환 지시로 해석하지 않는다. 기존 프로젝트는 upgrade로 자동 이행하지 않으며 이 작성 지침으로 표식을 추가하지 않는다. 파일이 분리되어도 승인 시점과 책임은 바뀌지 않는다. 구현 담당자는 승인 범위의 코드/테스트와 문서 변경 후보를 반환하고 총괄이 공통 추적/승인 상태를 관리한다.
 
 전달에는 목표/범위, **정확한 원본 경로·ID/절**, 적용 공통 조건, 검증 기준을 포함한다. 도구가 추천한 ID만 넘기거나 상세를 Run에 복사하지 않는다. Run/Wave는 기존 Product 선택 정책을 유지한다.
 

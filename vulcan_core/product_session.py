@@ -1,4 +1,4 @@
-"""Experimental Product session transactions, separate from legacy Gate writers.
+"""Iterative Product session transactions, separate from legacy Gate writers.
 
 The invoking Orchestrator owns real authority/provenance checks. Requests are
 data, never executable instructions. Locking coordinates cooperating writers;
@@ -136,7 +136,7 @@ def _evaluate(root, session, request, parse_tables):
         candidate = process.new_session(request["scope"])
     else:
         if session is None:
-            raise ValueError("session does not exist; start a separate experimental pilot first")
+            raise ValueError("session does not exist; initialize a new Product project first")
         process._validate(session)
         target = request["target"]
         if action == "open-work":
@@ -260,6 +260,25 @@ def _prepare_result_request(root, session, request, *, apply):
         row["command"] = deepcopy(argv)
         row["evidence"] = deepcopy(observed)
     return prepared
+
+
+def refresh_framework_metadata(project_dir, *, source, version):
+    """Upgrade framework metadata without replacing concurrently updated work."""
+    root = evidence._root(project_dir)
+    with _lock(root) as warnings:
+        _refresh_framework_metadata(root, source=source, version=version)
+    return warnings
+
+
+def _refresh_framework_metadata(root, *, source, version):
+    """Caller holds the process writer lock, including during framework copying."""
+    session, previous = _load(root)
+    process._validate(session)
+    session.update(vulcan_src=source, vulcan_version=version)
+    raw = (json.dumps(session, ensure_ascii=True, indent=2, allow_nan=False) + "\n").encode("ascii")
+    if len(raw) > MAX_SESSION_BYTES:
+        raise ValueError("upgraded session exceeds size limit")
+    _save(root, raw, revision(previous))
 
 
 def transact(project_dir, request, parse_tables, *, apply=False):

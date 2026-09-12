@@ -9780,7 +9780,7 @@ def extract_variables(project_dir="."):
     project = re.search(r'^# (.+?)(?:\s+-|\s+Harness)', content, re.MULTILINE)
     generated = re.search(r'생성일: (.+)', content)
 
-    session = load_session(project_dir)
+    session = product_consumers.load(project_dir) or load_session(project_dir)
 
     return {
         "PROJECT_NAME": project.group(1).strip() if project else session.get("project", "Unknown"),
@@ -9789,9 +9789,27 @@ def extract_variables(project_dir="."):
 
 
 def cmd_upgrade(project_dir="."):
+    marked = product_consumers.load(project_dir)
+    if marked is None:
+        return _upgrade_framework(project_dir)
+    try:
+        root = product_session.evidence._root(project_dir)
+        with product_session._lock(root) as warnings:
+            _upgrade_framework(project_dir)
+        for warning in warnings:
+            print(f"  경고: {warning}")
+    except product_session.ConflictError as error:
+        print(f"upgrade conflict: {error}. 세션을 덮어쓰지 않았습니다. 잠금/현재 상태를 확인하세요.")
+        sys.exit(2)
+    except (OSError, ValueError) as error:
+        print(f"upgrade failed: {error}. 프레임워크 파일 일부가 갱신되었을 수 있습니다. 원본과 상태 확인 후 재시도하세요.")
+        sys.exit(2)
+
+
+def _upgrade_framework(project_dir="."):
     import shutil
 
-    session = load_session(project_dir)
+    session = product_consumers.load(project_dir) or load_session(project_dir)
     vulcan_src = session.get("vulcan_src") or VULCAN_DIR
     src_templates = os.path.join(vulcan_src, "templates")
 
@@ -9877,9 +9895,12 @@ def cmd_upgrade(project_dir="."):
     if migrate_vulcan_config_qa_workspace_policy(project_dir):
         print(f"  마이그레이션: vulcan.config.json Gate 4 QA 기본 workspace → integration branch")
 
-    session["vulcan_version"] = new_ver
-    session["vulcan_src"] = vulcan_src
-    save_session(session, project_dir)
+    if "process_model" in session:
+        product_session._refresh_framework_metadata(product_session.evidence._root(project_dir), source=vulcan_src, version=new_ver)
+    else:
+        session["vulcan_version"] = new_ver
+        session["vulcan_src"] = vulcan_src
+        save_session(session, project_dir)
 
     print(f"\n완료! v{current_ver} → v{new_ver}")
     print(f"보존된 파일: ENVIRONMENT.md, session.json, docs/")
@@ -9891,7 +9912,7 @@ def cmd_version(project_dir="."):
     print(f"Vulcan-Anvil Ex v{VULCAN_VERSION}")
     session_path = os.path.join(project_dir, "session.json")
     if os.path.exists(session_path):
-        session = load_session(project_dir)
+        session = product_consumers.load(project_dir) or load_session(project_dir)
         project_ver = session.get("vulcan_version", "unknown")
         print(f"  프로젝트: {session.get('project', '-')} (설치 버전: {project_ver})")
 
@@ -15099,6 +15120,13 @@ def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFI
         "pending": [],
         "blocked": []
     }
+    if profile == "product":
+        from vulcan_core import product_process, product_readiness
+
+        # Initialization records the starting brief, not an approved work scope.
+        scope = {"work": product_readiness.local_reference(target_dir, "docs/product/PRODUCT_BRIEF.md", markdown=True),
+                 "related_ids": [], "contracts": [], "tests": [], "required_checks": []}
+        session.update(product_process.new_session(scope))
     write_file(target_dir, "session.json", json.dumps(session, ensure_ascii=False, indent=2))
 
 
@@ -15417,7 +15445,7 @@ def cmd_profile_status(project_dir="."):
     session_path = os.path.join(project_abs, "session.json")
     if os.path.exists(session_path):
         try:
-            session = load_session(project_abs)
+            session = product_consumers.load(project_abs) or load_session(project_abs)
         except SystemExit:
             session = {}
     config = load_vulcan_config(project_abs)
@@ -15433,6 +15461,10 @@ def cmd_profile_status(project_dir="."):
     print(f"  session_profile: {normalize_delivery_profile(session.get('profile') or session.get('delivery_profile') or profile)}")
     print(f"  config_profile: {config_profile}")
     print(f"  effective_profile: {profile}")
+    if "process_model" in session:
+        print(f"  process_model: {session['process_model']}")
+        print(f"  current_stage: {session['current_gate']}")
+        print("  process_route: status --check / session --process-request; legacy Gate policy labels below are not stage transitions")
     if config_profile != profile:
         print("  warning: session profile and config delivery_profile differ; session wins for Run preset selection")
     print("  supported_profiles: " + ", ".join(SUPPORTED_DELIVERY_PROFILES))
@@ -15453,7 +15485,7 @@ def cmd_profile_status(project_dir="."):
         "release_control",
     ):
         print(f"    {key}: {merged_rules.get(key) or '-'}")
-    if profile != "audit":
+    if profile != "audit" and "process_model" not in session:
         print("  note: non-audit profiles are recorded as overlay policy first; most checks still share audit-safe defaults until profile-specific strictness is implemented.")
 
 
@@ -15774,13 +15806,14 @@ def cmd_status(project_dir=".", check=False, trace_detail=False, emit_json=False
         if "process_model" in session:
             summary = product_process.describe(session)
             summary["session_revision"] = product_session.revision(raw)
-            exit_code = 0 if summary["status"] == "experimental" else 2
+            exit_code = 0 if summary["status"] == "active" else 2
             if check and not exit_code:
                 summary["scoped_check"] = product_readiness.collect(project_dir, session, parse_markdown_tables)
                 if summary["scoped_check"]["status"] != "ready":
                     exit_code = 1
-            if not exit_code or summary.get("status") == "experimental":
+            if not exit_code or summary.get("status") == "active":
                 summary["branch"] = product_consumers.branch_context(project_dir, session, workflow_policy(project_dir))
+                summary["dashboard_comments"] = collect_dashboard_comments(project_dir)
             if trace_detail:
                 summary["trace_detail"] = "not_enabled: legacy trace diagnostics cannot interpret iterative states"
                 exit_code = 2
@@ -16091,7 +16124,7 @@ def cmd_branch_start(stage="impl", project_dir=".", *, apply=False, dry_run=Fals
         print(json.dumps(result, ensure_ascii=False, indent=2) if emit_json else product_branch.render(result))
         return 0 if result["status"] in {"ready", "applied", "unchanged"} else 1 if result["status"] == "blocked" else 2
     if apply or dry_run or emit_json:
-        print("오류: branch-start --apply/--dry-run/--json은 실험 Product 모델 전용입니다.")
+        print("오류: branch-start --apply/--dry-run/--json은 반복 Product 모델 전용입니다.")
         return 2
     workflow = workflow_policy(project_abs)
     if workflow.get("branch_mode") in ("none", "single", "disabled"):
@@ -16243,7 +16276,7 @@ def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, pro
     pilot = product_consumers.load(project_abs)
     if pilot is not None:
         if not dry_run:
-            print("오류: 실험 Product는 release-pr --dry-run만 지원합니다. 범위 인수는 릴리즈/PR 발행 승인이 아닙니다.")
+            print("오류: 반복 Product는 release-pr --dry-run만 지원합니다. 범위 인수는 릴리즈/PR 발행 승인이 아닙니다.")
             sys.exit(2)
         preview = product_consumers.release_preview(project_abs, pilot, workflow, parse_markdown_tables,
                                                      base=base, head=head, title=title)
@@ -16394,6 +16427,10 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         print("  예: python vulcan.py init <dir> <name> --remote <git-url> --require-remote")
         sys.exit(1)
 
+    if os.path.exists(os.path.join(target_dir, "session.json")):
+        print("오류: 이미 초기화된 프로젝트입니다. 기존 문서와 프로세스를 보존하려면 upgrade를 사용하세요.")
+        sys.exit(1)
+
     if os.path.exists(target_dir):
         files = os.listdir(target_dir)
         if files:
@@ -16515,15 +16552,23 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         print(f"  2. Claude Code 런타임 실행 (claude)")
     else:
         print(f"  2. Codex 또는 Claude 런타임 실행")
-    print(f"  3. Orchestrator에게 '무엇을 만들지' 설명하고 Phase 0부터 시작")
+    if profile == "product":
+        print("  3. Orchestrator와 기획·설계부터 시작: 목표, 경계, 시나리오와 이번 작업 범위를 합의하세요.")
+        print("     신규 Product는 planning → impl → acceptance로 반복합니다. 인수와 릴리즈 승인은 별개입니다.")
+        print("     먼저 python vulcan.py status; 범위 확정과 상태 요청은 docs/core/ORCHESTRATOR_CLI_GUIDE.md 4.1절을 따릅니다.")
+    else:
+        print(f"  3. Orchestrator에게 '무엇을 만들지' 설명하고 Phase 0부터 시작")
     if not remote_url:
         print(f"  4. 협업/GitHub 대시보드를 쓰려면 git remote를 설정하세요.")
     print(f"\n대시보드 실행:")
     print(f"  cd <Vulcan-Anvil 경로>/dashboard && npm run dev")
     print(f"  브라우저: http://localhost:3001")
-    print(f"\nGate 완료 시:")
-    print(f"  python vulcan.py check-trace")
-    print(f"  python vulcan.py session --gate gate1 --status done --feature '기능명'")
+    print("\n다음 경계 확인:")
+    print("  python vulcan.py status --check")
+    if profile == "product":
+        print("  초기 빈 범위의 incomplete_scope는 정상입니다. 계약/검증 기준을 정한 뒤 open-work 요청으로 반영하세요.")
+    else:
+        print("  기존 Gate 전환은 docs/core/ORCHESTRATOR_CLI_GUIDE.md를 따릅니다.")
 
 
 # ── main ───────────────────────────────────────────────────────────────────
@@ -16643,17 +16688,17 @@ def main():
     p_gate_start.add_argument("gate", choices=list(GATE_LABELS.keys()), help="시작할 Gate 이름")
     p_gate_start.add_argument("--feature", default="", help="작업 기능명")
 
-    p_session = subparsers.add_parser("session", help="Gate 상태 갱신 / 실험 Product 상태 요청")
+    p_session = subparsers.add_parser("session", help="기존 Gate 상태 갱신 / 반복 Product 상태 요청")
     p_session.add_argument("--gate", choices=list(GATE_LABELS.keys()), help="기존 Gate 이름")
     p_session.add_argument("--status", choices=["done", "pending", "awaiting-approval"], help="기존 Gate 상태")
     p_session.add_argument("--feature", default="", help="작업 기능명")
     p_session.add_argument("--approved", action="store_true", help="사용자 명시 승인 후 Gate 완료/다음 Gate 전환 허용")
     p_session.add_argument("--approval-evidence", default="", help="사용자 승인 근거 또는 대화 메모")
-    p_session.add_argument("--process-request", help="실험 Product 요청 JSON 경로 또는 stdin(-); 기본 미리보기")
+    p_session.add_argument("--process-request", help="반복 Product 요청 JSON 경로 또는 stdin(-); 기본 미리보기")
     p_session_apply = p_session.add_mutually_exclusive_group()
-    p_session_apply.add_argument("--apply", action="store_true", help="검사 후 실험 Product 상태를 원자적으로 저장; 승인 대체 아님")
-    p_session_apply.add_argument("--dry-run", action="store_true", help="실험 Product 상태 요청 미리보기")
-    p_session.add_argument("--json", action="store_true", help="실험 Product 요청 결과 JSON")
+    p_session_apply.add_argument("--apply", action="store_true", help="검사 후 반복 Product 상태를 원자적으로 저장; 승인 대체 아님")
+    p_session_apply.add_argument("--dry-run", action="store_true", help="반복 Product 상태 요청 미리보기")
+    p_session.add_argument("--json", action="store_true", help="반복 Product 요청 결과 JSON")
 
     subparsers.add_parser("sync-session", help="session.json 대시보드 상태 캐시 동기화")
 
@@ -16662,9 +16707,9 @@ def main():
     p_branch_start = subparsers.add_parser("branch-start", help="workflow 단계별 통합 브랜치 시작")
     p_branch_start.add_argument("stage", choices=["impl"], help="시작할 브랜치 단계")
     p_branch_apply = p_branch_start.add_mutually_exclusive_group()
-    p_branch_apply.add_argument("--apply", action="store_true", help="실험 Product의 브랜치 준비 적용; 기본은 미리보기")
-    p_branch_apply.add_argument("--dry-run", action="store_true", help="실험 Product의 브랜치 준비 미리보기")
-    p_branch_start.add_argument("--json", action="store_true", help="실험 Product의 브랜치 준비 JSON 결과")
+    p_branch_apply.add_argument("--apply", action="store_true", help="반복 Product의 브랜치 준비 적용; 기본은 미리보기")
+    p_branch_apply.add_argument("--dry-run", action="store_true", help="반복 Product의 브랜치 준비 미리보기")
+    p_branch_start.add_argument("--json", action="store_true", help="반복 Product의 브랜치 준비 JSON 결과")
 
     p_release_pr = subparsers.add_parser("release-pr", help="Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신")
     p_release_pr.add_argument("--base", default="", help="PR base branch (기본: workflow.release_merge_to 또는 main)")
@@ -16701,7 +16746,7 @@ def main():
     p_run_preflight = subparsers.add_parser("run-preflight", help="worker 실행 전 Build Wave Run 작업지시서 사전 검사")
     p_run_preflight.add_argument("run_file", help="사전 검사할 Run 문서 경로")
 
-    p_execute = subparsers.add_parser("execute", help="Run 실행 계획 또는 실험 Product QA 전달 dry-run / 명시 검증 실행")
+    p_execute = subparsers.add_parser("execute", help="Run 실행 계획 또는 반복 Product QA 전달 dry-run / 명시 검증 실행")
     p_execute.add_argument("--run-id", help="실행 계획을 확인할 Run ID (예: RUN-010)")
     p_execute.add_argument("--runner", default="native", help="native, subagent, thread, agy-branch-agent 또는 codex-cli/claude-cli/antigravity-cli")
     p_execute.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
@@ -16837,7 +16882,7 @@ def main():
             parser.error("legacy session requires --gate/--status; --apply/--dry-run/--json require --process-request")
 
     # Explicit Product consumers validate their model before bypassing old Gates.
-    # Legacy state writers and PR publication remain unavailable in the pilot.
+    # Legacy state writers and automatic PR publication remain unavailable.
     if args.command not in {"init", "status", "version", None} and not process_request:
         session_path = os.path.join(getattr(args, "project_dir", None) or ".", "session.json")
         if os.path.isfile(session_path):
@@ -16846,7 +16891,7 @@ def main():
                     session = json.load(f)
                 if "process_model" in session:
                     session = product_consumers.load(os.path.dirname(session_path))
-                if "process_model" in session and args.command in {"branch-status", "branch-start", "doctor", "release-pr"}:
+                if "process_model" in session and args.command in {"branch-status", "branch-start", "doctor", "release-pr", "upgrade", "profile-status"}:
                     product_process._validate(session)
                 elif "process_model" in session and args.command == "execute" and args.verify:
                     product_session.require_verification_permission(session)

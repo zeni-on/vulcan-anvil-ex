@@ -5,6 +5,8 @@
 
 ## 1. 범위
 
+`process_model`이 있는 Product의 첫 범위 합의와 상태 전환은 [Core CLI 4.1](../../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 Product의 planning 세션을 아래 Gate 절차로 재시작하지 않는다. Run은 선택이며 아래 Run 계약은 Run 사용 시 적용한다. 표식 없는 기존 프로젝트/upgrade는 자동 이행하지 않고 표식을 수동 추가하지 않는다.
+
 Claude Adapter는 공통 Run Input Contract를 Claude Code CLI 또는 IDE 확장 실행 방식으로 변환한다.
 
 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다. Claude Run 입력은 이 공통 체크리스트와 `docs/adapters/claude/GATE_PROMPTS.md`를 읽으며, Codex 전용 `docs/adapters/codex-gpt/GATE_PROMPTS.md`를 실행 계약으로 사용하지 않는다.

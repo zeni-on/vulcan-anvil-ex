@@ -390,7 +390,7 @@ class ProductWorkerTests(unittest.TestCase):
         for rel_path, source in agents.items():
             self.assertEqual((root / rel_path).read_text(encoding="utf-8"), source)
         self.assertEqual((root / ".codex/config.toml").read_text(encoding="utf-8"), user_config)
-        self.assertEqual(json.loads((root / "session.json").read_text(encoding="utf-8"))["current_gate"], "phase0")
+        self.assertEqual(json.loads((root / "session.json").read_text(encoding="utf-8"))["current_gate"], "planning")
 
 
 if __name__ == "__main__":

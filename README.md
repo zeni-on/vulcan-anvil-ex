@@ -163,7 +163,9 @@ Dashboard 화면을 어떻게 읽는지는 [Dashboard Guide](docs/DASHBOARD_GUID
 
 ## 핵심 흐름
 
-Vulcan-Anvil Ex는 Phase 0과 5-Gate 흐름으로 작업을 나눕니다.
+새 `init --profile product`는 `product-iterative-v1`의 `planning`에서 시작해 `impl`, `acceptance`로 진행합니다. `completed`는 이번 범위의 최종 인수 결과이며 배포 완료가 아닙니다. 초기 범위는 구현 합의가 아니므로 먼저 목표와 범위를 총괄에게 설명하세요. 총괄이 기존 상태 요청의 미리보기와 적용을 맡으며 사용자가 JSON을 손으로 작성할 필요는 없습니다. 첫 사용 절차는 [Core CLI 4.1](docs/core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
+
+아래 Phase 0과 5-Gate 흐름은 표식 없는 기존 Product와 Audit/PoC에 적용합니다. `upgrade`는 자동 이행하지 않으며 `process_model` 표식을 수동 추가하지 않습니다.
 
 | 단계 | 목적 | 주요 산출물 |
 | --- | --- | --- |

@@ -71,7 +71,9 @@ class ProductPolicyTests(unittest.TestCase):
                     self.assertLess(route, legacy)
         guide = self.read("docs/core/ORCHESTRATOR_CLI_GUIDE.md").split("### 4.1", 1)[1].split("## 5.", 1)[0]
         self.assertIn("검증 전용 위임으로 코드나 상태를 수정하지 않는다", guide)
-        self.assertIn("일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다", guide)
+        self.assertIn("init --profile product", guide)
+        self.assertIn("upgrade", guide)
+        self.assertIn("open-work", guide)
 
     def test_worker_and_result_template_do_not_restore_git_evidence(self):
         worker = self.read("docs/core/PRODUCT_WORKER_GUIDE.md")

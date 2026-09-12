@@ -1,4 +1,4 @@
-"""Read-only operating views for the opt-in Product process.
+"""Read-only operating views for the iterative Product process.
 
 Persisted acceptance is not release authority. These consumers never checkout,
 write session state, run QA from document text, or publish a PR.
@@ -13,7 +13,7 @@ from . import evidence, product_process as process, product_readiness as readine
 
 
 def load(project_dir):
-    """Return a validated pilot session, or None for legacy/missing sessions."""
+    """Return a validated iterative session, or None for legacy/missing sessions."""
     path = Path(project_dir) / "session.json"
     if not path.is_file():
         return None

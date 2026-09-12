@@ -20,6 +20,16 @@ export function productSession(state: ProductState = 'planning'): ProductSession
   }
 }
 
+// Mirrors new Product init's empty scope using a synthetic revision.
+export function newProductSession(): ProductSessionData {
+  const session = productSession()
+  session.current_work.scope.work.ref = 'docs/product/PRODUCT_BRIEF.md'
+  session.current_work.scope.related_ids = []
+  // Computed with Python product_process.scope_key for this empty scope.
+  session.current_work.scope_key = 'c3b7e03a3f3f9c421616adeaed5027f2d4a457f28646cd79aa04092ad50b7bf4'
+  return session
+}
+
 export function invalidProductSessions(): [string, unknown][] {
   const base = productSession()
   return [

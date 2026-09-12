@@ -8,11 +8,11 @@
 
 **Experimental - v0.4.x**
 
-`0.4.x`는 Codex, Claude, Antigravity/Gemini runner를 실제 프로젝트 검수/구현/QA 흐름에 더 안전하게 연결하기 위해 audit workflow 브랜치 경계, worker 실행, staged Gate 4 QA, QA workspace 재사용, Program Design 계약 검증, trace-context 그래프, Dashboard 증적/추적 가시성을 보강하는 실험 라인입니다.
+`0.4.x`는 프로파일별 개발 흐름과 문서·검증 근거를 연결하는 실험 라인입니다. 신규 Product는 기획·설계 ↔ 구현 ↔ 인수 검증으로 반복하고, 기존 Product/Audit/PoC는 기존 Gate 흐름을 유지합니다. 역할별 native 위임, 통합 브랜치, 현재 계약·실제 시험·Dashboard 가시성을 지원하며 외부 CLI runner는 선택 경로입니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
-- Phase 0 + 5-Gate 진행 흐름
+- 신규 Product의 3구간 반복 운영과 기존 프로젝트의 Phase 0 + 5-Gate 흐름
 - Codex/GPT adapter
 - Claude adapter
 - Dashboard A2
@@ -94,12 +94,14 @@
 | 2 | 업무 분석을 작성 흐름에 연결 | [PR #45](https://github.com/zeni-on/vulcan-anvil-ex/pull/45) 병합, CI 3종 통과. [Core 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다), 선택 업무 양식과 [후보 연결 예시](../scripts/regression/fixtures/product-discovery-writing/README.md). [검증/한계](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md#7-작성-연결-검증-2026-09-12): 원본→REQ/AC→시험, 미정 결정·일반 활성화 경계와 설치/조회 호환 확인 |
 | 3 | 실제 요청 보드 한 흐름 검증 | [PR #46](https://github.com/zeni-on/vulcan-anvil-ex/pull/46) 병합, CI 3종 통과. [실행 샘플/결과](../examples/product-request-board/docs/verification.md): 후속 업무 합의, 실제 UI/API/SQLite에서 반복 반려·재제출·권한·이력 보존. API 12건, desktop/mobile 10건 통과 및 고의 이력 파괴 감지. 운영 인증/인수 승인은 아님 |
 | 4 | 제품 CI 연결·실행 | [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합, CI 4종 통과. [요청 보드 CI 결과](../examples/product-request-board/docs/ci-verification.md): 실제 GitHub 실행 1분 10초 성공, API 12건/UI 10건 및 7개 차단 probe 확인·artifact 회수. 자동 merge·배포·보호 설정은 변경하지 않음 |
-| 5 | 반복 운영·릴리즈 경계 마무리 | [PR #48](https://github.com/zeni-on/vulcan-anvil-ex/pull/48) 병합 대기. [같은 제품의 확장·결과](../examples/product-request-board/docs/iteration-verification.md): 상태 조회 확장, 과거 계약/수용/SQLite 이력 보존, 이전 승인·증적 재사용 거부, 릴리즈 후보와 실제 발행 분리. 로컬·원격 API 15건/UI 12건 및 실제 CLI 반복 시험 통과, GitHub 제품 CI 1분 27초·artifact 회수 확인. 자동 발행/기존 프로젝트 이행은 추가하지 않음 |
-| 6 | 신규 Product 일반 사용 마무리 | 미활성화. init/지원 adapter/Core/Dashboard의 같은 흐름과 호환 회귀를 확인한 뒤 적용 판단 |
+| 5 | 반복 운영·릴리즈 경계 마무리 | [PR #48](https://github.com/zeni-on/vulcan-anvil-ex/pull/48) 병합, CI 4종 통과. [같은 제품의 확장·결과](../examples/product-request-board/docs/iteration-verification.md): 상태 조회 확장, 과거 계약/수용/SQLite 이력 보존, 이전 승인·증적 재사용 거부, 릴리즈 후보와 실제 발행 분리. 로컬·원격 API 15건/UI 12건 및 실제 CLI 반복 시험 통과, GitHub 제품 CI 1분 27초·artifact 회수 확인. 자동 발행/기존 프로젝트 이행은 추가하지 않음 |
+| 6 | 신규 Product 일반 사용 마무리 | 구현·로컬 검증 완료, `codex/product-new-project-activation` 병합 대기. [초기화/호환 검증](reference/PRODUCT-NEW-PROJECT-VERIFICATION.md): 신규 Product만 planning 활성화, 첫 범위·승인 분리, Core/adapter/Dashboard 연결, 기존 모델·문서·이력 보존. Python 354건(351 Pass/3 skip), fixture 84단계, Dashboard 310건/build 및 Product 화면 시험 통과. 이후 실제 사용으로 전환 |
 
 6번 이후에는 실제 사용으로 전환한다. 아래 완료 이력과 장기 후보를 모두 구현해야 이 목표가 완료되는 것은 아니다.
 
-#### Product 3구간 반복 프로세스 (2026-09-12, 운영 관측/일반 활성화 전)
+#### Product 3구간 반복 프로세스 (2026-09-12, 구현 경과)
+
+아래는 단계별 당시 경계와 검증 이력이다. 현재 활성화 범위와 완료 여부는 위 6개 표를 우선한다. 초기 단계의 "일반 활성화 전"은 현재 신규 init을 차단하는 정책이 아니다.
 
 - 최우선 방향은 **기획·설계 ↔ 구현 ↔ 인수 검증**이다. [운영 설계](reference/PRODUCT-ITERATIVE-PROCESS-DESIGN.md)에 사용자 결정/자율 진행, 범위별 문서 책임, 반복·수용·배포 경계와 현재 코드의 결합 지점을 정리했다. 화면만 묶거나 내부에서 기존 7단계를 자동 순회하는 접근은 제외한다.
 - [운영 시나리오와 후속 회귀 기준](reference/PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)은 신규/확장, 인수 중 결함·업무 변경·환경 차단, 병렬 기획, 완료 후 재진입 등을 다룬다. 아직 runtime 실행 시험이 아니라 설계 검토용 기대 행동이다.
