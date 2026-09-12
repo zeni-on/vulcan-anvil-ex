@@ -103,6 +103,8 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 
 일반 `init`/`upgrade`는 이 모델을 활성화하지 않는다. 기존 Product/Audit/PoC 세션에 표식을 수동 추가하거나 이 명령으로 이행하지 않는다. 실험 모델도 Run/자동 Git commit/릴리즈를 추가로 강제하지 않으며, 기존 프로젝트에는 위의 Gate 라이프사이클이 그대로 적용된다.
 
+planning의 작성은 [Product Document Writing 0절](PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다)을 따른다. 이번 흐름의 문제·경계·규칙·예시를 확인한 뒤 REQ/AC와 설계·시험 원본으로 연결한다. 구현 인계의 `scope.contracts`에는 현재 채택할 REQ/AC와 적용 업무/공통 조건의 정확한 원본 절을, `scope.tests`에는 시험 계획을 지정한다. 직접 관련 정의 ID와 필수 시험만 선택하고 후보를 현재로 간주하지 않는다. 링크한 원본도 scope에 명시 연결해야 하며 전체 프로젝트 원장이나 과거 대화를 복사하지 않는다. `status --check`는 링크/ID/계획 정합성 검사이지 업무 합의 판정이 아니며, 실제 구현 허가와 인수 결정은 기존 상태 계약으로 따로 처리한다.
+
 | 실험 모델의 운영 작업 | 연결된 경로와 경계 |
 | --- | --- |
 | 현재 위치/범위/작업공간 | `status`, `branch-status`. `planning`/`impl`/`acceptance`를 그대로 읽으며 과거 Gate 키로 바꾸지 않는다. |
