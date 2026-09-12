@@ -25,6 +25,8 @@
 
 실행 경로는 [초기화 시험](../../scripts/regression/tests/test_product_activation.py), [legacy smoke](../../scripts/regression/run_fixture_smoke.py), [화면 시험](../../dashboard/src/__tests__/e2e/product-process.spec.ts), [요청 보드 반복 시험](../../examples/product-request-board/ci/iteration.py)에 있다. 전체 회귀의 첫 실행에서 과거 `init Product = phase0`를 전제한 fixture가 실패했고, 실제 제품 정책을 느슨하게 하지 않고 legacy fixture와 신규 초기화 기대값을 분리했다.
 
+최초 원격 실행에서는 Linux/제품 CI/Dashboard가 통과했고 Windows 잠금 시험 2건이 짧은 임시 경로를 내부 함수에 직접 전달해 실패했다. fixture root를 정규 경로로 만들어 실제 CLI와 같은 입력 계약을 사용하도록 보정했다. 제품의 경로 이탈 방어는 완화하지 않는다. 최종 재실행은 [PR #49 Checks](https://github.com/zeni-on/vulcan-anvil-ex/pull/49/checks)를 기준으로 본다.
+
 ## 독립 검토
 
 새 문맥의 native contract reviewer가 version의 legacy 읽기와 upgrade의 늦은 잠금 충돌 처리를 발견했다. marked 읽기 연결, 파일 복사 전 잠금, 명시 오류 처리와 전체 파일 무변경 CLI 시험으로 보정했다. 해당 수정 재검토와 집중 3건에서 추가 지적은 없었다. Dashboard/adapter 담당과 Python 담당의 변경 영역을 분리했고 총괄이 변경과 결과를 재확인했다.

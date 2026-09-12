@@ -20,7 +20,8 @@ class ProductActivationTests(unittest.TestCase):
     def root(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        return Path(temp.name) / "project"
+        # Internal path helpers receive canonical roots, as public CLI paths do.
+        return (Path(temp.name) / "project").resolve()
 
     def init(self, root, profile="product", primary="codex-cli"):
         output = io.StringIO()
