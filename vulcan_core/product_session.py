@@ -210,6 +210,58 @@ def _save(root, raw, expected):
             os.unlink(temporary)
 
 
+def _prepare_result_request(root, session, request, *, apply):
+    """Expand reviewed path-only rows in previews, pinning the bytes actually read."""
+    verification = request.get("verification")
+    rows = verification.get("results") if isinstance(verification, dict) else None
+    if not isinstance(rows, list) or not any(isinstance(row, dict) and isinstance(row.get("evidence"), str) for row in rows):
+        return None
+    if apply or "decision" in request:
+        raise ValueError("path-only results require a preview without decision; review prepared_request before applying acceptance")
+    if session is None or session.get("current_gate") != "acceptance" or request["action"] != "advance" or request.get("target") != "completed":
+        raise ValueError("path-only results are only supported for acceptance completion previews")
+    work = process._validate(session)
+    if verification.get("scope_key") != work["scope_key"]:
+        raise ValueError("verification belongs to another scope")
+    ids = [row.get("id") if isinstance(row, dict) else None for row in rows]
+    if any(not isinstance(identifier, str) for identifier in ids) or sorted(ids) != work["scope"]["required_checks"]:
+        raise ValueError("results must cover each required check exactly once")
+    prepared = deepcopy(request)
+    size = len(json.dumps(prepared, ensure_ascii=True, allow_nan=False))
+    reports = {}
+    for row in prepared["verification"]["results"]:
+        reference = row.get("evidence")
+        if not isinstance(reference, str):
+            continue
+        if set(row) != {"id", "status", "evidence"}:
+            raise ValueError("path-only results accept only id, status and evidence; command comes from the report")
+        if not isinstance(row["status"], str) or row["status"] not in {"Pass", "Fail", "Not Run", "environment_blocked", "Skipped"}:
+            raise ValueError("result status must be an explicit reviewed outcome")
+        if reference not in reports:
+            _, _, raw = readiness._content(root, reference)
+            report = decode(raw)
+            command = report.get("command")
+            if (report.get("kind") != "explicit_verification" or type(report.get("schema_version")) is not int
+                    or report["schema_version"] not in {1, 2} or not isinstance(command, dict)):
+                raise ValueError("expected an explicit_verification JSON report: " + reference)
+            argv = command.get("argv")
+            if (not isinstance(argv, list) or not argv or any(not isinstance(arg, str) or "\x00" in arg for arg in argv)
+                    or not argv[0] or type(command.get("exit_code")) is not int
+                    or not isinstance(command.get("started_at"), str) or not command["started_at"]
+                    or not isinstance(command.get("finished_at"), str) or not command["finished_at"]
+                    or (command.get("launch_error") is not None and not isinstance(command["launch_error"], str))):
+                raise ValueError("incomplete command observation: " + reference)
+            reports[reference] = (argv, {"ref": reference, "revision": revision(raw)})
+        argv, observed = reports[reference]
+        expanded = {"id": row["id"], "status": row["status"], "command": argv, "evidence": observed}
+        size += len(json.dumps(expanded, ensure_ascii=True)) - len(json.dumps(row, ensure_ascii=True))
+        if size > MAX_REQUEST_BYTES:
+            raise ValueError("prepared result request exceeds size limit")
+        row["command"] = deepcopy(argv)
+        row["evidence"] = deepcopy(observed)
+    return prepared
+
+
 def transact(project_dir, request, parse_tables, *, apply=False):
     """Default preview; apply re-evaluates under a writer lock and atomically saves."""
     try:
@@ -224,19 +276,33 @@ def transact(project_dir, request, parse_tables, *, apply=False):
                 raise ValueError("existing legacy sessions are not migrated by this command")
             if revision(previous) != request["expected_session_revision"]:
                 raise ConflictError("stale expected_session_revision; reload status before retrying")
-            candidate, checked = _evaluate(root, session, request, parse_tables)
+            prepared = _prepare_result_request(root, session, request, apply=apply)
+
+            def with_prepared(result):
+                if prepared is not None:
+                    _, current = _load(root)
+                    if current != previous:
+                        raise ConflictError("session changed during result preview; reload before preparing another request")
+                    result["prepared_request"] = prepared
+                return result
+
+            try:
+                candidate, checked = _evaluate(root, session, prepared or request, parse_tables)
+            except BlockedError as error:
+                return with_prepared({"status": "blocked", "applied": False,
+                                      "message": str(error), "checks": error.checks})
             raw = (json.dumps(candidate, ensure_ascii=True, indent=2, allow_nan=False) + "\n").encode("ascii")
             if len(raw) > MAX_SESSION_BYTES:
                 raise ValueError("proposed session exceeds size limit")
             if apply:
                 _save(root, raw, request["expected_session_revision"])
             current = candidate if apply else session
-            return {"status": "applied" if apply else "ready", "applied": apply, "action": action,
+            return with_prepared({"status": "applied" if apply else "ready", "applied": apply, "action": action,
                     "current_gate": current["current_gate"] if current else None,
                     "scope_key": current["current_work"]["scope_key"] if current else None,
                     "proposed_gate": candidate["current_gate"], "proposed_scope_key": candidate["current_work"]["scope_key"],
                     "previous_session_revision": revision(previous), "session_revision": revision(raw) if apply else revision(previous),
-                    "proposed_session_revision": revision(raw), "checks": checked, "release_authorized": False}
+                    "proposed_session_revision": revision(raw), "checks": checked, "release_authorized": False})
 
         if apply:
             with _lock(root) as warnings:

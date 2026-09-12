@@ -16924,7 +16924,9 @@ def main():
             except (OSError, ValueError) as error:
                 result = {"status": "invalid", "applied": False, "message": str(error)}
             print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else
-                  "\n".join(product_readiness.render(value) if key == "checks" and value else f"{key}: {value}"
+                  "\n".join(product_readiness.render(value) if key == "checks" and value else
+                            "prepared_request: available with --json; review before supplying acceptance" if key == "prepared_request" else
+                            f"{key}: {value}"
                             for key, value in result.items()))
             sys.exit(0 if result["status"] in {"ready", "applied"} else 1 if result["status"] == "blocked" else 2)
         cmd_session(

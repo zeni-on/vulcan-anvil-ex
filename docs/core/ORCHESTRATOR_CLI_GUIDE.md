@@ -122,8 +122,10 @@ native QA는 다음 순서로 연결한다. 새 문서를 추가로 채우라는
 1. acceptance에서 `python vulcan.py execute --dry-run --json`을 실행한다. `--run-id` 없이 현재 scope, 계약/시험 참조, 통합 작업공간, 환경 명세와 빈 `return_request`를 받는다. `--runner subagent`, `thread`, `agy-branch-agent`는 전달 방식의 표시이며 실제 호출이나 격리 보장이 아니다.
 2. 총괄이 기존 작업 요약에 담당자, 정확한 argv/cwd, 새 JSON/log/report 경로와 필요한 런타임 출력 경로를 붙여 전달한다. 문서에서 명령을 자동 추출·실행하지 않는다. 담당자는 검증 전용 위임으로 코드나 상태를 수정하지 않는다. `verify_only`는 역할 계약이며 CLI가 임의 테스트 프로세스를 OS sandbox로 격리한다는 뜻은 아니다.
 3. 담당자는 명시 명령을 실행하고 ID별 실제 결과, 명령 JSON과 원본 로그, 실패 원인/미실행 항목을 반환한다. `execute --verify`는 acceptance의 현재 계약·시험 계획·환경 명세·작업공간을 실행 전에 재확인한다. 환경 명세가 정상이어도 실제 서비스/브라우저가 준비됐다는 뜻은 아니다.
-4. 총괄이 실제 명령 종료·로그·현재 소스/환경 변경을 확인하고 `return_request.verification.results`를 채운다. ID마다 `id`, `status`, 실제 `command` argv, `evidence` 참조를 사용한다. 빈 results를 채우기 위해 Pass를 만들지 않으며 실패/누락/`environment_blocked`를 보존한다. delegate/검증 범위/결과는 기존 요약에 남긴다.
-5. 결과 요청을 `session --process-request <request.json> --json`으로 미리본다. 실제 증적이 통과해도 accept 결정이 없으면 차단되며 `checks.verification_key`만 확인할 수 있다. 총괄은 실제 수용 권한을 확인한 뒤 별도 accept 결정을 연결하고 `--apply`한다. 오래된 session revision이면 현재 상태를 먼저 확인하며 자동으로 새 revision을 끼워 넣어 재적용하지 않는다.
+4. 총괄이 실제 명령 종료·로그·현재 소스/환경 변경을 확인하고 `return_request.verification.results`를 채운다. ID마다 `id`, 직접 판정한 `status`, 기존 명령 JSON의 상대 경로인 `evidence`만 입력할 수 있다. 예: `{"id":"REG-001","status":"Pass","evidence":"evidence/retest.json"}`. 빈 results를 채우기 위해 Pass를 만들지 않으며 실패/누락/`environment_blocked`를 보존한다. delegate/검증 범위/결과는 기존 요약에 남긴다.
+5. 기존 `session --process-request <request.json 또는 -> --json`으로 결정 없이 미리본다. 경로만 준 결과는 실제 JSON의 argv와 읽은 bytes의 증적 참조를 채운 `prepared_request`로 반환한다. 기존 `command`/`evidence.ref`/`revision` 전체 입력도 유지한다. 실제 증적이 통과해도 accept 결정이 없으면 blocked/exit 1이며 `checks.verification_key`로 수용 대상을 확인한다. 총괄은 반환된 `prepared_request`를 검토하고 실제 권한 근거의 별도 accept 결정을 연결한 뒤 기존 `--apply`로 적용한다. 경로만 있는 입력의 직접 apply/결정 포함 preview는 거부하며, 저장 시 증적 변경과 오래된 session revision을 재검사한다. 실패한 요청의 revision이나 증적 참조를 자동으로 새 값으로 바꾸지 않는다.
+
+이 축약은 기존 반환 요청의 results 부분에만 적용한다. 현재 범위/환경/세션 revision은 전달받은 `return_request`를 유지하며 다시 작성하지 않는다. JSON 파일 대신 stdin도 가능하고 새 필수 결과 파일이나 CLI는 없다. 실행하지 않아 명령 JSON이 없는 항목에는 다른 성공 파일을 빌려 연결하지 않고, 미실행 사유를 기존 요약에 남긴다. 누락 상태에서는 완료할 수 없다. 텍스트 preview는 요청 본문을 펼치지 않고 `--json` 조회를 안내한다.
 
 실패한 결과 요청은 상태를 바꾸거나 실패 기록을 저장하지 않는다. 원본 증적과 기존 결과 요약에 실패를 남기고, 허가된 수정은 impl로 돌아가 처리한 뒤 새 증적을 수집한다. 서브에이전트의 완료 알림이나 exit 0은 테스트 건수/업무 결과/인수 승인을 인증하지 않는다. 이 경로는 새 Run/자동 dispatcher/릴리즈 권한을 만들지 않는다.
 
