@@ -1,0 +1,13 @@
+{
+  "name": "product-request-board-example",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "start": "python app.py --demo"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "lucide": "0.400.0"
+  }
+}

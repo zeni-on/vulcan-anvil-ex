@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>요청 보드</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/icons.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <header class="header">
+    <div class="brand"><span class="context">로컬 샘플 · 테스트 계정</span><h1>요청 보드</h1></div>
+    <div class="identity"><label for="identity">테스트 계정</label><select id="identity" disabled><option value="">계정 불러오는 중…</option></select></div>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="feedback"><p id="app-error" class="error" role="alert" hidden></p><p id="notice" class="notice" role="status" aria-live="polite"></p></div>
+    <div class="workspace">
+      <section class="requests" aria-labelledby="list-heading">
+        <div class="section-heading"><h2 id="list-heading">요청 목록 <span id="request-count" class="count">0</span></h2><button id="refresh" class="icon-button" type="button" title="목록 새로고침" aria-label="목록 새로고침" disabled><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div>
+        <p id="list-state" class="empty" role="status">계정을 확인하고 있습니다.</p>
+        <ul id="request-list" class="request-list" aria-label="요청 목록"></ul>
+        <section id="create-section" class="create-section" aria-labelledby="create-heading" hidden>
+          <h2 id="create-heading">새 요청</h2>
+          <form id="create-form">
+            <label for="content">요청 내용</label>
+            <textarea id="content" name="content" rows="4" maxlength="4000" required></textarea>
+            <p id="create-error" class="error" role="alert" hidden></p>
+            <div class="form-footer"><span class="counter" id="content-count">0 / 4,000</span><button class="primary" type="submit" title="요청 제출"><i data-lucide="send" aria-hidden="true"></i><span>요청 제출</span></button></div>
+          </form>
+        </section>
+      </section>
+      <section id="detail-panel" class="detail-panel" aria-labelledby="detail-heading" aria-busy="false">
+        <div class="section-heading"><h2 id="detail-heading">요청 상세</h2></div>
+        <p id="detail-state" class="empty detail-empty" role="status">테스트 계정을 선택해 주세요.</p>
+        <div id="detail"></div>
+      </section>
+    </div>
+  </main>
+  <noscript><p class="error">요청 보드를 사용하려면 JavaScript를 켜 주세요.</p></noscript>
+</body>
+</html>
