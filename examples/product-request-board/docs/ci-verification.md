@@ -2,7 +2,7 @@
 
 - 일자: 2026-09-12
 - 범위: Product 마무리 6개 중 4번. [업무 흐름 검증](verification.md)에 사용한 같은 샘플을 CI에 연결한다.
-- 현재: 로컬 검사 통과, 원격 PR 실행 확인 전. 실제 관측 후 아래 원격 기록을 갱신한다.
+- 현재: 로컬 및 GitHub 원격 제품 CI 검증 완료, [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합 대기.
 
 ## 연결과 책임
 
@@ -13,6 +13,8 @@
 필수 실행 설정은 [required.json](../ci/required.json)에 있다. API 메서드 목록, browser 태그와 desktop/mobile 실행을 결과에서 확인한다. 시험/필수 목록을 함께 임의 삭제하는 공격까지 자동 방지하는 기능은 아니다. 이 파일과 CI/시험 코드 변경은 리뷰 대상이다.
 
 workflow를 path filter로 통째로 건너뛰지 않는다. [scope 정책](../ci/policy.py)은 코드/설정/CI 또는 샘플의 계약·시험 정의·알 수 없는 새 문서 변경을 검사 대상으로 본다. README/기존 결과 요약 등 명시된 설명 문서는 샘플 시험을 생략할 수 있다. 알 수 없는 diff는 실행 또는 차단으로 처리하며 성공으로 추정하지 않는다.
+
+PR에서는 base와 현재 PR 전체 변경을 비교한다. 코드가 포함된 PR에서 마지막 커밋만 보고서 수정이라고 제품 검사를 생략하지 않는다. 문서-only 비적용은 PR의 비교 범위 전체가 해당할 때의 동작이다.
 
 마지막 step은 `always()`로 각 필수 step의 실제 `outcome`과 `conclusion`을 대조한다. 실패를 `continue-on-error`로 감추거나 필요한 step을 skip/취소/누락하면 성공하지 않는다. 설치/브라우저 준비 실패는 환경 차단으로 분리한다. workflow 전체가 실행되지 않거나 job 자체가 취소된 경우에는 마지막 step도 보장되지 않으므로 예상 check의 부재/취소를 통합 시점에 확인해야 한다.
 
@@ -46,7 +48,19 @@ Native worker Cicero가 scope/step 집계와 단위 회귀를 맡았다. 새 문
 
 ## 원격 기록
 
-원격 workflow의 실제 실행·리포트 회수는 아직 확인 전이다. 로컬 source/unit 검사를 원격 job 실행 성공으로 대체하지 않는다.
+[GitHub 실행 34686757012](https://github.com/zeni-on/vulcan-anvil-ex/actions/runs/34686757012)의 `Request board quality`가 **1분 10초에 성공**했다. Ubuntu hosted runner의 Python 3.12/Node 22에서 의존성 설치, Chromium 설치/launch, 정적 검사, API, 화면, 보고서 대조, 실패 probe, artifact 보존과 최종 집계가 모두 실행되었다.
+
+총괄이 `request-board-results-1` artifact를 회수하여 직접 확인한 내용:
+
+- `ci-artifacts/api.json`: 12건 실행/12건 passed.
+- `test-results/results.json`: 10건 expected, unexpected/skipped/flaky 각 0. 원격 Playwright 실행 시간은 12.5초.
+- `ci-artifacts/reports-summary.json`: passed, 이슈 없음.
+- `ci-artifacts/probes.json`: 위 7개 경계 모두 기대대로 감지. 실제 결함 failed, 누락/skip/0건 incomplete, 빈 브라우저 캐시 environment_blocked.
+- `playwright-report/index.html`과 desktop/mobile PNG 존재. 최종 집계 로그는 success, issues 없음.
+
+이것은 실제 원격 실행/리포트 확인이다. 단, 의도적 실패는 같은 job 안의 격리 subprocess에서 검사했고, 필수 step 누락/취소 집계는 단위 계약 시험이다. 전체 GitHub job을 고의로 취소하거나 보호 규칙의 강제 merge 거부를 실험했다는 뜻은 아니다.
+
+GitHub는 기존 저장소와 같은 action 버전(checkout v4, setup-node v4, setup-python v5, upload-artifact v4)의 Node 20 런타임 deprecation 경고를 표시했다. hosted runner가 Node 24로 실행했고 실제 검사는 성공했다. 이것은 제품을 실행한 Node 22 버전과 별개이며, 경고가 없었다고 기록하지 않는다.
 
 ## 한계와 다음
 

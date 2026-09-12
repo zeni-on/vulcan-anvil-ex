@@ -93,7 +93,7 @@
 | 1 | QA 결과 회수 간소화 | [PR #44](https://github.com/zeni-on/vulcan-anvil-ex/pull/44) 병합, Linux/Windows Python 및 Dashboard CI 통과. [검증과 한계](reference/PRODUCT-PROCESS-CONTRACTS.md#67-마무리-범위-1-qa-결과-입력-축소-2026-09-12): 기존 요청에서 ID·판정·증적 경로를 받고 실행 argv/참조를 보완. 별도 수용 결정과 변경/실패 차단 유지 |
 | 2 | 업무 분석을 작성 흐름에 연결 | [PR #45](https://github.com/zeni-on/vulcan-anvil-ex/pull/45) 병합, CI 3종 통과. [Core 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다), 선택 업무 양식과 [후보 연결 예시](../scripts/regression/fixtures/product-discovery-writing/README.md). [검증/한계](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md#7-작성-연결-검증-2026-09-12): 원본→REQ/AC→시험, 미정 결정·일반 활성화 경계와 설치/조회 호환 확인 |
 | 3 | 실제 요청 보드 한 흐름 검증 | [PR #46](https://github.com/zeni-on/vulcan-anvil-ex/pull/46) 병합, CI 3종 통과. [실행 샘플/결과](../examples/product-request-board/docs/verification.md): 후속 업무 합의, 실제 UI/API/SQLite에서 반복 반려·재제출·권한·이력 보존. API 12건, desktop/mobile 10건 통과 및 고의 이력 파괴 감지. 운영 인증/인수 승인은 아님 |
-| 4 | 제품 CI 연결·실행 | 로컬 검증 완료, 원격 실행 준비. 같은 [요청 보드 CI](../examples/product-request-board/docs/ci-verification.md)의 실행/필수 목록/실패·누락·환경 차단을 확인. 자동 merge·배포·보호 설정은 변경하지 않음 |
+| 4 | 제품 CI 연결·실행 | [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합 대기. [요청 보드 CI 결과](../examples/product-request-board/docs/ci-verification.md): 실제 GitHub 실행 1분 10초 성공, API 12건/UI 10건 및 7개 차단 probe 확인·artifact 회수. 자동 merge·배포·보호 설정은 변경하지 않음 |
 | 5 | 반복 운영·릴리즈 경계 마무리 | 기본 반복 계약 회귀 있음. 같은 제품의 확장/변경/기록 보존과 별도 배포 권한 확인. 자동 발행 구현을 당연한 전제로 늘리지 않음 |
 | 6 | 신규 Product 일반 사용 마무리 | 미활성화. init/지원 adapter/Core/Dashboard의 같은 흐름과 호환 회귀를 확인한 뒤 적용 판단 |
 
