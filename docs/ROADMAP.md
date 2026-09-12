@@ -97,7 +97,8 @@
 - 단계 2c: [PR #36](https://github.com/zeni-on/vulcan-anvil-ex/pull/36)을 머지했다. 지원 Dashboard의 3구간/현재 범위 읽기, `status`/`branch-status`의 실제 브랜치 조회, `doctor` 환경 진단, 합의한 통합 작업공간의 인수 시험과 무부작용 `release-pr --dry-run`을 연결했다. 범위 수용과 제품 전체 릴리즈 권한은 분리한다. 상세 제한과 [검증 결과](reference/PRODUCT-PROCESS-CONTRACTS.md#64-단계-2c)는 [운영 소비자 계약](reference/PRODUCT-PROCESS-CONTRACTS.md#44-운영-소비자-연결-단계-2c)에 둔다.
 - 실행 회귀 보강: [임시 Git/실제 native QA 검증](reference/PRODUCT-PROCESS-EXECUTION-VERIFICATION.md)을 진행했다. 실제 실패→허가된 수정→재시험, 과거 증적/승인 재사용 차단, 완료 후 재진입, 환경 차단, 발행 거부와 fixture Git 격리를 자동 회귀로 고정한다. Codex/Gemini 시작점은 실험 표식이 있을 때 같은 Core 안내로 먼저 라우팅한다. 실제 Codex QA 위임·회수는 확인했으며 Agy runtime, 자동 dispatcher/branch-start/성공적인 발행은 검증 완료로 보지 않는다.
 - Git 증적 제거: 검증·문서 조회의 Git/소스 지문 수집과 그에 따른 인수 차단을 제거했다. 테스트 후 staging/커밋은 결과를 무효화하지 않으며, 실제 실패·필수 시험 누락·범위/승인 연결 검사는 유지한다. 구현 변경의 재시험 판단은 총괄이 맡는다. 기존 로그는 보존하고 새 기록은 명령·시간·종료 코드만 남긴다.
-- 다음 순서: 실제 branch/QA 위임/릴리즈 발행 계약과 adapter/선택 양식의 운영 라우팅 마무리 → 업무 합의를 끝낸 같은 샘플의 제품 테스트·CI 연결과 실패/누락/환경 차단 검증 → 반복/명시 이행 보존 검증과 Product 기준 채택 판단. 자동 branch-start/PR 발행과 일반 init/upgrade는 이번 읽기 연결의 완료로 보지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
+- 단계 2d: [명시 브랜치 준비](reference/PRODUCT-PROCESS-CONTRACTS.md#45-명시-브랜치-준비-단계-2d)를 실험 모델의 `branch-start impl`에 연결했다. 기본 미리보기/명시 apply, 현재 범위·권한·계약 확인, 세션을 그대로 가져가는 동일 내용 브랜치 생성/전환과 충돌 보존을 실제 Git 시험 25건으로 검증했다. 세션 저장/사전 커밋/자동 push를 묶지 않는다. 기존 통합 브랜치 내용이 다르면 별도 Git 판단 대상으로 남긴다. 일반 활성화·발행·제품 CI 완료는 아니다.
+- 다음 순서: 남은 QA 위임·결과 회수/릴리즈 발행 계약과 adapter/선택 양식의 운영 라우팅 마무리 → 업무 합의를 끝낸 같은 샘플의 제품 테스트·CI 연결과 실패/누락/환경 차단 검증 → 반복/명시 이행 보존 검증과 Product 기준 채택 판단. 상태 전환 시 자동 브랜치 변경/PR 발행과 일반 init/upgrade는 이번 연결의 완료로 보지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 
 #### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)

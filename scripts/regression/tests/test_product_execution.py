@@ -171,7 +171,8 @@ class ProductExecutionTests(unittest.TestCase):
         self.assertEqual((self.root / "app.py").read_bytes(), source)
         self.assertEqual(self.project.git("branch", "--show-current").stdout.strip(), "dev-test")
         result = self.project.cli("branch-start", "impl")
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("authorized impl stage", result.stdout)
         self.assertEqual(self.session_bytes(), before)
         self.assertEqual((self.root / "app.py").read_bytes(), source)
 

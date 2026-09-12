@@ -189,7 +189,10 @@ class ProductConsumerTests(unittest.TestCase):
         preview = self.fixture.cli(["release-pr", "--dry-run"])
         self.assertEqual(preview.returncode, 1, preview.stdout + preview.stderr)
         self.assertIn("has not been accepted", preview.stdout)
-        for args in (["branch-start", "impl"], ["gate-start", "gate4"], ["sync-session"]):
+        branch = self.fixture.cli(["branch-start", "impl"])
+        self.assertEqual(branch.returncode, 1, branch.stdout + branch.stderr)
+        self.assertIn("authorized impl stage", branch.stdout)
+        for args in (["gate-start", "gate4"], ["sync-session"]):
             with self.subTest(args=args):
                 result = self.fixture.cli(args)
                 self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
@@ -214,7 +217,7 @@ class ProductConsumerTests(unittest.TestCase):
             mutate(session)
             self.fixture.path.write_text(json.dumps(session), encoding="utf-8")
             before = self.files()
-            for args in (["branch-status"], ["doctor", "--json"], ["release-pr", "--dry-run"]):
+            for args in (["branch-status"], ["branch-start", "impl", "--apply"], ["doctor", "--json"], ["release-pr", "--dry-run"]):
                 with self.subTest(args=args):
                     result = self.fixture.cli(args)
                     self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
