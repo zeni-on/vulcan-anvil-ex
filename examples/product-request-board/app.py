@@ -189,10 +189,11 @@ def create_app(db_path, *, demo_enabled=False):
         return {"user": user}
 
     @app.get("/api/requests")
-    def list_requests(user=Depends(actor)):
+    def list_requests(status: Literal["submitted", "rejected", "approved"] | None = None, user=Depends(actor)):
         with connection() as db:
-            rows = db.execute("SELECT * FROM requests WHERE owner=? OR ?='reviewer' ORDER BY id DESC",
-                              (user["id"], user["role"])).fetchall()
+            rows = db.execute("SELECT * FROM requests WHERE (owner=? OR ?='reviewer') "
+                              "AND (? IS NULL OR status=?) ORDER BY id DESC",
+                              (user["id"], user["role"], status, status)).fetchall()
             return {"requests": [view(db, row) for row in rows]}
 
     @app.post("/api/requests", status_code=201)

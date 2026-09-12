@@ -10,7 +10,7 @@ import sys
 
 
 ENVIRONMENT_STEPS = ("python", "node", "install", "browsers")
-VERIFICATION_STEPS = ("static", "api", "browser", "reports", "probe")
+VERIFICATION_STEPS = ("static", "api", "browser", "reports", "probe", "iteration")
 MANDATORY_STEPS = ENVIRONMENT_STEPS + VERIFICATION_STEPS
 EXAMPLE_PREFIX = "examples/product-request-board/"
 EXAMPLE_REPORTS = {

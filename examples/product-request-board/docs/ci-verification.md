@@ -2,7 +2,7 @@
 
 - 일자: 2026-09-12
 - 범위: Product 마무리 6개 중 4번. [업무 흐름 검증](verification.md)에 사용한 같은 샘플을 CI에 연결한다.
-- 현재: 로컬 및 GitHub 원격 제품 CI 검증 완료, [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합 대기.
+- 현재: 로컬 및 GitHub 원격 제품 CI 검증 완료, [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합. 아래 수치는 당시 4번 기준이며, 이후 상태 조회/반복 시험은 [5번 검증](iteration-verification.md)을 따른다.
 
 ## 연결과 책임
 

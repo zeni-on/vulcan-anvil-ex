@@ -58,6 +58,7 @@
     const busy = state.pending || state.switching;
     $("identity").disabled = busy || !state.users.length;
     $("refresh").disabled = busy || state.loading;
+    $("status-filter").disabled = busy || state.loading || !state.user;
     document.querySelectorAll("#create-form button, #create-form textarea, #detail form button, #detail form textarea, .request-item")
       .forEach((node) => { node.disabled = busy || !state.user || (state.loading && node.classList.contains("request-item")); });
     $("create-form").setAttribute("aria-busy", String(state.pending));
@@ -109,13 +110,20 @@
     if (!state.user) return;
     const epoch = state.epoch;
     const ticket = ++state.listTicket;
+    state.detailTicket++;
+    state.detail = null;
+    $("detail").replaceChildren();
+    $("detail-state").hidden = false;
+    $("detail-state").textContent = "상세 내용을 불러오는 중…";
+    $("detail-panel").setAttribute("aria-busy", "false");
     state.loading = true;
     $("request-list").setAttribute("aria-busy", "true");
     $("list-state").hidden = false;
     $("list-state").textContent = "요청을 불러오는 중…";
     controls();
     try {
-      const data = await api("/api/requests");
+      const status = $("status-filter").value;
+      const data = await api(status ? `/api/requests?status=${encodeURIComponent(status)}` : "/api/requests");
       if (epoch !== state.epoch || ticket !== state.listTicket) return;
       state.requests = data.requests;
       const desired = state.requests.find((request) => sameId(request.id, preferred));
@@ -127,13 +135,14 @@
         state.detail = null;
         $("detail").replaceChildren();
         $("detail-state").hidden = false;
-        $("detail-state").textContent = "아직 요청이 없습니다.";
+        $("detail-state").textContent = "표시할 요청이 없습니다.";
       }
     } catch (failure) {
       if (epoch !== state.epoch || ticket !== state.listTicket) return;
       error($("app-error"), message(failure));
       $("list-state").hidden = false;
       $("list-state").textContent = "목록을 불러오지 못했습니다. 새로고침해 주세요.";
+      $("detail-state").textContent = "목록을 불러오지 못했습니다. 새로고침해 주세요.";
     } finally {
       if (epoch === state.epoch && ticket === state.listTicket) {
         state.loading = false;
@@ -370,6 +379,12 @@
     }
   }
   $("identity").addEventListener("change", (event) => switchIdentity(event.target.value));
+  $("status-filter").addEventListener("change", () => {
+    error($("app-error"));
+    state.requests = [];
+    renderList();
+    refresh();
+  });
   $("refresh").addEventListener("click", () => {
     error($("app-error"));
     if (state.user) refresh(); else initialize();

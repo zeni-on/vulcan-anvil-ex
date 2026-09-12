@@ -192,6 +192,61 @@ class RequestFlowTests(unittest.TestCase):
             self.assertEqual((result["status"], result["version"], result["history"]), ("submitted", 1, []))
             self.assertEqual(self.alice.get(f"/api/requests/{row['id']}").json()["status"], "rejected")
 
+    def test_status_filter_all_statuses_access_order_and_read_only_restart(self):
+        bob = self.client("bob")
+        rows = []
+        for owner in (self.alice, bob, self.carol):
+            for status in ("submitted", "rejected", "approved"):
+                row = self.create(f"{status} request", client=owner)
+                if status != "submitted":
+                    row = self.decide(row, client=self.client("dana"), decision=status)
+                rows.append(row)
+        before = self.stored()
+        database_bytes = self.db_path.read_bytes()
+        for app in (self.app, create_app(self.db_path, demo_enabled=True)):
+            for name in ("alice", "bob", "carol", "dana"):
+                client = self.client(name, app)
+                authorized = [row for row in reversed(rows)
+                              if name in ("carol", "dana") or row["owner"]["id"] == name]
+                for status in (None, "submitted", "rejected", "approved"):
+                    with self.subTest(restarted=app is not self.app, user=name, status=status):
+                        response = client.get("/api/requests", params={} if status is None else {"status": status})
+                        self.assertEqual(response.status_code, 200, response.text)
+                        expected = [row for row in authorized if status is None or row["status"] == status]
+                        self.assertEqual(response.json(), {"requests": expected})
+            anonymous = self.client(app=app)
+            for status in ("submitted", "rejected", "approved"):
+                self.assertEqual(anonymous.get("/api/requests", params={"status": status}).status_code, 401)
+            self.assertEqual(self.stored(), before)
+            self.assertEqual(self.db_path.read_bytes(), database_bytes)
+
+    def test_status_filter_invalid_input_is_read_only(self):
+        self.decide(self.create())
+        before = self.stored()
+        for status in ("", "all", "pending", "Submitted", " approved", "approved' OR 1=1--"):
+            with self.subTest(status=status):
+                response = self.alice.get("/api/requests", params={"status": status})
+                self.assertEqual(response.status_code, 422)
+                self.assertEqual(response.json()["error"]["code"], "INVALID_INPUT")
+        response = self.alice.get("/api/requests?status=rejected", headers={"X-Demo-User": "bob"})
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "IDENTITY_CHANGED")
+        self.assertEqual(self.stored(), before)
+
+    def test_status_filter_resubmission_moves_buckets_preserving_history(self):
+        rejected = self.decide(self.resubmit(self.decide(self.create())), "Second review")
+        self.assertEqual(self.alice.get("/api/requests?status=rejected").json(), {"requests": [rejected]})
+        updated = self.resubmit(rejected, "Final amendment")
+        self.assertEqual(updated["history"], rejected["history"])
+        before = self.stored()
+        restarted = self.client("alice", create_app(self.db_path, demo_enabled=True))
+        for client in (self.alice, restarted):
+            self.assertEqual(client.get("/api/requests?status=rejected").json(), {"requests": []})
+            self.assertEqual(client.get("/api/requests?status=approved").json(), {"requests": []})
+            self.assertEqual(client.get("/api/requests?status=submitted").json(), {"requests": [updated]})
+            self.assertEqual(client.get("/api/requests").json(), {"requests": [updated]})
+        self.assertEqual(self.stored(), before)
+
     def test_demo_identity_switch_is_explicitly_opt_in(self):
         disabled = self.client(app=create_app(self.db_path))
         self.assertEqual(disabled.get("/api/demo/users").status_code, 404)
