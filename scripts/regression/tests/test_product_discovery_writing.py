@@ -164,6 +164,9 @@ class ProductDiscoveryWritingTests(unittest.TestCase):
                  "docs/reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md",
                  "docs/reference/PRODUCT-DISCOVERY-PILOT-REQUEST-BOARD.md"]
         paths += [p.relative_to(ROOT).as_posix() for p in FIXTURE.rglob("*.md")]
+        example = ROOT / "examples/product-request-board"
+        paths += [p.relative_to(ROOT).as_posix() for p in (example / "docs").glob("*.md")]
+        paths.append("examples/product-request-board/README.md")
         for relative in paths:
             sections = document_context._sections((ROOT / relative).read_text(encoding="utf-8"))
             definitions = document_context._reference_definitions("".join(s["visible"] for s in sections))
@@ -175,6 +178,19 @@ class ProductDiscoveryWritingTests(unittest.TestCase):
                     if link["anchor"]:
                         target = document_context._sections((ROOT / link["path"]).read_text(encoding="utf-8"))
                         self.assertIn(link["anchor"], document_context._anchor_indices(target), (relative, link))
+
+    def test_actual_sample_contracts_and_planned_tests_are_readable_without_session(self):
+        root = ROOT / "examples/product-request-board"
+        before = {p.name: p.read_bytes() for p in (root / "docs").glob("*.md")}
+        scope = {"work": {"ref": "example:request-board", "revision": "sample:1"},
+                 "related_ids": ["SCN-001", "REQ-001", "REQ-002", "AC-001", "AC-002", "AC-003", "SEC-001", "SEC-002"],
+                 "contracts": [product_readiness.local_reference(root, "docs/contracts.md", markdown=True)],
+                 "tests": [product_readiness.local_reference(root, "docs/test-plan.md", markdown=True)],
+                 "required_checks": [f"{prefix}-{i:03}" for prefix in ("REG", "SEC-REG") for i in range(1, 6)]}
+        result = product_readiness.document_readiness(root, scope, vulcan.parse_markdown_tables)
+        self.assertTrue(result["ready"], result)
+        self.assertFalse((root / "session.json").exists())
+        self.assertEqual(before, {p.name: p.read_bytes() for p in (root / "docs").glob("*.md")})
 
     def test_shared_guide_routes_planning_and_keeps_business_decisions_explicit(self):
         guide = (ROOT / "docs/core/PRODUCT_DOCUMENT_WRITING.md").read_text(encoding="utf-8")

@@ -91,8 +91,8 @@
 | 순서 | 작업 | 현재 상태 / 완료 기준 |
 | --- | --- | --- |
 | 1 | QA 결과 회수 간소화 | [PR #44](https://github.com/zeni-on/vulcan-anvil-ex/pull/44) 병합, Linux/Windows Python 및 Dashboard CI 통과. [검증과 한계](reference/PRODUCT-PROCESS-CONTRACTS.md#67-마무리-범위-1-qa-결과-입력-축소-2026-09-12): 기존 요청에서 ID·판정·증적 경로를 받고 실행 argv/참조를 보완. 별도 수용 결정과 변경/실패 차단 유지 |
-| 2 | 업무 분석을 작성 흐름에 연결 | 구현/로컬 검증 완료, PR 병합 전. [Core 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다), 선택 업무 양식과 [후보 연결 예시](../scripts/regression/fixtures/product-discovery-writing/README.md). [검증/한계](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md#7-작성-연결-검증-2026-09-12): 원본→REQ/AC→시험, 미정 결정·일반 활성화 경계와 설치/조회 호환 확인 |
-| 3 | 실제 요청 보드 한 흐름 검증 | 함수 fixture 시험 완료. 미정 업무 합의 후 화면·API·DB에서 재제출/반려 이력 보존 확인 |
+| 2 | 업무 분석을 작성 흐름에 연결 | [PR #45](https://github.com/zeni-on/vulcan-anvil-ex/pull/45) 병합, CI 3종 통과. [Core 작성 경로](core/PRODUCT_DOCUMENT_WRITING.md#0-업무에서-요구로-연결한다), 선택 업무 양식과 [후보 연결 예시](../scripts/regression/fixtures/product-discovery-writing/README.md). [검증/한계](reference/PRODUCT-DISCOVERY-AND-VALIDATION-GUIDE.md#7-작성-연결-검증-2026-09-12): 원본→REQ/AC→시험, 미정 결정·일반 활성화 경계와 설치/조회 호환 확인 |
+| 3 | 실제 요청 보드 한 흐름 검증 | 로컬 검증 완료, [PR #46](https://github.com/zeni-on/vulcan-anvil-ex/pull/46) 검토 대기. [실행 샘플/결과](../examples/product-request-board/docs/verification.md): 후속 업무 합의, 실제 UI/API/SQLite에서 반복 반려·재제출·권한·이력 보존. API 12건, desktop/mobile 10건 통과 및 고의 이력 파괴 감지. 운영 인증/원격 CI/인수 승인은 아님 |
 | 4 | 제품 CI 연결·실행 | 설계 있음. 같은 제품의 실제 원격 실행과 실패·필수 시험 누락·환경 차단 확인 |
 | 5 | 반복 운영·릴리즈 경계 마무리 | 기본 반복 계약 회귀 있음. 같은 제품의 확장/변경/기록 보존과 별도 배포 권한 확인. 자동 발행 구현을 당연한 전제로 늘리지 않음 |
 | 6 | 신규 Product 일반 사용 마무리 | 미활성화. init/지원 adapter/Core/Dashboard의 같은 흐름과 호환 회귀를 확인한 뒤 적용 판단 |
@@ -115,7 +115,7 @@
 - 단계 2d: [명시 브랜치 준비](reference/PRODUCT-PROCESS-CONTRACTS.md#45-명시-브랜치-준비-단계-2d)를 실험 모델의 `branch-start impl`에 연결했다. 기본 미리보기/명시 apply, 현재 범위·권한·계약 확인, 세션을 그대로 가져가는 동일 내용 브랜치 생성/전환과 충돌 보존을 실제 Git 시험 25건으로 검증했다. 세션 저장/사전 커밋/자동 push를 묶지 않는다. 기존 통합 브랜치 내용이 다르면 별도 Git 판단 대상으로 남긴다. 일반 활성화·발행·제품 CI 완료는 아니다.
 - 단계 2e: [Run 없는 QA 전달/회수](reference/PRODUCT-PROCESS-CONTRACTS.md#46-run-없는-qa-전달과-결과-회수-단계-2e)를 `execute --dry-run`과 기존 상태 요청에 연결했다. 현재 범위의 계약/시험/환경 참조와 빈 결과 요청을 제공하며, 실제 결과 회수·수용 판단은 총괄이 맡는다. acceptance 실행 직전 기준 재검사, 실패/누락/중복/오래된 요청의 완료 거부를 회귀로 확인한다. 자동 dispatcher/QA 승인 기능은 아니다.
 - [PR #42](https://github.com/zeni-on/vulcan-anvil-ex/pull/42)를 CI 3종 통과 후 병합하고 [실제 운영 관측](reference/PRODUCT-OPERATION-TRIAL-2026-09-12.md)을 진행했다. 같은 요청 재제출의 독립 함수 fixture에서 native QA 실패→한 줄 수정→재시험 3건 Pass→합성 수용을 확인했다. 새 Run/QA worktree/문서 수정에 따른 전체 재시험은 없었다. 운영 CLI 10회의 실행 합계는 9.823초였지만 결과 조립에 별도 로컬 helper를 썼으므로 기본 CLI만의 사용성·비용 절감 입증이나 실제 제품 인수로 확대하지 않는다.
-- 현재 마무리 순서와 완료 여부는 위 6개 표를 따른다. QA 결과 입력 축소는 #44에서 병합했고 업무 작성 연결을 진행한다. 새 CLI/Gate/필수 문서를 늘리는 방식은 우선하지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
+- 현재 마무리 순서와 완료 여부는 위 6개 표를 따른다. QA 결과 입력 축소와 업무 작성 연결은 #44/#45에서 병합했고, 실제 샘플 로컬 검증을 마쳤다. 다음은 같은 제품의 원격 CI다. 새 CLI/Gate/필수 문서를 늘리는 방식은 우선하지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 
 #### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)
