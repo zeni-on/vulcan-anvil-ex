@@ -138,7 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
-from vulcan_core import product_process, product_readiness, product_session, product_consumers
+from vulcan_core import product_process, product_readiness, product_session, product_consumers, product_branch
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -16069,8 +16069,18 @@ def cmd_metrics(project_dir=".", emit_json=False):
     print("==================================================")
 
 
-def cmd_branch_start(stage="impl", project_dir="."):
+def cmd_branch_start(stage="impl", project_dir=".", *, apply=False, dry_run=False, emit_json=False):
     project_abs = os.path.abspath(project_dir)
+    pilot = product_consumers.load(project_abs)
+    if pilot is not None:
+        if stage != "impl" or (apply and dry_run):
+            raise ValueError("Product branch-start supports impl with either preview or --apply")
+        result = product_branch.start(project_abs, workflow_policy, parse_markdown_tables, apply=apply)
+        print(json.dumps(result, ensure_ascii=False, indent=2) if emit_json else product_branch.render(result))
+        return 0 if result["status"] in {"ready", "applied", "unchanged"} else 1 if result["status"] == "blocked" else 2
+    if apply or dry_run or emit_json:
+        print("오류: branch-start --apply/--dry-run/--json은 실험 Product 모델 전용입니다.")
+        return 2
     workflow = workflow_policy(project_abs)
     if workflow.get("branch_mode") in ("none", "single", "disabled"):
         print("오류: workflow.branch_mode가 단일 브랜치 모드입니다.")
@@ -16639,6 +16649,10 @@ def main():
 
     p_branch_start = subparsers.add_parser("branch-start", help="workflow 단계별 통합 브랜치 시작")
     p_branch_start.add_argument("stage", choices=["impl"], help="시작할 브랜치 단계")
+    p_branch_apply = p_branch_start.add_mutually_exclusive_group()
+    p_branch_apply.add_argument("--apply", action="store_true", help="실험 Product의 브랜치 준비 적용; 기본은 미리보기")
+    p_branch_apply.add_argument("--dry-run", action="store_true", help="실험 Product의 브랜치 준비 미리보기")
+    p_branch_start.add_argument("--json", action="store_true", help="실험 Product의 브랜치 준비 JSON 결과")
 
     p_release_pr = subparsers.add_parser("release-pr", help="Gate 5 통합 브랜치 -> 기준 브랜치 PR 생성/갱신")
     p_release_pr.add_argument("--base", default="", help="PR base branch (기본: workflow.release_merge_to 또는 main)")
@@ -16820,7 +16834,7 @@ def main():
                     session = json.load(f)
                 if "process_model" in session:
                     session = product_consumers.load(os.path.dirname(session_path))
-                if "process_model" in session and args.command in {"branch-status", "doctor", "release-pr"}:
+                if "process_model" in session and args.command in {"branch-status", "branch-start", "doctor", "release-pr"}:
                     product_process._validate(session)
                 elif "process_model" in session and args.command == "execute" and args.verify:
                     product_session.require_verification_permission(session)
@@ -16911,7 +16925,7 @@ def main():
     elif args.command == "branch-status":
         cmd_branch_status()
     elif args.command == "branch-start":
-        cmd_branch_start(stage=args.stage)
+        sys.exit(cmd_branch_start(stage=args.stage, apply=args.apply, dry_run=args.dry_run, emit_json=args.json))
     elif args.command == "release-pr":
         cmd_release_pr(
             base=args.base,

@@ -17,7 +17,7 @@
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
 - 아직 연결하지 않은 legacy 명령은 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 지원하는 조회·진단·미리보기는 4.4절을 따르며, 상태 저장은 자체 검증을 거치는 `session --process-request`, 명령 증적 수집은 허가된 구간의 `execute --verify`로 수행한다.
 - `status --check`와 상태 요청 미리보기는 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다. 단계 2b의 명시 `--apply`는 검증한 상태만 저장하며 Git commit/push, Run, branch 생성, release는 수행하지 않는다.
-- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. branch-start의 상태/Git 복합 변경, QA 위임·결과 회수, 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
+- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. 4.5절은 상태 저장과 분리한 명시 브랜치 준비다. QA 위임·결과 회수의 운영 라우팅, 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
 
 ## 2. 범위의 직렬화
 
@@ -144,7 +144,33 @@ python vulcan.py session --process-request - --json
 - `release-pr --dry-run`은 이번 범위 completed, 현재 계약/증적 재검사, clean Git 작업공간, 실제 current/head/base 브랜치를 확인한다. 기존 Gate 5 승인서를 억지로 요구하지 않는다. 관련 없는 미처리 의무는 누락하지 않고 수량으로 노출하며 릴리즈 포함/제외 판단을 요청한다. 통과한 결과는 후보일 뿐 `release_authorized: false`, `publication_enabled: false`다.
 - 미리보기는 PR body 파일도 쓰지 않고 `gh`/push/merge를 실행하지 않는다. 필수 실행 결과·증적과 승인 연결은 확인하되 Git/소스 신선도로 후보를 차단하지 않는다. 구현·환경 변경 영향은 Orchestrator가 판단하며 현재 범위 밖 기능·과거 수용 전체의 배포 적합성을 인증하지 않는다.
 
-이번에는 **조회와 명시 시험/미리보기**까지만 연결한다. `branch-start`의 상태/Git 복합 변경, native QA 위임·결과 회수, 실제 릴리즈 발행의 별도 승인/대상 revision 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
+단계 2c는 **조회와 명시 시험/미리보기**까지 연결했다. 후속 브랜치 준비는 아래 4.5절에서 상태 변경과 분리한다. native QA 위임·결과 회수의 운영 라우팅, 실제 릴리즈 발행의 별도 승인/대상 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
+
+### 4.5 명시 브랜치 준비 (단계 2d)
+
+`product_branch.start()`를 기존 `branch-start impl`에 연결한다. 표식이 있는 실험 Product에서만 기본이 미리보기이며, `--apply`가 있어야 Git 브랜치를 생성/전환한다. `--dry-run`은 기본과 같고 `--json`은 결과 형식만 바꾼다. 기존 profile/표식 없는 세션의 동작은 유지하고 새 옵션을 거부한다. 일반 init/upgrade 활성화는 하지 않는다.
+
+| 조건 | 수행/차단 |
+| --- | --- |
+| 허가된 impl, 현재 범위의 계약·시험 계획 준비 완료 | 브랜치 준비 가능. 실행 테스트 완료나 인수 승인까지 요구하지 않음 |
+| planning/acceptance/completed, 구현 권한 없음, 손상/미지원 모델 | 생성/전환 전에 거부. 과거 Gate로 변환하거나 승인을 만들지 않음 |
+| 독립 Git 루트, 정상 HEAD, 설정된 main에 있고 통합 브랜치 없음 | 현재 HEAD에서 통합 브랜치 생성·전환 |
+| 기존 통합 브랜치의 커밋된 파일 내용이 현재 HEAD와 같음 | 같은 작업공간에서 전환. dirty/staged/untracked `session.json` 보존 |
+| 기존 통합 브랜치의 파일 내용이 다름 | 오래된 세션/계약을 덮어쓸 수 있으므로 보류. 별도 영향 검토·명시 Git 작업 필요 |
+| 세션 외 미커밋 코드/문서/추적되지 않은 파일 | 전환 보류. 자동 commit/stash/discard 없음. ignored 의존성 캐시는 그대로 유지 |
+| 이미 통합 브랜치 | no-op. 진행 중 코드 변경을 정리하려고 하거나 세션을 다시 저장하지 않음 |
+| single/none/disabled 또는 integration branch 사용 안 함 | 별도 준비 불필요로 거부. 현재 작업공간 운영은 유지 |
+| 다른 worker branch, detached/unborn HEAD, 상위 저장소를 상속한 하위 폴더 | 모호한 기준에서 생성/전환하지 않음 |
+
+브랜치의 tree 비교는 **전환 시 파일을 바꾸지 않는다는 경계 확인**에만 사용하며 Git 증적/테스트 신선도 판정으로 저장하지 않는다. stage 전환 직후의 `session.json` 때문에 사전 커밋을 강제하지 않으며 `branch_state`, stats, 승인·이력, 문서·Run도 갱신하지 않는다. Git HEAD의 실제 브랜치는 기존 `status`/`branch-status`가 읽는다.
+
+적용은 기존 `.vulcan/product-process.lock` 안에서 정책을 다시 읽고 세션·Git·설정·현재 문서 조건을 재관측한다. 새 브랜치는 관측한 commit에서 만들고, 기존 대상은 Git의 `update-ref --stdin` verify/prepare 트랜잭션으로 ref를 잠근 동안 전환한다. 실행 후 HEAD·세션·정책·문서를 다시 확인한다. 이 Git 트랜잭션을 지원하지 않거나 잠글 수 없는 환경은 적용을 보류한다.
+
+Git checkout/reference-transaction hook은 일회성 빈 hooks 경로로 비활성화해 제품 코드 실행/발행 부작용을 막으며 저장소 설정은 변경하지 않는다. Git/외부 편집기 전체를 원자적으로 잠그는 기능은 아니다. 비협조적 편집/다른 Git 작업이 동시에 일어나면 최종 확인이 필요하고, 실패를 되돌리려고 reset/checkout을 수행하지 않는다.
+
+결과는 `ready`(미리보기), `applied`(준비 완료), `unchanged`(이미 대상), `blocked`(조건 부족), `conflict`(잠금/동시 변경/불명확한 Git 실행), `invalid`(모델/입력/관측 오류)다. 앞 세 상태는 exit 0, blocked는 1, 나머지는 2다. Git 실행 도중 실패·timeout 또는 사후 상태 불일치는 `applied: null`로 반환한다. 실제 상태가 바뀌지 않았다고 단정하지 않고 `branch-status`/세션 확인을 요청한다. 어떠한 결과도 push/merge/release 권한이 아니다.
+
+일반 Git 전환·worktree 관리 도구를 재구현하는 단계가 아니다. 서로 다른 기존 브랜치의 자동 병합, 상태 이행, native dispatcher, 실제 PR 발행·CI 적용은 이 변경에 포함하지 않는다.
 
 ## 5. 지속 점검
 
@@ -193,3 +219,12 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 초기 production dependency audit에 남았던 moderate 2건은 병합 전 Mermaid `11.16.0 -> 11.16.1`, DOMPurify `3.4.11 -> 3.4.15` 갱신으로 해소했다. 개발 의존성에서 추가 확인한 5개 패키지의 advisory도 기존 의존성 범위 안에서 갱신했으며, 잠금 파일 기준 전체 `npm audit` 결과는 0건이다. Next/React의 주요 버전과 기존 audit 차단 기준은 변경하지 않았다.
 - 갱신 후 `npm ci`, typecheck, production build, Jest 300개, 전체 E2E 45개가 통과했다. 애니메이션 완료 대기를 보강한 최종 Mermaid E2E 2개도 통과했고 390px/1440px 캡처에서 노드·연결·글자를 확인했다. 설치된 의존성 전체 `npm audit --audit-level=low`도 0건이다.
 - 남은 관찰: Python의 기존 pathlib 경고는 별도이다. Mermaid 캡처 과정에서 기존 DocDrawer의 `min-w-[480px]` 때문에 390px 화면에서는 문서 패널 왼쪽이 잘리는 현상도 확인했다. 다이어그램 자체는 표시되며 이 의존성 보강에서는 기존 패널 레이아웃을 변경하지 않는다.
+
+### 6.5 단계 2d
+
+- 임시 Git 저장소에서 최종 브랜치 시험 25건을 통과했다. preview 무변경, 미커밋/staged/untracked 세션·ignored 캐시 보존, 기존 브랜치의 다른 내용 거부, 이미 통합 브랜치인 경우 no-op, 단계·권한·설정 오류, Git root/worker branch 경계와 legacy 경로를 확인했다.
+- 새 문맥의 native contract-reviewer가 대상 ref 이동과 잠금 이전의 오래된 workflow 정책 사용을 발견했다. Git verify/prepare ref 잠금, 관측한 commit에서 생성, 잠금 안의 정책 해석과 실행 후 재검사로 보정했다. 추가로 최종 관측 중 HEAD·세션·브랜치 변경을 놓치는 경로를 수정했다. 해당 경로 재검토에서 남은 지적은 없으며 총괄이 변경 전/중/후의 실제 Git·설정·세션 변화 회귀를 실행했다.
+- Git ref 잠금 종료의 stdin EOF 누락은 실제 시험에서 발견해 보정했다. 실패/timeout의 상태 불확실성을 숨기거나 자동 rollback하지 않으며, 설정된 checkout hook을 실행하지 않는 것도 시험했다.
+- 전체 Python 회귀 284건 실행에서 281건 통과, 로컬 symlink 생성 제약 3건 skip을 확인했다. 그 실행 이후 추가한 최종 관측 비교/예외 분류 보강은 브랜치 관련 25건으로 재검증했다. 전체 회귀와 마지막 영향 시험의 실행 시점을 구분한다.
+- 초기화 smoke 12단계, 기존 Product/PoC/Audit fixture smoke 84단계, 관련 문서의 로컬 링크 42개가 통과했다. 기존 pathlib deprecation warning은 남아 있다. GUI 변경이 없어 Dashboard 로컬 빌드/브라우저 시험은 이번에 반복하지 않았다.
+- 합성 프로세스·Git 연결 시험이지 요청 보드 업무 앱의 QA나 미정 업무 권한의 승인 결과가 아니다. 일반 Product 활성화, 기존 사용자 프로젝트 변경, 실제 릴리즈 발행과 제품별 CI 연결은 수행하지 않았다.
