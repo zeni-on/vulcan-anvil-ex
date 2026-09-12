@@ -83,7 +83,7 @@ class RequestBoardReportTests(unittest.TestCase):
         self.assertNotIn("paths-ignore:", text)
         self.assertNotIn("secrets.", text)
         self.assertNotIn("if: ", text.split("steps:", 1)[0])
-        for name in ("static", "api", "browser", "reports", "probe"):
+        for name in ("static", "api", "browser", "reports", "probe", "iteration"):
             self.assertIn("id: " + name, text)
 
 

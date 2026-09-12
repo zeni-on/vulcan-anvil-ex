@@ -10,6 +10,7 @@
     "test:e2e": "playwright test",
     "check:reports": "python ci/checks.py reports",
     "test:ci-boundaries": "python -B ci/probes.py",
+    "test:iteration": "python -B ci/iteration.py",
     "start": "python app.py --demo"
   },
   "devDependencies": {

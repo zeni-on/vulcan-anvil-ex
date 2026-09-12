@@ -126,7 +126,7 @@ def run_api():
 
 
 def run_static():
-    commands = [[sys.executable, "-m", "py_compile", "app.py", "tests/test_api.py"],
+    commands = [[sys.executable, "-m", "py_compile", "app.py", "tests/test_api.py", "ci/iteration.py", "ci/iteration_assertions.py"],
                 ["node", "--check", "static/app.js"], ["node", "--check", "playwright.config.js"],
                 ["node", "--check", "tests/browser/request-board.spec.js"],
                 ["node", "--check", "ci/browser-ready.cjs"]]

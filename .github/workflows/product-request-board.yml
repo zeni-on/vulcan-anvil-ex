@@ -78,6 +78,10 @@ jobs:
         id: probe
         if: success() && steps.scope.outputs.required == 'true'
         run: npm run test:ci-boundaries
+      - name: Same-product iteration and separate release authority
+        id: iteration
+        if: success() && steps.scope.outputs.required == 'true'
+        run: npm run test:iteration
       - name: Preserve sample reports even on failure
         if: always() && steps.scope.outputs.required == 'true'
         uses: actions/upload-artifact@v4

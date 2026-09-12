@@ -11,8 +11,11 @@
     "test_api.RequestFlowTests.test_sec_reg_003_invalid_input_and_actor_override_do_not_write",
     "test_api.RequestFlowTests.test_sec_reg_003_out_of_range_ids_return_structured_input_error",
     "test_api.RequestFlowTests.test_sec_reg_004_session_origin_and_host_boundaries",
-    "test_api.RequestFlowTests.test_sec_reg_004_stale_tab_identity_cannot_write_as_new_actor"
+    "test_api.RequestFlowTests.test_sec_reg_004_stale_tab_identity_cannot_write_as_new_actor",
+    "test_api.RequestFlowTests.test_status_filter_all_statuses_access_order_and_read_only_restart",
+    "test_api.RequestFlowTests.test_status_filter_invalid_input_is_read_only",
+    "test_api.RequestFlowTests.test_status_filter_resubmission_moves_buckets_preserving_history"
   ],
-  "browser": ["@resubmission", "@access", "@render", "@identity", "@tabs"],
+  "browser": ["@resubmission", "@access", "@render", "@identity", "@tabs", "@status-filter"],
   "projects": ["desktop", "mobile"]
 }

@@ -1,5 +1,86 @@
 const { test, expect } = require('@playwright/test');
 
+test('Status filter preserves history across resubmission and isolates accounts', { tag: '@status-filter' }, async ({ page }) => {
+  const filter = page.getByLabel('상태', { exact: true });
+  const item = id => page.locator(`[data-request-id="${id}"]`);
+  async function filterBy(status) {
+    const response = page.waitForResponse(r => {
+      const url = new URL(r.url());
+      return url.pathname === '/api/requests' && r.request().method() === 'GET'
+        && url.search === (status ? `?status=${status}` : '');
+    });
+    await filter.selectOption(status);
+    const result = await response;
+    expect(result.status()).toBe(200);
+    const rows = (await result.json()).requests;
+    if (status) expect(rows.every(row => row.status === status)).toBe(true);
+    await expect(filter).toBeEnabled();
+    await expect(page.locator('.request-item')).toHaveCount(rows.length);
+    expect(await page.locator('.request-item').evaluateAll(nodes => nodes.map(node => Number(node.dataset.requestId))))
+      .toEqual(rows.map(row => row.id));
+  }
+
+  await signIn(page, 'bob');
+  const privateId = await submit(page, 'Bob private status-filter request');
+  await signIn(page, 'alice');
+  const pendingId = await submit(page, 'Pending status-filter request');
+  const approvedId = await submit(page, 'Approved status-filter request');
+  const id = await submit(page, 'Original status-filter request');
+  await signIn(page, 'carol');
+  await select(page, approvedId);
+  await decide(page);
+  await select(page, id);
+  await decide(page, 'Add quantities');
+  await filterBy('submitted');
+  await expect(item(privateId)).toBeVisible();
+  await expect(item(pendingId)).toBeVisible();
+  await expect(item(id)).toHaveCount(0);
+  await expect(item(approvedId)).toHaveCount(0);
+  await expect(page.locator('#detail')).not.toContainText('Original status-filter request');
+
+  await page.getByLabel('테스트 계정').selectOption('alice');
+  await expect(filter).toBeEnabled();
+  await expect(filter).toHaveValue('submitted');
+  await expect(item(privateId)).toHaveCount(0);
+  await filterBy('approved');
+  await expect(item(approvedId)).toBeVisible();
+  await expect(item(pendingId)).toHaveCount(0);
+  await filterBy('rejected');
+  await item(id).click();
+  await expect(page.locator('.history-item')).toHaveCount(1);
+  await expect(page.locator('.history-item')).toContainText('Original status-filter request');
+  await expect(page.locator('.history-item')).toContainText('Add quantities');
+  await page.getByLabel('보완 내용').fill('Updated status-filter request: 2 units');
+  await page.getByRole('button', { name: '재제출', exact: true }).click();
+  await expect(filter).toBeEnabled();
+  await expect(item(id)).toHaveCount(0);
+  await expect(page.locator('#detail')).not.toContainText('Original status-filter request');
+  await expect(page.getByLabel('보완 내용')).toHaveCount(0);
+  await filterBy('submitted');
+  await item(id).click();
+  await expect(page.locator('#detail > .content')).toHaveText('Updated status-filter request: 2 units');
+  await expect(page.locator('.history-item')).toHaveCount(1);
+  await expect(page.locator('.history-item')).toContainText('Original status-filter request');
+  await expect(page.locator('.history-item')).toContainText('Add quantities');
+  await filterBy('');
+  for (const ownId of [id, pendingId, approvedId]) await expect(item(ownId)).toBeVisible();
+  await expect(item(privateId)).toHaveCount(0);
+
+  await filterBy('rejected');
+  await page.getByLabel('테스트 계정').selectOption('bob');
+  await expect(filter).toBeEnabled();
+  await expect(filter).toHaveValue('rejected');
+  await expect(page.locator('.request-item')).toHaveCount(0);
+  await expect(page.locator('#detail')).toBeEmpty();
+  await expect(page.locator('#list-state')).toHaveText('표시할 요청이 없습니다.');
+  expect((await page.request.get(`/api/requests/${id}`)).status()).toBe(404);
+  await filterBy('submitted');
+  await expect(item(privateId)).toBeVisible();
+  for (const ownId of [id, pendingId, approvedId]) await expect(item(ownId)).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('status-filter.png'), fullPage: true });
+});
+
 async function signIn(page, user) {
   await page.goto('/');
   await page.getByLabel('테스트 계정').selectOption(user);

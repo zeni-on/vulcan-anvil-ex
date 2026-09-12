@@ -20,6 +20,7 @@
     <div class="workspace">
       <section class="requests" aria-labelledby="list-heading">
         <div class="section-heading"><h2 id="list-heading">요청 목록 <span id="request-count" class="count">0</span></h2><button id="refresh" class="icon-button" type="button" title="목록 새로고침" aria-label="목록 새로고침" disabled><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div>
+        <div class="status-filter"><label for="status-filter">상태</label><select id="status-filter" disabled><option value="">전체</option><option value="submitted">검토 대기</option><option value="rejected">반려</option><option value="approved">승인</option></select></div>
         <p id="list-state" class="empty" role="status">계정을 확인하고 있습니다.</p>
         <ul id="request-list" class="request-list" aria-label="요청 목록"></ul>
         <section id="create-section" class="create-section" aria-labelledby="create-heading" hidden>
