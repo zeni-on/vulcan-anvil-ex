@@ -20,9 +20,15 @@ created_at: {{GENERATED_DATE}}
 
 적용 사용자/범위와 제외 범위: TBD
 
+업무 흐름·규칙·예시의 원본 절 / 합의 근거: TBD
+
+<!-- 원본이 없을 만큼 작은 기능이면 여기에 시작/종료·액터·중요 예외와 예시를 적는다. 큰 흐름은 BUSINESS_FLOW의 관련 절 링크로 연결하고 본문을 복사하지 않는다. 미합의 REQ/AC는 해당 제목 아래 vulcan:state=candidate 표식으로 구분한다. -->
+
 ## REQ-001
 
-요구 동작: TBD
+| REQ ID | 요구 동작 |
+| --- | --- |
+| REQ-001 | TBD |
 
 ### Conditions And Exceptions
 
@@ -31,9 +37,9 @@ created_at: {{GENERATED_DATE}}
 
 ### Acceptance Criteria
 
-| AC ID | 관측 가능한 인수조건 |
-| --- | --- |
-| AC-001 | TBD |
+| AC ID | 조건 / 행동 | 관측 가능한 인수조건 |
+| --- | --- | --- |
+| AC-001 | TBD | TBD |
 
 ### Applicable Constraints
 

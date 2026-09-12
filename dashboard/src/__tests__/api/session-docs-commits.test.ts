@@ -575,6 +575,32 @@ status: Draft
   /**
    * UT-005-05: docs/ 비어있을 때 → 빈 배열 200 반환
    */
+  it('Product 업무 흐름과 요구 상세를 기존 요구사항 분류로 표시한다', async () => {
+    mockGetDocTree.mockResolvedValue([
+      {
+        name: 'artifacts', type: 'dir', children: [
+          {
+            name: '01-requirements', type: 'dir', children: [
+              { name: 'requests-flow', type: 'file' },
+              { name: 'requests', type: 'file' },
+            ],
+          },
+        ],
+      },
+    ])
+    const res = await docsGET(
+      makeRequest('http://localhost:3001/api/projects/local-test-abc123/docs'),
+      makeContext('local-test-abc123'),
+    )
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.docs).toHaveLength(2)
+    expect(body.docs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'docs/artifacts/01-requirements/requests-flow.md', category: 'requirements' }),
+      expect.objectContaining({ path: 'docs/artifacts/01-requirements/requests.md', category: 'requirements' }),
+    ]))
+  })
+
   it('UT-005-05: docs/ 비어있음(빈 배열 반환) → { docs: [] } 200', async () => {
     mockReadProjects.mockReturnValue([LOCAL_PROJECT])
     mockGetDocTree.mockResolvedValue([])

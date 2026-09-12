@@ -252,6 +252,7 @@ PRODUCT_ARTIFACT_TEMPLATES = [
     ("docs/templates/product/REGRESSION_AND_RELEASE_REPORT_TEMPLATE.md", "docs/product/REGRESSION_AND_RELEASE_REPORT.md"),
 ]
 PRODUCT_OPTIONAL_DETAIL_TEMPLATES = [
+    ("docs/templates/product/PRODUCT_BUSINESS_FLOW_TEMPLATE.md", "docs/artifacts/01-requirements/PRODUCT_BUSINESS_FLOW.md"),
     ("docs/templates/product/PRODUCT_REQUIREMENTS_TEMPLATE.md", "docs/artifacts/01-requirements/PRODUCT_REQUIREMENTS.md"),
     ("docs/templates/product/PRODUCT_API_CONTRACT_TEMPLATE.md", "docs/artifacts/02-design/api/PRODUCT_API_CONTRACT.md"),
     ("docs/templates/product/PRODUCT_DATA_MODEL_TEMPLATE.md", "docs/artifacts/02-design/data/PRODUCT_DATA_MODEL.md"),
