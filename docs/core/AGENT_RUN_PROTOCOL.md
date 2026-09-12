@@ -3,6 +3,10 @@
 > 상태: 초안 v0.1
 > 목적: Vulcan-Anvil Ex에서 Codex, GPT, Claude 등 서로 다른 에이전트가 동일한 산출물과 Gate 규칙을 기준으로 작업하도록 공통 실행 규약을 정의한다.
 
+`process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 아래 기존 Gate 순서나 Run 자동화로 새 프로세스를 대체하지 않으며, 미지원 모델을 기존 Gate로 해석하지 않는다.
+
+Product의 Run 사용과 입력·검증 범위는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 Run 생성·분할·입출력 절차는 Run을 사용하는 경로에 적용하며, Run 없는 Product 작업에 새 Run을 요구하지 않는다. Audit/PoC는 각 profile의 기존 필수 Run과 승인 기준을 유지한다.
+
 ## 1. 기본 원칙
 
 Agent Run Protocol은 특정 모델이나 제품의 사용법이 아니다.
@@ -11,11 +15,11 @@ Agent Run Protocol은 특정 모델이나 제품의 사용법이 아니다.
 
 Core 원칙:
 
-- 에이전트는 항상 승인된 문서와 추적표를 먼저 읽고 작업한다.
+- 에이전트는 현재 작업에 적용되는 승인 문서와 추적 관계를 먼저 확인한다.
 - 런타임 전역 메모리, 과거 세션 요약, 다른 샘플 프로젝트 기억은 현재 프로젝트의 source of truth가 아니다.
 - 메모리가 자동으로 제공되더라도 요구사항, Gate 상태, Run 범위, 승인 여부, 구현 대상, 테스트 통과 여부는 현재 저장소의 `session.json`, Gate 산출물, Run 문서, 사용자 최신 지시로 다시 확인한다.
 - 에이전트의 모든 작업은 `REQ`, `AC`, `FUNC`, `SCR`, `PGM`, `DB`, `SEC`, `UT`, `IT`, `PT`, `UI` 중 하나 이상과 연결되어야 한다.
-- 에이전트가 임의로 범위를 확장하지 않도록 Run Scope를 명시한다.
+- 에이전트가 임의로 범위를 확장하지 않도록 작업 범위를 명시한다. Run을 사용하면 Run Scope에 기록한다.
 - Gate 완료 전에는 산출물, 구현, 테스트, 증적, 미해결 이슈를 함께 남긴다.
 - Gate 산출물 완료 후에는 다음 Gate로 진행하지 말고 사용자 승인 질문을 남긴 뒤 대기한다.
 - 대화상 명시 승인이 없으면 Run, 릴리즈 승인서, Gate 결과에 사용자 승인으로 기록하지 않는다.
@@ -23,7 +27,7 @@ Core 원칙:
 
 ## 2. Run 단위
 
-하나의 Run은 에이전트에게 위임 가능한 최소 작업 단위다.
+Run을 사용하는 경로에서 하나의 Run은 에이전트에게 위임할 작업 계약 단위다.
 
 Run은 다음 중 하나의 목적을 가진다.
 
@@ -63,15 +67,15 @@ CR-001 게시글 첨부파일 요청 영향도 분석
 
 ## 3. Run 입력 계약
 
-Adapter는 에이전트를 실행하기 전에 다음 입력을 구성해야 한다.
+Adapter는 Run으로 에이전트를 실행할 때 다음 입력을 구성한다.
 
-Gate 작업은 Run 문서 생성 뒤에 시작한다. `vulcan.py gate-start`는 Gate 상태를 갱신한 뒤 해당 Gate의 기본 `orchestrator-plan` Run 초안을 자동 생성한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
+Gate별 Plan Run을 사용하는 경로에서는 Run 문서를 시작 계약으로 준비한다. 기존 `vulcan.py gate-start`는 Gate 상태 갱신 후 profile 정책에 따라 `orchestrator-plan` Run 초안을 자동 생성하며, Product/PoC에서는 이 자동 생성을 생략한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
 
 Gate 산출물이 완료되어도 사용자 승인 전에는 `done`으로 닫지 않는다. 산출물 요약과 다음 Gate 진행 질문을 남긴 뒤 `python vulcan.py session --gate <현재 Gate> --status awaiting-approval`로 현재 Gate에 머무른다. 사용자가 명시 승인한 뒤에만 `python vulcan.py session --gate <현재 Gate> --status done --approved --approval-evidence "<승인 근거>"`를 실행해 다음 Gate로 전환한다.
 
 기본 audit workflow는 브랜치 경계를 둔다. `init`과 Phase 0~Gate 3 산출물은 `main`에서 진행한다. `impl`에 진입하면 `python vulcan.py branch-start impl`로 `vulcan.config.json.workflow.integration_branch`(기본 `dev`)를 만들거나 전환한다. Build Wave 구현, worker 실행, Gate 4 QA는 통합 브랜치에서 수행하고, Gate 5 승인 후 통합 브랜치를 `main`으로 반영한다. 현재 상태는 `python vulcan.py branch-status`로 확인한다.
 
-이 기본 Run은 Gate 작업의 시작 계약이다. 에이전트는 이 Run을 읽고 필요한 세부 persona Run을 제안하거나 `run-new`로 추가 생성한 뒤 산출물 작성, 구현, 테스트, QA를 진행한다. Gate 종료 시에는 시작 시 만든 Run 또는 세부 Run을 완료 보고 형식으로 갱신한다.
+기본 Run을 사용하는 경우 에이전트는 해당 계약에 따라 산출물 작성, 구현, 테스트, QA를 진행하고 필요한 세부 persona Run을 추가한다. Gate 종료 시에는 사용한 Run을 완료 보고 형식으로 갱신한다.
 
 | 입력 | 필수 여부 | 설명 |
 | --- | --- | --- |
