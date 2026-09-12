@@ -10,6 +10,8 @@ module.exports = defineConfig({
   expect: { timeout: 5000 },
   workers: 1,
   retries: 0,
+  forbidOnly: true,
+  failOnFlakyTests: true,
   reporter: [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/results.json' }]],
   use: { baseURL: `http://127.0.0.1:${port}`, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   webServer: {

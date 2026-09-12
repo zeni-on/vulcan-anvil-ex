@@ -11,16 +11,19 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main():
-    sys.stdout.reconfigure(encoding="utf-8")
-    source = (ROOT / "app.py").read_text(encoding="utf-8")
+def mutated_source(source):
     needle = """                       (body.content, request_id))
             result = view(db, row_for(db, request_id, user))"""
     if source.count(needle) != 1:
         raise RuntimeError("Mutation target changed; review the negative probe")
-    changed = source.replace(needle, """                       (body.content, request_id))
+    return source.replace(needle, """                       (body.content, request_id))
             db.execute("UPDATE decisions SET content=? WHERE request_id=?", (body.content, request_id))
             result = view(db, row_for(db, request_id, user))""")
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+    changed = mutated_source((ROOT / "app.py").read_text(encoding="utf-8"))
     with tempfile.TemporaryDirectory(prefix="request-board-negative-") as folder:
         root = Path(folder)
         (root / "app.py").write_text(changed, encoding="utf-8")
