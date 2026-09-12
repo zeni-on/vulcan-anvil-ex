@@ -107,7 +107,7 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 | --- | --- |
 | 현재 위치/범위/작업공간 | `status`, `branch-status`. `planning`/`impl`/`acceptance`를 그대로 읽으며 과거 Gate 키로 바꾸지 않는다. |
 | 구현 통합 브랜치 준비 | `branch-start impl` 또는 `branch-start impl --dry-run`으로 미리보고, `--apply`로 적용한다. `--json`으로 결과를 읽을 수 있다. 허가된 impl 범위와 현재 계약을 확인하며 세션·승인·commit/push는 만들지 않는다. |
-| 환경 확인/인수 시험 | `doctor` 후 필요한 명시 명령만 `execute --verify`로 실행한다. 인수 시험은 합의한 통합 브랜치의 현재 작업공간을 사용하고 QA worktree를 새로 만들지 않는다. 환경 진단은 인수 승인이 아니다. |
+| QA 전달/인수 시험 | acceptance에서 `execute --dry-run --json`으로 Run 없는 전달 후보를 읽는다. 환경이 불확실하면 `doctor`로 확인하고 필요한 명시 명령만 `execute --verify`로 실행한다. 합의한 통합 작업공간을 사용하고 QA worktree를 새로 만들지 않는다. |
 | 릴리즈 후보 확인 | `release-pr --dry-run`은 현재 범위 인수/증적/브랜치를 재확인하며 미처리 의무를 표시한다. 파일·PR·push를 만들지 않으며 후보가 나와도 발행 권한은 없다. |
 | 화면 확인 | 지원 Dashboard는 저장된 3구간과 이번 작업 범위를 읽기 전용으로 표시한다. `completed`는 이번 범위 인수이며 제품 전체 완료나 배포 완료가 아니다. |
 
@@ -117,7 +117,15 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 
 기존 Gate/QA Run 자동화와 실제 `release-pr` 발행은 아직 지원하지 않는다. `session --process-request`로 상태를 저장해도 브랜치는 자동 전환되지 않는다. 표식이 없는 기존 모델의 `branch-start impl` 동작은 유지하며 새 `--apply`/`--dry-run`/`--json` 옵션은 실험 모델 전용이다.
 
-native QA는 기존 작업 요약으로 목표·허용 경로·계약/시험·명시 명령·증적 위치를 전달한다. 담당자는 같은 통합 작업공간에서 실행 결과와 실패 원인을 반환하며 검증 전용 위임으로 코드나 상태를 수정하지 않는다. 총괄은 실제 명령 종료·현재 소스/환경·증적을 확인한 후 상태 요청에 연결한다. 실패는 보존하고, 허가된 수정 후 새 증적을 수집한다. 서브에이전트의 완료 알림이나 Pass 문장은 인수 결정이 아니며 새 Run/자동 dispatcher를 요구하지 않는다.
+native QA는 다음 순서로 연결한다. 새 문서를 추가로 채우라는 뜻이 아니라 현재 작업 요약과 기존 상태 요청을 재사용하는 경로다.
+
+1. acceptance에서 `python vulcan.py execute --dry-run --json`을 실행한다. `--run-id` 없이 현재 scope, 계약/시험 참조, 통합 작업공간, 환경 명세와 빈 `return_request`를 받는다. `--runner subagent`, `thread`, `agy-branch-agent`는 전달 방식의 표시이며 실제 호출이나 격리 보장이 아니다.
+2. 총괄이 기존 작업 요약에 담당자, 정확한 argv/cwd, 새 JSON/log/report 경로와 필요한 런타임 출력 경로를 붙여 전달한다. 문서에서 명령을 자동 추출·실행하지 않는다. 담당자는 검증 전용 위임으로 코드나 상태를 수정하지 않는다. `verify_only`는 역할 계약이며 CLI가 임의 테스트 프로세스를 OS sandbox로 격리한다는 뜻은 아니다.
+3. 담당자는 명시 명령을 실행하고 ID별 실제 결과, 명령 JSON과 원본 로그, 실패 원인/미실행 항목을 반환한다. `execute --verify`는 acceptance의 현재 계약·시험 계획·환경 명세·작업공간을 실행 전에 재확인한다. 환경 명세가 정상이어도 실제 서비스/브라우저가 준비됐다는 뜻은 아니다.
+4. 총괄이 실제 명령 종료·로그·현재 소스/환경 변경을 확인하고 `return_request.verification.results`를 채운다. ID마다 `id`, `status`, 실제 `command` argv, `evidence` 참조를 사용한다. 빈 results를 채우기 위해 Pass를 만들지 않으며 실패/누락/`environment_blocked`를 보존한다. delegate/검증 범위/결과는 기존 요약에 남긴다.
+5. 결과 요청을 `session --process-request <request.json> --json`으로 미리본다. 실제 증적이 통과해도 accept 결정이 없으면 차단되며 `checks.verification_key`만 확인할 수 있다. 총괄은 실제 수용 권한을 확인한 뒤 별도 accept 결정을 연결하고 `--apply`한다. 오래된 session revision이면 현재 상태를 먼저 확인하며 자동으로 새 revision을 끼워 넣어 재적용하지 않는다.
+
+실패한 결과 요청은 상태를 바꾸거나 실패 기록을 저장하지 않는다. 원본 증적과 기존 결과 요약에 실패를 남기고, 허가된 수정은 impl로 돌아가 처리한 뒤 새 증적을 수집한다. 서브에이전트의 완료 알림이나 exit 0은 테스트 건수/업무 결과/인수 승인을 인증하지 않는다. 이 경로는 새 Run/자동 dispatcher/릴리즈 권한을 만들지 않는다.
 
 ## 5. Run 생성과 검증
 

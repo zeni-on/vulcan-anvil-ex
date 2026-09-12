@@ -121,6 +121,14 @@ class ProductPolicyTests(unittest.TestCase):
         self.assertNotIn("tested-source identity", qa)
         self.assertNotIn("command success, source identity", qa)
 
+    def test_pilot_qa_handoff_is_routed_without_new_run_or_automatic_acceptance(self):
+        qa = self.read(".agents/skills/vulcan-qa/SKILL.md")
+        self.assertIn("empty return request", qa)
+        self.assertIn("does not launch a delegate or approve QA", qa)
+        guide = self.read("docs/core/ORCHESTRATOR_CLI_GUIDE.md").split("### 4.1", 1)[1].split("## 5.", 1)[0]
+        for phrase in ("return_request.verification.results", "checks.verification_key", "실패한 결과 요청은 상태를 바꾸거나 실패 기록을 저장하지 않는다"):
+            self.assertIn(phrase, guide)
+
 
 if __name__ == "__main__":
     unittest.main()
