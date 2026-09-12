@@ -1,10 +1,12 @@
 # Product CI And Quality Loop
 
-- 상태: 2026-09-12 설계 / Product 샘플 적용 전
+- 상태: 2026-09-12 설계 / 요청 보드 샘플 로컬·원격 CI 검증 완료
 - 범위: Product의 업무 예시, 실행 가능한 검증, CI, 인수 판단 연결
 - 선행 작업: [3구간 운영 연결](PRODUCT-PROCESS-CONTRACTS.md), [업무 합의 파일럿](PRODUCT-DISCOVERY-PILOT-REQUEST-BOARD.md)
 
 이 문서는 적용할 방향과 시험 기준이다. 현재 Core 정책, init/upgrade, CI 설정, 저장소 보호 규칙을 변경하지 않는다. 일반 Product 프로젝트의 필수 검사로 활성화한 상태가 아니며 Audit/PoC에도 소급 적용하지 않는다.
+
+후속 현황: 위 문장은 설계 당시 경계다. [요청 보드 제품 CI 검증](../../examples/product-request-board/docs/ci-verification.md)에서 합의한 샘플에만 별도 workflow를 연결했다. 원격 실행 결과는 그 보고서에 기록한다. Core 일반 활성화/init 자동 설치/저장소 보호 설정은 여전히 별도다. 이 문서의 모든 계획 표를 완료로 바꾸지는 않는다.
 
 ## 1. 목적과 현재 차이
 

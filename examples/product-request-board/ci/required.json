@@ -1,0 +1,18 @@
+{
+  "api": [
+    "test_api.RequestFlowTests.test_demo_identity_switch_is_explicitly_opt_in",
+    "test_api.RequestFlowTests.test_reg_001_preserves_original_content_and_reason_after_resubmit",
+    "test_api.RequestFlowTests.test_reg_002_repeated_rejection_survives_new_application_instance",
+    "test_api.RequestFlowTests.test_reg_003_stale_duplicate_and_invalid_state_are_nonmutating",
+    "test_api.RequestFlowTests.test_reg_004_concurrent_review_has_one_winner_and_one_snapshot",
+    "test_api.RequestFlowTests.test_reg_004_read_row_and_history_share_snapshot_during_commit",
+    "test_api.RequestFlowTests.test_sec_reg_001_visibility_and_other_actors_cannot_mutate",
+    "test_api.RequestFlowTests.test_sec_reg_002_self_review_and_requester_review_are_forbidden",
+    "test_api.RequestFlowTests.test_sec_reg_003_invalid_input_and_actor_override_do_not_write",
+    "test_api.RequestFlowTests.test_sec_reg_003_out_of_range_ids_return_structured_input_error",
+    "test_api.RequestFlowTests.test_sec_reg_004_session_origin_and_host_boundaries",
+    "test_api.RequestFlowTests.test_sec_reg_004_stale_tab_identity_cannot_write_as_new_actor"
+  ],
+  "browser": ["@resubmission", "@access", "@render", "@identity", "@tabs"],
+  "projects": ["desktop", "mobile"]
+}

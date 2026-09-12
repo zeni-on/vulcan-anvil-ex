@@ -3,7 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
+    "check:static": "python ci/checks.py static",
+    "check:browser": "node ci/browser-ready.cjs",
+    "test:api": "python -B ci/checks.py api",
+    "pretest:e2e": "node -e \"require('node:fs').rmSync('test-results/results.json', { force: true })\"",
     "test:e2e": "playwright test",
+    "check:reports": "python ci/checks.py reports",
+    "test:ci-boundaries": "python -B ci/probes.py",
     "start": "python app.py --demo"
   },
   "devDependencies": {

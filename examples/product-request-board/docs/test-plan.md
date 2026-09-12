@@ -15,8 +15,8 @@ The following tests apply to the [sample contract](contracts.md). Input, expecte
 | SEC-REG-004 | Missing session, cross-origin write, untrusted Host, old session token, stale displayed actor | Denial without writes; test identity switching requires explicit demo mode | API test_sec_reg_004 and opt-in test | Planned |
 | SEC-REG-005 | HTML-like content; second submission; delayed old-account response; another tab switches identity | Render plain text; select newly created request; discard prior identity's selected records and unsent editor | Browser checks on desktop/mobile | Planned |
 
-Commands from the example root: `python -B -m unittest discover -s tests -p test_api.py -v`; `npm run test:e2e`; `python -B tests/probe_history.py`.
+Local and CI commands from the example root: `npm run check:browser`; `npm run check:static`; `npm run test:api`; `npm run test:e2e`; `npm run check:reports`; `npm run test:ci-boundaries`. The required-case inventory is in `ci/required.json`. Test definitions stay here; API methods and browser tags are executable identifiers, not new requirement IDs.
 
 The negative probe copies only app/test source into a temporary directory and deliberately overwrites the preserved content there. The same preservation assertion must fail with an AssertionError, not import/environment error. The normal application and user databases remain unchanged.
 
-Evidence: current command logs under `.local/`; official Playwright HTML/JSON report, screenshots and failure traces under `playwright-report/` and `test-results/`. These are local generated artifacts, not authored plans. Product-specific remote CI execution belongs to finish scope 4.
+Evidence: API/check/probe results under `ci-artifacts/`; official Playwright HTML/JSON report, screenshots and failure traces under `playwright-report/` and `test-results/`. Earlier local logs remain under `.local/`. These are generated artifacts, not authored plans. The sample CI uploads reports for 7 days; it does not publish databases or dependencies.

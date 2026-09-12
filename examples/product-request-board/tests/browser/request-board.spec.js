@@ -39,7 +39,7 @@ async function resubmit(page, content) {
   await expect(page.getByLabel('테스트 계정')).toBeEnabled();
 }
 
-test('SCN-001: private amendment, repeated rejection, resubmission and approval preserve history', async ({ page, browser }, testInfo) => {
+test('SCN-001: private amendment, repeated rejection, resubmission and approval preserve history', { tag: '@resubmission' }, async ({ page, browser }, testInfo) => {
   const reviewerContext = await browser.newContext({ viewport: page.viewportSize() });
   const reviewer = await reviewerContext.newPage();
   const errors = [];
@@ -90,7 +90,7 @@ test('SCN-001: private amendment, repeated rejection, resubmission and approval 
   }
 });
 
-test('SEC-REG-001/002: another requester cannot read history; reviewer cannot review own request', async ({ page }) => {
+test('SEC-REG-001/002: another requester cannot read history; reviewer cannot review own request', { tag: '@access' }, async ({ page }) => {
   await signIn(page, 'alice');
   const id = await submit(page, '작성자와 검토자에게만 공개하는 요청');
   await signIn(page, 'bob');
@@ -102,7 +102,7 @@ test('SEC-REG-001/002: another requester cannot read history; reviewer cannot re
   await expect(page.getByRole('button', { name: '반려', exact: true })).toHaveCount(0);
 });
 
-test('SEC-REG-005: user content is text and a second submission selects the new request', async ({ page }) => {
+test('SEC-REG-005: user content is text and a second submission selects the new request', { tag: '@render' }, async ({ page }) => {
   await signIn(page, 'alice');
   await submit(page, '첫 번째 요청');
   const unsafe = '<img src=x onerror="window.injected=true">' + '긴내용'.repeat(250);
@@ -113,7 +113,7 @@ test('SEC-REG-005: user content is text and a second submission selects the new 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('SEC-REG-005: delayed prior identity response cannot restore private content', async ({ page }) => {
+test('SEC-REG-005: delayed prior identity response cannot restore private content', { tag: '@identity' }, async ({ page }) => {
   await signIn(page, 'alice');
   const id = await submit(page, '이전 계정에만 보이는 요청');
   let release;
@@ -144,7 +144,7 @@ test('SEC-REG-005: delayed prior identity response cannot restore private conten
   expect((await page.request.get(`/api/requests/${id}`)).status()).toBe(404);
 });
 
-test('SEC-REG-005: another tab identity switch clears prior identity and unsent draft', async ({ page, context }) => {
+test('SEC-REG-005: another tab identity switch clears prior identity and unsent draft', { tag: '@tabs' }, async ({ page, context }) => {
   await signIn(page, 'alice');
   await submit(page, '계정 변경 전 요청');
   await page.getByLabel('요청 내용', { exact: true }).fill('아직 제출하지 않은 개인 입력');

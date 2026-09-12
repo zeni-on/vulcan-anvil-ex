@@ -1,0 +1,97 @@
+name: Product Request Board
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-request-board-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Request board quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: examples/product-request-board
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Determine sample test scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python ci/policy.py --scope
+      - name: Set up Python
+        id: python
+        if: steps.scope.outputs.required == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node
+        id: node
+        if: steps.scope.outputs.required == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install sample dependencies without a restored cache
+        id: install
+        if: steps.scope.outputs.required == 'true'
+        run: |
+          python -m pip install -r requirements.txt
+          npm ci
+      - name: Install and launch Chromium
+        id: browsers
+        if: steps.scope.outputs.required == 'true'
+        run: |
+          npx playwright install --with-deps chromium
+          npm run check:browser
+      - name: Compile and syntax checks
+        id: static
+        if: steps.scope.outputs.required == 'true'
+        run: npm run check:static
+      - name: Required API and SQLite tests
+        id: api
+        if: steps.scope.outputs.required == 'true'
+        run: npm run test:api
+      - name: Required desktop and mobile workflow tests
+        id: browser
+        if: steps.scope.outputs.required == 'true'
+        run: npm run test:e2e
+      - name: Validate required cases actually passed
+        id: reports
+        if: always() && steps.scope.outputs.required == 'true' && steps.install.outcome == 'success'
+        run: npm run check:reports
+      - name: Defect, omission, weakening and environment probes
+        id: probe
+        if: success() && steps.scope.outputs.required == 'true'
+        run: npm run test:ci-boundaries
+      - name: Preserve sample reports even on failure
+        if: always() && steps.scope.outputs.required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: request-board-results-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            examples/product-request-board/ci-artifacts/
+            examples/product-request-board/playwright-report/
+            examples/product-request-board/test-results/
+      - name: Fail closed on missing or skipped mandatory steps
+        if: always()
+        env:
+          REQUIRED: ${{ steps.scope.outputs.required }}
+          STEPS_JSON: ${{ toJSON(steps) }}
+        run: python ci/policy.py --gate
