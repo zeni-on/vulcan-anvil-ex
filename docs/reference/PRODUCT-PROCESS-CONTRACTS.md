@@ -183,6 +183,8 @@ Git checkout/reference-transaction hook은 일회성 빈 hooks 경로로 비활�
 | `native`, `subagent`, `thread`, `agy-branch-agent` | 사용자/총괄이 선택한 실행 방식의 표기. 실제 spawn/send/격리/모델 설정 없음 |
 | 담당자와 argv/cwd/출력 경로 | 총괄이 할당 전에 확정할 항목. 현재 문서에서 명령 자동 추출·전체 본문 복제 없음 |
 | `return_request` | 기존 상태 요청의 action/target/session revision/scope/basis를 제공하되 results는 빈 배열, decision은 없음. 그대로는 완료할 수 없음 |
+| 경로만 있는 결과 행 | 기존 session preview에서 `{id, status, evidence: "relative.json"}`을 받는다. ID별 판정은 입력 그대로 두고 실행 JSON의 argv와 해당 bytes의 참조만 보완한 `prepared_request`를 반환. 기존 전체 행과 혼합 사용 가능 |
+| 준비된 결과 요청 | 수용 결정은 만들지 않는다. 경로만 있는 요청은 직접 apply/decision 포함 preview 불가. 반환된 전체 요청을 검토한 뒤 별도 accept 결정으로 기존 apply 사용. preview 이후 증적 bytes 변경·오래된 세션 요청은 재사용 차단 |
 | 실패·미실행·환경 차단·누락·중복 결과 또는 실제 명령 실패를 감춘 Pass | 기존 결과/실행 관측 검사에서 거부. 실패 보고는 원본 증적/요약에 보존하고 세션 저장 실패를 결과 저장으로 오인하지 않음 |
 | 실제 결과 성공, accept 결정 없음 | 인수 요청 미리보기는 blocked. 검증된 결과 키만 반환하며 별도 실제 수용 판단 후 apply |
 | 전달 이후 session revision 변경 | 기존 optimistic concurrency 검사로 conflict. 현재 범위 확인 없이 새 revision으로 치환하지 않음 |
@@ -255,3 +257,13 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 초기화 smoke 12단계와 기존 Product/PoC/Audit fixture smoke 84단계를 통과했다. 관련 문서의 로컬 링크 대상 46개와 diff-check를 확인했다. 기존 pathlib deprecation warning은 남아 있으며 GUI 변경이 없어 Dashboard 로컬 빌드/브라우저 시험은 반복하지 않았다.
 - 새 문맥의 native contract-reviewer는 현재 구현/테스트의 실행·권한·legacy 경계를 읽기 전용으로 검토했고 추가 지적은 없었다. 실제 테스트는 총괄이 실행했다. 이번 시험에서 실제 QA 에이전트를 새로 호출한 것은 아니며, 자동 회귀가 native 호출의 후보 입력/반환 형태를 검증한 것이다. Agy 런타임 동작이나 자동 dispatcher 성공으로 확대하지 않는다.
 - QA skill의 frontmatter 검증을 통과했다. Codex skill과 Gemini bootstrap은 같은 Core CLI 4.1절을 참조하므로 adapter별 절차를 복제하지 않는다. 일반 init/upgrade 활성화, 사용자 프로젝트 변경, 업무 정책 승인, 실제 릴리즈 발행/제품별 CI 설정은 하지 않았다.
+
+### 6.7 마무리 범위 1: QA 결과 입력 축소 (2026-09-12)
+
+- [결과 요청 회귀](../../scripts/regression/tests/test_product_qa_return.py) 16건을 추가했다. 기존 `session --process-request`의 preview에서 경로만 있는 결과를 준비하며 별도 CLI/Run/승인 정책을 만들지 않는다. 경로·JSON 형식, 판정 보존, 실패 명령을 가린 Pass, 잘못된 ID/중복/누락, scope/session/환경/문서 변경과 preview 이후 증적 변경, 직접 apply/결정 주입 거부, 기존 전체/혼합 결과 호환과 보완된 요청의 기존 크기 제한을 확인한다.
+- 크기 제한 보강 전 Product 회귀 222건 중 221건 통과/1건 skip, 나머지 Python 회귀 92건 중 90건 통과/2건 skip을 확인했다. 당시 전체 discovery 대상 합계 314건 중 311건 통과이며 skip 3건은 로컬 symlink 생성 제약이다. 마지막 크기 제한 사례를 포함한 결과 반환/QA/세션 영향 시험 44건도 모두 통과했다. 기존 pathlib deprecation warning은 이번 범위에서 수정하지 않았다.
+- 초기화 smoke 12단계, 기존 Product/PoC/Audit fixture smoke 84단계와 관련 문서의 로컬 링크 대상 18개, diff-check를 확인했다. GUI 변경이 없어 Dashboard 로컬 빌드/브라우저 시험은 반복하지 않았으며 최종 CI 결과와 구분한다.
+- 새 독립 로컬 예시에서 별도 Python 결과 조립 helper 없이 PowerShell의 JSON 변환과 기존 CLI로 실패→수정→재시험→합성 수용을 수행했다. 최초 3건 중 1건 실패를 보존하고 원문 이력 코드 한 줄 수정 뒤 3건 모두 통과했다. 성공 결과만으로는 수용되지 않으며 최종 scoped check ready/이슈 0건, 발행 비활성화를 확인했다. 사용자 프로젝트/실제 업무 정책의 승인이나 UI·DB 시험은 아니다.
+- 이 예시의 운영 CLI는 13회였다(독립 fixture 준비 제외). 수정 후 현재 basis가 비워지는 것을 놓쳐 null 환경 기준의 재시험 인계가 한 번 거부됐고, 보존된 이전 기준을 확인·명시하여 다시 인계했다. 잘못된 요청으로 상태/테스트가 진행되지는 않았다. 이는 결과 행 축약과 별개인 총괄의 상태 인계 실수이며 운영 전체가 자동화됐다고 보고하지 않는다.
+- 이번에 제거한 수동 입력은 결과 행마다 복사하던 argv와 증적 revision이다. 범위/환경/세션은 기존 전달 요청을 재사용한다. 상태 전환·결과 검토·수용 결정은 남아 있으며 명령 수나 소요시간/크레딧 감소를 입증하지 않았다. 원본 성공/실패 JSON과 로그는 로컬 예시에 보존하고 공개 저장소로 복사하지 않았다.
+- 새 문맥의 native contract-reviewer가 상태/판정/참조/권한 경계를 읽기 전용 검토했고 추가 지적은 없었다. 이후 추가한 크기 제한 보강은 총괄이 해당 부정 시험과 위 44건으로 재검증했다. 테스트 실행은 총괄이 맡았다. Core CLI 4.1절과 handoff 안내만 현행화하며 Codex/Gemini에 별도 운영 방법을 복제하지 않는다.

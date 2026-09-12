@@ -54,9 +54,9 @@ def handoff(project_dir, workflow, parse_tables, *, runner="native"):
             },
             "return_rules": [
                 "Return the delegate, scoped check IDs, actual outcomes, command observations, logs and blockers in the existing summary.",
-                "Fill verification.results from reviewed executions; the empty request is deliberately not acceptable.",
+                "Fill verification.results with reviewed id/status/evidence-path rows; session preview returns prepared_request with recorded argv and pinned evidence references. The empty request is not acceptable.",
                 "Preserve Fail, Not Run and environment_blocked; never turn completion or exit zero alone into QA Pass.",
-                "The Orchestrator previews session --process-request without a decision, reviews the results, then supplies a separate accept decision.",
+                "The Orchestrator previews session --process-request without a decision, reviews prepared_request and the results, then supplies a separate accept decision. Never apply path-only rows directly.",
             ],
             "limitations": [
                 "Preview only: no agent launch, commands, directories, Run, state writes or branch changes.",
