@@ -138,7 +138,7 @@ def _bootstrap_vulcan_core():
 
 _bootstrap_vulcan_core()
 
-from vulcan_core import product_process, product_readiness, product_session, product_consumers, product_branch
+from vulcan_core import product_process, product_readiness, product_session, product_consumers, product_branch, product_qa
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -12949,7 +12949,18 @@ def _execute_plan(run_id, runner="native", project_dir="."):
     }
 
 
-def cmd_execute(run_id, runner="native", dry_run=False, project_dir=".", emit_json=False):
+def cmd_execute(run_id=None, runner="native", dry_run=False, project_dir=".", emit_json=False):
+    pilot = product_consumers.load(project_dir)
+    if pilot is not None:
+        if not dry_run or run_id:
+            raise ValueError("Product QA handoff requires --dry-run without --run-id; no agent is launched")
+        result = product_qa.handoff(project_dir, workflow_policy(project_dir), parse_markdown_tables, runner=runner)
+        print(json.dumps(result, ensure_ascii=False, indent=2) if emit_json else product_qa.render(result))
+        if result["status"] != "candidate":
+            sys.exit(2 if result["status"] == "conflict" else 1)
+        return
+    if not run_id:
+        raise ValueError("execute dry-run requires --run-id for legacy projects")
     plan = _execute_plan(run_id, runner=runner, project_dir=project_dir)
 
     if emit_json:
@@ -16689,7 +16700,7 @@ def main():
     p_run_preflight = subparsers.add_parser("run-preflight", help="worker 실행 전 Build Wave Run 작업지시서 사전 검사")
     p_run_preflight.add_argument("run_file", help="사전 검사할 Run 문서 경로")
 
-    p_execute = subparsers.add_parser("execute", help="Run 실행 전 preflight/위임/검증 계획 dry-run")
+    p_execute = subparsers.add_parser("execute", help="Run 실행 계획 또는 실험 Product QA 전달 dry-run / 명시 검증 실행")
     p_execute.add_argument("--run-id", help="실행 계획을 확인할 Run ID (예: RUN-010)")
     p_execute.add_argument("--runner", default="native", help="native, subagent, thread, agy-branch-agent 또는 codex-cli/claude-cli/antigravity-cli")
     p_execute.add_argument("--project-dir", default=".", help="대상 프로젝트 루트 경로")
@@ -16839,7 +16850,10 @@ def main():
                 elif "process_model" in session and args.command == "execute" and args.verify:
                     product_session.require_verification_permission(session)
                     project_dir = getattr(args, "project_dir", None) or "."
-                    product_consumers.require_qa_workspace(project_dir, session, workflow_policy(project_dir))
+                    if session["current_gate"] == "acceptance":
+                        product_qa.require_acceptance_context(project_dir, session, workflow_policy(project_dir), parse_markdown_tables)
+                elif "process_model" in session and args.command == "execute" and args.dry_run and not args.run_id:
+                    product_process._validate(session)
                 else:
                     guard_legacy_process(session)
             except (OSError, ValueError, TypeError, KeyError) as error:
@@ -16976,15 +16990,16 @@ def main():
             sys.exit(exit_code)
         if args.source is not None or args.evidence is not None or args.cwd is not None or args.verify_command:
             parser.error("--source/--evidence/--cwd/command require --verify")
-        if not args.run_id:
-            parser.error("execute dry-run requires --run-id")
-        cmd_execute(
-            run_id=args.run_id,
-            runner=args.runner,
-            dry_run=args.dry_run,
-            project_dir=args.project_dir,
-            emit_json=args.json,
-        )
+        try:
+            cmd_execute(
+                run_id=args.run_id,
+                runner=args.runner,
+                dry_run=args.dry_run,
+                project_dir=args.project_dir,
+                emit_json=args.json,
+            )
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            parser.error(str(error))
     elif args.command == "orchestrator-plan":
         cmd_orchestrator_plan(
             goal=args.goal,

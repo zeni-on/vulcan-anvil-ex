@@ -1,12 +1,12 @@
 # Product Process Contract Prototype
 
-- 상태: 2026-09-11 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI + 단계 2c Dashboard 읽기/운영 미리보기 구현. 일반 init/기존 프로젝트 이행/실제 릴리즈 발행은 미활성화.
+- 상태: 2026-09-12 단계 1 상태 계약 + 단계 2a 범위별 검사 + 단계 2b 실험 상태 저장 CLI + 단계 2c 운영 소비자 + 단계 2d 명시 브랜치 준비 + 단계 2e QA 전달/회수 연결. 일반 init/기존 프로젝트 이행/실제 릴리즈 발행은 미활성화.
 - 원본 설계: [3구간 운영](PRODUCT-ITERATIVE-PROCESS-DESIGN.md), [시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
 - 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py), [product_consumers.py](../../vulcan_core/product_consumers.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py), [운영 소비자 시험](../../scripts/regression/tests/test_product_consumers.py).
 
 이 문서는 프레임워크 개발·검토용이다. 프로젝트 에이전트의 시작 입력에 추가하지 않는다.
 일반 init/upgrade는 새 모델을 활성화하지 않는다. 현재 Product의 기존 Gate 운영은 유지한다.
-**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI 상태 저장·검사·시험 실행과 Dashboard 표시/릴리즈 후보 미리보기를 사용할 수 있다. 남은 branch/QA 위임/실제 발행 계약과 반복·이행 보존 검증 후 일반 적용 여부를 결정한다.
+**병합과 일반 활성화는 다르다.** main에 코드를 병합해도 기존 프로젝트가 즉시 3구간으로 바뀌지는 않는다. 지금은 별도 합성 파일럿에서 CLI 상태 저장·검사·명시 브랜치 준비·QA 전달/시험/결과 회수와 Dashboard 표시/릴리즈 후보 미리보기를 사용할 수 있다. 실제 발행 계약과 반복·이행 보존 검증 후 일반 적용 여부를 결정한다.
 
 ## 1. 이번 단계의 경계
 
@@ -17,7 +17,7 @@
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
 - 아직 연결하지 않은 legacy 명령은 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 지원하는 조회·진단·미리보기는 4.4절을 따르며, 상태 저장은 자체 검증을 거치는 `session --process-request`, 명령 증적 수집은 허가된 구간의 `execute --verify`로 수행한다.
 - `status --check`와 상태 요청 미리보기는 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다. 단계 2b의 명시 `--apply`는 검증한 상태만 저장하며 Git commit/push, Run, branch 생성, release는 수행하지 않는다.
-- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. 4.5절은 상태 저장과 분리한 명시 브랜치 준비다. QA 위임·결과 회수의 운영 라우팅, 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
+- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. 4.5절은 상태 저장과 분리한 명시 브랜치 준비, 4.6절은 Run 없는 QA 전달 후보와 결과 회수 경로다. 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
 
 ## 2. 범위의 직렬화
 
@@ -144,7 +144,7 @@ python vulcan.py session --process-request - --json
 - `release-pr --dry-run`은 이번 범위 completed, 현재 계약/증적 재검사, clean Git 작업공간, 실제 current/head/base 브랜치를 확인한다. 기존 Gate 5 승인서를 억지로 요구하지 않는다. 관련 없는 미처리 의무는 누락하지 않고 수량으로 노출하며 릴리즈 포함/제외 판단을 요청한다. 통과한 결과는 후보일 뿐 `release_authorized: false`, `publication_enabled: false`다.
 - 미리보기는 PR body 파일도 쓰지 않고 `gh`/push/merge를 실행하지 않는다. 필수 실행 결과·증적과 승인 연결은 확인하되 Git/소스 신선도로 후보를 차단하지 않는다. 구현·환경 변경 영향은 Orchestrator가 판단하며 현재 범위 밖 기능·과거 수용 전체의 배포 적합성을 인증하지 않는다.
 
-단계 2c는 **조회와 명시 시험/미리보기**까지 연결했다. 후속 브랜치 준비는 아래 4.5절에서 상태 변경과 분리한다. native QA 위임·결과 회수의 운영 라우팅, 실제 릴리즈 발행의 별도 승인/대상 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
+단계 2c는 **조회와 명시 시험/미리보기**까지 연결했다. 후속 브랜치 준비는 아래 4.5절에서 상태 변경과 분리하고 QA 전달/회수는 4.6절을 따른다. 실제 릴리즈 발행의 별도 승인/대상 계약, 이행/기본 init 전환은 후속이다. 단순 조회를 가능하게 하려고 legacy save/session/gate-start/run-exec 차단을 해제하지 않는다. 기존 프로젝트와 PMTool/샘플 폴더는 자동 변환하지 않는다.
 
 ### 4.5 명시 브랜치 준비 (단계 2d)
 
@@ -171,6 +171,25 @@ Git checkout/reference-transaction hook은 일회성 빈 hooks 경로로 비활�
 결과는 `ready`(미리보기), `applied`(준비 완료), `unchanged`(이미 대상), `blocked`(조건 부족), `conflict`(잠금/동시 변경/불명확한 Git 실행), `invalid`(모델/입력/관측 오류)다. 앞 세 상태는 exit 0, blocked는 1, 나머지는 2다. Git 실행 도중 실패·timeout 또는 사후 상태 불일치는 `applied: null`로 반환한다. 실제 상태가 바뀌지 않았다고 단정하지 않고 `branch-status`/세션 확인을 요청한다. 어떠한 결과도 push/merge/release 권한이 아니다.
 
 일반 Git 전환·worktree 관리 도구를 재구현하는 단계가 아니다. 서로 다른 기존 브랜치의 자동 병합, 상태 이행, native dispatcher, 실제 PR 발행·CI 적용은 이 변경에 포함하지 않는다.
+
+### 4.6 Run 없는 QA 전달과 결과 회수 (단계 2e)
+
+`execute --dry-run [--json]`에서 Run을 생략하면 실험 Product의 현재 acceptance 범위로 `product_qa.handoff()`를 호출한다. 기존 Run planner, 외부 CLI 실행과 섞지 않으며 새 명령/Run/위임 sidecar를 만들지 않는다. 실제 운영 순서는 [Core CLI 4.1절](../core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)에 한 번만 정의한다. Codex QA skill과 Gemini bootstrap은 같은 Core 경로를 참조한다.
+
+| 계약 | 동작 |
+| --- | --- |
+| 현재 acceptance + verify 권한 + 현재 계약/시험/환경 명세 + 합의한 작업공간 | `candidate`/exit 0. 현재 scope/참조/basis를 읽고 `verify_only` 전달 후보를 반환 |
+| planning/impl/completed, 권한/계약/환경/작업공간 불일치 | 후보를 만들지 않고 차단. impl self-check의 기존 `execute --verify` 권한은 유지 |
+| `native`, `subagent`, `thread`, `agy-branch-agent` | 사용자/총괄이 선택한 실행 방식의 표기. 실제 spawn/send/격리/모델 설정 없음 |
+| 담당자와 argv/cwd/출력 경로 | 총괄이 할당 전에 확정할 항목. 현재 문서에서 명령 자동 추출·전체 본문 복제 없음 |
+| `return_request` | 기존 상태 요청의 action/target/session revision/scope/basis를 제공하되 results는 빈 배열, decision은 없음. 그대로는 완료할 수 없음 |
+| 실패·미실행·환경 차단·누락·중복 결과 또는 실제 명령 실패를 감춘 Pass | 기존 결과/실행 관측 검사에서 거부. 실패 보고는 원본 증적/요약에 보존하고 세션 저장 실패를 결과 저장으로 오인하지 않음 |
+| 실제 결과 성공, accept 결정 없음 | 인수 요청 미리보기는 blocked. 검증된 결과 키만 반환하며 별도 실제 수용 판단 후 apply |
+| 전달 이후 session revision 변경 | 기존 optimistic concurrency 검사로 conflict. 현재 범위 확인 없이 새 revision으로 치환하지 않음 |
+
+후보 조회는 session bytes를 다시 대조하며 변경 감지 시 conflict를 반환한다. 이 조회는 예약이나 파일시스템 잠금이 아니다. 실제 `execute --verify`는 acceptance에서 계약/시험/환경 참조를 재확인하지만 소스 변경·실제 서비스·시험 수·업무 커버리지를 인증하지 않는다. 테스트 도구의 결과와 현재 소스/환경 영향은 총괄이 확인한다. Git 증적/사전 commit을 추가하지 않는다.
+
+`verify_only`는 위임 계약이며 외부 명령의 쓰기를 기술적으로 막는 sandbox가 아니다. 총괄이 도구 권한과 정확한 출력 범위를 제한한다. 결과 회수도 agent 메시지를 파싱해 자동 Pass/승인으로 바꾸는 기능이 아니며, 새로운 dispatcher나 실제 release 발행은 포함하지 않는다.
 
 ## 5. 지속 점검
 
@@ -228,3 +247,11 @@ Product 운영 지침을 바꿀 때 현재 범위에서 다음 사례를 함께 
 - 전체 Python 회귀 284건 실행에서 281건 통과, 로컬 symlink 생성 제약 3건 skip을 확인했다. 그 실행 이후 추가한 최종 관측 비교/예외 분류 보강은 브랜치 관련 25건으로 재검증했다. 전체 회귀와 마지막 영향 시험의 실행 시점을 구분한다.
 - 초기화 smoke 12단계, 기존 Product/PoC/Audit fixture smoke 84단계, 관련 문서의 로컬 링크 42개가 통과했다. 기존 pathlib deprecation warning은 남아 있다. GUI 변경이 없어 Dashboard 로컬 빌드/브라우저 시험은 이번에 반복하지 않았다.
 - 합성 프로세스·Git 연결 시험이지 요청 보드 업무 앱의 QA나 미정 업무 권한의 승인 결과가 아니다. 일반 Product 활성화, 기존 사용자 프로젝트 변경, 실제 릴리즈 발행과 제품별 CI 연결은 수행하지 않았다.
+
+### 6.6 단계 2e
+
+- [QA 전달 모듈](../../vulcan_core/product_qa.py)과 [QA 회귀](../../scripts/regression/tests/test_product_qa.py)를 추가했다. 집중 시험 11건에서 실제 Git 통합 작업공간의 전달 후보 → 실제 실패 → 허가된 수정 → 새 결과 회수 → 별도 수용을 확인했다. 빈/실패/미실행/환경 차단/누락/중복 결과, 실제 명령 실패를 가린 Pass, 오래된 결과 요청은 완료되지 않는다.
+- Product 회귀 207건 중 206건 통과/1건 skip, 나머지 Python 회귀 92건 중 90건 통과/2건 skip으로 기존 전체 discovery 대상을 나누어 실행했다. 합계 299건 중 296건 통과이며 3건은 로컬 symlink 생성 제약이다. 초기 집중 시험 이후 추가한 Core 라우팅 정책 회귀도 포함한다.
+- 초기화 smoke 12단계와 기존 Product/PoC/Audit fixture smoke 84단계를 통과했다. 관련 문서의 로컬 링크 대상 46개와 diff-check를 확인했다. 기존 pathlib deprecation warning은 남아 있으며 GUI 변경이 없어 Dashboard 로컬 빌드/브라우저 시험은 반복하지 않았다.
+- 새 문맥의 native contract-reviewer는 현재 구현/테스트의 실행·권한·legacy 경계를 읽기 전용으로 검토했고 추가 지적은 없었다. 실제 테스트는 총괄이 실행했다. 이번 시험에서 실제 QA 에이전트를 새로 호출한 것은 아니며, 자동 회귀가 native 호출의 후보 입력/반환 형태를 검증한 것이다. Agy 런타임 동작이나 자동 dispatcher 성공으로 확대하지 않는다.
+- QA skill의 frontmatter 검증을 통과했다. Codex skill과 Gemini bootstrap은 같은 Core CLI 4.1절을 참조하므로 adapter별 절차를 복제하지 않는다. 일반 init/upgrade 활성화, 사용자 프로젝트 변경, 업무 정책 승인, 실제 릴리즈 발행/제품별 CI 설정은 하지 않았다.
