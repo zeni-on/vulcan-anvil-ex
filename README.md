@@ -41,7 +41,7 @@ Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD
 - **Adapter**: Codex, Claude, Gemini/Antigravity 같은 런타임 차이를 흡수한다.
 - **Dashboard**: Gate, 문서, Run, 통계, 최근 커밋을 한 화면에서 확인한다.
 
-최근 `0.4.x` 라인은 Gate 전환 전 사전 진단(`prepare-transition`), 설계-코드 불일치 후보 보고(`drift-report`), adapter별 Run 입력 문서 분리, native subagent/Agy Workspace branch 위임 기록, 더 구체적인 `check-trace` 진단, Dashboard 문서 코멘트를 보강하고 있습니다. 공통 Gate 실행 기준은 `docs/core/GATE_EXECUTION_CHECKLIST.md`에 두고, Codex/Claude/Gemini 같은 runner 전용 prompt는 각 adapter 문서에서만 추가로 참조합니다.
+`0.5.0`의 신규 Product는 **기획·설계 ↔ 구현 ↔ 인수 검증**으로 반복합니다. 업무의 경계·규칙·예시를 먼저 확인하고, 기능별 문서 원본과 실제 테스트 결과를 연결합니다. Run/Wave는 필요할 때만 사용하며 기존 Product/Audit/PoC의 Gate 흐름은 자동 변경하지 않습니다. [릴리즈 노트](docs/releases/v0.5.0.md)에서 적용 범위와 업그레이드 주의사항을 확인할 수 있습니다.
 
 ## 왜 필요한가
 
@@ -183,9 +183,9 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.4.9**
+**Experimental - v0.5.0**
 
-`0.4.9`은 profile/runtime 안정화와 Dashboard 회귀 기반을 보강한 패치입니다. Product profile 원장/상세 산출물 경계를 정리하고 fixture smoke 및 Dashboard 검사를 강화했습니다.
+`0.5.0`은 신규 Product의 반복 프로세스, 기능별 문서 원본, 가벼운 native 협업과 실제 제품 CI 검증을 묶은 마이너 릴리즈입니다. 이번 범위 인수와 제품 전체 릴리즈를 구분하며, 기존 프로젝트는 문서·상태·이력을 보존한 채 프레임워크만 upgrade할 수 있습니다.
 
 `0.4.8`은 Product profile 안정화 패치입니다. Product Build Wave의 `SCN/API/DATA/UI/REG` 관련 ID를 보존하고, Product Gate 5 release PR body가 `docs/product/` 원장 문서를 evidence로 표시하며, ADR이 없을 때는 `ADR-NONE` empty-state를 사용합니다.
 

@@ -6,9 +6,9 @@
 
 ## 현재 상태
 
-**Experimental - v0.4.x**
+**Experimental - v0.5.0**
 
-`0.4.x`는 프로파일별 개발 흐름과 문서·검증 근거를 연결하는 실험 라인입니다. 신규 Product는 기획·설계 ↔ 구현 ↔ 인수 검증으로 반복하고, 기존 Product/Audit/PoC는 기존 Gate 흐름을 유지합니다. 역할별 native 위임, 통합 브랜치, 현재 계약·실제 시험·Dashboard 가시성을 지원하며 외부 CLI runner는 선택 경로입니다.
+`0.5.0`은 신규 Product의 반복 운영을 기본 활성화하는 실험 라인입니다. 신규 Product는 기획·설계 ↔ 구현 ↔ 인수 검증으로 반복하고, 기존 Product/Audit/PoC는 기존 Gate 흐름을 유지합니다. 역할별 native 위임, 통합 브랜치, 현재 계약·실제 시험·Dashboard 가시성을 지원하며 외부 CLI runner는 선택 경로입니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
@@ -79,7 +79,7 @@
 
 ## 다음 초점
 
-`0.4.x`에서는 기능을 더 많이 넣기보다, 실제 샘플 프로젝트에서 반복 검증 가능한 운영 체계를 단단하게 만드는 데 집중한다.
+`0.5.0`의 아래 여섯 마무리 항목은 모두 병합됐다. 이제 새 기능 묶음을 늘리기보다 실제 사용에서 업무 합의, 기능 확장, 문서 조회와 검증의 불편을 관찰한다.
 세부 아이디어는 reference 문서로 넘기고, 이 문서는 "지금 무엇을 먼저 볼지"를 정하는 큐로 사용한다.
 
 ### Now: testing-first stabilization
@@ -95,7 +95,7 @@
 | 3 | 실제 요청 보드 한 흐름 검증 | [PR #46](https://github.com/zeni-on/vulcan-anvil-ex/pull/46) 병합, CI 3종 통과. [실행 샘플/결과](../examples/product-request-board/docs/verification.md): 후속 업무 합의, 실제 UI/API/SQLite에서 반복 반려·재제출·권한·이력 보존. API 12건, desktop/mobile 10건 통과 및 고의 이력 파괴 감지. 운영 인증/인수 승인은 아님 |
 | 4 | 제품 CI 연결·실행 | [PR #47](https://github.com/zeni-on/vulcan-anvil-ex/pull/47) 병합, CI 4종 통과. [요청 보드 CI 결과](../examples/product-request-board/docs/ci-verification.md): 실제 GitHub 실행 1분 10초 성공, API 12건/UI 10건 및 7개 차단 probe 확인·artifact 회수. 자동 merge·배포·보호 설정은 변경하지 않음 |
 | 5 | 반복 운영·릴리즈 경계 마무리 | [PR #48](https://github.com/zeni-on/vulcan-anvil-ex/pull/48) 병합, CI 4종 통과. [같은 제품의 확장·결과](../examples/product-request-board/docs/iteration-verification.md): 상태 조회 확장, 과거 계약/수용/SQLite 이력 보존, 이전 승인·증적 재사용 거부, 릴리즈 후보와 실제 발행 분리. 로컬·원격 API 15건/UI 12건 및 실제 CLI 반복 시험 통과, GitHub 제품 CI 1분 27초·artifact 회수 확인. 자동 발행/기존 프로젝트 이행은 추가하지 않음 |
-| 6 | 신규 Product 일반 사용 마무리 | 구현·로컬 검증 완료, `codex/product-new-project-activation` 병합 대기. [초기화/호환 검증](reference/PRODUCT-NEW-PROJECT-VERIFICATION.md): 신규 Product만 planning 활성화, 첫 범위·승인 분리, Core/adapter/Dashboard 연결, 기존 모델·문서·이력 보존. Python 354건(351 Pass/3 skip), fixture 84단계, Dashboard 310건/build 및 Product 화면 시험 통과. 이후 실제 사용으로 전환 |
+| 6 | 신규 Product 일반 사용 마무리 | [PR #49](https://github.com/zeni-on/vulcan-anvil-ex/pull/49) 병합, CI 4종 통과. [초기화/호환 검증](reference/PRODUCT-NEW-PROJECT-VERIFICATION.md): 신규 Product만 planning 활성화, 첫 범위·승인 분리, Core/adapter/Dashboard 연결, 기존 모델·문서·이력 보존. Python 354건(로컬 351 Pass/3 skip), fixture 84단계, Dashboard 310건/build 및 Product 화면 시험 통과. [PR #50](https://github.com/zeni-on/vulcan-anvil-ex/pull/50)에서 Run 적용 범위와 QA skill 표현까지 정리. 이후 실제 사용으로 전환 |
 
 6번 이후에는 실제 사용으로 전환한다. 아래 완료 이력과 장기 후보를 모두 구현해야 이 목표가 완료되는 것은 아니다.
 
@@ -117,7 +117,7 @@
 - 단계 2d: [명시 브랜치 준비](reference/PRODUCT-PROCESS-CONTRACTS.md#45-명시-브랜치-준비-단계-2d)를 실험 모델의 `branch-start impl`에 연결했다. 기본 미리보기/명시 apply, 현재 범위·권한·계약 확인, 세션을 그대로 가져가는 동일 내용 브랜치 생성/전환과 충돌 보존을 실제 Git 시험 25건으로 검증했다. 세션 저장/사전 커밋/자동 push를 묶지 않는다. 기존 통합 브랜치 내용이 다르면 별도 Git 판단 대상으로 남긴다. 일반 활성화·발행·제품 CI 완료는 아니다.
 - 단계 2e: [Run 없는 QA 전달/회수](reference/PRODUCT-PROCESS-CONTRACTS.md#46-run-없는-qa-전달과-결과-회수-단계-2e)를 `execute --dry-run`과 기존 상태 요청에 연결했다. 현재 범위의 계약/시험/환경 참조와 빈 결과 요청을 제공하며, 실제 결과 회수·수용 판단은 총괄이 맡는다. acceptance 실행 직전 기준 재검사, 실패/누락/중복/오래된 요청의 완료 거부를 회귀로 확인한다. 자동 dispatcher/QA 승인 기능은 아니다.
 - [PR #42](https://github.com/zeni-on/vulcan-anvil-ex/pull/42)를 CI 3종 통과 후 병합하고 [실제 운영 관측](reference/PRODUCT-OPERATION-TRIAL-2026-09-12.md)을 진행했다. 같은 요청 재제출의 독립 함수 fixture에서 native QA 실패→한 줄 수정→재시험 3건 Pass→합성 수용을 확인했다. 새 Run/QA worktree/문서 수정에 따른 전체 재시험은 없었다. 운영 CLI 10회의 실행 합계는 9.823초였지만 결과 조립에 별도 로컬 helper를 썼으므로 기본 CLI만의 사용성·비용 절감 입증이나 실제 제품 인수로 확대하지 않는다.
-- 현재 마무리 순서와 완료 여부는 위 6개 표를 따른다. #44~#47에서 QA 결과 입력·업무 작성·실제 앱·제품 CI를 병합했다. 5번은 같은 제품의 확장/이력/릴리즈 경계 검증이며, 다음 6번이 신규 Product 일반 활성화다. 새 CLI/Gate/필수 문서를 늘리는 방식은 우선하지 않는다. main 병합은 기본 활성화를 뜻하지 않으며 기존 프로젝트 상태를 먼저 바꾸지 않는다.
+- 마무리 여섯 항목은 #44~#49에서 모두 병합했고 #50에서 잔존 지침 표현을 정리했다. 신규 Product 초기화는 기본 활성화됐으며 기존 프로젝트 상태는 바꾸지 않는다. 이후 실제 사용에서 확인한 문제만 좁혀 보완하며 새 CLI/Gate/필수 문서를 늘리는 방식은 우선하지 않는다.
 - Audit/PoC는 이번 설계 대상이 아니며 기존 동작을 유지한다. 단계 축소와 문서 축소는 별개다. 아래 업무 분석 파일럿과 기능별 원본 구조를 활용하고, 전체 AC/REQ 조회는 별도 후속으로 유지한다.
 
 #### Product 업무·시나리오 합의 파일럿 (2026-09-10, 진행 중)
