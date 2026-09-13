@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-09-13
+
+`0.5.0`은 신규 Product의 기본 운영을 기획·설계, 구현, 인수 검증의 반복 흐름으로 바꾸는 마이너 릴리즈다. `v0.4.9` 이후 병합된 문서 구조, native 협업, 실제 제품 검증과 Dashboard 안정화도 함께 포함한다. 기존 Product/Audit/PoC 프로젝트는 upgrade로 새 프로세스에 자동 이행하지 않는다.
+
+Release notes: [docs/releases/v0.5.0.md](docs/releases/v0.5.0.md)
+
+- 신규 `init --profile product`는 `product-iterative-v1`의 `planning`으로 시작한다. 작업 범위 저장, 실제 검증, 구현/인수 승인과 릴리즈 권한을 구분한다.
+- 업무의 문제·경계·액터·규칙·예시를 REQ/AC와 설계·시험 원본으로 연결하는 작성 경로를 추가했다. 각 질문이나 문서 절을 별도 Gate로 만들지 않는다.
+- Product 원장 6종은 진입점으로 유지하고, 요구/API/DB/UI/보안/개발 기준/시험 상세를 기능별 원본으로 연결한다. 현재 계약과 후보·과거 기록을 구분하는 절 조회 및 분리 문서 검사를 보강했다.
+- Product의 Run/Wave를 선택 사항으로 정리하고 native worker의 입력과 검증 범위를 좁혔다. 메타데이터 정리나 이미 확인한 결과를 이유 없이 반복 검증하지 않으며 별도 Git 증적을 요구하지 않는다.
+- Codex native 모델 상속·작업별 effort, 위험도에 따른 새 문맥 리뷰, 역할별 지속 작업의 문서 소유권·전달·회수 기준을 정리했다. 외부 CLI runner는 선택 경로로 유지한다.
+- Run 없는 QA 전달·결과 회수, 명시적 브랜치 준비, 실패·미실행·이전 승인 재사용 차단과 완료 후 새 범위 반복을 연결했다.
+- 실제 요청 보드의 UI/API/SQLite 흐름과 기능 확장을 검증하고 제품별 GitHub Actions 예시를 추가했다. 모든 생성 프로젝트에 CI가 자동 설치되거나 배포되는 것은 아니다.
+- Dashboard에 Product의 3구간·현재 범위 표시와 분야별 문서 분류를 연결하고 로컬 접근·경로·출처 보호 및 의존성/회귀 검증을 보강했다.
+- `doctor`, release, status 로직을 `vulcan_core`로 분리하고 신규 초기화·기존 모델 upgrade 보존을 Windows/Linux 회귀로 확인했다.
+
 ## 0.4.9 - 2026-06-26
 
 `0.4.9`은 Product/PoC profile과 Orchestrator runtime 표시를 단단하게 만드는 안정화 패치 릴리즈다. Product Gate 5, PoC evidence, QA 환경 차단, delegation sidecar, Dashboard/Jest 검증 경로를 실제 샘플과 fixture smoke 기준으로 고정했다.

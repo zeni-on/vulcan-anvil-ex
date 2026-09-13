@@ -46,7 +46,15 @@ python vulcan.py upgrade
 
 `upgrade`는 없는 공식 산출물 템플릿은 새로 만들 수 있지만, 이미 작성된 산출물은 기본적으로 덮어쓰지 않습니다.
 
-## 0.4.x 업그레이드 후 확인할 것
+## 0.5.0 업그레이드 후 확인할 것
+
+먼저 원본 Ex 저장소를 최신 상태로 갱신한 뒤, 대상 프로젝트에서 `python vulcan.py upgrade`, `python vulcan.py version`, `python vulcan.py status`를 실행합니다. 상세 변경은 [v0.5.0 릴리즈 노트](releases/v0.5.0.md)를 참고합니다.
+
+- 새 `init --profile product`만 기획·설계 ↔ 구현 ↔ 인수 검증으로 시작합니다. 기존 Product를 upgrade해도 과거 Gate/승인/문서가 자동 전환되지 않습니다.
+- 이미 반복 프로세스를 사용하는 Product는 현재 범위와 결정·이력을 보존합니다. 실행 중인 worker와 상태 변경을 정리한 후 upgrade하고, 이전에 만든 상태 요청은 현재 revision을 다시 확인합니다.
+- Dashboard는 Ex 저장소의 `dashboard/`에서 의존성을 lockfile에 맞춰 설치(`npm ci`)하고 서버를 재시작합니다. 프로젝트 upgrade만으로 실행 중인 Dashboard가 갱신되지는 않습니다.
+
+## 기존 0.4.x Gate 프로젝트 참고
 
 `0.4.x`는 구현/QA 실행 방식의 브랜치 경계와 QA workspace 개념에 더해 trace-context와 release-pr 안정화 흐름을 포함합니다. 기존 프로젝트를 업그레이드했다면 다음 항목을 확인합니다.
 
