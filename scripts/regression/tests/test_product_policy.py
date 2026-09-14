@@ -17,6 +17,12 @@ class ProductPolicyTests(unittest.TestCase):
     def read(self, path):
         return (ROOT / path).read_text(encoding="utf-8")
 
+    def legacy_skill(self, name):
+        root = f".agents/skills/{name}"
+        entry = self.read(f"{root}/SKILL.md")
+        self.assertIn("(references/legacy-gates.md)", entry)
+        return self.read(f"{root}/references/legacy-gates.md")
+
     def test_direct_edit_restrictions_have_a_non_product_section(self):
         text = self.read("docs/core/ORCHESTRATOR_PROTOCOL.md")
         section = text.split("### Product 이외의 직접 구현 제한", 1)[1].split("### QA 실행 경로", 1)[0]
@@ -44,12 +50,29 @@ class ProductPolicyTests(unittest.TestCase):
         for text in (qa, impl):
             self.assertIn("PRODUCT_PROFILE_BASELINE.md", text)
         self.assertIn("not four mandatory Runs", qa)
-        self.assertIn("same permission again", qa)
         self.assertIn("verification-only worker", qa)
-        self.assertIn("consider `qa-reader`", qa)
-        self.assertIn("consider `trace-scout`", impl)
-        self.assertIn("consider `run-drafter`", impl)
-        self.assertNotIn("Start `qa-fix-loop` only after Orchestrator/user decision.", qa)
+        legacy_qa = self.legacy_skill("vulcan-qa")
+        legacy_impl = self.legacy_skill("vulcan-impl-wave")
+        self.assertIn("same permission again", legacy_qa)
+        self.assertIn("consider `qa-reader`", legacy_qa)
+        self.assertIn("consider `trace-scout`", legacy_impl)
+        self.assertIn("consider `run-drafter`", legacy_impl)
+        self.assertNotIn("Start `qa-fix-loop` only after Orchestrator/user decision.", legacy_qa)
+
+    def test_codex_router_does_not_select_other_runtime_agents(self):
+        entry = self.read(".agents/skills/vulcan-orchestrator/SKILL.md")
+        self.assertNotIn(".gemini/", entry)
+        self.assertNotIn(".claude/", entry)
+        self.assertIn("PERSONA_DELEGATION.md", entry)
+
+    def test_legacy_gate_constraints_are_available_only_in_linked_procedures(self):
+        for name, gate in (("vulcan-impl-wave", "impl"), ("vulcan-qa", "gate4"),
+                           ("vulcan-release", "gate5")):
+            with self.subTest(skill=name):
+                entry = self.read(f".agents/skills/{name}/SKILL.md")
+                constraint = f"Confirm `session.json.current_gate` is `{gate}`"
+                self.assertNotIn(constraint, entry)
+                self.assertIn(constraint, self.legacy_skill(name))
 
     def test_checklist_and_bootstrap_do_not_restore_mandatory_product_wave(self):
         text = self.read("docs/core/GATE_EXECUTION_CHECKLIST.md")
