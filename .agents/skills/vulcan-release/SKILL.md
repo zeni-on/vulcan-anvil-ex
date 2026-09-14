@@ -1,42 +1,27 @@
 ---
 name: vulcan-release
-description: Use for Vulcan Gate 5 release approval, release readiness review, backlog/non-blocking issue handling, release-pr dry-run/body generation, tag/release note preparation, and final approval boundaries.
+description: Prepare or review a Vulcan project's release readiness, notes and publication approval.
 ---
 
 # Vulcan Release
 
-Use this for Gate 5 release and release preparation.
+Use the current release scope, applicable verification results, unresolved
+obligations and approval record. Preparing notes is not permission to publish.
 
-For projects with `process_model`, follow `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
-section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope and
-authority; do not add the marker or reinterpret an unsupported model as legacy.
-Unmarked projects keep the existing flow.
+## Select the process
 
-## Preconditions
+For `process_model`, use [Core CLI section 4.1](../../../docs/core/ORCHESTRATOR_CLI_GUIDE.md)
+instead of legacy Gate steps. Do not add the marker or reinterpret an unsupported
+model as legacy. Inspect selected `session.json` fields only if the assigned state
+is missing or inconsistent.
+For unmarked projects, use [legacy release](references/legacy-gates.md) for Gate 5.
+Product evidence and verification follow [Product section 7](../../../docs/core/PRODUCT_PROFILE_BASELINE.md).
 
-1. Confirm `session.json.current_gate` is `gate5` or that Gate 4 is approved for Gate 5.
-2. For Product, follow `PRODUCT_PROFILE_BASELINE.md` section 7 and read the current release scope, applicable test results, open issues and approval record. Other profiles read Release Approval, Test Result, QA Finding, Backlog, Change Request, and Traceability Matrix.
-3. Run `python vulcan.py status` to confirm Gate, profile, branch, release readiness context, and dirty state.
-4. Apply profile-specific release control from `docs/core/DELIVERY_PROFILES.md`.
-5. Use `python vulcan.py branch-status` only if branch-only detail is needed beyond `status`.
+## Release outcome
 
-## Workflow
-
-1. Separate blocking defects from accepted backlog/non-blocking issues.
-2. Verify QA results and Gate transition readiness before release approval.
-3. Use `python vulcan.py release-pr --dry-run` before creating PR or final release material.
-4. Keep release notes tied to actual changes, applicable Run/FIND/CR/ISSUE records and known residual risks. Product does not create Runs or separate Git evidence for release-note bookkeeping.
-5. Do not claim final approval without explicit user approval.
-
-## Verification
-
-- `python vulcan.py status --check`
-- `python vulcan.py prepare-transition` only when detailed/compatibility transition diagnostics are needed
-- `python vulcan.py check-trace` only when traceability needs detailed debugging
-- Relevant `run-check` commands for release Runs
-- `python vulcan.py release-pr --dry-run`
-- Project tests required by the release profile
-
-## Report
-
-Report release status, blocking issues, accepted backlog items, verification commands, PR/tag/release-note readiness, and the explicit approval needed.
+Separate blocking defects from accepted backlog and keep notes tied to actual
+changes and known limits. No new Run or Git evidence is needed just to write notes.
+Use `release-pr --dry-run` for readiness; in the iterative process it is a
+read-only candidate, not automatic publication or approval.
+Perform externally visible publication only under explicit release authorization.
+Report what was verified, published or still blocked without expanding that authority.

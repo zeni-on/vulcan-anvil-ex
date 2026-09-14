@@ -6,7 +6,7 @@
 
 ## 1. 기본 원칙
 
-- 첫 명령은 가능하면 `python vulcan.py status`다.
+- 프로젝트 진행 상태나 다음 행동이 불명확하면 `python vulcan.py status`로 확인한다. 확인된 범위의 일반 수정이나 설명 질문마다 상태 명령을 반복하지 않는다. 상태 변경 전에는 현재 상태와 권한을 확인한다.
 - Gate 전환 전에는 `python vulcan.py status --check`로 전환 가능성, Run 상태, 추적성, branch 상태를 한 번에 확인한다.
 - 로컬 실행 환경이 의심되면 `python vulcan.py doctor`를 먼저 실행한다. `doctor`는 Gate 상태가 아니라 Git/Node/npm/Playwright/runner/cache/Dashboard 환경을 확인한다.
 - `prepare-transition`은 `status --check`가 호출하는 상세 전환 진단의 원자 명령이다. 사람이 원인 분석, 호환성 확인, 레거시 스크립트 연동을 위해 직접 실행할 수 있지만 기본 진입점은 아니다.

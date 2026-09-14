@@ -1,78 +1,33 @@
 ---
 name: vulcan-impl-wave
-description: Use for Vulcan implementation phase work, BW-000 scaffold, Build Wave planning, worker Run creation, run-preflight, native subagent/thread delegation, optional agent-run/run-exec execution, run-integrate, wave-complete, and implementation traceability.
+description: Plan or coordinate implementation in a Vulcan project; assigned Product workers use their handoff instead.
 ---
 
-# Vulcan Impl Wave
+# Vulcan Implementation
 
-Use this for `impl` Gate execution and follow-up implementation iterations.
+Assigned Product workers use the handoff and [Product worker guide](../../../docs/core/PRODUCT_WORKER_GUIDE.md).
+Do not perform Orchestrator planning, delegation or state updates under that assignment.
 
-For projects with `process_model`, follow `docs/core/ORCHESTRATOR_CLI_GUIDE.md`
-section 4.1 instead of the legacy Gate lifecycle below. Use the assigned scope and
-authority; do not add the marker or reinterpret an unsupported model as legacy.
-Unmarked projects keep the existing flow.
+## Select the process
 
-This is an Orchestrator routing skill. If you are an assigned Product worker,
-follow the assigned summary or Run and `docs/core/PRODUCT_WORKER_GUIDE.md`; do not perform the
-planning, delegation, session, or completion commands below.
+For `process_model`, use [Core CLI section 4.1](../../../docs/core/ORCHESTRATOR_CLI_GUIDE.md)
+instead of legacy Gate steps. Do not add the marker or reinterpret an unsupported
+model as legacy. Inspect selected `session.json` fields only if the assigned state
+is missing or inconsistent.
 
-## Preconditions
+For Product, use [Product section 7](../../../docs/core/PRODUCT_PROFILE_BASELINE.md):
+implement the approved goal within its writable scope, with current contract
+references and meaningful completion checks. Run/Wave and a fresh worker are optional.
+Respect user-assigned roles. Continue authorized implementation, fixes and affected
+checks through the agreed handoff; do not repeat tests for report-only edits.
 
-1. Confirm `session.json.current_gate` is `impl`.
-2. Confirm previous Gate approval exists.
-3. Run `python vulcan.py status` to confirm Gate, profile, branch, active Run/Wave, and dirty state.
-4. Apply profile-specific Run weight and trace depth rules from `docs/core/DELIVERY_PROFILES.md`.
-5. Use `python vulcan.py branch-status` only if branch-only detail is needed beyond `status`.
+For unmarked projects using Run/Wave, or Audit/PoC implementation, read
+[legacy implementation](references/legacy-gates.md). Keep that lifecycle conditional;
+do not introduce a Wave merely to follow the recipe.
 
-## Product workflow
+## Completion
 
-Use `docs/core/PRODUCT_PROFILE_BASELINE.md` section 7. An approved goal, writable
-scope, contract references and meaningful completion checks can live in the
-existing task/issue; do not create a Run/Wave or a fresh worker for every change.
-Respect user-assigned roles; reuse the development task or implement bounded work
-directly when appropriate. Record actual results and update the current contract,
-not a new copy of every ledger. If a Run is chosen, check it before execution;
-if a Wave is chosen, use the Wave lifecycle below. Required QA and approvals remain.
-
-## Run/Wave workflow
-
-Apply this when a Run/Wave is required by the profile or deliberately selected.
-Product does not inherit the general direct-edit exception bookkeeping below.
-
-1. Review the chosen scope. Audit/PoC use an implementation plan Run when scope is more than a tiny change; Product may use the existing task plan.
-2. If buildable skeleton is missing, check the delivery profile before starting `BW-000`.
-   - In `poc`, do not create `BW-000` by default. Let the first native worker create the environment, hello/build smoke, and the core feature together unless the user asks for stricter separation.
-   - In `product` or `audit`, prefer an earlier Environment Readiness Track when possible; use `BW-000 implementation-scaffold` when official contract skeleton or build smoke must be isolated.
-3. Create one active Build Wave at a time.
-4. Prefer `wave-start <BW-ID> --trace-seed <detailed-id>` or `run-new ... --trace-seed <id>`.
-5. Narrow `scope.writable`, `target_contracts`, `interface_contract`, and verification commands before worker execution.
-6. In Product, if related IDs/source documents need separate investigation, consider `trace-scout`. Other profiles use `trace-scout` when those references are unclear.
-7. In Product, if separate handoff review adds value, consider `run-drafter`; Run creation alone does not require a helper. Other profiles use `run-drafter` for important, newly generated or previously problematic Runs.
-8. Confirm `run-preflight` passes before native worker delegation. A passing `execute --dry-run` includes that check; repeat after the Run, contracts, scope, or project state changes. `run-exec` and `agent-run --mode work` auto-run preflight, but native delegation does not.
-9. Run `python vulcan.py doctor` before retrying a worker when failure looks like local runtime readiness, for example unsupported runner, missing npm/Node, missing Playwright browser cache, locked port, or Dashboard/runtime confusion.
-10. Select Product executors through section 7 and the user's role assignments. Outside Product, use native worker delegation (subagent/thread/native branch agent) for code, test, UI, API, or DB implementation by default.
-11. Use `agent-run --mode work` or `run-exec` only when external CLI process evidence, worktree isolation, watchdog/timeout, or cross-runner execution is needed.
-12. After worker output, assess whether separate review adds value for runtime/API/DB/UI drift or other risk. Follow `AGENT_RUN_PROTOCOL.md` section 5.4: a new reviewer must not inherit the implementation conversation. Do not call all helpers for every Product Wave; preserve required reviews.
-13. Integrate worker output only after diff/scope verification.
-14. Record native subagent/thread output in `delegation_records`; include started_at, completed_at, duration_seconds, heartbeat_count/status_probe_count when available. External CLI workers also keep Run Execution Record and `_exec` logs.
-15. Complete the Wave with `wave-complete` and `sync-session` only after relevant tests pass.
-16. In `poc`, do not let workers chase non-blocking `run-preflight` or `run-check` warnings. If implementation tests pass and only non-blocking warnings remain, the worker records them and returns for Orchestrator judgment.
-17. In `poc`, keep Build Worker scope to code, requirements/dependency files, and fast self-checks. README, final test report, browser screenshots, release/backlog, and evidence normalization belong to Gate 4/5 or a separate Evidence/Normalization Worker.
-18. In `product`, apply `docs/core/PRODUCT_PROFILE_BASELINE.md` section 7. Finalize scoped paths and concrete stack-specific test commands before preflight. The worker returns code/test results; the Orchestrator handles ledger/Run normalization and conditional evidence verification. Nonblocking warning cleanup is not a worker completion goal.
-
-## Guardrails
-
-- Outside Product, Orchestrator should not be the primary implementer; user silence
-  about worker usage is not a direct-implementation exception.
-- Do not mark Gate 3 planned tests as Pass during Impl just to satisfy trace checks.
-- Full E2E/UI evidence belongs to Gate 4 unless explicitly scoped as smoke evidence.
-- In `poc`, warning cleanup is not a worker completion goal unless the warning hides a real product failure, broken test, or scope violation.
-- For PoC performance review, prefer recording file-change lifecycle fields when known: `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`.
-- In `poc` Impl, do not ask the Build Worker to create final browser evidence or complete `POC_TEST_REPORT.md`; that turns the build worker into a QA/doc worker and hides the real cost.
-
-## Verification
-
-- `python vulcan.py run-check <run-file>` when using a Run
-- `python vulcan.py run-preflight <run-file>` before executing a Run
-- Relevant backend/frontend tests for the Wave
-- `python vulcan.py status --check` when assessing Gate readiness; `check-trace` only for detailed trace errors or trace-only regression
+Return actual scoped results and unresolved issues. The Orchestrator verifies
+the diff, scope and evidence under Product section 7; worker completion is not
+acceptance or release approval. Use the [agent protocol](../../../docs/core/AGENT_RUN_PROTOCOL.md)
+when delegation or independent review is needed, not for every edit.

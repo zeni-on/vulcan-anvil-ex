@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Codex 스킬 설명을 작업별 선택 조건으로 축약하고 기존 Gate 상세 절차를 필요할 때 읽는 참조로 분리했다. Product의 승인·보안·검증과 Audit/PoC 절차는 유지한다.
+- 일반 질문/국소 수정에서 총괄 시작 루틴을 반복하지 않도록 AGENTS와 Core CLI 안내를 맞추고, Codex 총괄 스킬의 Gemini agent 참조를 제거했다. [OpenAI 스킬·프롬프트 가이드](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)를 참고했다. 모델 설정·자동 스킬 선택·비용 절감 효과를 변경하거나 보장하지 않는다.
+
 ## 0.5.0 - 2026-09-13
 
 `0.5.0`은 신규 Product의 기본 운영을 기획·설계, 구현, 인수 검증의 반복 흐름으로 바꾸는 마이너 릴리즈다. `v0.4.9` 이후 병합된 문서 구조, native 협업, 실제 제품 검증과 Dashboard 안정화도 함께 포함한다. 기존 Product/Audit/PoC 프로젝트는 upgrade로 새 프로세스에 자동 이행하지 않는다.

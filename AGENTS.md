@@ -20,7 +20,7 @@
 
 ## 2. 시작 루틴
 
-항상 다음 순서로 시작한다.
+프로젝트를 처음 맡거나 진행 상태·범위·승인 판단이 필요한 작업에서 아래를 확인한다. 현재 대화나 위임에 확인된 상태가 있고 변경 징후가 없으면 다시 읽지 않는다. 일반 설명 질문이나 범위가 명확한 오탈자 수정에 전체 시작 루틴을 수행하지 않는다. 상태 변경 전에는 현재 상태와 권한을 다시 확인한다.
 
 1. 사용자의 최신 요청을 확인한다.
 2. `session.json`의 `current_gate`, profile, branch 필드 또는 `status` 요약을 확인한다. 누적 세션 전체를 매번 출력하지 않는다.
@@ -50,7 +50,7 @@
 
 ## 4. 문서 라우팅
 
-먼저 `docs/core/ORCHESTRATOR_CLI_GUIDE.md`의 CLI 표면을 따른다. 상세 판단이 필요할 때만 아래 문서를 읽는다.
+Vulcan 명령이나 상태 처리가 필요하면 `docs/core/ORCHESTRATOR_CLI_GUIDE.md`의 해당 절을 따른다. 현재 작업의 판단에 필요한 문서만 아래에서 선택한다.
 
 | 작업 | 우선 문서 |
 | --- | --- |
@@ -73,7 +73,7 @@ Product worker는 `docs/core/PRODUCT_WORKER_GUIDE.md`를 사용한다. 입력 �
 
 ## 5. Codex Skill과 Custom Agent
 
-Repo-local skill은 `.agents/skills/`에 있다. Vulcan 작업에서는 맞는 skill을 먼저 확인한다.
+Repo-local skill은 `.agents/skills/`에 있다. Vulcan 프로세스 운영에는 해당 작업의 skill을 사용한다. 단계나 배정 역할이 명확하면 총괄 skill을 먼저 거치지 않는다. 일반 코드 수정이나 설명에 모든 skill을 읽지 않는다.
 
 | 작업 | Skill |
 | --- | --- |
@@ -100,7 +100,7 @@ Codex native 호출은 `CODEX_MODEL_POLICY.md` 3.1절에 따라 모델 override�
 
 완료 보고에는 다음을 간결하게 포함한다.
 
-- 현재 Gate와 다음 승인 지점
+- 프로세스 운영 작업이면 현재 상태와 다음 승인 지점
 - 변경 파일
 - 실행한 검증 명령과 결과
 - 남은 이슈, FIND/CR/ISSUE, 환경 차단 여부
