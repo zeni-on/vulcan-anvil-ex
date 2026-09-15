@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from vulcan_core.product_documents import ProductDocuments
-from vulcan_core.document_context import _sections, _reference_definitions, _links
+from vulcan_core.document_context import _anchor_indices, _sections, _reference_definitions, _links
 
 spec = importlib.util.spec_from_file_location("vulcan_product_writing_tests", ROOT / "vulcan.py")
 vulcan = importlib.util.module_from_spec(spec)
@@ -24,6 +24,12 @@ with mock.patch.object(sys, "platform", "linux"):
     spec.loader.exec_module(vulcan)
 
 GUIDE = "docs/core/PRODUCT_DOCUMENT_WRITING.md"
+BRIEF = "docs/product/PRODUCT_BRIEF.md"
+BRIEF_TEMPLATE = "docs/templates/product/PRODUCT_BRIEF_TEMPLATE.md"
+BRIEF_HEADINGS = (
+    "1. Product Goal", "2. Users And Boundary", "3. Core Scenarios And Flow",
+    "4. Current Work Scope", "5. Constraints And Open Decisions", "6. References And History",
+)
 ROUTES = (
     "AGENTS.md", "GEMINI.md", "docs/core/PRODUCT_PROFILE_BASELINE.md",
     "docs/core/PRODUCT_WORKER_GUIDE.md", "docs/core/GATE_EXECUTION_CHECKLIST.md",
@@ -67,6 +73,11 @@ class ProductWritingTests(unittest.TestCase):
                 self.assertTrue((root / GUIDE).is_file())
                 self.assertEqual({p.name for p in (root / "docs/product").glob("*.md")},
                                  {Path(dst).name for _, dst in vulcan.PRODUCT_ARTIFACT_TEMPLATES})
+                brief = (root / BRIEF).read_text(encoding="utf-8")
+                expected = vulcan.render((ROOT / BRIEF_TEMPLATE).read_text(encoding="utf-8"),
+                                         vulcan.extract_variables(str(root)))
+                self.assertEqual(brief, expected)
+                self.assertEqual(tuple(re.findall(r"^## (.+)$", brief, re.M)), BRIEF_HEADINGS)
                 for route in ROUTES:
                     self.assertIn("PRODUCT_DOCUMENT_WRITING.md", (root / route).read_text(encoding="utf-8"), route)
                 for src, dst in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES:
@@ -83,15 +94,72 @@ class ProductWritingTests(unittest.TestCase):
         for i, path in enumerate(authored):
             self.write(root, path, f"# Authored {i}\nOriginal contract and pending obligation.\n")
         before = {p: (root / p).read_bytes() for p in authored}
-        for src, _ in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES:
+        refreshed = [src for src, _ in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES] + [BRIEF_TEMPLATE, GUIDE]
+        for src in refreshed:
             self.write(root, src, "# Old template\n")
         with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(
                 vulcan.subprocess, "run", side_effect=AssertionError("No external processes in upgrade fixture")):
             vulcan.cmd_upgrade(str(root))
         self.assertEqual(before, {p: (root / p).read_bytes() for p in authored})
-        for src, _ in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES:
+        for src in refreshed:
             expected = vulcan.render((ROOT / src).read_text(encoding="utf-8"), vulcan.extract_variables(str(root)))
             self.assertEqual((root / src).read_text(encoding="utf-8"), expected)
+
+    def test_brief_toc_resolves_without_duplicating_scenario_or_linked_requirements(self):
+        root = self.temp_root()
+        brief = self.render_template("PRODUCT_BRIEF_TEMPLATE.md")
+        brief = brief.replace("## 4. Current Work Scope",
+                              "[requirements](../artifacts/01-requirements/tasks.md)\n\n## 4. Current Work Scope")
+        self.write(root, BRIEF, brief)
+        self.write(root, "docs/artifacts/01-requirements/tasks.md",
+                   self.render_template("PRODUCT_REQUIREMENTS_TEMPLATE.md"))
+        sections = _sections(brief)
+        anchors = _anchor_indices(sections)
+        targets = re.findall(r"\]\(#([^)]+)\)", brief)
+        self.assertEqual(len(targets), 6)
+        self.assertEqual([sections[anchors[target]]["heading"] for target in targets], list(BRIEF_HEADINGS))
+        self.assertNotIn("{{", brief)
+        docs = ProductDocuments(root, ["PRODUCT_BRIEF.md"])
+        records = docs.records("PRODUCT_BRIEF.md", r"SCN-\d{3}", vulcan.parse_markdown_tables)
+        self.assertEqual(docs.issues, [], docs.issues)
+        self.assertEqual(docs.warnings, [], docs.warnings)
+        self.assertEqual([r["id"] for r in records], ["SCN-001"])
+        self.assertEqual(vulcan.product_requirement_ids(docs), {"REQ-001"})
+        self.assertEqual(len(docs.documents("PRODUCT_BRIEF.md")), 2)
+
+    def test_brief_user_relocation_keeps_existing_placeholder_check(self):
+        root = self.fixture()
+        brief = self.render_template("PRODUCT_BRIEF_TEMPLATE.md").replace("TBD", "Defined")
+        brief = brief.replace("| 주요 사용자 | Defined |", "| 주요 사용자 | TBD |")
+        self.write(root, BRIEF, brief)
+        issues, _ = vulcan.collect_product_profile_findings(str(root), "gate1")
+        self.assertTrue(any("주요 사용자 항목이 TBD" in issue for issue in issues), issues)
+        self.write(root, BRIEF, brief.replace("| 주요 사용자 | TBD |", "| 주요 사용자 | Operator |"))
+        issues, _ = vulcan.collect_product_profile_findings(str(root), "gate1")
+        self.assertFalse(any("주요 사용자 항목이 TBD" in issue for issue in issues), issues)
+
+    def test_brief_scope_replacement_keeps_product_definition_and_excludes_past_records(self):
+        root = self.temp_root()
+        brief = self.render_template("PRODUCT_BRIEF_TEMPLATE.md")
+        brief = brief.replace("| 이번 작업명 | TBD |", "| 이번 작업명 | Pilot |")
+        self.write(root, BRIEF, brief)
+        # Simulate the authoring operation; this does not transition or approve a project.
+        past = "# Pilot record\n| ID | Result |\n| --- | --- |\n| SCN-900 | Old result |\n"
+        path = self.write(root, "docs/artifacts/04-review/pilot/results.md", past)
+        before = path.read_bytes()
+        updated = brief.replace("| 이번 작업명 | Pilot |", "| 이번 작업명 | Extension |")
+        updated += "\n[Pilot result](../artifacts/04-review/pilot/results.md)\n"
+        self.write(root, BRIEF, updated)
+        docs = ProductDocuments(root, ["PRODUCT_BRIEF.md"])
+        self.assertEqual(brief.split("## 4. Current Work Scope")[0],
+                         updated.split("## 4. Current Work Scope")[0])
+        self.assertIn("| 이번 작업명 | Extension |", docs.text("PRODUCT_BRIEF.md"))
+        self.assertNotIn("Pilot", docs.text("PRODUCT_BRIEF.md"))
+        self.assertNotIn("SCN-900", docs.text("PRODUCT_BRIEF.md"))
+        self.assertIn("[Pilot result]", (root / BRIEF).read_text(encoding="utf-8"))
+        self.assertEqual(docs.issues, [], docs.issues)
+        self.assertEqual(docs.warnings, [], docs.warnings)
+        self.assertEqual(before, path.read_bytes())
 
     def test_contract_detail_templates_have_no_conflicting_primary_id_definitions(self):
         root = self.fixture()

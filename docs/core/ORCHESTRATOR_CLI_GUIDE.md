@@ -105,6 +105,18 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 
 표식 없는 기존 Product와 Audit/PoC는 기존 흐름을 유지하며 `upgrade`로 자동 이행하지 않는다. `process_model` 표식을 수동 추가하지 않고 미지원 모델을 기존 Gate로 해석하지 않는다. 새 명령이나 profile 플래그는 없다. Run은 필수가 아니며 자동 Git 증적·commit·릴리즈 기능을 추가하지 않는다. `init` 자체의 기존 Git 초기화 옵션과 이후 검증/발행 권한은 별개다.
 
+#### 기존 Product의 명시적 이행
+
+표식 없는 정상 Product를 사용자가 승인한 경우에만 새 `planning`으로 이행한다. Audit/PoC는 대상이 아니며 `init`/`start` 재실행이나 표식 수동 추가로 대신하지 않는다. 과거 기록은 보존하되 과거 승인을 새 구현·인수·릴리즈 승인으로 이어받지 않는다.
+
+1. 총괄은 이번 범위·승인 근거·미완료 의무를 기존 원본에서 확인한다. 별도 문서를 의무 생성하거나 과거 Run/의무를 삭제하지 않는다. 적용 전 승인한 보호 대상의 로컬 백업과 격리 사본 검증을 확인하고 다른 writer를 멈춘다.
+2. `process_model: product-iterative-v1`, `action: migrate`, `target: planning`, `scope`, `reason`, `obligations`, `obligation_review`, `expected_session_revision: null` 요청을 준비한다. 참조는 로컬 Markdown의 전체 파일 해시다. `python vulcan.py session --process-request <request.json 또는 -> --json`으로 파일 변경 없이 미리본다.
+3. 반환된 상태·범위·미완료 의무를 검토하고 승인한 `prepared_request`만 같은 명령에 `--apply`로 적용한다. session revision과 `preview_key`를 임의 갱신하지 않으며 충돌·손상·잠금 오류는 원인 확인 후 재검토한다. 이관 목록은 당시 스냅샷이지 전체 의무의 완료 증명이 아니다.
+
+자동 보존은 `.vulcan/product-migrations/`의 **session.json 원본만** 대상으로 하며 전체 프로젝트 백업이 아니다. 보존본은 암호화/Git 제외되지 않으므로 별도 보호한다. 코드·문서·DB는 변경하지 않는다.
+
+복구는 같은 `process_model`에 `action: restore-migration`, `backup: <반환 경로>`, `expected_session_revision: null`을 미리보고 승인한 `prepared_request`를 적용한다. **session이 이행 직후 그대로일 때만** 원본을 복원하며, 이후 변경은 새 revision으로도 덮어쓰지 않는다. 다른 파일과 보존본은 유지한다. 요청 필드는 [계약 4.7](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#47-기존-product의-명시적-이행과-복구)을 참고한다.
+
 #### 처음 사용하는 Product
 
 이미 표식이 있는 Product도 기존 `python vulcan.py upgrade`로 프레임워크 파일을 갱신할 수 있다. 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신하며, 프로세스 상태·현재 범위·결정·작업 이력은 보존한다. 이는 새 세션 생성이나 승인/범위 변경이 아니며 표식 없는 프로젝트의 자동 활성화도 아니다. 저장된 세션 bytes가 바뀌면 이전 요청의 expected revision을 재사용하지 않고 `status --json`으로 현재 상태를 다시 확인한다.

@@ -227,6 +227,9 @@ def collect(project_dir, session, parse_tables):
                         "Source changes are not detected here; the Orchestrator decides relevant retests.",
                         "Environment manifests describe the environment; they do not observe live services."],
         "unresolved_obligations": len(session.get("open_issues", [])) if isinstance(session.get("open_issues", []), (list, dict)) else "unknown"}
+    if "migration_handover" in summary:
+        result["migration_handover"] = summary["migration_handover"]
+        result["limitations"].append("Migration handover is a preserved snapshot, not resolved obligations or a complete issue inventory.")
     readiness = {"scope_key": work["scope_key"], "ready": docs["ready"],
                  "purpose": "implementation" if stage == "planning" else "handoff",
                  "evidence": {"ref": "status:scoped-readiness", "revision": "sha256:" + process._digest(docs)}}
@@ -258,6 +261,14 @@ def render(result):
     lines = [f"scoped_check: {result['status']} ({result['purpose']})",
              f"  documents: {len(result['documents'])}; execution: {result['execution']}",
              f"  unresolved obligations outside this decision: {result['unresolved_obligations']}"]
+    handover = result.get("migration_handover")
+    if handover:
+        lines.append(f"  migration handover: review={handover['obligation_review']}; "
+                     f"{len(handover['obligations'])} recorded items; not a complete/resolved inventory")
+        lines.append("  preserved legacy Gate states: " + str(handover["legacy_gate_status"]))
+        for row in handover["obligations"]:
+            lines.append(f"  handover [{row['scope']}/{row['status']}] {row['source']['ref']}: "
+                         f"{row['description']} (owner: {row['owner']})")
     for issue in result["issues"]:
         location = issue["path"] or "scope"
         if issue["line"] is not None:

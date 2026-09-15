@@ -87,12 +87,19 @@ def _validated_request(request):
         raise ValueError("request requires explicit product-iterative-v1 process_model")
     action = request.get("action")
     fields = {"start": {"scope"}, "advance": {"target", "decision", "basis", "verification", "reason"},
-              "open-work": {"scope", "target", "reason", "decision"}}
+              "open-work": {"scope", "target", "reason", "decision"},
+              "migrate": {"target", "scope", "reason", "obligations", "obligation_review", "preview_key"},
+              "restore-migration": {"backup", "preview_key"}}
     if not isinstance(action, str) or action not in fields:
-        raise ValueError("action must be start, advance or open-work")
+        raise ValueError("action must be start, advance, open-work, migrate or restore-migration")
     common = {"process_model", "expected_session_revision", "action"}
     if not common <= request.keys() or request.keys() - common - fields[action]:
         raise ValueError("missing request fields or unsupported fields")
+    if action in {"migrate", "restore-migration"}:
+        expected = request["expected_session_revision"]
+        if expected is not None and (not isinstance(expected, str) or not _is_revision(expected)):
+            raise ValueError("expected_session_revision must be null for discovery or an observed SHA-256")
+        return action
     if action == "start":
         if "scope" not in request or request["expected_session_revision"] is not None:
             raise ValueError("start requires scope and null expected_session_revision")
@@ -132,7 +139,7 @@ def _evaluate(root, session, request, parse_tables):
     checked = None
     if action == "start":
         if session is not None:
-            raise ValueError("start cannot replace an existing session; legacy migration is not supported")
+            raise ValueError("start cannot replace an existing session; use explicit migration")
         candidate = process.new_session(request["scope"])
     else:
         if session is None:
@@ -191,7 +198,7 @@ def _lock(root):
             warnings.append("writer lock cleanup failed; verify owner before removing the stale lock")
 
 
-def _save(root, raw, expected):
+def _save(root, raw, expected, *, before_replace=None):
     path = evidence._path(root, "session.json")
     temporary = None
     try:
@@ -203,6 +210,8 @@ def _save(root, raw, expected):
         _, current = _load(root)
         if revision(current) != expected:
             raise ConflictError("session changed during validation; reload status and prepare a new request")
+        if before_replace is not None:
+            before_replace()
         os.replace(temporary, path)
         temporary = None
     finally:
@@ -288,6 +297,9 @@ def transact(project_dir, request, parse_tables, *, apply=False):
         if type(apply) is not bool:
             raise ValueError("apply must be a boolean")
         action = _validated_request(request)
+        if action in {"migrate", "restore-migration"}:
+            from . import product_migration
+            return product_migration.transact(root, request, apply=apply)
 
         def perform():
             session, previous = _load(root)

@@ -2,7 +2,7 @@
 
 - 상태: 작성 운영 연결 / 실제 업무 흐름 검증 전
 - 작성일: 2026-09-10
-- 업데이트: 2026-09-12
+- 업데이트: 2026-09-15
 - 적용 검토 범위: Product의 기획·설계 구간과 이후 기능 확장 시 영향 범위 재검토
 - 연습: [요청 보드 파일럿](PRODUCT-DISCOVERY-PILOT-REQUEST-BOARD.md)
 
@@ -25,10 +25,14 @@
 | [IIBA Business Analysis Standard / BABOK 안내](https://www.iiba.org/knowledgehub/the-business-analysis-standard/) | 요구 도출·확인, 현재/미래 상태 분석, 요구 검증·타당성 확인, 변경 관리 | 업무 분석 활동의 전체 틀 | 모든 기법·문서를 순서대로 수행하는 고정 프로세스 |
 | [IREB CPRE Requirements Elicitation](https://cpre.ireb.org/en/concept/requirements-elicitation) | 이해관계자·문서·시스템에서 요구를 찾고, 상황에 맞는 기법으로 충돌과 오해를 해소 | 출처 확인, 필요한 질문 선택, 해석 차이 확인 | 에이전트끼리 합의하면 실제 사용자의 요구도 확인됐다는 주장 |
 | [ISO/IEC/IEEE 29148:2018 공개 개요](https://www.iso.org/standard/72089.html) | 생명주기 전반의 요구공학 프로세스와 정보 항목 | 요구의 근거·내용 품질·생명주기를 점검하는 참조 기준 | Ex 검사 통과를 ISO 준수 인증으로 표현 |
+| [IBM Vision](https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/doors-next/7.2.0?topic=requirements-vision-document) / [OpenUP Vision](https://archive.eclipse.org/epf/downloads/OpenUP/published/openup_published_1.5.1.5_20121212/openup/core.tech.common.extend_supp/workproducts/vision_2E71B03C.html) | 목적·상위 범위·사용자·핵심 능력과 제약을 설명하고 상세 요구는 분리 | Brief를 제품 전체의 현재 정의로 유지하고 기능과 목표 릴리즈를 구분 | 전체 양식을 의무화하거나 Brief를 상세 명세·작업 일지로 사용 |
+| [Atlassian PRD 양식](https://www.atlassian.com/software/confluence/templates/product-requirements) | 제품/기능의 목표·성공 지표·요구·제외 범위·열린 질문 | 이번 범위 요약과 기존 기능별 요구/검증 원본 연결 | 모든 파일럿마다 별도 PRD 파일을 의무 생성 |
 | [OMG BPMN 2.0.2](https://www.omg.org/spec/BPMN/2.0.2/About-BPMN) | 업무 프로세스와 참여자 간 협업을 표현하는 표기 | 역할 간 인계·분기가 복잡할 때 선택적으로 모델링 | 모든 작은 기능에 BPMN 도구·실행 엔진을 의무화 |
 | [Cucumber Example Mapping](https://cucumber.io/docs/bdd/example-mapping/) | 이야기, 규칙, 구체적 예시, 미해결 질문을 구분하는 대화 | 한 시나리오의 이해를 예시로 맞추기 | Gherkin 파일 작성이나 Cucumber 설치를 선행 조건으로 요구 |
 
 2026-09-10에 공개 안내를 확인했다. 유료 표준 전문·교재 전체를 검토한 것은 아니며 원문을 템플릿에 전재하지 않는다. 특히 ISO 준수가 필요한 프로젝트는 해당 판본의 정식 원문과 고객 기준을 별도로 검토해야 한다. 단순 Mermaid 흐름도를 BPMN 준수 모델이라고 부르지 않는다.
+
+2026-09-15 Vision/PRD 가이드를 추가 확인했다. [Brief 작성 기준](../core/PRODUCT_DOCUMENT_WRITING.md#12-brief의-목차와-반복-갱신)은 Ex의 적용안이며 국제표준의 고정 Brief 목차가 아니다. 파일 이름은 유지하고 하나의 Brief 안에서 제품 전체 정의와 이번 작업 선택을 구분한다.
 
 ## 3. 대화 운영
 

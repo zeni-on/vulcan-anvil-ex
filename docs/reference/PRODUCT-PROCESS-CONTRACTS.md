@@ -1,6 +1,6 @@
 # Product Process Contracts
 
-- 상태: 2026-09-12 신규 `init --profile product`에 반복 프로세스 연결. 기존 프로젝트 이행과 자동 릴리즈 발행은 비활성화. 설치/첫 범위/호환 검증은 [일반 사용 검증](PRODUCT-NEW-PROJECT-VERIFICATION.md)을 따른다.
+- 상태: 2026-09-12 신규 Product 초기화 연결, 2026-09-15 기존 Product의 명시적 session 이행/복구 추가(4.7절). 자동 이행·릴리즈 발행은 비활성화. 설치/첫 범위/호환 검증은 [일반 사용 검증](PRODUCT-NEW-PROJECT-VERIFICATION.md)을 따른다.
 - 원본 설계: [3구간 운영](PRODUCT-ITERATIVE-PROCESS-DESIGN.md), [시나리오](PRODUCT-ITERATIVE-PROCESS-SCENARIOS.md)
 - 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py), [product_consumers.py](../../vulcan_core/product_consumers.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py), [운영 소비자 시험](../../scripts/regression/tests/test_product_consumers.py).
 
@@ -17,7 +17,7 @@
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
 - 아직 연결하지 않은 legacy 명령은 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 지원하는 조회·진단·미리보기는 4.4절을 따르며, 상태 저장은 자체 검증을 거치는 `session --process-request`, 명령 증적 수집은 허가된 구간의 `execute --verify`로 수행한다.
 - `status --check`와 상태 요청 미리보기는 명령 실행·파일 변경·승인 생성·상태 전환을 하지 않는다. 단계 2b의 명시 `--apply`는 검증한 상태만 저장하며 Git commit/push, Run, branch 생성, release는 수행하지 않는다.
-- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. 4.5절은 상태 저장과 분리한 명시 브랜치 준비, 4.6절은 Run 없는 QA 전달 후보와 결과 회수 경로다. 실제 발행과 사용자 프로젝트 이행은 후속이다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
+- Dashboard/실제 브랜치 조회·환경 진단·인수 시험·릴리즈 후보 미리보기는 4.4절까지 연결했다. 4.5절은 상태 저장과 분리한 명시 브랜치 준비, 4.6절은 Run 없는 QA 전달 후보와 결과 회수 경로다. 기존 Product의 선택적 이행은 4.7절만 사용하며 실제 발행과 사용자 프로젝트 적용 검증은 별도다. 기존 세션에 표식을 수동 추가하여 운영하지 않는다.
 
 ## 2. 범위의 직렬화
 
@@ -195,6 +195,25 @@ Git checkout/reference-transaction hook은 일회성 빈 hooks 경로로 비활�
 후보 조회는 session bytes를 다시 대조하며 변경 감지 시 conflict를 반환한다. 이 조회는 예약이나 파일시스템 잠금이 아니다. 실제 `execute --verify`는 acceptance에서 계약/시험/환경 참조를 재확인하지만 소스 변경·실제 서비스·시험 수·업무 커버리지를 인증하지 않는다. 테스트 도구의 결과와 현재 소스/환경 영향은 총괄이 확인한다. Git 증적/사전 commit을 추가하지 않는다.
 
 `verify_only`는 위임 계약이며 외부 명령의 쓰기를 기술적으로 막는 sandbox가 아니다. 총괄이 도구 권한과 정확한 출력 범위를 제한한다. 결과 회수도 agent 메시지를 파싱해 자동 Pass/승인으로 바꾸는 기능이 아니며, 새로운 dispatcher나 실제 release 발행은 포함하지 않는다.
+
+### 4.7 기존 Product의 명시적 이행과 복구
+
+운영 절차와 보존·복구 제한은 [Core CLI 안내](../core/ORCHESTRATOR_CLI_GUIDE.md#기존-product의-명시적-이행)를 따른다. 구현은 [product_migration.py](../../vulcan_core/product_migration.py), 합성 회귀는 [test_product_migration.py](../../scripts/regression/tests/test_product_migration.py)에 있다.
+
+표식 없는 `profile: product`, 알려진 `current_gate`, 일곱 Gate의 유효한 상태가 대상이다. 반복으로 done/pending이 섞인 것은 허용하지만 다른 profile·표식·iterative 필드가 섞인 상태는 거부한다. 요청은 다음 필드를 사용한다.
+
+| 요청 | 필드 |
+| --- | --- |
+| 공통 | `process_model: product-iterative-v1`, `action`, `expected_session_revision` (미리보기는 null 허용) |
+| `migrate` | `target: planning`, 2절의 `scope`, 승인 근거 `reason`, `obligations`, `obligation_review: pending 또는 reviewed` |
+| 의무 한 건 | `source`, `description`, `owner`, `scope: current/followup/undetermined`, `status: open/undetermined`. 미정 담당은 문자열로 명시; 최대 256건 |
+| 참조 | `reason`/의무 `source` 등은 `{ref, revision}` 형식의 로컬 Markdown과 전체 파일 SHA-256. anchor 의미나 전체 이력은 이행에서 검사하지 않음 |
+| `restore-migration` | `backup`: 이행 결과로 반환된 보존본 경로 |
+| 적용 | 미리보기의 `prepared_request` 사용. 관측 session revision과 `preview_key` 필수; 바뀐 입력/상태/요청은 conflict |
+
+새 상태는 `planning`, 결정/작업 이력은 빈 값이다. 기존 Gate·승인·실행 집계는 원본 session 보존본에 남기고 다른 설정과 `open_issues`는 유지한다. `migration_handover`는 옛 Gate와 의무의 당시 스냅샷이며, 빈 목록도 전체 의무 없음/완료를 뜻하지 않는다. 원본 의무는 기존 문서에서 계속 관리한다.
+
+기존 writer lock 아래 원본 보존을 확인한 후 session을 원자 교체한다. 교체 전 실패는 원본을 유지하고 정상 보존본만 재사용하며 부분/손상본은 자동 덮어쓰지 않는다. 복구는 이행 직후 session과 보존본이 일치할 때만 가능하다. 전원 장애·외부 writer·악의적 변조·승인자 신원 인증까지 보장하는 기능은 아니다. 합성 시험은 실제 프로젝트의 백업·격리 검증을 대신하지 않는다.
 
 ## 5. 지속 점검
 

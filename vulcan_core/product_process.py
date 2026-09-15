@@ -114,6 +114,17 @@ def _validate(session):
         prior = _object(item.get("work"), "historical work")
         _require(item.get("current_gate") in STATES, "invalid historical state")
         _require(prior.get("scope_key") == scope_key(prior.get("scope")), "historical scope identity mismatch")
+    if "migration" in session:
+        handover = _object(session["migration"], "migration handover")
+        _require(handover.get("obligation_review") in ("pending", "reviewed")
+                 and isinstance(handover.get("legacy_gate_status"), dict)
+                 and isinstance(handover.get("obligations"), list), "invalid migration handover")
+        for row in handover["obligations"]:
+            row = _object(row, "migration obligation")
+            _require(_text(row.get("owner")) and _text(row.get("description"))
+                     and row.get("scope") in ("current", "followup", "undetermined")
+                     and row.get("status") in ("open", "undetermined"), "invalid migration obligation")
+            _reference(row.get("source"))
     for decision in work["decisions"]:
         _validate_decision(decision, work["scope_key"])
     if stage in {"impl", "acceptance", "completed"}:
@@ -299,12 +310,15 @@ def describe(session):
         if model == "legacy":
             return {"process_model": "legacy", "use_legacy": True}
         work = _validate(session)
-        return {"process_model": model, "runtime_enabled": True, "checks_enabled": True,
+        result = {"process_model": model, "runtime_enabled": True, "checks_enabled": True,
                 "session_writes_enabled": True, "status": "active",
                 "dashboard_read_enabled": True, "operating_preview_enabled": True,
                 "publication_enabled": False,
                 "current_gate": session["current_gate"], "scope_key": work["scope_key"],
                 "work": deepcopy(work["scope"]["work"]), "history_count": len(session["work_history"]),
-                "message": "New Product projects use scoped planning, implementation and acceptance. Existing projects are not migrated; acceptance does not authorize publication."}
+                "message": "Product uses scoped planning, implementation and acceptance. Legacy migration is explicit; acceptance does not authorize publication."}
+        if "migration" in session:
+            result["migration_handover"] = deepcopy(session["migration"])
+        return result
     except ProcessContractError as error:
         return {"status": "unsupported_or_invalid", "runtime_enabled": False, "message": str(error)}
