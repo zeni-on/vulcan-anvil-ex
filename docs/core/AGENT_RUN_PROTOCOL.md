@@ -5,7 +5,7 @@
 
 `process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 아래 기존 Gate 순서나 Run 자동화로 새 프로세스를 대체하지 않으며, 미지원 모델을 기존 Gate로 해석하지 않는다.
 
-Product의 Run 사용과 입력·검증 범위는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 Run 생성·분할·입출력 절차는 Run을 사용하는 경로에 적용하며, Run 없는 Product 작업에 새 Run을 요구하지 않는다. Audit/PoC는 각 profile의 기존 필수 Run과 승인 기준을 유지한다.
+Product의 Run 사용과 입력·검증 범위는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 Run 생성·분할·입출력 절차는 Run을 사용하는 경로에 적용하며, Run 없는 Product 작업에 새 Run을 요구하지 않는다. Audit은 기존 필수 Run과 승인 기준을 유지한다.
 
 ## 1. 기본 원칙
 
@@ -69,7 +69,7 @@ CR-001 게시글 첨부파일 요청 영향도 분석
 
 Adapter는 Run으로 에이전트를 실행할 때 다음 입력을 구성한다.
 
-Gate별 Plan Run을 사용하는 경로에서는 Run 문서를 시작 계약으로 준비한다. 기존 `vulcan.py gate-start`는 Gate 상태 갱신 후 profile 정책에 따라 `orchestrator-plan` Run 초안을 자동 생성하며, Product/PoC에서는 이 자동 생성을 생략한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
+Gate별 Plan Run을 사용하는 경로에서는 Run 문서를 시작 계약으로 준비한다. 기존 `vulcan.py gate-start`는 Gate 상태 갱신 후 profile 정책에 따라 `orchestrator-plan` Run 초안을 자동 생성하며, Product에서는 이 자동 생성을 생략한다. 이미 같은 Gate에 `Draft`, `InProgress`, `In Progress`, `Running` 상태의 Run이 있으면 중복 생성하지 않는다.
 
 Gate 산출물이 완료되어도 사용자 승인 전에는 `done`으로 닫지 않는다. 산출물 요약과 다음 Gate 진행 질문을 남긴 뒤 `python vulcan.py session --gate <현재 Gate> --status awaiting-approval`로 현재 Gate에 머무른다. 사용자가 명시 승인한 뒤에만 `python vulcan.py session --gate <현재 Gate> --status done --approved --approval-evidence "<승인 근거>"`를 실행해 다음 Gate로 전환한다.
 
@@ -254,7 +254,7 @@ UI 테스트는 화면 하나를 크게 Pass 처리하지 않는다.
 
 ## 5.3 Implementation Plan과 Build Wave
 
-Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 먼저 적용한다. 일반 변경에는 Run/Wave와 새 worker 생성이 필수가 아니며, 아래의 계획 Run/직접 수정 예외/고정 분할 절차는 Product에 일괄 적용하지 않는다. Run을 선택한 경우 해당 입력/출력 계약과 실행 전 preflight, Wave를 선택한 경우 단일 active Wave 제약은 유지한다. Audit/PoC의 기존 기준은 유지한다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 먼저 적용한다. 일반 변경에는 Run/Wave와 새 worker 생성이 필수가 아니며, 아래의 계획 Run/직접 수정 예외/고정 분할 절차는 Product에 일괄 적용하지 않는다. Run을 선택한 경우 해당 입력/출력 계약과 실행 전 preflight, Wave를 선택한 경우 단일 active Wave 제약은 유지한다. Audit의 기존 기준은 유지한다.
 
 구현 단계는 작업 규모에 따라 운영 강도를 조절한다. 구현 범위가 중간 이상이거나 subagent, 여러 커밋, 여러 모듈, UI 증적이 함께 필요한 경우에는 `implementation-plan` Run을 만들고 승인된 범위를 `Implementation Scaffold`와 여러 `Build Wave`로 나눈다. 작은 단일 구현은 Build Wave 분할을 생략할 수 있지만, Orchestrator 직접 구현을 의미하지 않는다. 실제 코드/테스트/UI/API 구현은 기본적으로 `build` persona의 native worker(subagent/thread/native branch agent)가 수행한다.
 
@@ -408,7 +408,6 @@ subagent/thread가 직접 작업했다면 Orchestrator는 결과를 현재 Run �
 이 기록은 `Run Execution Record`보다 얇다. stderr, jsonl, cache, timeout policy 같은 외부 프로세스 메타는 필요 없지만, 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령은 남긴다.
 
 `delegation_records.status`는 worker lifecycle과 Orchestrator 검증 lifecycle을 분리해서 쓴다. `worker_completed` 또는 `completed`는 worker가 결과를 반환했다는 뜻이고, `verified`는 Orchestrator가 테스트/증적/계약을 재검증한 뒤에만 쓴다. worker 완료만 기록된 Run은 `run-check`/`run-preflight`에서 경고가 날 수 있으므로, Orchestrator는 `orchestrator_verification` 또는 `needs_review`/`blocked` 같은 판정 후보를 남긴다.
-PoC 병목 분석이 필요하면 `first_file_change_at`, `last_file_change_at`, `worker_final_response_at`, `final_response_lag_seconds`를 함께 남겨 코드 변경 시간과 최종 응답 지연을 구분한다. 알 수 없는 값은 추정하지 않고 비워두거나 notes에 근거를 남긴다.
 변경 파일은 `scope.writable` 안에 있는지 확인하고, worker/subagent가 만든 테스트케이스와 관련 회귀 검증을 Orchestrator가 재실행한다.
 
 Orchestrator 직접 수정 예외:
@@ -441,8 +440,6 @@ Build Wave 분할을 생략하는 경우에도 구현 Run은 worker 실행 단�
 - 관련 ID
 - 실행할 테스트와 검증 명령
 
-PoC에서 구현 worker는 `app/`, `static/`, `tests/`, `requirements.txt`와 최소 self-check를 담당한다. README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 로그 정규화까지 맡기면 Impl 비용이 실제 코드 비용처럼 보이므로 worker handoff 전에 분리한다.
-PoC Impl worker의 완료 기준은 `코드 변경 + 빠른 self-check + 남은 판단 항목 보고`다. Gate 4 smoke/evidence/report는 별도 QA/Evidence 단계가 담당한다. 이미 worker가 진행 중이고 코드 구현은 끝난 상태에서 문서/경고 정리에 오래 머문다면 Orchestrator가 증적 정리와 Run 경고 정규화를 회수한다.
 Agy `Workspace: branch` 또는 native branch worker가 격리 workspace 안에서 Run 문서를 직접 수정하지 못한 경우도 정상 경로로 처리할 수 있다. worker는 변경 파일과 self-check 결과를 반환하고, Orchestrator가 부모 workspace에서 `delegation_records`, Run 결과, scope 검증을 정규화한다.
 - 추적표 갱신 기준
 - 커밋 메시지 후보
@@ -540,7 +537,7 @@ Build Wave와 worker Run은 시간이나 파일 개수가 아니라 닫힌 기�
 
 - Product에서는 모든 Wave마다 리뷰어를 일괄 호출하지 않는다. Orchestrator는 중요한 계약/보안/권한/DB 변경, 여러 모듈의 통합, 증적 불확실 또는 원인 분석 정체가 있는지 확인해 별도 리뷰 여부를 판단한다. PR/통합 경계는 판단 지점이지 무조건 호출하는 조건이 아니다.
 - 단순 문구/국소 수정은 담당 검사와 메인의 diff 확인으로 충분할 수 있다. 위험하거나 판단이 충돌하면 새 문맥의 reviewer를 우선 사용하고, 다른 모델은 추가 관점이 필요하거나 사용자가 요청할 때 선택한다.
-- Audit/고객 계약, 현재 Gate 또는 사용자가 명시한 필수 검수는 생략하지 않는다. 다른 모델 검수가 명시된 경우 같은 모델의 새 문맥으로 대체하지 않는다. PoC도 명시 요구를 유지하며 불필요한 정례 리뷰를 추가하지 않는다.
+- Audit/고객 계약, 현재 Gate 또는 사용자가 명시한 필수 검수는 생략하지 않는다. 다른 모델 검수가 명시된 경우 같은 모델의 새 문맥으로 대체하지 않는다.
 - 리뷰 여부와 중요한 이유는 기존 Run/PR/결과 요약에 짧게 남긴다. 새 필수 문서나 checker 차단 항목은 추가하지 않는다. 이 정책은 자동 호출 장치가 아니라 Orchestrator의 판단 기준이다.
 
 ### 호출과 입력

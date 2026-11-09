@@ -39,7 +39,7 @@
 
 기준과 식별자를 알 수 없으면 추정하지 말고 확인한다. 현재 계약 구간과 검증 소스 식별은 [Current Context And Evidence](CURRENT_CONTEXT_AND_EVIDENCE.md)를 따른다. 잘린 구간/미분류/서로 다른 계약은 승인된 사실로 간주하지 않는다. 공통 보안 조건을 읽기 범위에서 빠뜨리지 않는다.
 
-Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. 계약/범위/Run/프로젝트 상태가 바뀌면 재검사한다. Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 작업/이슈 요약으로 전달할 수 있다. PoC의 기존 Run 생략 기준도 유지한다. 역할 작업창을 사용한다는 이유로 Run을 추가하지 않는다.
+Run을 사용하는 native worker는 위임 전 `run-preflight` 또는 이를 포함한 `execute --dry-run` 통과를 확인한다. 계약/범위/Run/프로젝트 상태가 바뀌면 재검사한다. Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 작업/이슈 요약으로 전달할 수 있다. 역할 작업창을 사용한다는 이유로 Run을 추가하지 않는다.
 
 ## 4. 전달, 회수, 다음 행동
 

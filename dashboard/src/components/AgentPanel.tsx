@@ -690,7 +690,7 @@ export default function AgentPanel({
         </h3>
         {delegations.length === 0 ? (
           <p className="text-xs leading-5 text-slate-500">
-            Run에 기록된 위임 경로가 없습니다. 짧은 PoC 작업에서는 정상일 수 있습니다.
+            Run에 기록된 위임 경로가 없습니다.
           </p>
         ) : (
           <ul className="space-y-1.5">

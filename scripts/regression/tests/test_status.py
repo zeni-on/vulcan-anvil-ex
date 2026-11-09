@@ -30,8 +30,8 @@ class StatusCoreTests(unittest.TestCase):
                 if waves:
                     self.assertIn("미완료 Wave", actions[1])
 
-    def test_product_keeps_branch_guard_and_other_profiles_keep_wave_routing(self):
-        for profile in ("product", "audit", "poc"):
+    def test_product_keeps_branch_guard_and_audit_keeps_wave_routing(self):
+        for profile in ("product", "audit"):
             with self.subTest(profile=profile):
                 args = dict(
                     session_exists=True, current_gate="impl", current_branch="main",

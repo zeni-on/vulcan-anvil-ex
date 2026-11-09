@@ -8,7 +8,6 @@
   --panel: rgba(255, 255, 255, 0.82);
   --panel-strong: #ffffff;
   --teal: #0f766e;
-  --green: #2f9e58;
   --amber: #d08721;
   --coral: #c25743;
   --blue: #4267b2;
@@ -406,7 +405,7 @@ h1 {
 
 .profile-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -422,10 +421,6 @@ h1 {
 
 .profile-card:nth-child(2) {
   border-top: 4px solid var(--blue);
-}
-
-.profile-card:nth-child(3) {
-  border-top: 4px solid var(--green);
 }
 
 .runtime {

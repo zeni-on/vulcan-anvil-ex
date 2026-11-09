@@ -124,18 +124,19 @@ function ProfileArtifactBanner({
   docs: DocEntry[]
   docsLoading?: boolean
 }) {
-  const profile = session?.profile ?? 'audit'
+  if (!session || session.process_model) return null
+
+  const profile = session.profile
+  const profileLabel = !profile ? '미기록' : profile === 'audit' || profile === 'product' ? profile : `${profile} (미지원)`
   const docPaths = new Set(docs.map((doc) => normalizeDocPath(doc.path)))
   const missingProductDocs = PRODUCT_PROFILE_DOCS.filter((path) => !docPaths.has(path))
   const productDocCount = PRODUCT_PROFILE_DOCS.length - missingProductDocs.length
-
-  if (!session || session.process_model) return null
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 text-slate-300">
         <FileText className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-        profile: <span className="font-medium text-slate-100">{profile}</span>
+        profile: <span className="font-medium text-slate-100">{profileLabel}</span>
       </span>
 
       {profile === 'product' && (
@@ -297,7 +298,7 @@ export default function ProjectDetailPage() {
           {session ? (
             <>
               <h1 className="text-2xl font-bold text-[#F9FAFB] mb-1">
-                {session.project ?? 'Product'}
+                {session.project ?? (session.process_model ? 'Product' : `프로젝트 ID: ${id}`)}
               </h1>
               {session.feature && (
                 <p className="text-sm text-[#9CA3AF] mb-1">{session.feature}</p>

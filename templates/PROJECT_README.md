@@ -2,7 +2,7 @@
 
 이 저장소는 애플리케이션 소스와 Vulcan-Anvil Ex 산출물/운영 파일을 함께 보관합니다.
 
-Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트와 승인 기록을 연결하는 AI 협업 개발 프레임워크입니다. 신규 Product는 기획·설계, 구현, 인수 검증으로 반복하며 기존 프로젝트와 Audit/PoC는 Gate 흐름을 사용합니다.
+Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트와 승인 기록을 연결하는 AI 협업 개발 프레임워크입니다. 신규 Product는 기획·설계, 구현, 인수 검증으로 반복하며 표식 없는 기존 Product와 Audit는 Gate 흐름을 사용합니다.
 
 ## 폴더 구조
 
@@ -55,7 +55,7 @@ Vulcan-Anvil Ex는 요구사항, 설계, 구현, 테스트와 승인 기록을 �
 
 먼저 `python vulcan.py status`로 현재 모델과 위치를 확인합니다. 새 `init --profile product`는 `product-iterative-v1`의 planning 세션을 이미 생성합니다. 총괄에게 목표와 범위를 설명하면 [Core CLI 4.1](docs/core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)에 따라 기존 open-work 요청을 미리보고 적용합니다. 사용자가 JSON을 손으로 작성하거나 start를 다시 호출할 필요는 없습니다. 초기 `status --check`는 구현 합의 전까지 차단하며, readiness와 별도 advance 승인 후 impl, acceptance로 진행합니다. completed는 이번 범위의 최종 인수 결과이지 배포 완료가 아닙니다.
 
-아래 Gate 명령과 Gate 2/Gate 4 검수 설명은 표식 없는 기존 Product와 Audit/PoC용입니다. upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않습니다. 반복 모델에서는 Run이 필수가 아니고 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업으로 남습니다.
+아래 Gate 명령과 Gate 2/Gate 4 검수 설명은 표식 없는 기존 Product와 Audit용입니다. upgrade는 자동 이행하지 않으며 표식을 수동 추가하지 않습니다. 반복 모델에서는 Run이 필수가 아니고 실제 릴리즈/PR 생성은 별도 승인 후 명시적인 수동 작업으로 남습니다.
 
 ```bash
 python vulcan.py gate-start gate1 --feature "기능명"

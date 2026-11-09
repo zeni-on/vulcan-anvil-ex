@@ -6,7 +6,6 @@ title: Product Security Checklist
 title_ko: 제품 보안 체크리스트
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-gate4
 status: Draft
 version: v0.1
 owner_role: Security / Technical Owner

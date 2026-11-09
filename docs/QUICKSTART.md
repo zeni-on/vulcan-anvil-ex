@@ -12,7 +12,6 @@ Vulcan-Anvil Ex를 처음 볼 때는 모든 Gate와 문서를 한 번에 이해�
 
 | 만들고 싶은 것 | 추천 profile | 남는 것 |
 | --- | --- | --- |
-| 아이디어나 기술이 되는지 확인 | `poc` | 목표, 가설, 반복 기록, smoke/demo 결과 |
 | 제품/업무 앱을 계속 개발 | `product` | 제품 요구사항, 주요 설계, 계약, 회귀/릴리즈 기록 |
 | 감리, 고객 검수, 인수인계 대응 | `audit` | 요구사항, 상세 설계, 테스트, QA 증적, 변경관리 |
 
@@ -23,14 +22,13 @@ Product는 `docs/product/` 원장 6종으로 시작하고, API/DB/UI/보안/개�
 ## 2. 프로젝트 만들기
 
 ```powershell
-python vulcan.py init ../my-poc "My PoC" --profile poc
 python vulcan.py init ../my-product "My Product" --profile product
 python vulcan.py init ../my-audit-project "My Audit Project"
 ```
 
 기본값은 `audit`입니다.
 새 Product는 `product-iterative-v1`의 `planning`에서 시작합니다. 총괄에게 이번 목표와 포함/제외 범위를 설명하면 기존 `open-work` 요청의 미리보기와 적용을 맡습니다. 사용자가 JSON을 손으로 쓸 필요는 없습니다. 초기 `status --check`의 구현 차단은 범위 합의와 별도 구현 승인이 아직 없다는 뜻입니다. 이후 `impl`, `acceptance`를 거치며 `completed`는 이번 범위의 최종 결과이지 배포 완료가 아닙니다. [첫 사용 절차](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)를 따릅니다.
-표식 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며 `process_model`을 수동 추가하지 않습니다.
+Audit과 표식 없는 기존 Product는 `upgrade`로 자동 이행하지 않으며 `process_model`을 수동 추가하지 않습니다.
 GitHub 원격 저장소와 함께 시작하려면 `--remote`를 추가합니다.
 
 ```powershell
@@ -88,8 +86,8 @@ npm run dev
 
 - Ex는 한 번의 프롬프트로 앱을 가장 빨리 만드는 도구가 아닙니다.
 - Ex는 AI가 만든 결과를 요구사항, 설계, 테스트, 증적, 승인 흐름으로 회수하는 도구입니다.
-- PoC도 실패나 미실행 항목을 `Pass`로 쓰지 않습니다. 대신 결과와 다음 판단으로 남깁니다.
-- Product와 Audit은 문서가 더 많지만, 그만큼 유지보수와 검수에 필요한 근거가 남습니다.
+- 어느 profile에서도 실패나 미실행 항목을 `Pass`로 쓰지 않습니다. 대신 결과와 다음 판단으로 남깁니다.
+- Product는 반복 릴리즈에 필요한 계약과 회귀 결과를, Audit은 검수에 필요한 상세 추적과 증적을 남깁니다.
 - Dashboard 코멘트는 원본 Markdown에 직접 들어가지 않고 `.vulcan/comments/comments.jsonl`에 저장됩니다.
 
 더 자세한 절차는 [Getting Started](GETTING_STARTED.md), profile 선택은 [Which Profile Should I Use?](WHICH_PROFILE_SHOULD_I_USE.md), 실제 샘플 결과는 [Examples And Benchmarks](EXAMPLES_AND_BENCHMARKS.md)를 참고합니다.

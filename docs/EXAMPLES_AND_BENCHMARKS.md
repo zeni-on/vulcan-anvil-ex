@@ -5,10 +5,12 @@
 ## 읽는 법
 
 - 시간은 절대 성능 보증이 아니라 운영 강도 비교용입니다.
-- PoC, Product, Audit은 품질 등급이 아니라 문서/증적/승인 깊이의 차이입니다.
+- Product와 Audit은 품질 등급이 아니라 문서/증적/승인 깊이의 차이입니다.
 - 실행하지 않은 테스트를 `Pass`로 기록하는 것은 어떤 profile에서도 허용하지 않습니다.
 
-## 단일 TODO 앱 관찰
+## 단일 TODO 앱 관찰 (은퇴 전 기록)
+
+아래 비교는 당시 PoC와 Audit 샘플의 측정값입니다. Product 측정값이나 현재 지원 프로파일의 속도 비교로 해석하지 않습니다. 옛 기록의 용어는 v0.5.0에 보존된 [compact Run 설계](https://github.com/zeni-on/vulcan-anvil-ex/blob/v0.5.0/docs/reference/POC-RUN-COMPACT-STRATEGY.md)와 [PoC 템플릿 설계](https://github.com/zeni-on/vulcan-anvil-ex/blob/v0.5.0/docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md)를 참고하세요.
 
 | 축 | PoC profile | Audit profile |
 | --- | --- | --- |
@@ -28,22 +30,9 @@
 - Gate 4에서는 `node --check static/app.js`, `node tests/todo_store_test.js`를 실행하고 결과를 `POC_TEST_REPORT.md`에 반영했다.
 - 반복별 기능 추가/변경은 `Fix Log / Experiment Iterations`에 `ITER-001`, `ITER-002`처럼 남겼다.
 
-이 관찰 기준으로 PoC는 "정해진 시간 안에 끝나는 모드"가 아니라, 기능 가설과 반복별 변경, 실행 증거, 다음 판단을 복원 가능하게 남기는 모드로 본다.
+당시 관찰은 완료 시간보다 기능 가설, 반복별 변경, 실행 증거와 다음 판단을 복원할 수 있었는지에 초점을 뒀다.
 
 ## Profile별 결과물 예시
-
-### PoC
-
-보통 다음이 남습니다.
-
-- `docs/poc/POC_REQUIREMENTS.md`
-- `docs/poc/POC_SYSTEM_DESIGN.md`
-- `docs/poc/POC_TEST_REPORT.md`
-- 구현 코드와 dependency manifest
-- smoke/demo 로그
-- 다음 판단 항목
-
-PoC의 목표는 "모든 공식 산출물 작성"이 아니라, 핵심 가설이 맞는지 검증하고 반복별 기능 변화와 다음 판단을 남기는 것입니다.
 
 ### Product
 
@@ -58,7 +47,7 @@ PoC의 목표는 "모든 공식 산출물 작성"이 아니라, 핵심 가설이
 - 릴리즈 후보, backlog, issue, release note
 - 주요 QA 로그와 화면/API 증적
 
-Product는 PoC보다 오래가지만 Audit보다 가볍습니다. 실제 제품 또는 업무 앱을 계속 운영할 때의 기본 레이어입니다.
+실제 제품 또는 업무 앱을 계속 운영할 때의 기본 레이어입니다.
 
 ### Audit
 

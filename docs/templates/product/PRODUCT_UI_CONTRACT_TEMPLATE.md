@@ -6,7 +6,6 @@ title: Product UI Contract
 title_ko: 제품 UI 계약
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-gate4
 status: Draft
 version: v0.1
 owner_role: Product / Frontend Owner

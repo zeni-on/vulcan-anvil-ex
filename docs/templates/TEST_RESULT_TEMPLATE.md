@@ -84,7 +84,7 @@ change_reason: 최초 초안 작성
 | Not Run | 캡처 또는 브라우저 검증을 수행하지 못했다 |
 | FIND 등록 | 테스트 항목과 증적 파일이 맞지 않거나, 기대 화면을 보여주지 못하는 캡처가 Pass로 기록된 경우 |
 | CDP/수동 캡처 | 보조 관찰로만 허용하며, `@playwright/test` 실행 결과 없이 Pass 불가 |
-| 커스텀 Playwright script | PoC smoke/demo 또는 보조 관찰로 허용할 수 있으나, audit/product 공식 UI Pass는 `npx playwright test` 결과와 report/trace/screenshot을 기준으로 한다 |
+| 커스텀 Playwright script | 보조 관찰로 허용할 수 있으나, audit/product 공식 UI Pass는 `npx playwright test` 결과와 report/trace/screenshot을 기준으로 한다 |
 
 ### 4.2 UIREF 구현 계약 비교
 

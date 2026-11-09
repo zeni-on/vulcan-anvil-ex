@@ -135,9 +135,9 @@ class ProductMigrationTests(unittest.TestCase):
         for changes in cases:
             with self.subTest(changes=changes):
                 self.path.write_text(json.dumps({**self.legacy, **changes}))
-                before = self.path.read_bytes()
+                before = self.snapshot()
                 self.assertEqual(self.call(self.request())["status"], "invalid")
-                self.assertEqual(self.path.read_bytes(), before)
+                self.assertEqual(self.snapshot(), before)
         self.path.unlink()
         self.assertEqual(self.call(self.request())["status"], "invalid")
         self.assertFalse((self.root / ".vulcan").exists())

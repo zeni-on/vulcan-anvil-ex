@@ -20,7 +20,7 @@ fix authority and reruns through `PRODUCT_PROFILE_BASELINE.md` section 7.
 
 1. `QA-000`: prepare or confirm the QA workspace on the integration branch, dependencies, ports, DB, and smoke readiness.
 2. `QA-001`: run command-based checks such as syntax, unit/integration tests, lint, build, and contract checks.
-3. `QA-002`: collect UI/E2E evidence, screenshots, logs, and browser artifacts. For audit/product profiles, official UI Pass must be based on `@playwright/test` and `npx playwright test`; custom Playwright library scripts are PoC smoke/demo or auxiliary evidence only.
+3. `QA-002`: collect UI/E2E evidence, screenshots, logs, and browser artifacts. For audit/product profiles, official UI Pass must be based on `@playwright/test` and `npx playwright test`; custom Playwright library scripts are auxiliary evidence only.
 4. `QA-003`: synthesize Test Result, QA Finding, traceability status candidates, and approval/blocking issues.
 
 `QA-001` to `QA-003` must reuse the workspace recorded by `QA-000`. A separate QA worktree is optional and should be used only when explicitly enabled by project policy.
@@ -38,7 +38,7 @@ applicable current results from the ledger and retain unresolved obligations.
 
 - A verification-only worker returns fix candidates to the Orchestrator. Product
   workers already assigned fixes and retests follow section 7 without seeking the
-  same permission again. Audit/PoC QA workers do not fix code immediately.
+  same permission again. Audit QA workers do not fix code immediately.
 - If QA is delegated to a native subagent/thread, retain delegate, scope, evidence/log paths, result summary, and Orchestrator verification in the existing result summary. Use `delegation_records` when a Run is used; do not invent reruns that were not executed.
 - If QA is delegated to an external CLI runner, keep the full Run Execution Record, `_exec` logs, watchdog/timeout status, and any recovered transcript.
 - In Product, if mixed logs or stale evidence need separate analysis, consider `qa-reader`.

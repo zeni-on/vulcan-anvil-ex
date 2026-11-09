@@ -3,7 +3,6 @@
 ---
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate3
 status: Draft
 owner_role: QA Owner
 created_at: {{GENERATED_DATE}}
@@ -17,6 +16,8 @@ created_at: {{GENERATED_DATE}}
 
 ## 2. Regression Plan
 
+승인된 AC에서 기대값을 정하고, 그 기대가 틀렸다면 실패할 행동·검증 방법을 아래에 짝지어 적는다. 예: 지우기 버튼이 요구라면 버튼을 눌러 저장한 뒤 다시 연 값을 확인한다. API로 같은 상태를 만든 것만으로 그 행동을 대신하지 않는다.
+
 | REG ID | 관련 Scenario / REQ / AC / 계약 | 입력 / 행동 | 기대값 | 명령 / 테스트 위치 |
 | --- | --- | --- | --- | --- |
 | REG-001 | SCN-001, REQ-001, AC-001, API-001 | TBD | TBD | TBD |
@@ -29,7 +30,9 @@ created_at: {{GENERATED_DATE}}
 
 ## 4. Test Data And Evidence
 
-초기화/정리 방법, 필요한 증적과 기록 위치: TBD
+이 TC만 다시 실행할 때 쓸 고정 입력 또는 fixture/준비 명령: TBD
+
+상태가 있는 시험은 시작 상태 확인, 격리·초기화/정리 방법, 필요한 증적 위치를 적는다. 기존 테스트 코드가 이를 수행하면 해당 위치만 연결한다.
 
 ## 5. Open Decisions
 

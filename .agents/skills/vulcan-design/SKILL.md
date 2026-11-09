@@ -22,8 +22,9 @@ Product scope and verification follow [Product section 7](../../../docs/core/PRO
 Use [Product document writing](../../../docs/core/PRODUCT_DOCUMENT_WRITING.md)
 when authoring Product contracts: keep one owned source and link from the ledger.
 Preserve requirements, API/data/UI/security constraints and existing approved sources.
-Use [design sequence](../../../docs/core/GATE2_DESIGN_SEQUENCE.md) only when the
-design order or a legacy contract dependency is unclear.
+For an unmarked legacy project, use [design sequence](../../../docs/core/GATE2_DESIGN_SEQUENCE.md)
+only when its design order or contract dependency is unclear. Product iterative
+planning uses the current scope and linked writing guide, not numbered Gate steps.
 
 Resolve blocking conflicts or scope changes with the Orchestrator; continue other
 authorized design work. Design review does not imply implementation permission.

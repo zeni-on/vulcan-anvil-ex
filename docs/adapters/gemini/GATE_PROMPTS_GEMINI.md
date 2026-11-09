@@ -14,9 +14,15 @@
 
 ---
 
-## 2. 게이트별 시스템 프롬프트 명세 (System Instructions)
+## 2. Product 반복 모델
 
 Product에서는 아래 일반 프롬프트보다 `docs/core/PRODUCT_PROFILE_BASELINE.md`의 실행 정책과 `docs/core/PRODUCT_DOCUMENT_WRITING.md`의 원본 위치/선택 템플릿을 우선한다. 6종 원장에 상세를 재복사하지 않고 상대 Markdown 링크로 연결하며, 기존 승인 문서는 자동 이동하지 않는다. 이 문서 추가가 API의 자동 바인딩 기능을 새로 구현했다는 뜻은 아니다.
+
+반복 모델은 `planning → impl → acceptance`의 현재 범위와 담당 역할에 맞춰 작업을 전달한다. 아래 `gate1`~`gate4_5` 프롬프트를 순차 적용하거나 planning 안에서 요구·설계·시험 계획을 각각 승인 단계로 나누지 않는다. 상세 운영은 Core CLI 4.1과 Product 기준선 한 곳을 따른다.
+
+## 3. 기존 Gate 모델용 프롬프트 (System Instructions)
+
+아래 YAML은 Audit과 표식 없는 기존 Product의 호환용이다. 여기의 Product 분기는 기존 모델의 문서 작성 위치만 안내하며 반복 모델에 이 절을 적용하라는 뜻이 아니다.
 
 ```yaml
 gemini_prompts:

@@ -231,7 +231,7 @@ description: ...
 새 스킬을 추가한 후 다음을 모두 통과해야 머지한다.
 
 - [ ] 임시 디렉토리에 `python vulcan.py init <tmp> Test`를 실행해 `.claude/skills/<name>/skill.md`가 정상 복사되는지 확인
-- [ ] 임시 디렉토리에서 `.claude/skills/<name>/`을 삭제 후 `python vulcan.py upgrade`를 실행해 복원되는지 확인 (FRAMEWORK_FILES 등록 검증)
+- [ ] 임시 Audit/Product 프로젝트 디렉터리에서 `.claude/skills/<name>/`을 삭제 후 [최신 원본 CLI로 업그레이드](UPGRADE_AND_DASHBOARD.md)해 복원되는지 확인 (FRAMEWORK_FILES 등록 검증)
 - [ ] 새 Claude Code 세션에서 description의 주요 트리거 키워드를 입력해 자동 발화 여부 확인
 - [ ] 기존 스킬과 트리거 충돌이 없는지 확인. 충돌이 있으면 양쪽 description의 `NOT for` 절로 경계를 명시한다.
 - [ ] (외부 출처) 파일 안에 출처, upstream 라이선스, 저작권자 고지 보존

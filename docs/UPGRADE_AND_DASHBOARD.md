@@ -3,22 +3,27 @@
 이 문서는 기존 Vulcan-Anvil Ex 프로젝트를 최신 규칙으로 갱신하는 방법과 Dashboard를 통해 진행 상태를 확인하는 방법을 정리합니다.
 Dashboard 화면 자체를 처음 읽는다면 먼저 [Dashboard Guide](DASHBOARD_GUIDE.md)를 참고합니다.
 
-## 기존 프로젝트 업그레이드
+## v0.6.0 호환성 변경
 
-이미 `init`으로 만든 프로젝트에 최신 Ex 규칙과 템플릿을 반영하려면 해당 프로젝트 폴더에서 `upgrade`를 실행합니다.
+v0.6.0부터 지원 프로파일은 `audit`과 `product`입니다. 기존 `poc` 프로젝트에서는 `upgrade`를 실행하지 마세요. 원본과 증적은 보존하고, `profile` 값 변경이나 `init` 재실행으로 전환을 시도하지 마세요. [v0.6.0 릴리즈 노트](releases/v0.6.0.md)를 먼저 확인하세요.
+
+## 업그레이드 절차
+
+먼저 대상 프로젝트의 작업 상태와 백업을 확인합니다. 원본 Ex clone을 최신 버전으로 갱신하고, 대상 프로젝트의 `session.json`에서 `profile`이 `audit` 또는 `product`인지, `vulcan_src`가 그 clone의 실제 경로인지 확인합니다. 경로가 다르거나 원본이 없으면 업그레이드를 중단하고 확인하세요.
+
+**대상 프로젝트 디렉터리**에서 최신 clone의 `vulcan.py`로 업그레이드합니다. 예를 들어 대상과 `vulcan-anvil-ex`가 같은 상위 디렉터리에 있을 때는 다음과 같습니다. 다른 배치라면 첫 명령의 스크립트 경로를 실제 clone 경로로 바꾸세요.
 
 ```powershell
-cd ../my-project
-python vulcan.py upgrade
+python ../vulcan-anvil-ex/vulcan.py upgrade
+python vulcan.py version
+python vulcan.py status
 ```
 
-`init`으로 만든 프로젝트는 `session.json`에 원본 Ex 저장소 경로를 기록하므로, 보통은 `upgrade` 명령에 Ex 폴더 경로를 따로 넘기지 않아도 됩니다.
+`v0.2.2` 프로젝트에 들어 있는 로컬 업그레이더는 CLI만 바꾸고 필요한 Core 모듈을 복사하지 않습니다. 따라서 Audit과 Product 모두 업그레이드 **실행**에는 최신 clone의 CLI를 쓰고, **결과 확인**에는 프로젝트에 갱신된 CLI를 씁니다.
 
-표식 없는 기존 프로젝트에서 Ex 저장소 위치를 옮겼거나 `session.json`의 `vulcan_src`가 더 이상 유효하지 않으면, 먼저 해당 값을 현재 Ex 저장소 경로로 맞춘 뒤 실행합니다. `process_model`이 있는 Product에는 이 수동 세션 편집 안내를 적용하지 않습니다. 원본 경로가 유효하지 않으면 경로 문제를 먼저 확인하고 보고합니다.
+`product-iterative-v1`이 이미 활성화된 Product도 위 절차를 사용합니다. 프레임워크 파일은 갱신하되 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신합니다. 프로세스 상태, 현재 범위, 결정과 작업 이력은 보존하며 새 planning 세션으로 초기화하지 않습니다. 세션 bytes가 바뀐 뒤에는 `status --json`으로 현재 revision을 다시 확인합니다. 첫 범위 합의와 상태 요청은 [Core CLI 4.1](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
 
-`product-iterative-v1`이 이미 활성화된 Product도 기존 `upgrade`를 사용합니다. 프레임워크 파일은 갱신하되 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신합니다. 프로세스 상태, 현재 범위, 결정과 작업 이력은 보존하며 새 planning 세션으로 초기화하지 않습니다. 세션 bytes가 바뀐 뒤에는 `status --json`으로 현재 revision을 다시 확인합니다. 첫 범위 합의와 상태 요청은 [Core CLI 4.1](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
-
-표식 없는 기존 Product/Audit/PoC는 upgrade로 자동 활성화하거나 이행하지 않습니다. `process_model`을 수동 추가하지 않습니다.
+표식 없는 기존 Product와 Audit은 upgrade로 자동 활성화하거나 이행하지 않습니다. `process_model`을 수동 추가하지 않습니다.
 
 ## upgrade가 갱신하는 것
 
@@ -46,9 +51,9 @@ python vulcan.py upgrade
 
 `upgrade`는 없는 공식 산출물 템플릿은 새로 만들 수 있지만, 이미 작성된 산출물은 기본적으로 덮어쓰지 않습니다.
 
-## 0.5.0 업그레이드 후 확인할 것
+## 기존 v0.5.0 Product 참고
 
-먼저 원본 Ex 저장소를 최신 상태로 갱신한 뒤, 대상 프로젝트에서 `python vulcan.py upgrade`, `python vulcan.py version`, `python vulcan.py status`를 실행합니다. 상세 변경은 [v0.5.0 릴리즈 노트](releases/v0.5.0.md)를 참고합니다.
+업그레이드 명령과 경로는 위의 [업그레이드 절차](#업그레이드-절차)를 따릅니다. 당시 변경은 [v0.5.0 릴리즈 노트](releases/v0.5.0.md)를 참고합니다.
 
 - 새 `init --profile product`만 기획·설계 ↔ 구현 ↔ 인수 검증으로 시작합니다. 기존 Product를 upgrade해도 과거 Gate/승인/문서가 자동 전환되지 않습니다.
 - 이미 반복 프로세스를 사용하는 Product는 현재 범위와 결정·이력을 보존합니다. 실행 중인 worker와 상태 변경을 정리한 후 upgrade하고, 이전에 만든 상태 요청은 현재 revision을 다시 확인합니다.

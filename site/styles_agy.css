@@ -365,7 +365,7 @@ h1 {
 /* Profiles */
 .profiles-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   width: min(1200px, 100%);
   margin: 0 auto;
@@ -392,7 +392,6 @@ h1 {
 
 .profile-card.audit::before { background: var(--coral); }
 .profile-card.product::before { background: var(--blue); }
-.profile-card.poc::before { background: var(--primary); }
 
 .profile-card:hover {
   transform: translateY(-6px);

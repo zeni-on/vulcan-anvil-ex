@@ -6,9 +6,9 @@
 
 ## 현재 상태
 
-**Experimental - v0.5.0**
+**Experimental · v0.6.0**
 
-`0.5.0`은 신규 Product의 반복 운영을 기본 활성화하는 실험 라인입니다. 신규 Product는 기획·설계 ↔ 구현 ↔ 인수 검증으로 반복하고, 기존 Product/Audit/PoC는 기존 Gate 흐름을 유지합니다. 역할별 native 위임, 통합 브랜치, 현재 계약·실제 시험·Dashboard 가시성을 지원하며 외부 CLI runner는 선택 경로입니다.
+[v0.6.0 릴리즈 노트](releases/v0.6.0.md)의 호환성 변경은 PoC 프로파일 은퇴입니다. 현행 운영 대상은 Audit과 Product이며, 기존 PoC 프로젝트나 승인·시험 결과를 둘 중 하나로 자동 이행하지 않습니다. 신규 Product는 기획·설계 ↔ 구현 ↔ 인수 검증으로 반복하고, Audit과 표식 없는 기존 Product는 기존 Gate 흐름을 유지합니다.
 
 포함된 주요 기능은 다음과 같습니다.
 
@@ -48,7 +48,6 @@
 - fixture 기반 회귀 smoke harness
 - `doctor` 환경 진단과 `doctor --json` 구조화 출력, Product fixture smoke, QA-000 `QA-000-doctor.json` 환경 증적 연결
 - 샘플 프로젝트 로그 기반 성능/병렬화 병목 분석 초안
-- PoC profile의 compact Run 완충과, 별도 PoC 템플릿 세트 설계 초안
 - Upgrade와 Dashboard 운영 흐름
 - 사용자용 profile 선택 가이드와 샘플/benchmark 요약 문서
 - Dashboard 문서 코멘트와 `status.dashboard_comments` 기반 Orchestrator 가시성
@@ -190,7 +189,7 @@
 
 2. **Gate 4 QA 흐름 재검증**
    - Audit/Product의 공식 UI Pass는 `@playwright/test`와 `npx playwright test` 실행 결과를 기준으로 한다.
-   - 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 쓴다.
+   - 커스텀 Playwright script는 보조 증적으로만 쓴다.
    - QA-000은 `doctor --json` 환경 증적을 남기고, 제품 결함과 `environment_blocked`를 분리한다.
    - QA worker가 테스트 실행자와 수정자 역할을 섞지 않는지, 수정이 승인된 `qa-fix-loop` 또는 Config Hotfix 후보로 분리되는지 샘플에서 확인한다.
    - 2026-06-25 Product sample Gate 4에서 `doctor`, compileall, pytest, npm test/build, `npx playwright test`와 screenshot 증적까지 확인했다. 동시에 Product 기본 문구 `Not run yet | Planned`가 Gate 4 전환을 막지 못하던 readiness 버그를 fixture에 고정했다.
@@ -199,9 +198,9 @@
 3. **Profile별 실제 샘플 재실행**
    - Product profile은 fixture smoke만으로 끝내지 않고, 실제 Product 샘플 1회를 재실행해 운영 마찰을 확인한다.
    - 2026-06-25 Product sample rerun에서 Phase 0~Gate 5, Impl handoff, native worker 구현, `BW-001` Verified, Gate 4 QA evidence, Gate 5 release approval, `release-pr --dry-run`까지 확인했다. full-stack Product Build Wave가 `build-frontend`로 잘못 추론되던 문제를 `build`로 보정했고, Product trace 원장 기반 구현 통계가 `3/3`으로 잡히도록 fixture에 고정했다. Gate 5 승인서 누락을 `status --check`가 놓치던 문제도 fixture에 고정했다. 결과는 `docs/reference/PRODUCT-PROFILE-SAMPLE-RERUN-2026-06-25.md`에 남겼다.
-   - PoC profile은 빠른 시간보다 실험 기록 복원성을 기준으로 본다. 2026-06-25 반복형 PoC 샘플에서 `Fix Log / Experiment Iterations`가 REQ/테스트/증적과 연결되면 복원이 가능함을 확인했고, evidence 없는 `Smoke Pass`가 완료로 집계되지 않도록 fixture에 고정했다. 결과는 `docs/reference/POC-ITERATION-SAMPLE-RERUN-2026-06-25.md`에 남겼다.
+   - 은퇴 전 관찰: 2026-06-25 반복형 PoC 샘플에서 `Fix Log / Experiment Iterations`가 REQ/테스트/증적과 연결되면 복원이 가능함을 확인했고, evidence 없는 `Smoke Pass`가 완료로 집계되지 않도록 fixture에 고정했다. 결과는 `docs/reference/POC-ITERATION-SAMPLE-RERUN-2026-06-25.md`에 남겼다.
    - Audit profile은 Gate 4/5 전환과 release-pr dry-run까지 큰 흐름이 깨지지 않는지 릴리즈 전 smoke 성격으로만 재실행한다.
-   - Product 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`, PoC 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
+   - Product 기준은 [Product fixture smoke 전략](reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md)을 따른다.
 
 4. **Run/위임 품질 게이트는 샘플 기반으로만 보강**
    - `run-check`, `run-preflight`, `trace-context`, `--trace-seed`, native 위임용 `delegation_records`의 MVP는 이미 들어갔다.
@@ -232,12 +231,10 @@
    - 상세 기준은 `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md`를 따른다.
 
 3. **Delivery Profile 구체화**
-   - Audit/SI, Product, PoC profile의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
+   - Audit과 Product의 Run preset, 검사 엄격도, Dashboard 표시를 더 분명하게 나눈다.
    - Product profile은 OWASP/CWE 기반 보안 기준선과 프로젝트 단어사전/데이터 매핑을 기본으로 삼고, KISA/공공데이터 공통표준은 Audit 전환 gap으로 정리한다.
    - Product profile은 현재 문서 세트, Gate별 필수 산출물, trace 검사, `release-pr --dry-run` evidence 기준이 1차 구현되어 있다.
    - Product fixture smoke 기준은 `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md`에 고정했다. 다음 작업은 실제 Product 샘플 재실행으로 fixture가 놓치는 운영 마찰을 확인하는 것이다.
-   - PoC compact Run 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
-   - PoC 산출물 세트 분리 기준은 `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md`를 따른다.
    - Product 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`를 따른다.
 
 4. **Dashboard 증적/추적 polish**
@@ -301,7 +298,7 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | --- | --- | --- |
 | Audit/SI | 감리, 인수인계, 장기 유지보수 대응 | 가장 강함 |
 | Product | 제품 로드맵, 릴리즈, 품질 기준 중심 | 중간 |
-| PoC | 기능/기술 가설 실험과 반복 기록 | 낮음 |
+
 자세한 기준 초안은 `docs/core/DELIVERY_PROFILES.md`를 따릅니다.
 현재 CLI는 `init --profile`과 `profile-status`를 제공하며, 검사 엄격도와 Dashboard 표시는 후속 단계에서 Profile Overlay와 연결합니다.
 
@@ -335,15 +332,13 @@ Vulcan-Anvil Ex는 모든 프로젝트에 같은 무게의 절차를 강제하�
 | `docs/RUN_FIRST_MULTI_AGENT_DISPATCHER.md` | dispatcher 장기 구상 | 일부는 이미 구현됨. 자동 큐/PR 교차검증 검토 시 참고 |
 | `docs/core/REFACTORING_PROCESS.md` | 리팩토링 분류 기준 초안 | DEBT/FIND/CR 판단과 문서 영향 분석 기준. 자동화는 향후 보강 |
 | `docs/core/DELIVERY_PROFILES.md` | Delivery Profile 기준 | `init --profile`, `profile-status`, profile_rules 기반 Overlay. 검사 엄격도/Dashboard 연동은 후속 보강 |
-| `docs/WHICH_PROFILE_SHOULD_I_USE.md` | 사용자용 Profile 선택 가이드 | PoC/Product/Audit을 처음 고르는 기준과 시작 메시지 예시 |
+| `docs/WHICH_PROFILE_SHOULD_I_USE.md` | 사용자용 Profile 선택 가이드 | Product와 Audit 중 하나를 고르는 기준과 시작 메시지 예시 |
 | `docs/EXAMPLES_AND_BENCHMARKS.md` | 샘플/benchmark 요약 | 샘플 실행 결과, profile별 산출물과 시간 차이를 사용자 관점으로 요약 |
 | `docs/core/PRODUCT_PROFILE_BASELINE.md` | Product Profile 기준 | 제품/업무 앱 기본 레이어의 보안, 데이터, Gate, Audit 전환 gap 기준 |
 | `docs/core/CODEX_MODEL_POLICY.md` | Codex model/effort 정책 | Codex runner의 역할별 모델 선택, 실행 기록, 성능 측정 기준 |
 | `docs/reference/REGRESSION-HARNESS-FIXTURE-STRATEGY.md` | 회귀 하네스 fixture 전략 | 기존 샘플 프로젝트 문서를 정규화해 테스트 입력으로 사용하는 방향 |
 | `docs/reference/TRACEABILITY-GRAPH-STRATEGY.md` | 추적성 그래프 전략 | 추적표를 그래프 원장으로 사용해 Run 입력과 Dashboard ID 탐색을 자동 추천하는 방향 |
 | `docs/reference/PERFORMANCE-AND-PARALLELIZATION-STRATEGY.md` | 성능/병렬화 전략 | 샘플 프로젝트 로그 기준 병목 분석과 perf-report, QA 정합성 자동화, 제한적 병렬화 방향 |
-| `docs/reference/FAST-POC-AND-ENV-RUNWAY-STRATEGY.md` | PoC와 개발환경 runway 전략 | PoC 실험 기록, Environment Readiness Track, BW-000 재정의 방향 |
-| `docs/reference/POC-PROFILE-TEMPLATE-SET-STRATEGY.md` | PoC 전용 템플릿 세트 전략 | PoC를 audit 템플릿 완충이 아니라 3개 통합 산출물 세트로 검증하는 방향 |
 | `docs/reference/PRODUCT-FIXTURE-SMOKE-STRATEGY.md` | Product fixture smoke 전략 | Product profile 회귀 fixture와 실제 샘플 재실행의 합격 기준 |
 | `docs/reference/EX-DIRECTION-INVESTMENT-REVIEW.md` | Ex 방향성/투자 판단 기준 | 빠른 AI coding tool이 아니라 AI coding governance framework로 투자할 조건과 축소 신호를 정리 |
 | `docs/reference/CODEX-REPO-LOCAL-SKILL-STRATEGY.md` | Codex repo-local skill 전략 | 전역 skill을 건드리지 않고 `.agents/skills`로 Vulcan 절차 카드를 제공하는 기준 |

@@ -6,7 +6,7 @@ it defines the approved goal, writable paths, contracts and completion checks.
 
 ## Read
 
-- Read AGENTS.md, this guide, and the assigned handoff. Use its confirmed Gate/profile;
+- Read AGENTS.md, this guide, and the assigned handoff. Use its confirmed process state/profile;
   inspect selected session fields only if that context is missing or inconsistent.
 - Read the assigned contract IDs/sections and their enclosing constraints from
   the referenced source documents. Follow API, data, UI, and security rules.
@@ -32,6 +32,10 @@ it defines the approved goal, writable paths, contracts and completion checks.
   and relevant environment details. Never invent missing metadata.
 - If dependencies or the environment block a required command, report
   environment_blocked/not_run with the failed command and evidence. Do not mark Pass.
+- Check the assigned AC conditions with relevant assertions or explicit observations,
+  including their preconditions and timing. Report untested conditions separately;
+  command success or one observed step does not prove the entire AC. Reuse existing
+  test code/definitions; do not create a TC document for every unit test.
 - When assigned `execute --verify`, link its command-result JSON and actual test logs.
   `--source` is optional descriptive context, not a source inventory or fingerprint.
   No Git evidence or pre-test commit is required; command success is not QA approval.
@@ -46,7 +50,7 @@ it defines the approved goal, writable paths, contracts and completion checks.
 - Return changed files, scoped verification results, contract/trace update
   candidates, and remaining issues. Update the Run only when its scope allows it.
 - Leave final ledger/traceability/report normalization, run-check/run-preflight,
-  session/Gate/Wave changes, delegation verification, and release decisions to
+  session/process/Wave changes, delegation verification, and release decisions to
   the Orchestrator. Do not launch helpers or new Waves under this assignment.
 - Request clarification for a blocking contract or permission issue. Continue
   authorized work without repeated permission requests for routine steps.

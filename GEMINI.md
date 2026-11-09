@@ -28,27 +28,26 @@
 4. Gate 완료 및 다음 Gate로의 전환 준비를 진단할 때는 **`python vulcan.py status --check`** (혹은 `prepare-transition`)를 실행한다.
 5. 로컬 실행 환경이 의심되면 **`python vulcan.py doctor`**를 실행한다. 예: 새 프로젝트/upgrade 직후 첫 worker 전, QA-000 전, npm/Playwright/runner/Dashboard 실패, `environment_blocked` 또는 `Not Run` 보고.
 6. 현재 작업에 맞는 repo-local skill 또는 Core 문서만 선별하여 추가로 읽는다.
-7. profile이 `poc`이면 공식 작업 문서는 기본적으로 `docs/poc/POC_REQUIREMENTS.md`, `docs/poc/POC_SYSTEM_DESIGN.md`, `docs/poc/POC_TEST_REPORT.md` 3종이다. Audit 산출물 파일이 없다는 이유로 임의 생성하거나 작성하지 않는다.
-8. profile이 `product`이면 문서 작성 위치는 `docs/core/PRODUCT_DOCUMENT_WRITING.md`를 따른다. 보안/데이터 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`를 유지한다. 기존 상세 원본을 갱신하고 원장은 상대 Markdown 링크로 연결하며, 상세 본문을 재복사하지 않는다.
+7. profile이 `product`이면 문서 작성 위치는 `docs/core/PRODUCT_DOCUMENT_WRITING.md`를 따른다. 보안/데이터 기준은 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`를 유지한다. 기존 상세 원본을 갱신하고 원장은 상대 Markdown 링크로 연결하며, 상세 본문을 재복사하지 않는다.
 
 현재 프로젝트의 사실 근거는 반드시 `session.json`, 현재 산출물, 현재 Run, `docs/core/`, 그리고 사용자의 최신 지시에서만 확인한다.
 
-`process_model`이 있는 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 새 `init --profile product`는 planning 세션을 이미 생성한다. 첫 범위 합의는 기존 `open-work` 요청으로 처리하며 `start`나 Phase 0/Gate 1로 재시작하지 않는다. 표식이 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
+지원 프로파일은 Audit과 Product다. 기존 프로젝트가 미지원 프로파일이면 쓰기 작업을 멈추고 보고한다. 기본값으로 해석하거나 `upgrade`·프로파일 변경으로 자동 전환하지 않는다.
+
+`process_model`이 있는 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 새 `init --profile product`는 planning 세션을 이미 생성한다. 첫 범위 합의는 기존 `open-work` 요청으로 처리하며 `start`나 Phase 0/Gate 1로 재시작하지 않는다. Audit과 표식 없는 기존 Product는 `upgrade`로 자동 이행하지 않으며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
 
 ---
 
 ## 3. 핵심 Guardrails
 
-- **지연 및 누수 방지**: 현재 Gate보다 앞서 구현/테스트/승인/릴리즈를 진행하지 않는다.
-- **상태의 임의 변경 금지**: `gate:` 텍스트 수정만으로는 Gate가 완료되지 않는다. 상태 갱신은 `vulcan.py` 내의 `gate-start`, `session` 또는 `release-pr` 등의 실제 CLI 명령을 실행해 반영한다.
-- **Profile Overlay 준수**: `profile`은 Core 규칙을 대체하지 않지만 산출물 범위, 검사 엄격도, 증적 수준을 조정한다. 특히 PoC에서는 `docs/poc/` 3종과 `status --check` 결과를 우선 기준으로 삼는다.
+- **지연 및 누수 방지**: 현재 프로세스와 승인 범위 밖의 구현/테스트/승인/릴리즈를 진행하지 않는다.
+- **상태의 임의 변경 금지**: `gate:` 텍스트 수정만으로는 상태가 바뀌지 않는다. Product 반복 모델은 CLI Guide 4.1의 `session --process-request`를 사용한다. 기존 Gate 명령과 실제 릴리즈는 각각 해당 모델·발행 권한을 따른다.
+- **Profile Overlay 준수**: `profile`은 Core 규칙을 대체하지 않지만 산출물 범위, 검사 엄격도, 증적 수준을 조정한다.
 - **Product 보안 기준선 노출**: Product는 OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE를 기본 보안 기준으로 삼는다. `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG`를 비워두지 않는다. KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
 - **Product 상세 산출물 원칙**: 6종 원장은 진입점이다. 필요한 요구/설계/시험/실행 상세의 위치와 선택 템플릿은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`에서 확인한다. 상세 파일을 일괄 생성하거나 기존 승인 문서를 자동 이동하지 않는다. 상세 파일이 없다는 이유만으로 차단하지 않되 필요한 내용과 실제 검증은 생략하지 않는다.
 - **환경 진단 분리**: `doctor`는 Gate 전환 판정 도구가 아니라 로컬 실행 환경 진단 도구다. `doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고, 환경 차단이면 `environment_blocked` 또는 `ISSUE` 후보로 분리한다.
-- **환경 Runway 선행 가능**: Phase 0~Gate 3 동안 Agy `Workspace: branch` 또는 subagent로 구현 환경을 병렬 준비할 수 있다. 이 작업은 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke까지만 허용하며, 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경, Gate/session 변경은 금지한다.
+- **환경 Runway 선행 가능**: Product의 planning 또는 기존 모델의 Phase 0~Gate 3에서 승인 범위에 따라 Agy `Workspace: branch` 또는 subagent로 구현 환경을 병렬 준비할 수 있다. 이 작업은 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke까지만 허용하며, 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경, 프로세스/session 변경은 금지한다.
 - **실행자 선택**: Product는 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절에 따라 실행자와 Run/Wave를 선택한다. 사용자 역할 배정을 유지하고 기존 개발 담당을 재사용할 수 있다. 그 외 profile은 기존 native worker 구현 원칙을 따른다.
-- **PoC Impl 책임 경계**: `profile: poc`의 구현 worker는 코드, dependency manifest, 빠른 self-check까지만 담당한다. `README.md`, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker가 담당한다.
-- **PoC 정합성 표현**: PoC에서는 "계약 100% 일치" 같은 audit식 단정보다 "PoC 목표 검증에 충분히 일치"와 "제품화/감리 승격 시 보강 gap"을 함께 기록한다.
 - **Run 선택과 사전 검사**: Run을 사용하는 native worker는 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 통과해야 한다. Run 없는 Product 작업도 목표/범위/계약/검증을 전달하며, YAML을 채우려고 Run을 새로 만들지 않는다. 외부 CLI의 자동 preflight는 유지한다.
 - **위임 사실의 기록**: 기존 결과 요약에 위임 대상, 범위, 변경 파일과 검증을 남긴다. Run이 있으면 `delegation_records`를 사용하며 선택적 timing 필드를 만들기 위해 별도 작업을 하지 않는다.
 - **검증의 엄격성**: 실제로 실행하여 통과하지 않은 테스트 결과를 Pass로 기록하지 않는다.
@@ -58,6 +57,8 @@
 ## 4. CLI 명령어 및 상위 Facade 로드맵 활용 규칙
 
 오케스트레이터는 탐색 비효율을 최소화하기 위해 다음 CLI 명령어 체계를 활용한다.
+
+Product 반복 모델의 상태 변경·검증·발행은 Core CLI 4.1을 따른다. 아래 Gate/Run 자동화와 Facade 제안을 planning/impl/acceptance의 필수 실행 순서로 사용하지 않는다.
 
 ### 4-1. 현재 구현된 실제 CLI 명령어
 * **`status`**: 현재 상태 조회 및 행동 추천
@@ -86,8 +87,7 @@
 
 * **서브에이전트 스폰**: 리포지토리 파일을 물리적으로 오염시키지 않고, Antigravity 런타임의 서브에이전트 제어 도구인 `define_subagent` 및 `invoke_subagent`를 사용하여 동적으로 하부 작업자를 기동한다.
 * **가상 격리 워크스페이스 (`Workspace: branch`)**: 워커 위임 호출 시 `Workspace` 파라미터는 반드시 `'branch'` 모드로 설정하여 CoW 기반의 초고속 격리 빌드/테스트 환경을 활용한다.
-* **환경 준비 위임**: `Workspace: branch`는 PoC/product/audit 모두에서 Environment Readiness Track에 사용할 수 있다. 부모 workspace에 반영되는 결과는 환경 기준선 후보이며, 오케스트레이터가 scope와 smoke 검증을 재실행한 뒤에만 확정한다.
-* **PoC 구현 위임 축소**: Agy `Workspace: branch`가 빠르더라도 PoC Impl worker에게 browser evidence, README, 최종 결과서, release/backlog 정리를 한꺼번에 맡기지 않는다. 구현이 끝나고 비차단 `run-preflight`/`run-check` 경고만 남으면 경고를 기록하고 Orchestrator에게 반환한다.
+* **환경 준비 위임**: `Workspace: branch`는 Product와 Audit 모두에서 Environment Readiness Track에 사용할 수 있다. 부모 workspace에 반영되는 결과는 환경 기준선 후보이며, 오케스트레이터가 scope와 smoke 검증을 재실행한 뒤에만 확정한다.
 * **이벤트 기반 비동기 협업**: 에이전트 간 통신은 Antigravity 런타임의 메시징 도구인 `send_message`로 처리하며, 플랫폼의 Reactive Wakeup 알림 수신 시 오케스트레이터가 동작하여 통합(`run-integrate`) 및 재검증을 진행한다.
 
 ---

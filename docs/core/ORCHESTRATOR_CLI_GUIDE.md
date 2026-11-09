@@ -75,14 +75,14 @@ Orchestrator가 우선 기억해야 할 명령 표면은 다음이다.
 `status --check`가 실패하면 바로 다음 Gate로 넘어가지 않는다. 실패 위치, 영향 ID, 해결 후보를 정리하고 필요할 때만 `prepare-transition` 또는 `check-trace`를 별도 실행한다.
 
 `status`는 선택된 profile의 gap 요약을 함께 보여준다.
-Product profile에서는 `docs/product/` 6종 문서 존재 여부와 현재 Gate의 핵심 `TBD` 항목 수를 먼저 확인한다.
+Product 반복 모델에서는 현재 작업 범위의 readiness와 미해결 계약을 확인한다(4.1절). 문서 개수나 `TBD` 개수만으로 구현·인수를 승인하지 않는다.
 상세 목록이 필요하면 `profile-gap --to product` 또는 `profile-gap --to audit`을 실행한다.
 
 대시보드에서 문서에 남긴 코멘트는 원본 Markdown이 아니라 `.vulcan/comments/comments.jsonl`에 저장된다. `status`는 이 파일을 읽어 `dashboard_comments` 섹션에 Open 코멘트를 요약한다. Orchestrator는 Gate 판단, Run 보완, QA/FIND/CR/ISSUE 후보 정리 전에 이 섹션을 먼저 확인한다. 코멘트 상태는 단순히 `open` 또는 `closed`만 사용하며, 에이전트가 코멘트를 반영하거나 답변했으면 `closed`로 닫는다.
 
 ## 4. Gate 라이프사이클
 
-이 절의 Gate 명령은 표식 없는 기존 Product와 Audit/PoC용이다. 새 `init --profile product` 프로젝트는 아래 4.1절을 먼저 따른다.
+이 절의 Gate 명령은 표식 없는 기존 Product와 Audit용이다. 새 `init --profile product` 프로젝트는 아래 4.1절을 먼저 따른다.
 
 | 목적 | 명령 |
 | --- | --- |
@@ -91,23 +91,23 @@ Product profile에서는 `docs/product/` 6종 문서 존재 여부와 현재 Gat
 | 상태 재계산/동기화 | `python vulcan.py sync-session` |
 
 `gate-start`는 해당 Gate의 기본 Orchestrator Plan Run 초안을 자동 생성할 수 있다. 이미 Draft 또는 InProgress Run이 있으면 중복 생성하지 않는다.
-PoC와 Product profile에서는 Gate별 Orchestrator Plan Run 자동 생성을 생략한다.
-이 두 profile은 각각 `docs/poc/`, `docs/product/` 원장과 `status --check`를 우선 사용하고, 위임/재현/검수 기록이 필요할 때만 Run을 만든다.
+표식 없는 기존 Product에서는 Gate별 Orchestrator Plan Run 자동 생성을 생략한다.
+이때 `docs/product/` 원장과 `status --check`를 우선 사용하고, 위임/재현/검수 기록이 필요할 때만 Run을 만든다.
 
 Gate 완료는 사용자 승인 또는 명시적인 진행 지시가 있을 때만 수행한다.
 
-Product profile은 Gate별 폴더를 늘리기보다 `docs/product/` 문서 세트의 `gate_scope`와 본문 섹션을 갱신한다.
+표식 없는 기존 Product도 작성된 원장·상세 원본을 유지한다. 옛 문서의 단계 표기를 상태 변경 명령으로 사용하거나 새 템플릿에 복원하지 않는다.
 Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하지 않는다.
 
 ### 4.1 개발용 Product 반복 프로세스
 
 새 `init --profile product`는 기존 `process_model: product-iterative-v1`을 활성화하고 `planning` 세션을 생성한다. `planning`(기획·설계), `impl`(구현), `acceptance`(인수 검증)의 세 작업 구간을 사용하며, `completed`는 이번 범위의 최종 인수 결과이지 네 번째 작업 구간이나 배포 완료가 아니다. 이 모델에서는 `status --check`와 `session --process-request`를 사용한다. 기존 Gate 명령을 새 구간 이름으로 호출하지 않는다. 상태 요청은 기본 미리보기이고 `--apply`일 때만 범위/권한/증적과 상태 revision을 검사해 저장한다. 상세 기계 계약과 제한은 프레임워크 저장소의 [Product Process Contracts](https://github.com/zeni-on/vulcan-anvil-ex/blob/main/docs/reference/PRODUCT-PROCESS-CONTRACTS.md#43-상태-저장-cli-단계-2b)를 따른다.
 
-표식 없는 기존 Product와 Audit/PoC는 기존 흐름을 유지하며 `upgrade`로 자동 이행하지 않는다. `process_model` 표식을 수동 추가하지 않고 미지원 모델을 기존 Gate로 해석하지 않는다. 새 명령이나 profile 플래그는 없다. Run은 필수가 아니며 자동 Git 증적·commit·릴리즈 기능을 추가하지 않는다. `init` 자체의 기존 Git 초기화 옵션과 이후 검증/발행 권한은 별개다.
+표식 없는 기존 Product와 Audit은 기존 흐름을 유지하며 `upgrade`로 자동 이행하지 않는다. `process_model` 표식을 수동 추가하지 않고 미지원 모델을 기존 Gate로 해석하지 않는다. 새 명령이나 profile 플래그는 없다. Run은 필수가 아니며 자동 Git 증적·commit·릴리즈 기능을 추가하지 않는다. `init` 자체의 기존 Git 초기화 옵션과 이후 검증/발행 권한은 별개다.
 
 #### 기존 Product의 명시적 이행
 
-표식 없는 정상 Product를 사용자가 승인한 경우에만 새 `planning`으로 이행한다. Audit/PoC는 대상이 아니며 `init`/`start` 재실행이나 표식 수동 추가로 대신하지 않는다. 과거 기록은 보존하되 과거 승인을 새 구현·인수·릴리즈 승인으로 이어받지 않는다.
+표식 없는 정상 Product를 사용자가 승인한 경우에만 새 `planning`으로 이행한다. Audit은 대상이 아니며 `init`/`start` 재실행이나 표식 수동 추가로 대신하지 않는다. 과거 기록은 보존하되 과거 승인을 새 구현·인수·릴리즈 승인으로 이어받지 않는다.
 
 1. 총괄은 이번 범위·승인 근거·미완료 의무를 기존 원본에서 확인한다. 별도 문서를 의무 생성하거나 과거 Run/의무를 삭제하지 않는다. 적용 전 승인한 보호 대상의 로컬 백업과 격리 사본 검증을 확인하고 다른 writer를 멈춘다.
 2. `process_model: product-iterative-v1`, `action: migrate`, `target: planning`, `scope`, `reason`, `obligations`, `obligation_review`, `expected_session_revision: null` 요청을 준비한다. 참조는 로컬 Markdown의 전체 파일 해시다. `python vulcan.py session --process-request <request.json 또는 -> --json`으로 파일 변경 없이 미리본다.
@@ -119,7 +119,7 @@ Audit profile처럼 모든 `docs/artifacts/` 산출물을 처음부터 생성하
 
 #### 처음 사용하는 Product
 
-이미 표식이 있는 Product도 기존 `python vulcan.py upgrade`로 프레임워크 파일을 갱신할 수 있다. 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신하며, 프로세스 상태·현재 범위·결정·작업 이력은 보존한다. 이는 새 세션 생성이나 승인/범위 변경이 아니며 표식 없는 프로젝트의 자동 활성화도 아니다. 저장된 세션 bytes가 바뀌면 이전 요청의 expected revision을 재사용하지 않고 `status --json`으로 현재 상태를 다시 확인한다.
+이미 표식이 있는 Product도 대상 프로젝트 디렉터리에서 최신 원본 clone의 CLI로 `upgrade`를 실행해 프레임워크 파일을 갱신할 수 있다. 세션은 Product writer lock 안에서 최신 상태를 다시 읽고 `vulcan_src`와 `vulcan_version`만 갱신하며, 프로세스 상태·현재 범위·결정·작업 이력은 보존한다. 이는 새 세션 생성이나 승인/범위 변경이 아니며 표식 없는 프로젝트의 자동 활성화도 아니다. 저장된 세션 bytes가 바뀌면 이전 요청의 expected revision을 재사용하지 않고 `status --json`으로 현재 상태를 다시 확인한다.
 
 1. 생성된 프로젝트에서 `python vulcan.py status --json`과 `python vulcan.py status --check`를 확인한다. 초기 `scope.work`는 초기화된 `docs/product/PRODUCT_BRIEF.md`를 불변 내용 해시로 참조한다. `related_ids`, `contracts`, `tests`, `required_checks`와 `decisions`는 모두 빈 배열이다. 이 초기 범위는 구현 합의가 아니므로 `status --check`가 구현 진입을 차단하는 것이 정상이다. 문서를 수정해도 저장된 해시가 자동 갱신되거나 승인이 생기지 않는다.
 2. 사용자는 목표, 포함/제외 범위와 제약을 설명하고 총괄과 합의한다. 총괄은 실제 업무·요구/AC·설계·시험 계획의 원본을 작성하고, 실제 합의한 작업과 관련 참조/필수 검증만 scope에 연결한다. 초기 빈칸을 채우려고 REQ나 Pass를 만들어내지 않는다.
@@ -198,7 +198,7 @@ python vulcan.py execute --verify --evidence docs/product/evidence/REG-001-comma
 | Build Wave 완료 | `python vulcan.py wave-complete <BW-ID> --status Verified` |
 | worker 결과 통합 검토 | `python vulcan.py run-integrate <run-file>` |
 
-구현은 기본적으로 통합 브랜치에서 수행한다. Product의 실행자 선택은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 일반 수정마다 새 worker/Run을 만들지 않는다. `status`는 Product에서 승인된 변경의 구현/검증을 안내하며 `wave-start`를 필수 다음 행동으로 추천하지 않는다. Wave를 선택하면 기존 시작/완료 명령을 사용하며 미완료 Wave를 자동 완료하지 않는다. Audit/PoC의 위임 방식은 유지한다.
+구현은 기본적으로 통합 브랜치에서 수행한다. Product의 실행자 선택은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 일반 수정마다 새 worker/Run을 만들지 않는다. `status`는 Product에서 승인된 변경의 구현/검증을 안내하며 `wave-start`를 필수 다음 행동으로 추천하지 않는다. Wave를 선택하면 기존 시작/완료 명령을 사용하며 미완료 Wave를 자동 완료하지 않는다. Audit의 위임 방식은 유지한다.
 
 Product profile에서 `wave-start --trace-seed SCN-001`을 사용하면 Product 원장에서 관련 `REQ/API/DATA/UI/REG`를 추천한다. 원장 전체 정독 대신 worker guide와 대상 계약 ID/섹션을 입력으로 사용한다. 생성된 Run의 수정 경로와 검증 명령 TBD는 실제 프로젝트 기준으로 확정한 뒤 preflight를 통과시킨다. 원장만으로 계약이 부족하면 `docs/templates/product/PRODUCT_*_TEMPLATE.md`의 경량 상세 문서를 `docs/artifacts/02-design/...`에 둔다. 추적표/최종 결과 정리는 Orchestrator가 맡으며, 증적 재사용과 재실행 조건은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 
@@ -232,7 +232,9 @@ python vulcan.py trace-context --id API-001 --sections --document docs/product/P
 
 ## 7. QA와 릴리즈
 
-Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다.
+반복 모델 Product의 검증 전달·반환은 4.1절을 따른다. 아래 Gate 4/QA-000~003 및 필수 qa-fix-loop Run 흐름은 기존 Gate 모델에 해당하며 반복 모델 Product에 새 단계로 적용하지 않는다.
+
+기존 Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다.
 
 | 단계 | 목적 |
 | --- | --- |
@@ -249,6 +251,21 @@ Gate 4 QA는 한 번에 모두 수행하지 않고 다음 흐름으로 나눈다
 `docs/product/PRODUCT_TRACEABILITY.md`,
 `docs/product/REGRESSION_AND_RELEASE_REPORT.md`,
 `docs/backlog/DOC-PM-OPS-001_Backlog_v0.1.md`를 중심으로 evidence를 표시한다.
+
+### 7.1 기존 QA 결과의 읽기 전용 조회
+
+기존 TC 결과 JSON을 검색 가능한 정적 HTML 또는 조회 JSON으로 내보낼 수 있다. 새 필수 시험 양식이 아니라 선택적인 adapter다.
+
+```text
+python vulcan.py export --kind qa --input tests/results.json --format html --output reports/qa-review.html
+python vulcan.py export --kind qa --input tests/results.json --evidence-root . --output reports/qa-review.json
+```
+
+- 입력은 TC 객체 배열 또는 `{"schema_version":1,"cases":[...]}`다. `id`는 중복 없는 문자열이어야 한다. `status`, `title`, `requirement`, `ac`, `preconditions`, `input`, `steps`, `expected`, `actual`, `evidence` 등을 읽으며 기존 한국어 키 `상태`, `시나리오`, `REQ`, `AC`, `사전상태`, `입력값`, `절차`, `단계별기대결과`, `실행메모`, `실행증적`도 지원한다. 없는 항목을 만들거나 추측하지 않는다.
+- 선택 `observations`에는 TC 내부의 `id`, `step`, `expected`, `actual`, `status`, `evidence`, `required`(기본 true)를 둘 수 있다. 필수 관측 요약과 원본 판정은 별도 표시한다. 일부 미실행/차단이면 전체 Pass와 불일치를 진단하지만 원본 판정을 수정하지 않는다. 단계별 구조가 없는 서술형 TC의 완전성은 사람이 확인한다.
+- 증적 경로는 입력 JSON의 폴더 기준이다. 기본 허용 범위도 같은 폴더이며 상위/형제 증적은 필요한 최소 범위를 `--evidence-root`로 명시한다. 파일 존재만 검사하고 본문·앵커·시험 대상 일치는 판정하지 않는다. 절대 경로·URL·범위 밖 경로·symlink/junction은 따라가지 않는다. HTML은 증적 본문을 복사하거나 자동 링크로 열지 않는다.
+- 출력 폴더는 미리 존재해야 하며 출력은 새 `.json`/`.html` 파일만 허용한다. 기존 원본·결과를 덮어쓰지 않는다. HTML은 오프라인 검색/필터를 제공하지만 편집·실행·승인 기능은 없다. 개인정보는 자동 제거되지 않으므로 공유 전 내용을 확인한다.
+- 성공 종료는 내보내기 성공이지 QA Pass가 아니다. `session.json`, 원장, 인수 상태, 기존 결과는 갱신하지 않는다. 수동 관측을 `execute --verify` 명령 증적으로 위장하거나 이 출력으로 process-request의 인수 계약을 대체하지 않는다. `export`의 기본 snapshot 동작은 유지한다.
 
 ## 8. 직접 실행보다 상태 표면을 우선하는 이유
 

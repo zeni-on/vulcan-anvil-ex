@@ -26,7 +26,7 @@ class ProductPolicyTests(unittest.TestCase):
     def test_direct_edit_restrictions_have_a_non_product_section(self):
         text = self.read("docs/core/ORCHESTRATOR_PROTOCOL.md")
         section = text.split("### Product 이외의 직접 구현 제한", 1)[1].split("### QA 실행 경로", 1)[0]
-        self.assertIn("Audit/PoC에 적용", section)
+        self.assertIn("Audit에 적용", section)
         self.assertIn("30 LOC", section)
         self.assertIn("네 개의 Run 생성을 요구하지 않는다", text)
 
@@ -34,7 +34,7 @@ class ProductPolicyTests(unittest.TestCase):
         text = self.read("docs/core/CHANGE_CONTROL_PROCESS.md")
         self.assertNotIn("Gate를 다시 진행할 때는 Run 문서가 필수다. Run은", text)
         self.assertIn("기존 CR/이슈/작업 요약을 사용하며 Run은 선택", text)
-        self.assertIn("아래 실행 기준은 Audit/PoC에 적용", text)
+        self.assertIn("아래 실행 기준은 Audit에 적용", text)
         self.assertNotIn("| CR 승인, 즉시 반영 | 바로 Run 생성 |", text)
 
     def test_product_authority_and_scoped_verification_remain_canonical(self):
@@ -43,6 +43,19 @@ class ProductPolicyTests(unittest.TestCase):
                      "검증만 맡은 담당자는 수정 후보를 총괄에게 반환", "필수 검증 미실행은 Pass가 아니다",
                      "제품 테스트를 기계적으로 재실행하지 않음"):
             self.assertIn(rule, text)
+
+    def test_current_product_guidance_has_no_numbered_gate_lifecycle(self):
+        for path in ("docs/core/PRODUCT_PROFILE_BASELINE.md", "docs/core/PRODUCT_DOCUMENT_WRITING.md",
+                     "docs/core/PRODUCT_WORKER_GUIDE.md"):
+            with self.subTest(path=path):
+                self.assertNotRegex(self.read(path), r"(?i)\bgate_scope\b|\bgate\s*[1-5]\b|\bphase\s*0\b")
+        baseline = self.read("docs/core/PRODUCT_PROFILE_BASELINE.md")
+        stages = baseline.split("## 5.", 1)[1].split("## 6.", 1)[0]
+        for stage in ("planning", "impl", "acceptance"):
+            self.assertIn(f"| `{stage}`", stages)
+        self.assertIn("completed", stages)
+        self.assertIn("배포 완료가 아니다", stages)
+        self.assertNotIn("major-gates", self.read("docs/core/DELIVERY_PROFILES.md"))
 
     def test_skills_route_instead_of_requiring_product_helpers_and_fix_runs(self):
         qa = self.read(".agents/skills/vulcan-qa/SKILL.md")
@@ -78,7 +91,7 @@ class ProductPolicyTests(unittest.TestCase):
         text = self.read("docs/core/GATE_EXECUTION_CHECKLIST.md")
         implementation = next(line for line in text.splitlines() if line.startswith("| Impl |"))
         self.assertIn("Product는 승인된 현재 작업 범위", implementation)
-        self.assertIn("Audit/PoC", implementation)
+        self.assertIn("Audit은 승인된 Build Wave와 worker Run 결과", implementation)
         bootstrap = self.read(".agents/skills/vulcan-orchestrator/SKILL.md")
         self.assertIn("For Product execution, start with", bootstrap)
         self.assertNotIn("If the task is non-trivial, read `docs/core/ORCHESTRATOR_PROTOCOL.md`.", bootstrap)
@@ -124,7 +137,7 @@ class ProductPolicyTests(unittest.TestCase):
                 text = self.read(f"docs/adapters/codex-gpt/skills/{name}.md")
                 route = text.index("PRODUCT_PROFILE_BASELINE.md")
                 self.assertLess(route, text.index("## 필수 입력"))
-                self.assertIn("Audit/PoC", text)
+                self.assertIn("Audit", text[route:text.index("## 필수 입력")])
         fix = self.read("docs/adapters/codex-gpt/skills/qa-fix-loop.md")
         self.assertNotIn("Orchestrator는 `qa-fix-loop` Run을 먼저 만들고", fix)
         change = self.read("docs/adapters/codex-gpt/skills/change-impact-analysis.md")
@@ -138,7 +151,7 @@ class ProductPolicyTests(unittest.TestCase):
         verification = wave.split("## 검증 경계", 1)[1].split("## Orchestrator", 1)[0]
         self.assertNotIn("worker 테스트를 재실행하고", verification)
         self.assertIn("Product", verification)
-        self.assertIn("Audit/PoC", verification)
+        self.assertRegex(verification, r"\| Audit Wave 종료 검증 \|[^\n]+worker 테스트 재실행")
 
     def test_qa_skill_records_command_results_without_source_identity(self):
         qa = self.read(".agents/skills/vulcan-qa/SKILL.md")

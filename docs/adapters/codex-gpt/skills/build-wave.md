@@ -8,7 +8,7 @@ Product는 `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 Run/Wave를 선택한 �
 
 Build Wave는 전체 구현이 아니라 하나의 검증 가능한 구현 배치다. Wave가 끝나면 코드, 테스트케이스, 실제 검증 명령과 결과, 문서/추적표 갱신 필요 항목, 커밋 후보가 함께 남아야 한다. worker는 요구사항추적표의 `Implemented` 또는 `Verified` 상태를 직접 확정하지 않고, 갱신해야 할 ID와 증적 후보를 보고한다.
 
-Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다. Audit/PoC의 시간별 분할 권장과 직접 수정 예외는 아래 별도 기준을 따른다.
+Wave/worker Run은 시간 단위가 아니라 기능/계약 단위로 나눈다. Audit의 시간별 분할 권장과 직접 수정 예외는 아래 별도 기준을 따른다.
 
 ## 필수 입력
 
@@ -52,7 +52,7 @@ Build Wave는 전체 Gate 4 QA가 아니다.
 | --- | --- | --- |
 | worker self-check | worker | 자기 수정 범위의 단위 테스트, API/컴포넌트 테스트, lint/build를 가능한 만큼 실행한다. Node/Playwright는 보조 검증이다. |
 | Product Wave 종료 검증 | Orchestrator | `PRODUCT_PROFILE_BASELINE.md` 7절에 따라 diff/scope와 실제 결과를 확인하고 변경·실패·불확실성이 있을 때 관련 검증을 다시 실행한다. |
-| Audit/PoC Wave 종료 검증 | Orchestrator | worker 테스트 재실행과 현재까지 가능한 build/run-check/회귀 검증으로 통합 깨짐을 확인한다. |
+| Audit Wave 종료 검증 | Orchestrator | worker 테스트 재실행과 현재까지 가능한 build/run-check/회귀 검증으로 통합 깨짐을 확인한다. |
 | Gate 4 QA | QA/review/evidence | 전체 사용자 시나리오, Playwright 화면 증적, Test Result, QA Finding을 확정한다. |
 
 Wave가 전체 사용자 시나리오를 완성하지 않았다면 전체 E2E나 최종 화면 증적을 Wave 완료 조건으로 요구하지 않는다.
@@ -65,10 +65,10 @@ Wave가 vertical slice를 완성한 경우에는 제한된 smoke/E2E를 실행�
 
 - Orchestrator는 선택한 Run 작성, 실행자 배정, 결과 검토, 통합, profile에 따른 검증과 상태 갱신을 담당한다.
 - Orchestrator는 Build Wave Run을 worker에게 넘기기 전에 `--trace-seed` 추천값을 확인하고, `scope.writable`, `target_contracts.interface_contract`, `contract_skeleton`, 검증 명령을 실제 구현 범위에 맞게 확정한다.
-- Product 실행자는 `PRODUCT_PROFILE_BASELINE.md` 7절과 사용자 역할 배정으로 정한다. Audit/PoC의 기능 구현 주 작성자는 `build` persona의 native worker다. `agent-run --mode work`와 `run-exec`는 외부 CLI가 필요할 때 선택한다.
+- Product 실행자는 `PRODUCT_PROFILE_BASELINE.md` 7절과 사용자 역할 배정으로 정한다. Audit의 기능 구현 주 작성자는 `build` persona의 native worker다. `agent-run --mode work`와 `run-exec`는 외부 CLI가 필요할 때 선택한다.
 - subagent/thread 위임은 외부 프로세스 실행 기록이 없을 수 있으므로 `delegation_records`로 책임 추적을 남긴다. `delegation_records`가 있으면 Orchestrator는 해당 변경을 재검증한 뒤 Wave 상태를 갱신한다.
 
-### Audit/PoC의 분할·직접 수정 기준
+### Audit의 분할·직접 수정 기준
 
 - 목표 시간은 10분 내외, 최대 15분 권장이지만 보조 기준이다. 15분을 넘길 것으로 예상되면 개발을 중간에 끊지 말고 더 작은 기능/계약 묶음으로 다시 나눈다.
 - 작은 기능, 단일 파일, 단일 테스트 변경이라도 Orchestrator가 바로 구현 완료 처리하지 않는다. 단일 worker Run으로 위임하거나 직접 수정 예외를 기록한다.

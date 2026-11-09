@@ -41,7 +41,6 @@ Profile별 기본 기준:
 
 | Profile | 보안 기준 | 데이터 기준 |
 | --- | --- | --- |
-| `poc` | 주요 위험 식별과 제품화 전환 gap | 핵심 데이터 항목과 민감정보 식별 |
 | `product` | `OWASP-ASVS`, `OWASP-T10-2021`, `OWASP-API-T10-2023`, `CWE` | 프로젝트 단어사전, 화면/API/DB 매핑, 도메인/보안분류, 필요 시 `ISO-IEC-11179`/`DAMA-DICTIONARY` 참고 |
 | `audit` | Product 기준 + `KISA-SD-2021`, `KISA-SWVD-2021`, 고객/공공 기준 공식 매핑 | Product 기준 + `PUBLIC-DATA-STD-2025-11` 준용/변형/신규 사유 |
 

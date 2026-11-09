@@ -59,6 +59,8 @@ class ProductDocuments:
         self.cache = {}
         self.groups = {}
         self.linked = set()
+        self.references = set()
+        self.navigation = set()
         self.reference_count = 0
         for name in names if names is not None else [n for n in ROOTS if (self.root / "docs/product" / n).exists()]:
             name = Path(name).name
@@ -97,9 +99,11 @@ class ProductDocuments:
             if sections is None:
                 continue
             if anchor:
-                start = _anchor_indices(sections).get(anchor)
+                anchors = _anchor_indices(sections)
+                start = anchors.get(anchor)
                 if start is None:
-                    self.issues.append(f"Product source anchor missing: {path}#{anchor}")
+                    reason = "ambiguous" if anchor in anchors else "missing"
+                    self.issues.append(f"Product source anchor {reason}: {path}#{anchor}")
                     continue
                 indices = {j for j, s in enumerate(sections) if j == start or start in s["parents"]}
                 indices.update(sections[start]["parents"])
@@ -121,26 +125,31 @@ class ProductDocuments:
                 if len(links) > MAX_LINKS:
                     self.issues.append(f"Product section reference limit: {path}:{section['start_line']}; input incomplete.")
                 for link in links[:MAX_LINKS]:
-                    self.reference_count += 1
-                    if self.reference_count > MAX_REFERENCES:
-                        if self.reference_count == MAX_REFERENCES+1:
-                            self.issues.append("Product reference limit: input incomplete.")
-                        break
                     target = link["path"]
                     # Other ledgers and folders are navigation/evidence links,
                     # not definitions owned by this logical document.
                     other_ledger = target.startswith("docs/product/") and Path(target).name in ROOTS and target != root
                     owned = (target.startswith("docs/product/") or any(target.startswith(p) for p in ROOTS[name]))
                     if other_ledger or target and not owned:
+                        self.navigation.add((path, target, link["anchor"]))
                         if link["status"] != "available":
                             self.warnings.append(f"Product reference unavailable: {path}:{section['start_line']} -> {link['target']}")
-                        elif not other_ledger:
-                            self.warnings.append(f"Product reference outside document ownership (not included): {path}:{section['start_line']} -> {link['target']}")
                         continue
                     self.linked.add(name)
                     if link["status"] != "available" or EXCLUDED_DIRS.intersection(p.lower() for p in Path(target).parts):
                         self.issues.append(f"Product source reference {link['status']}: {path}:{section['start_line']} -> {link['target']}")
                         continue
+                    # Count unique owned targets, not every repeated navigation
+                    # from the architecture, contracts and their shared details.
+                    reference = (target, link["anchor"])
+                    if reference not in self.references:
+                        if len(self.references) >= MAX_REFERENCES:
+                            issue = "Product reference limit: input incomplete."
+                            if issue not in self.issues:
+                                self.issues.append(issue)
+                            continue
+                        self.references.add(reference)
+                        self.reference_count = len(self.references)
                     if depth >= MAX_DEPTH and (target, link["anchor"]) not in visited:
                         self.issues.append(f"Product source depth limit: {path}:{section['start_line']} -> {link['target']}")
                         continue
@@ -186,4 +195,5 @@ class ProductDocuments:
 
     def diagnostics(self):
         return {"incomplete": bool(self.issues or self.warnings), "issues": list(dict.fromkeys(self.issues)),
-                "warnings": list(dict.fromkeys(self.warnings)), "sources": sorted(self.cache)}
+                "warnings": list(dict.fromkeys(self.warnings)), "sources": sorted(self.cache),
+                "navigation_count": len(self.navigation)}

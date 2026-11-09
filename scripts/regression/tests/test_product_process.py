@@ -206,7 +206,7 @@ class ProductProcessTests(unittest.TestCase):
             process.open_work(done, scope(), reason=ref("new-title-is-not-a-new-scope"))
 
     def test_legacy_and_unknown_models_are_never_reinterpreted(self):
-        for profile in ("product", "audit", "poc"):
+        for profile in ("product", "audit"):
             legacy = {"profile": profile, "current_gate": "gate2"}
             before = deepcopy(legacy)
             self.assertEqual(process.describe(legacy), {"process_model": "legacy", "use_legacy": True})
@@ -218,9 +218,8 @@ class ProductProcessTests(unittest.TestCase):
             self.assertEqual(process.describe(unknown)["status"], "unsupported_or_invalid")
             with self.assertRaises(process.ProcessContractError):
                 process.require_legacy(unknown)
-        for profile in ("audit", "poc"):
-            wrong = dict(process.new_session(scope()), profile=profile)
-            self.assertEqual(process.describe(wrong)["status"], "unsupported_or_invalid")
+        wrong = dict(process.new_session(scope()), profile="audit")
+        self.assertEqual(process.describe(wrong)["status"], "unsupported_or_invalid")
 
     def test_invalid_state_and_forged_completion_are_diagnosed(self):
         for field, value in (("current_gate", "gate2"), ("gate_status", {}),

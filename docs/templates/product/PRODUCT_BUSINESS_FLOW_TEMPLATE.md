@@ -3,7 +3,6 @@
 ---
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: phase0-gate1
 status: Draft
 owner_role: Product / Business Owner
 created_at: {{GENERATED_DATE}}

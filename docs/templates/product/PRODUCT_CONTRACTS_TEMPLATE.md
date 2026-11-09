@@ -6,7 +6,6 @@ title: Product Contracts
 title_ko: 제품 구현 계약 인덱스
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-impl
 status: Draft
 version: v0.1
 owner_role: Technical Architect
@@ -73,7 +72,7 @@ Figma, 이미지 시안, HTML/CSS/JS prototype, screenshot baseline 중 실제�
 | Product UI Contract | `docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md` | 화면 흐름, 상태, UI 기준선, 증적 계획 |
 | UI Design | `docs/artifacts/02-design/screen/images/` | 화면 흐름, 와이어프레임, 시안, 디자인 결정 |
 | UI Publishing | `docs/artifacts/02-design/screen/prototypes/` | HTML/CSS/JS prototype, static baseline, 구현 기준 파일 |
-| UI Evidence 후보 | `docs/artifacts/04-review/evidence/ui/` | Gate 4 또는 release regression screenshot |
+| UI Evidence 후보 | `docs/artifacts/04-review/evidence/ui/` | 인수 검증 또는 릴리즈 회귀 screenshot |
 
 | UI Baseline ID | 기준 산출물 | 유지해야 할 요소 | 변경 허용 범위 | 관련 UI/Scenario |
 | --- | --- | --- | --- | --- |

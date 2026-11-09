@@ -1,5 +1,7 @@
 # PoC and Environment Readiness Runway Strategy
 
+> **역사 자료:** PoC 은퇴 전의 설계 제안이다. v0.6.0의 실행·템플릿·전환 지침으로 사용하지 않는다. 현재 지원 기준은 [Delivery Profiles](../core/DELIVERY_PROFILES.md)를 따른다.
+
 > 목적: PoC profile을 실제 실험 기록에 맞게 줄이고, 구현 단계에서 처음 개발환경을 만드는 병목을 줄이기 위해 Environment Readiness Track을 정의한다.
 
 ## 1. 배경

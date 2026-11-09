@@ -54,6 +54,7 @@ class ProductActivationTests(unittest.TestCase):
                     self.assertEqual(work["scope"][field], [])
                 config = json.loads((root / "vulcan.config.json").read_bytes())
                 self.assertEqual(config["runtime"]["primary"], primary)
+                self.assertEqual(config["profile_rules"]["gate_approval"], "scope-acceptance-and-release")
                 self.assertNotIn("Phase 0부터 시작", output)
                 self.assertIn("incomplete_scope", output)
                 before = (root / "session.json").read_bytes()
@@ -74,6 +75,24 @@ class ProductActivationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(json.loads(result.stdout)["dashboard_comments"]["open"], 1)
 
+    def test_qa_export_is_readonly_in_native_planning(self):
+        root = self.root()
+        self.init(root)
+        source = root / "cases.json"
+        source.write_text(json.dumps([{"id": "TC-1", "status": "Blocked"}]), encoding="utf-8")
+        before = (root / "session.json").read_bytes()
+        result = self.cli(root, ["export", "--kind", "qa", "--input", "cases.json",
+                                 "--format", "html", "--output", "qa.html"])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Blocked", (root / "qa.html").read_text(encoding="utf-8"))
+        self.assertEqual((root / "session.json").read_bytes(), before)
+        again = self.cli(root, ["export", "--kind", "qa", "--input", "cases.json",
+                                "--format", "html", "--output", "qa.html"])
+        self.assertEqual(again.returncode, 1)
+        legacy = self.cli(root, ["export", "--output", "snapshot.json"])
+        self.assertNotEqual(legacy.returncode, 0)
+        self.assertFalse((root / "snapshot.json").exists())
+
     def test_version_and_lock_contended_upgrade_are_safe_cli_paths(self):
         root = self.root()
         self.init(root)
@@ -93,16 +112,15 @@ class ProductActivationTests(unittest.TestCase):
             self.assertNotIn("Traceback", result.stderr)
             self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()})
 
-    def test_audit_and_poc_init_keep_legacy_state(self):
-        for profile in ("audit", "poc"):
-            with self.subTest(profile=profile):
-                root = self.root()
-                output = self.init(root, profile=profile)
-                session = self.read(root)
-                self.assertNotIn("process_model", session)
-                self.assertEqual(session["current_gate"], "phase0")
-                self.assertEqual(len(session["gate_status"]), 7)
-                self.assertIn("Phase 0부터 시작", output)
+    def test_audit_init_keeps_legacy_state(self):
+        root = self.root()
+        output = self.init(root, profile="audit")
+        session = self.read(root)
+        self.assertNotIn("process_model", session)
+        self.assertEqual(session["profile"], "audit")
+        self.assertEqual(session["current_gate"], "phase0")
+        self.assertEqual(len(session["gate_status"]), 7)
+        self.assertIn("Phase 0부터 시작", output)
 
     def test_reinitialization_cannot_replace_existing_project(self):
         root = self.root()
@@ -162,7 +180,7 @@ class ProductActivationTests(unittest.TestCase):
         self.assertFalse(json.loads(approved.stdout)["release_authorized"])
 
     def test_upgrade_preserves_authored_docs_and_each_process(self):
-        for kind in ("new_product", "legacy_product", "audit", "poc"):
+        for kind in ("new_product", "legacy_product", "audit"):
             with self.subTest(kind=kind):
                 root = self.root()
                 self.init(root, profile="product" if "product" in kind else kind)
@@ -175,7 +193,7 @@ class ProductActivationTests(unittest.TestCase):
                 session["vulcan_version"] = "old-fixture"
                 path.write_text(json.dumps(session), encoding="utf-8")
                 authored = root / ("docs/product/PRODUCT_BRIEF.md" if "product" in kind else "docs/user-owned.md")
-                authored.write_text("# Authored scope\nDo not rewrite my requirements.\n", encoding="utf-8")
+                authored.write_text("# Authored scope\nREQ-001: Preserve the proof of concept (PoC) report.\n", encoding="utf-8")
                 before_doc = authored.read_bytes()
                 result = self.cli(root, ["upgrade"])
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

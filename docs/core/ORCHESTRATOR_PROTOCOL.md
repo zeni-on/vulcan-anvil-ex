@@ -90,7 +90,7 @@ Product에서는 이 문서의 테스트 재실행 지시를 [PRODUCT_PROFILE_BA
 
 ### Product 이외의 직접 구현 제한
 
-이 절의 직접 수정 제한과 예외 기록은 Audit/PoC에 적용한다. Product 실행자 선택은 위의 Product 기준을 따른다.
+이 절의 직접 수정 제한과 예외 기록은 Audit에 적용한다. Product 실행자 선택은 위의 Product 기준을 따른다.
 
 Orchestrator가 직접 수정할 수 있는 구현 관련 범위는 다음으로 제한한다.
 
@@ -137,10 +137,9 @@ Gate 5 승인 전까지 `main`에 구현 결과를 직접 누적하지 않는다
 
 구현 단계는 한 번에 하나의 `Build Wave`만 active 상태로 둔다.
 
-- Audit/PoC의 Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다. Product는 선택한 Wave 범위를 기존 작업 요약에 연결할 수 있다.
+- Audit의 Orchestrator는 `Implementation Plan Run`에서 전체 Wave 목록을 정의한다. 작은 단일 구현은 Wave 분할을 생략할 수 있지만, 직접 구현을 의미하지 않는다. Product는 선택한 Wave 범위를 기존 작업 요약에 연결할 수 있다.
 - 3개 이상 파일, 대략 100 LOC 이상, 15분 이상 예상, 새 API/메소드/DTO/DB/SCR/PGM 계약 추가, backend/frontend 동시 변경, 테스트 본문 대량 추가가 예상되면 반드시 Build Wave Run으로 분리한다.
 - Implementation Plan은 feature 구현 Wave를 만들기 전에 `Implementation Scaffold` 필요 여부를 먼저 판단한다. 신규 개발, 빈 코드베이스, 빌드 설정 부재, Program Design의 public signature 부재가 있으면 `BW-000 implementation-scaffold`를 첫 Wave로 둔다.
-- 단, PoC profile에서는 `BW-000 implementation-scaffold`를 기본 생성하지 않는다. 첫 구현 worker가 환경 생성, hello/build smoke, 핵심 기능 구현을 함께 수행할 수 있다.
 - 모든 profile에서 개발환경 준비는 업무 기능 구현과 분리된 Environment Readiness Track으로 앞당길 수 있다. 이 Track은 Phase 0~Gate 3 동안 병렬로 폴더 구조, dependency, lint/build/test script, hello world/health check, build smoke를 준비하며, 업무 요구사항 구현/Pass 확정/추적표 Implemented 반영은 하지 않는다.
 - 이미 빌드 가능한 골격과 public signature가 있으면 `contract_skeleton.mode: not-required`와 확인 근거를 Run에 남긴다.
 - 실제 구현은 Wave마다 별도의 `Build Wave Run` 또는 단일 worker Run을 만든 뒤 native worker(subagent/thread/native branch agent) 위임으로 진행한다. `agent-run --mode work`와 `run-exec`는 별도 CLI 프로세스, worktree 격리, watchdog/timeout 증적, cross-runner 실행이 필요할 때 선택하는 옵션이다.
@@ -172,7 +171,7 @@ Implementation Plan Run
 
 ## 6. Orchestrator Plan 계약
 
-`vulcan.py gate-start`는 Audit에서 Gate 상태를 갱신한 뒤 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 같은 Gate에 열린 Run이 있으면 중복 생성하지 않는다. `poc`, `product`는 Gate별 Orchestrator Plan Run을 자동 생성하지 않는다. 각 profile의 원장과 `status --check`를 우선 사용하고 위임/재현/검수 기록이 필요할 때 Run을 만든다.
+`vulcan.py gate-start`는 Audit에서 Gate 상태를 갱신한 뒤 기본 Orchestrator Plan Run 초안을 자동 생성한다. 이미 같은 Gate에 열린 Run이 있으면 중복 생성하지 않는다. `product`는 Gate별 Orchestrator Plan Run을 자동 생성하지 않는다. Product 원장과 `status --check`를 우선 사용하고 위임/재현/검수 기록이 필요할 때 Run을 만든다.
 
 `vulcan.py orchestrator-plan`은 Orchestrator가 다음 작업을 잊지 않도록 `docs/runs/`에 실행 계획 Run을 만든다.
 

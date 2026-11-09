@@ -6,7 +6,6 @@ title: Product Data Model
 title_ko: 제품 데이터 모델
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-impl
 status: Draft
 version: v0.1
 owner_role: Data / Backend Owner

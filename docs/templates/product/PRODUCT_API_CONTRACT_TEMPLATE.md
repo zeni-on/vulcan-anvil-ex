@@ -6,7 +6,6 @@ title: Product API Contract
 title_ko: 제품 API 계약
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-impl
 status: Draft
 version: v0.1
 owner_role: Technical Architect

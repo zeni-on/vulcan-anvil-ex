@@ -78,6 +78,12 @@ class ProductWritingTests(unittest.TestCase):
                                          vulcan.extract_variables(str(root)))
                 self.assertEqual(brief, expected)
                 self.assertEqual(tuple(re.findall(r"^## (.+)$", brief, re.M)), BRIEF_HEADINGS)
+                session = json.loads((root / "session.json").read_text(encoding="utf-8"))
+                self.assertEqual(session["process_model"], "product-iterative-v1")
+                self.assertEqual(session["current_gate"], "planning")
+                for _, dst in vulcan.PRODUCT_ARTIFACT_TEMPLATES:
+                    self.assertNotRegex((root / dst).read_text(encoding="utf-8"),
+                                        r"(?i)\bgate_scope\s*:|\bgate\s*[1-5]\b|\bphase\s*0\b", dst)
                 for route in ROUTES:
                     self.assertIn("PRODUCT_DOCUMENT_WRITING.md", (root / route).read_text(encoding="utf-8"), route)
                 for src, dst in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES:
@@ -92,7 +98,8 @@ class ProductWritingTests(unittest.TestCase):
         authored = [dst for _, dst in vulcan.PRODUCT_ARTIFACT_TEMPLATES]
         authored += [dst for _, dst in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES]
         for i, path in enumerate(authored):
-            self.write(root, path, f"# Authored {i}\nOriginal contract and pending obligation.\n")
+            self.write(root, path, f"# Authored {i}\ngate_scope: gate2-gate5\n"
+                       "Original contract and pending obligation.\n")
         before = {p: (root / p).read_bytes() for p in authored}
         refreshed = [src for src, _ in vulcan.PRODUCT_OPTIONAL_DETAIL_TEMPLATES] + [BRIEF_TEMPLATE, GUIDE]
         for src in refreshed:
@@ -104,6 +111,36 @@ class ProductWritingTests(unittest.TestCase):
         for src in refreshed:
             expected = vulcan.render((ROOT / src).read_text(encoding="utf-8"), vulcan.extract_variables(str(root)))
             self.assertEqual((root / src).read_text(encoding="utf-8"), expected)
+
+    def test_all_product_templates_omit_legacy_gate_assignments(self):
+        templates = list((ROOT / "docs/templates/product").glob("*.md"))
+        self.assertTrue(templates)
+        for template in templates:
+            with self.subTest(template=template.name):
+                self.assertNotRegex(template.read_text(encoding="utf-8"),
+                                    r"(?i)\bgate_scope\s*:|\bgate\s*[1-5]\b|\bphase\s*0\b")
+
+    def test_renamed_report_headings_keep_current_result_detection_and_legacy_reading(self):
+        root = self.temp_root()
+        content = self.render_template("REGRESSION_AND_RELEASE_REPORT_TEMPLATE.md").replace("TBD", "Observed")
+        content = content.replace("Planned / Pass / Fail / Not Run / environment_blocked", "Not Run")
+        legacy = content.replace("Current Execution Results", "Gate 4 Execution Result").replace(
+            "Current Security Check Results", "Gate 4 Security Check Result")
+        for report in (content, legacy):
+            with self.subTest(legacy=report == legacy):
+                self.write(root, "docs/product/REGRESSION_AND_RELEASE_REPORT.md", report)
+                docs = ProductDocuments(root, ["REGRESSION_AND_RELEASE_REPORT.md"])
+                issues = vulcan.product_verification_result_findings(
+                    docs.texts("REGRESSION_AND_RELEASE_REPORT.md"), "gate4", [])
+                for test_id in ("REG-001", "SEC-REG-001"):
+                    self.assertTrue(any(test_id in issue for issue in issues), issues)
+                self.write(root, "docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                           report.replace("| Not Run |", "| Pass |"))
+                docs = ProductDocuments(root, ["REGRESSION_AND_RELEASE_REPORT.md"])
+                self.assertEqual(vulcan.product_verification_result_findings(
+                    docs.texts("REGRESSION_AND_RELEASE_REPORT.md"), "gate4", []), [])
+                counts = vulcan._product_test_status_counts(str(root), docs)
+                self.assertEqual((counts["total"], counts["passed"], counts["security"]["passed"]), (1, 1, 1))
 
     def test_brief_toc_resolves_without_duplicating_scenario_or_linked_requirements(self):
         root = self.temp_root()

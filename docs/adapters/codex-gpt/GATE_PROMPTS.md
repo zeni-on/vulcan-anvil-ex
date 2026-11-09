@@ -13,13 +13,13 @@ Run을 사용하면 출력은 `docs/core/RUN_OUTPUT_CONTRACT.md`를 따른다.
 
 ## 2. Product
 
-Product는 [PRODUCT_PROFILE_BASELINE.md](../../core/PRODUCT_PROFILE_BASELINE.md) 7절과 현재 작업의 관련 원본부터 읽는다. Run/Wave 선택, 실행자, 수정·재시험 권한, 조건부 재검증은 7절을 따른다. Audit/PoC의 worker 필수·직접 수정 예외·QA 재승인 절차를 가져오지 않는다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](../../core/PRODUCT_PROFILE_BASELINE.md) 7절과 현재 작업의 관련 원본부터 읽는다. Run/Wave 선택, 실행자, 수정·재시험 권한, 조건부 재검증은 7절을 따른다. Audit의 worker 필수·직접 수정 예외·QA 재승인 절차를 가져오지 않는다.
 
 문서 위치는 [PRODUCT_DOCUMENT_WRITING.md](../../core/PRODUCT_DOCUMENT_WRITING.md)를 따른다. 6종은 진입점이며 필요한 상세의 단일 원본을 연결한다. 승인된 작업을 수행하고 현재 계약과 실제 결과를 갱신하며, 작은 변경마다 Run/상세 파일을 만들거나 기존 승인 문서를 자동 이동하지 않는다.
 
 ## 3. 기존 Gate 절차의 상세 참조
 
-Gate의 최소 확인·승인·worker 경계는 [GATE_EXECUTION_CHECKLIST.md](../../core/GATE_EXECUTION_CHECKLIST.md), 운영은 [ORCHESTRATOR_PROTOCOL.md](../../core/ORCHESTRATOR_PROTOCOL.md)의 해당 절을 따른다. Audit/PoC의 기존 Run/worker 및 필수 검수 기준은 유지한다. 아래 문서는 현재 작업에 필요한 경우에만 추가로 읽는다.
+Gate의 최소 확인·승인·worker 경계는 [GATE_EXECUTION_CHECKLIST.md](../../core/GATE_EXECUTION_CHECKLIST.md), 운영은 [ORCHESTRATOR_PROTOCOL.md](../../core/ORCHESTRATOR_PROTOCOL.md)의 해당 절을 따른다. Audit의 기존 Run/worker 및 필수 검수 기준은 유지한다. 아래 문서는 현재 작업에 필요한 경우에만 추가로 읽는다.
 
 | 필요한 판단 | 참조 |
 | --- | --- |

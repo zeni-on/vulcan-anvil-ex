@@ -21,7 +21,7 @@ references and meaningful completion checks. Run/Wave and a fresh worker are opt
 Respect user-assigned roles. Continue authorized implementation, fixes and affected
 checks through the agreed handoff; do not repeat tests for report-only edits.
 
-For unmarked projects using Run/Wave, or Audit/PoC implementation, read
+For unmarked projects using Run/Wave, or Audit implementation, read
 [legacy implementation](references/legacy-gates.md). Keep that lifecycle conditional;
 do not introduce a Wave merely to follow the recipe.
 

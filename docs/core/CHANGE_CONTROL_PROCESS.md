@@ -132,7 +132,7 @@ CR 승격 예시:
 
 CR이 승인되면 전체 프로젝트를 처음부터 다시 진행하지 않는다. `vulcan.py gate-start <gate>`로 필요한 Gate를 다시 진행 상태로 만들고, 승인된 CR의 영향 범위를 현재 작업 기록에 연결한 뒤 해당 범위의 산출물만 갱신한다.
 
-Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 CR/이슈/작업 요약을 사용하며 Run은 선택한다. Audit/PoC에서 Gate를 다시 진행할 때는 Run 문서가 필수다. 작업 기록은 다음을 남긴다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 CR/이슈/작업 요약을 사용하며 Run은 선택한다. Audit에서 Gate를 다시 진행할 때는 Run 문서가 필수다. 작업 기록은 다음을 남긴다.
 
 - 관련 `CR-ID`
 - 영향받는 `REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI`
@@ -154,7 +154,7 @@ Product는 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절에 �
 scope: REQ-005, AC-008, FUNC-005, PGM-005, SEC-002, UT-008
 ```
 
-Product의 검증 선택과 재실행은 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 실행 기준은 Audit/PoC에 적용한다.
+Product의 검증 선택과 재실행은 [PRODUCT_PROFILE_BASELINE.md](PRODUCT_PROFILE_BASELINE.md) 7절을 따른다. 아래 실행 기준은 Audit에 적용한다.
 
 | 테스트 | 기준 |
 | --- | --- |
@@ -170,7 +170,7 @@ Backlog는 CR 자체가 아니며, Gate 밖에 있는 단순 TODO도 아니다. 
 | 상황 | 처리 |
 | --- | --- |
 | Phase 0 아이디어가 아직 요구사항으로 확정되지 않음 | `IDEA`로 Backlog 등록 후 Gate 1 후보로 정리 |
-| CR 승인, 즉시 반영 | Product는 기존 작업 기록으로 진행, Audit/PoC는 Run 생성 |
+| CR 승인, 즉시 반영 | Product는 기존 작업 기록으로 진행, Audit은 Run 생성 |
 | CR 승인, 다음 배치 반영 | `CR`로 Backlog 등록 |
 | CR 반려 | CR 상태를 Rejected로 기록 |
 | CR 보류 | CR 상태를 Deferred로 기록하고 필요하면 `ISSUE` 또는 Backlog에 보류 사유 기록 |

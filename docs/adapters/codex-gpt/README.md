@@ -12,7 +12,7 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 이 Adapter는 다음 작업을 우선 지원한다.
 
 - 요구사항/설계 문서 읽기
-- Gate별 작업 범위 선정
+- 현재 프로세스의 작업 범위 선정
 - 구현 및 테스트 실행
 - 화면 캡처와 결과 증적 생성
 - 요구사항추적표 갱신
@@ -20,14 +20,14 @@ Codex/GPT Adapter는 공통 Run Input Contract를 Codex/GPT 계열 runner 호출
 
 ## 2. 현재 적용 범위
 
-`0.4.7` 기준 Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `.agents/skills/`, `.codex/agents/`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
+Codex/GPT Adapter는 새 프로젝트에 주입되는 `AGENTS.md`, `.agents/skills/`, `.codex/agents/`, `docs/core/`, `docs/adapters/codex-gpt/skills/`를 통해 다음 흐름을 지원한다.
 
 - 새 프로젝트 컨시어지 응답
-- Phase 0부터 Gate 5까지의 단계 판단
+- Product 반복 모델의 planning/impl/acceptance 운영과 기존 모델의 Gate 판단
 - 요구사항, 설계, 보안, 데이터, 테스트, 변경관리 문서 작성
-- Build Wave 기반 구현 계획과 Wave별 작업지시
+- 승인 범위의 구현 계획과 작업 전달. Product에서 Run/Wave는 선택
 - `workflow.integration_branch` 기준 구현 통합 브랜치와 worker 실행
-- Gate 4 `qa-execution`과 `QA-000` workspace 재사용
+- 현재 범위의 인수 검증. 기존 Gate 모델은 `qa-execution`과 `QA-000` workspace 재사용
 - Run 문서 작성과 `vulcan.py` 기반 검증
 - 사용자가 선택한 역할별 지속 작업의 전달/회수와 단일 총괄 운영: [Persona Delegation](PERSONA_DELEGATION.md)
 - Dashboard가 읽는 `session.json`, Run, 문서 상태 갱신
@@ -100,11 +100,11 @@ Repo-local Codex skill:
 
 | 상황 | Repo-local Skill |
 | --- | --- |
-| Gate/Run/worker/승인 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
-| Gate 2 설계 | `.agents/skills/vulcan-design/SKILL.md` |
+| 상태/Run/worker/승인 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
+| 설계 | `.agents/skills/vulcan-design/SKILL.md` |
 | Impl Build Wave | `.agents/skills/vulcan-impl-wave/SKILL.md` |
-| Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
-| Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
+| 인수 검증/QA | `.agents/skills/vulcan-qa/SKILL.md` |
+| 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
 
 Codex custom agent:
 

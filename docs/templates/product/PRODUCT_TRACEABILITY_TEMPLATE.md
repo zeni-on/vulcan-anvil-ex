@@ -6,7 +6,6 @@ title: Product Traceability
 title_ko: 제품 시나리오 추적표
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate3-gate5
 status: Draft
 version: v0.1
 owner_role: Orchestrator
