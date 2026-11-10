@@ -36,6 +36,7 @@ export function invalidProductSessions(): [string, unknown][] {
     ['unknown model', { ...base, process_model: 'future-v2' }],
     ['null marker', { ...base, process_model: null }],
     ['wrong profile', { ...base, profile: 'audit' }],
+    ['retired profile with Product marker', { ...base, profile: 'poc' }],
     ['legacy stage', { ...base, current_gate: 'gate1' }],
     ['conflicting status', { ...base, current_gate: 'completed' }],
     ['old gate key', { ...base, gate_status: { ...base.gate_status, gate1: 'done' } }],

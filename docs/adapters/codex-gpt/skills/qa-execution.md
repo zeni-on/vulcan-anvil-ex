@@ -6,7 +6,7 @@ Gate 4에서 승인된 구현물을 실제로 실행 검증하고, 테스트 결
 
 Product의 일반 QA는 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절에 따라 현재 작업 요약과 관련 시험 원본을 사용한다. 환경/명령/UI/결과 정리는 책임 구분이며 네 개의 Run을 만들라는 뜻이 아니다. Run 없이 수정·재시험까지 위임받았다면 그 범위에서 계속 수행하고, 검증 전용 담당자는 수정 후보를 반환한다.
 
-아래는 검증 전용 `qa-execution` Run을 선택했거나 Audit/PoC의 해당 Run을 위임받은 worker의 계약이다. 이 Run의 쓰기 범위를 넘어 결함을 수정하지 않는다. 수정은 Orchestrator가 권한을 확인한 뒤 `qa-fix-loop`의 profile별 경로로 전달한다.
+아래는 검증 전용 `qa-execution` Run을 선택했거나 Audit의 해당 Run을 위임받은 worker의 계약이다. 이 Run의 쓰기 범위를 넘어 결함을 수정하지 않는다. 수정은 Orchestrator가 권한을 확인한 뒤 `qa-fix-loop`의 profile별 경로로 전달한다.
 
 ## 필수 입력
 

@@ -237,7 +237,7 @@ class ProductSessionTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_legacy_sessions_and_mixed_flags_cannot_enter_the_pilot(self):
-        for profile in ("product", "audit", "poc"):
+        for profile in ("product", "audit"):
             original = json.dumps({"profile": profile, "current_gate": "gate2"}).encode()
             self.path.write_bytes(original)
             request = self.request("open-work", scope=self.fixture.scope, target="planning", reason=helpers.ref("not-migration"))

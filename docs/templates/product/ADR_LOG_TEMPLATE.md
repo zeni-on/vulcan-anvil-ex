@@ -6,7 +6,6 @@ title: ADR Log
 title_ko: 제품 아키텍처 의사결정 기록
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-gate5
 status: Draft
 version: v0.1
 owner_role: Product Architect

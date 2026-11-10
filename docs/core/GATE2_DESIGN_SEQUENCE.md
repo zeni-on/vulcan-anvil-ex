@@ -3,6 +3,8 @@
 > 상태: 초안 v0.1
 > 목적: Gate 2 설계를 한 번에 뭉쳐 작성하지 않고, 효율적인 순서와 반복 갱신 지점에 따라 진행하기 위한 기준을 정의한다.
 
+이 문서는 Audit과 표식 없는 기존 Product의 Gate 모델용이다. `process_model`이 있는 Product의 planning에는 이 단계 순서를 적용하지 않고 [PRODUCT_DOCUMENT_WRITING.md](PRODUCT_DOCUMENT_WRITING.md)와 현재 작업 범위를 따른다.
+
 ## 1. 핵심 원칙
 
 Gate 2는 승인된 요구사항을 구현 가능한 설계와 테스트 입력으로 전개하는 단계다.
@@ -51,7 +53,6 @@ health check, TLS 종료 위치, WAS/DB 이중화, 파일 저장소, 로그/백�
 
 `product` profile에서는 Gate 2 초기에 `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md`를 먼저 확인한다.
 `audit` profile에서는 위 기준에 더해 `docs/core/REFERENCE_STANDARDS.md`, `docs/core/KISA_SECURITY_RULES.md`, `docs/seed-docs/reference-standards/`를 필요한 만큼 참조한다.
-`poc` profile에서는 보안/데이터를 상세 제출 기준이 아니라 위험 식별과 제품화 전환 gap 중심으로 기록한다.
 
 | 지점 | 확인 |
 | --- | --- |

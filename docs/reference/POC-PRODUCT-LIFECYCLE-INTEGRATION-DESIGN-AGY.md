@@ -1,5 +1,7 @@
 # PoC & Product Lifecycle Integration Design (AGY-PROPOSAL)
 
+> **역사 자료:** PoC 은퇴 전의 설계 제안이다. v0.6.0의 실행·템플릿·전환 지침으로 사용하지 않는다. 현재 지원 기준은 [Delivery Profiles](../core/DELIVERY_PROFILES.md)를 따른다.
+
 > **상태**: v1.1 (설계 제안서, Codex review 반영)
 > **오케스트레이터**: AGY (Antigravity) 초안, Codex 검토 보정
 > **목적**: Vulcan-Anvil Ex 프레임워크에 PoC 및 Product 프로필을 유기적으로 융합하고, 제품 요구사항 추적성, 아키텍처 결정 기록(ADR), 단계별 승격(Promotion)을 처리하기 위한 상세 스펙을 정의하여 에이전트 및 팀과의 설계를 싱크한다.

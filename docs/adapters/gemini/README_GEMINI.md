@@ -33,9 +33,8 @@ Agy를 메인 Orchestrator로 사용할 때는 다음 기준을 적용한다.
 * Core Gate 규칙은 `docs/core/GATE_EXECUTION_CHECKLIST.md`를 따른다.
 * Agy/Gemini 전용 prompt와 persona mapping은 `docs/adapters/gemini/` 문서를 따른다.
 * 현재 Gate/Profile/Branch/Run 상태와 다음 행동 후보는 먼저 `python vulcan.py status`로 확인한다.
-* Delivery Profile 세부 기준은 `docs/core/DELIVERY_PROFILES.md`를 따른다. `profile: poc`이면 `docs/poc/POC_REQUIREMENTS.md`, `docs/poc/POC_SYSTEM_DESIGN.md`, `docs/poc/POC_TEST_REPORT.md` 3종을 공식 작업 문서로 보고, audit 산출물 파일을 임의 생성하거나 채우지 않는다.
-* Phase 0~Gate 3 동안 Agy `Workspace: branch`를 Environment Readiness Track에 사용할 수 있다. 이 경로는 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke를 준비하는 용도이며 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경은 금지한다.
-* `profile: poc`의 Impl worker는 코드, dependency manifest, 빠른 self-check까지만 담당한다. `README.md`, `POC_TEST_REPORT.md` 최종화, browser smoke/screenshot, release/backlog, 증적 정규화는 Gate 4/5 또는 별도 Evidence/Normalization worker로 넘긴다.
+* Delivery Profile 세부 기준은 `docs/core/DELIVERY_PROFILES.md`를 따른다.
+* Product 반복 모델의 planning 또는 기존 모델의 Phase 0~Gate 3에서 승인 범위에 따라 Agy `Workspace: branch`를 Environment Readiness Track에 사용할 수 있다. 이 경로는 폴더, 의존성, lockfile, lint/build/test 스크립트, hello/health smoke를 준비하는 용도이며 업무 요구사항 구현, 테스트 Pass 확정, 추적표 Implemented/Verified 변경은 금지한다.
 * Gate 전환 가능성은 `python vulcan.py status --check`로 요약 진단하고, `prepare-transition`은 상세/호환 진단이 필요할 때 직접 실행한다.
 * Agy native subagent와 `Workspace: branch`는 외부 CLI runner가 아니라 native delegation 경로로 취급한다.
 * Product의 실행자/Run/Wave 선택은 `docs/core/PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. Run을 사용하는 worker만 호출 전에 preflight를 실행하며, Run 없는 작업도 목표/범위/계약/검증을 전달한다.
@@ -60,8 +59,6 @@ Orchestrator는 Agy worker 결과를 그대로 확정하지 않고 부모 worksp
 Run을 사용하는 Agy native branch worker는 실행 전에 `run-preflight` 또는 이를 포함한 `execute --dry-run`을 통과해야 한다. 외부 CLI 자동 preflight는 유지한다. Product는 Run 없는 작업 요약을 허용하고 전환 때 완료된 과거 Run의 preflight를 반복하지 않는다. 결과 요약에는 위임 대상, 변경 범위, 실제 검증과 남은 문제를 기록한다.
 
 Environment Readiness Track에서 생성한 결과도 같은 방식으로 검증한다. 단, 환경 기준선 후보는 기능 구현 Wave가 아니므로 REQ/AC/UI/UT/IT를 `Implemented`, `Verified`, `Pass`로 변경하지 않는다.
-
-PoC Impl worker는 `Workspace: branch`의 속도 이점이 있더라도 browser evidence, README, 최종 테스트 결과서, release/backlog 정리까지 한 번에 수행하지 않는다. 구현 파일과 빠른 self-check를 반환하고, 비차단 `run-preflight`/`run-check` 경고가 남으면 제거 루프를 반복하지 않고 후속 판단 항목으로 보고한다.
 
 Agy `Workspace: branch` worker가 부모 workspace의 untracked Run 문서에 직접 쓰지 못해도 실패로 처리하지 않는다. worker는 변경 파일, self-check, 요약을 반환하고, Orchestrator가 부모 workspace에서 Run 문서와 `delegation_records`를 정규화한다.
 

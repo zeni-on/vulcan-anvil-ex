@@ -93,7 +93,7 @@ class CollaborationDocsTests(unittest.TestCase):
                                     f"Missing routing reference: {source} -> {target}")
 
     def test_init_installs_collaboration_routing_for_all_profiles(self):
-        for profile in ("poc", "product", "audit"):
+        for profile in ("product", "audit"):
             with self.subTest(profile=profile):
                 root = self.project(profile)
                 self.assert_routing(root)

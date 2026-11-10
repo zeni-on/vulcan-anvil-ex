@@ -173,6 +173,6 @@ describe('AgentPanel worker activity drawer', () => {
   it('Run 위임 기록이 없어도 오류 대신 미기록 안내를 표시한다', () => {
     render(<AgentPanel runtime={{ ...runtime, active_executions: [], delegations: [] }} />)
 
-    expect(screen.getByText('Run에 기록된 위임 경로가 없습니다. 짧은 PoC 작업에서는 정상일 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('Run에 기록된 위임 경로가 없습니다.')).toBeInTheDocument()
   })
 })

@@ -564,8 +564,6 @@ merge 가능 여부 최종 판단
 ```
 
 worker가 위 항목이 필요하다고 판단하면 직접 실행하지 않고 완료 보고의 `orchestrator_decision_needed`에 반환한다.
-PoC worker는 `run-preflight`/`run-check` 경고가 비차단이면 이를 실패로 간주하지 않는다. 담당 구현과 self-check를 완료한 뒤 경고, 재현 명령, 후속 판단 필요 여부를 결과에 남기고 종료한다.
-PoC 구현 worker는 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog, 증적 로그 정규화를 기본 완료 범위로 삼지 않는다. 이 작업들은 Gate 4/5 또는 Evidence/Normalization worker가 담당한다.
 
 worker Run에는 Orchestrator가 Run을 나눌 때 쓰는 `worker_run_sizing_policy` 전체 블록을 반복하지 않는다.
 대신 `worker_execution_policy.completion_rules`에 worker가 직접 지킬 완료 기준만 짧게 둔다.
@@ -576,8 +574,6 @@ worker_execution_policy:
     - "이 Run의 target_contracts만 완결한다."
     - "빌드 또는 담당 테스트가 깨진 상태를 완료로 보고하지 않는다."
     - "범위가 너무 크면 중간 구현하지 말고 Orchestrator 결정 필요 항목으로 반환한다."
-    - "PoC에서 비차단 경고만 남으면 경고 제거 루프를 반복하지 않고 내용과 후속 판단자를 기록한 뒤 반환한다."
-    - "PoC 구현 Run이면 browser smoke/screenshot, 최종 테스트 결과서, README/release/backlog 정리는 Orchestrator 결정 필요 항목으로 반환한다."
 ```
 
 `scope.writable` 밖의 파일 수정은 원칙적으로 금지한다.
@@ -609,8 +605,6 @@ ui_evidence_policy:
   official_runner: "@playwright/test"
   official_runner_command: "npx playwright test"
   official_runner_required_profiles: [audit, product]
-  poc_fallback_allowed: true
-  fallback_rule: "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."
   required_artifacts:
     - "playwright-report/index.html 또는 동등한 HTML report"
     - "test-results/ trace, screenshot, video 중 프로젝트가 선택한 증적"
@@ -694,7 +688,7 @@ Gate 4 `check-trace`는 QA 테스트 결과서의 `결과` 컬럼을 우선 읽�
 
 Audit/Product Profile에서 공식 UI Pass는 `@playwright/test` 러너 실행 결과를 기준으로 한다.
 권장 기준은 `playwright.config.ts` 또는 동등 설정, `tests/e2e/**/*.spec.*`, `npx playwright test`, `playwright-report/`, `test-results/`, 상태별 screenshot을 연결하는 것이다.
-`playwright` 라이브러리를 직접 호출하는 커스텀 Node 스크립트는 PoC smoke/demo 또는 보조 관찰로 남길 수 있지만, audit/product의 Gate 4 UI Pass 근거로 단독 사용하지 않는다.
+`playwright` 라이브러리를 직접 호출하는 커스텀 Node 스크립트는 보조 관찰로 남길 수 있지만, audit/product의 Gate 4 UI Pass 근거로 단독 사용하지 않는다.
 
 QA 실행 worker는 다음을 수행하지 않는다.
 

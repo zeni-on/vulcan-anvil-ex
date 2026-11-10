@@ -14,7 +14,6 @@ Read first:
 - GEMINI.md
 - session.json
 - docs/core/RUN_INPUT_CONTRACT.md
-- docs/reference/POC-RUN-COMPACT-STRATEGY.md when present
 - The draft Run document under review
 
 Rules:
@@ -24,7 +23,7 @@ Rules:
   2. Strict scope (ensure writable files are minimized and readonly/excluded lists are correct).
   3. Concrete verification commands (OS-specific, cwd, exit code, log paths).
   4. Explicit related IDs.
-- Ensure the delivery profile constraints (audit, solution, poc) are applied correctly.
+- Ensure the delivery profile constraints (audit or product) are applied correctly.
 - Return structured review feedback.
 
 Output Format:

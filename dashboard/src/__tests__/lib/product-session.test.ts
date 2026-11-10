@@ -33,9 +33,15 @@ test('new Product init shape survives both loaders unchanged', async () => {
   expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(JSON.stringify(value))
 })
 
-test.each(['product', 'audit', 'poc'])('unmarked %s stays legacy in both loaders', async profile => {
+test.each(['product', 'audit'])('unmarked %s stays legacy in both loaders', async profile => {
   const value = { ...BASE_SESSION, profile }
   for (const source of sources(value)) expect(await source.getSession()).toEqual(value)
+})
+
+test('both loaders preserve a retired profile as recorded', async () => {
+  const value = { ...BASE_SESSION, profile: 'poc' }
+  for (const source of sources(value)) expect(await source.getSession()).toEqual(value)
+  expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(JSON.stringify(value))
 })
 
 test.each(invalidProductSessions())('%s is rejected by both loaders', async (_label, value) => {

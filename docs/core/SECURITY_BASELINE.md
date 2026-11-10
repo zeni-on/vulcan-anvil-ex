@@ -30,7 +30,6 @@ Profile별 기본 적용은 다음과 같다.
 
 | Profile | 기본 보안 기준 |
 | --- | --- |
-| `poc` | 주요 위험 식별, 민감정보/인증/외부입력 여부, 제품화 전환 시 보강할 gap |
 | `product` | OWASP ASVS, OWASP Top 10, OWASP API Security Top 10, CWE 기반 제품 보안 기준선 |
 | `audit` | Product 기준선 + KISA/공공/고객사 기준 매핑 + 제출/검수용 증적 |
 

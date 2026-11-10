@@ -6,7 +6,6 @@ title: Product Brief
 title_ko: 제품/업무 앱 개요
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: phase0-gate1
 status: Draft
 version: v0.1
 owner_role: Product Owner
@@ -49,6 +48,8 @@ updated_at: {{GENERATED_DATE}}
 | 관련 시스템·자료와 경계 | TBD |
 
 역할·책임은 제품 수준에서 설명한다. 개별 사업의 자료 목록, 상세 권한과 예외는 필요한 업무 흐름/정책 원본에 둔다. 이해관계자라는 이유만으로 제품 사용·자료 접근·발송 권한을 부여하지 않는다.
+
+<!-- 예: 요청자는 신청, 검토자는 승인 여부 결정, 제품은 상태·기록 보존, 외부 시스템은 실제 후속 처리를 책임진다. 역할별 책임과 제품이 보장하지 않는 경계를 함께 적는다. 예시는 실제 업무 합의로 대체하며 공통 코어/외부 연계 그림이 필요하면 Architecture의 원본 하나를 연결한다. -->
 
 ## 3. Core Scenarios And Flow
 

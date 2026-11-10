@@ -2,8 +2,15 @@
 
 ## Unreleased
 
-- Codex 스킬 설명을 작업별 선택 조건으로 축약하고 기존 Gate 상세 절차를 필요할 때 읽는 참조로 분리했다. Product의 승인·보안·검증과 Audit/PoC 절차는 유지한다.
+## 0.6.0 - 2026-11-10
+
+- **호환성 변경:** 지원 프로파일을 Product와 Audit로 정리하고 PoC 전용 실행·템플릿·검사를 제거했다. 기존 PoC 프로젝트는 자동 변환하지 않는다.
+- Product 시험 계획에 같은 조건으로 회귀시험할 입력·fixture 준비와 초기화 방법을 연결한다. 실제 사용자 행동, 미실행 단계, 수정 후 재시험, 고유 TC와 환경별 실행 횟수를 구분한다.
+- Product 문서 호환성, 시험 정의와 실행 증적의 읽기 전용 조회, 기능별 구현 위치 연결을 보강했다.
+- Codex 스킬 설명을 작업별 선택 조건으로 축약하고 기존 Gate 상세 절차를 필요할 때 읽는 참조로 분리했다.
 - 일반 질문/국소 수정에서 총괄 시작 루틴을 반복하지 않도록 AGENTS와 Core CLI 안내를 맞추고, Codex 총괄 스킬의 Gemini agent 참조를 제거했다. [OpenAI 스킬·프롬프트 가이드](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)를 참고했다. 모델 설정·자동 스킬 선택·비용 절감 효과를 변경하거나 보장하지 않는다.
+
+Release notes: [docs/releases/v0.6.0.md](docs/releases/v0.6.0.md)
 
 ## 0.5.0 - 2026-09-13
 

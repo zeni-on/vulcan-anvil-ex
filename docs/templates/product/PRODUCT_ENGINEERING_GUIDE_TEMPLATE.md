@@ -6,7 +6,6 @@ title: Product Engineering Guide
 title_ko: 제품 개발/빌드/배포 기준
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2-impl-gate4
 status: Draft
 version: v0.1
 owner_role: Engineering Owner

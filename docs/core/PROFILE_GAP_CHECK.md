@@ -1,37 +1,13 @@
 # Profile Gap Check
 
 > 상태: 초안 v0.1
-> 목적: `poc -> product -> audit` 전환을 무거운 승격 프로세스가 아니라 가벼운 gap 진단으로 다루기 위한 기준을 정의한다.
+> 목적: 현재 산출물을 Product 또는 Audit 기준과 비교해 부족한 계약과 증적을 찾는다.
 
 ## 1. 원칙
 
-Delivery Profile 변경은 프로젝트를 새로 만드는 일이 아니다.
-같은 프로젝트 안에서 운영 강도와 산출물 기대치를 바꾸는 것이다.
+`profile-gap`은 목표 프로파일 기준으로 문서의 존재와 내용을 확인하는 읽기 전용 진단이다. 프로파일이나 프로세스 모델을 전환하지 않고 기존 문서·승인·증적을 이관하지 않는다. 부족한 항목은 보강 후보로 기록하고 실제 작업 범위는 별도로 합의한다.
 
-따라서 profile 전환은 다음처럼 다룬다.
-
-```text
-현재 산출물 확인
--> 목표 profile 기준의 부족 항목 확인
--> gap을 backlog 또는 후속 작업으로 기록
--> 사용자가 원하면 profile 값을 변경
-```
-
-`profile-gap`은 전환을 차단하거나 자동 승격하지 않는다.
-부족한 항목을 알고 넘어가게 하는 진단 도구다.
-
-## 2. 왜 승격 프로세스를 크게 만들지 않는가
-
-PoC의 목적은 빠른 확인이다.
-PoC가 끝난 뒤 Product로 이어갈지 말지는 사용자의 제품 판단이며, 프레임워크가 복잡한 승인서나 별도 프로젝트 생성을 강제할 필요는 없다.
-
-필요한 것은 다음 정도다.
-
-- 지금 가진 PoC 결과가 Product 판단에 충분한가
-- Product로 계속 개발하려면 어떤 문서와 계약을 보강해야 하는가
-- Audit으로 가려면 어떤 공식 추적, 보안, 데이터, QA 증적이 부족한가
-
-## 3. 권장 명령
+## 2. 권장 명령
 
 ```powershell
 python vulcan.py profile-gap --to product
@@ -48,11 +24,11 @@ python vulcan.py profile-gap --to product --json
 - `content_issues` / `content_warnings`: 현재 Gate에서 판단에 필요한 핵심 내용이 비어 있거나 확인이 필요한지
 
 예를 들어 Product profile을 새로 init하면 `docs/product/` 6종 문서는 모두 있으므로 문서 세트는 `ok`가 될 수 있다.
-하지만 `PRODUCT_BRIEF.md`의 목표, 주요 사용자, 성공 기준이 `TBD`라면 `content_issues`가 남고 `status --check`는 Gate 완료를 차단한다.
+파일이 있다는 것만으로 현재 범위가 승인되거나 인수 가능한 것은 아니다. 현재 진행 가능 여부는 `status --check`에서 따로 확인한다.
 
-## 4. PoC -> Product Gap
+## 3. Product 기준
 
-Product로 이어가기 전에 최소 확인할 항목은 다음이다.
+Product 기준으로 검토할 항목은 다음과 같다.
 
 | 항목 | 의미 |
 | --- | --- |
@@ -63,15 +39,9 @@ Product로 이어가기 전에 최소 확인할 항목은 다음이다.
 | Regression/release report | 반복 실행할 회귀 테스트와 릴리즈 판단 근거가 있는가 |
 | Traceability | 핵심 시나리오 -> 계약 -> 구현 -> 테스트 -> 릴리즈 근거가 끊기지 않는가 |
 
-PoC 문서가 이 항목의 일부를 이미 설명하고 있으면 `partial`로 본다.
-Product profile에서 계속 개발하려면 `partial` 항목을 Product 산출물 또는 기존 설계 산출물로 보강한다.
+## 4. Audit 기준
 
-Product profile로 새 프로젝트를 시작하면 기본 Product 산출물은 `docs/product/` 아래에 생성된다.
-PoC에서 Product로 전환하는 경우에는 `profile-gap --to product` 결과를 보고 필요한 문서부터 채운다.
-
-## 5. Product -> Audit Gap
-
-Audit으로 전환할 때는 다음 항목을 확인한다.
+공식 제출이나 고객 검수를 위해 다음 항목을 확인한다.
 
 | 항목 | 의미 |
 | --- | --- |
@@ -83,10 +53,7 @@ Audit으로 전환할 때는 다음 항목을 확인한다.
 | Traceability matrix | REQ/AC/FUNC/SCR/PGM/API/DB/SEC/UT/IT/UI가 추적표에서 연결되어 있는가 |
 | Change/release records | FIND/CR/ISSUE, 릴리즈 승인, 미해결 리스크가 정리되어 있는가 |
 
-Audit 전환은 Product보다 더 엄격하다.
-다만 `profile-gap`은 여전히 진단이며, 실제 전환과 보강 범위는 사용자 승인 후 진행한다.
-
-## 6. 결과 해석
+## 5. 결과 해석
 
 `profile-gap` 항목은 다음 상태를 사용한다.
 
@@ -97,8 +64,4 @@ Audit 전환은 Product보다 더 엄격하다.
 | `missing` | 근거 산출물이 보이지 않는다 |
 | `review` | 파일은 있으나 내용 판단이나 사용자 결정이 필요하다 |
 
-`missing`이 있어도 profile 변경 자체가 금지되는 것은 아니다.
-단, 변경 후에는 해당 항목을 backlog, Run, 또는 다음 Gate 작업으로 남겨야 한다.
-
-`content_issues`는 현재 Gate 전환의 차단 후보로 본다.
-`content_warnings`는 전환 가능할 수 있지만 Orchestrator가 사용자에게 남은 판단 항목으로 보고해야 한다.
+`missing`과 `partial`은 보강 후보이며 `ok`도 승인이나 검증 완료를 뜻하지 않는다. 내용 경고와 차단 후보를 현재 범위와 대조하고, 필요한 작업과 승인 지점을 사용자에게 보고한다.

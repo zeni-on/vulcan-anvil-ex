@@ -4,7 +4,7 @@
 
 QA, 테스트, 리뷰, 증적 확인 중 발견한 결함이 승인된 설계 범위 안에서 수정 가능해 보일 때 사용한다.
 
-Product는 [PRODUCT_PROFILE_BASELINE.md](../../../core/PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 FIND/이슈/작업 요약의 수정 범위와 재시험 기준을 사용한다. 이미 수정·재시험까지 맡았다면 같은 허가를 다시 요청하지 않는다. 검증 전용 담당자는 수정 후보를 총괄에게 반환한다. Run과 새 worker는 선택이며, 실행자와 결과 확인은 7절을 따른다. Audit/PoC는 아래 Run/worker 절차를 유지한다.
+Product는 [PRODUCT_PROFILE_BASELINE.md](../../../core/PRODUCT_PROFILE_BASELINE.md) 7절에 따라 기존 FIND/이슈/작업 요약의 수정 범위와 재시험 기준을 사용한다. 이미 수정·재시험까지 맡았다면 같은 허가를 다시 요청하지 않는다. 검증 전용 담당자는 수정 후보를 총괄에게 반환한다. Run과 새 worker는 선택이며, 실행자와 결과 확인은 7절을 따른다. Audit은 아래 Run/worker 절차를 유지한다.
 
 ## 필수 입력
 
@@ -18,8 +18,8 @@ Product는 [PRODUCT_PROFILE_BASELINE.md](../../../core/PRODUCT_PROFILE_BASELINE.
 1. 이슈가 승인된 설계 범위 안에 있는지 확인한다.
 2. 범위 안의 결함이면 `FIND`를 생성하거나 갱신한다.
 3. 관련 `REQ`, `AC`, `PGM`, `SEC`, `UT`, `IT`, `UI` ID를 식별한다.
-4. Product는 기존 작업 요약에 수정 범위, 금지 범위와 검증 명령을 확정한다. Run을 선택했거나 Audit/PoC라면 `qa-fix-loop` Run에 `scope.writable`과 같은 기준을 기록한다.
-5. Product 실행자는 7절로 정한다. Audit/PoC에서는 native worker가 수정하고 Orchestrator는 통합과 재검증을 담당한다. 외부 CLI가 필요할 때만 `agent-run`/`run-exec`와 해당 Run 계약을 사용한다.
+4. Product는 기존 작업 요약에 수정 범위, 금지 범위와 검증 명령을 확정한다. Run을 선택했거나 Audit라면 `qa-fix-loop` Run에 `scope.writable`과 같은 기준을 기록한다.
+5. Product 실행자는 7절로 정한다. Audit에서는 native worker가 수정하고 Orchestrator는 통합과 재검증을 담당한다. 외부 CLI가 필요할 때만 `agent-run`/`run-exec`와 해당 Run 계약을 사용한다.
 6. 발견사항을 해결하는 최소 구현 또는 문서 수정을 수행한다.
 7. 관련 검증을 다시 실행한다.
 8. 검증 결과에는 실행 위치(cwd), 명령, 성공 기준, exit code, 결과, 로그/증적 경로를 기록한다.

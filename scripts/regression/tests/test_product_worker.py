@@ -202,7 +202,7 @@ class ProductWorkerTests(unittest.TestCase):
             self.assertTrue(any("verification.cwd" in item for item in vulcan.run_preflight_file(str(path))[0]))
 
     def test_run_new_summary_uses_worker_guide_only_for_product_builds(self):
-        for profile in ("product", "audit", "poc"):
+        for profile in ("product", "audit"):
             for scaffold in (False, True):
                 with self.subTest(profile=profile, scaffold=scaffold):
                     path = self.draft(self.project(profile=profile), "run-new", scaffold)
@@ -258,8 +258,8 @@ class ProductWorkerTests(unittest.TestCase):
             self.draft(root)
         self.assertFalse((root / "docs/runs").exists())
 
-    def test_execute_product_conditional_validation_and_audit_poc_unchanged(self):
-        for profile in ("product", "audit", "poc"):
+    def test_execute_product_conditional_validation_and_audit_unchanged(self):
+        for profile in ("product", "audit"):
             with self.subTest(profile=profile):
                 root = self.project(profile=profile, stack="python")
                 path = self.draft(root)

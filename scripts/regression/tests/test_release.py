@@ -10,9 +10,9 @@ from vulcan_core.release import (
 )
 
 
-def _body(profile):
+def _body(profile, missing=()):
     policy = release_profile_policy(profile)
-    evidence_status = {path: True for path in policy["evidence_documents"]}
+    evidence_status = {path: path not in missing for path in policy["evidence_documents"]}
     return build_release_pr_body(
         project_name="release-fixture",
         profile=profile,
@@ -44,13 +44,15 @@ class ReleaseBodyTests(unittest.TestCase):
         self.assertNotIn("DOC-QA-G4-002_Test-Result", body)
         self.assertNotIn("DOC-CORE-G4-001_Traceability-Matrix", body)
 
-    def test_poc_body_uses_compact_poc_evidence(self):
-        body = _body("poc")
-
-        self.assertIn("Profile: `poc`", body)
-        self.assertIn("docs/poc/POC_TEST_REPORT.md", body)
-        self.assertIn("PoC continue/pivot/stop decision reviewed", body)
-        self.assertNotIn("DOC-PM-G5-001_Release-Approval", body)
+    def test_missing_profile_evidence_is_not_reported_as_ok(self):
+        approval = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
+        for profile, report in (("audit", "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md"),
+                                ("product", "docs/product/REGRESSION_AND_RELEASE_REPORT.md")):
+            with self.subTest(profile=profile):
+                body = _body(profile, missing=(report,))
+                self.assertIn(f"- [MISSING] `{report}`", body)
+                self.assertNotIn(f"- [OK] `{report}`", body)
+                self.assertIn(f"- [OK] `{approval}`", body)
 
     def test_release_path_and_gh_commands_remain_stable(self):
         with tempfile.TemporaryDirectory() as temp_dir:

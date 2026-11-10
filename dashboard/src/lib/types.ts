@@ -348,7 +348,8 @@ export interface LegacySessionData {
   project: string
   vulcan_src?: string
   vulcan_version: string
-  profile?: 'audit' | 'product' | 'poc' | string
+  /** Stored legacy profile, including values no longer supported. */
+  profile?: string
   current_gate: GateKey
   gate_status: Record<GateStatusKey, GateStatus>
   feature?: string

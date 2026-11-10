@@ -7,7 +7,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 
 ## 1. 공통 원칙
 
-`process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`의 planning을 아래 Phase 0/Gate 절차로 재시작하지 않는다. 아래 Gate 전환 명령은 표식 없는 기존 Product와 Audit/PoC용이며 upgrade는 자동 이행하지 않는다. 표식을 수동 추가하지 않는다.
+`process_model`이 있는 Product는 [CLI Guide 4.1](ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 우선한다. 새 `init --profile product`의 planning을 아래 Phase 0/Gate 절차로 재시작하지 않는다. 아래 Gate 전환 명령은 표식 없는 기존 Product와 Audit용이며 upgrade는 자동 이행하지 않는다. 표식을 수동 추가하지 않는다.
 
 - `session.json.current_gate`, 사용자 최신 지시와 현재 작업 요약 또는 Run을 확인한다. Product의 Run/Wave 선택 기준은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다.
 - Product 문서를 작성/현행화할 때는 [PRODUCT_DOCUMENT_WRITING.md](PRODUCT_DOCUMENT_WRITING.md)의 원본 위치와 선택 템플릿을 따른다. 6종 원장에 모든 상세를 누적하지 않으며 요구/설계, 시험 정의, 실행 결과의 수명주기를 구분한다.
@@ -42,7 +42,7 @@ adapter별 prompt는 이 문서를 참조할 수 있지만, Core Gate 규칙을 
 | Gate 1 | 상세 `REQ/NREQ/AC`가 테스트 가능한 문장이고 추적표 행과 연결되어 있는가 |
 | Gate 2 | 아키텍처, 기능, 프로그램, API, DB, 보안, 화면/개발표준이 구현자가 따를 계약으로 전개되어 있는가 |
 | Gate 3 | 테스트케이스가 요구사항, 보안, UI 상태/시나리오, 명령, 성공 기준, 증적 경로와 연결되어 있는가 |
-| Impl | Product는 승인된 현재 작업 범위의 구현·실제 검증 근거가 있는가. Audit/PoC는 승인된 Build Wave와 worker Run 결과·Orchestrator 재검증 명령이 남아 있는가 |
+| Impl | Product는 승인된 현재 작업 범위의 구현·실제 검증 근거가 있는가. Audit은 승인된 Build Wave와 worker Run 결과·Orchestrator 재검증 명령이 남아 있는가 |
 | Gate 4 | 테스트 결과, 로그, 화면 증적, FIND/CR/ISSUE 후보, QA 결과서가 실제 실행 결과를 기준으로 정리되어 있는가 |
 | Gate 5 | 릴리즈 승인 근거, 잔여 위험, backlog, release note, 인수인계 항목이 정리되어 있는가 |
 

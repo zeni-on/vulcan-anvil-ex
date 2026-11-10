@@ -2,24 +2,11 @@
 
 import os
 
+from .profiles import normalize_delivery_profile
+
 
 def release_profile_policy(profile):
-    if profile == "poc":
-        return {
-            "release_doc": "docs/poc/POC_TEST_REPORT.md",
-            "evidence_documents": [
-                "docs/poc/POC_REQUIREMENTS.md",
-                "docs/poc/POC_SYSTEM_DESIGN.md",
-                "docs/poc/POC_TEST_REPORT.md",
-            ],
-            "verification_checklist": [
-                "`python vulcan.py status --check`",
-                "PoC evidence logs and smoke result reviewed",
-                "Open ISSUE/Backlog/promotion candidates reviewed",
-                "PoC continue/pivot/stop decision reviewed",
-                "Independent review completed or explicitly waived",
-            ],
-        }
+    profile = normalize_delivery_profile(profile)
     if profile == "product":
         release_doc = "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"
         return {

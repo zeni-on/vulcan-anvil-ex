@@ -232,11 +232,132 @@ class ProductDocumentTests(unittest.TestCase):
         self.split("REGRESSION_AND_RELEASE_REPORT.md", "03-test")
         self.assertEqual(set(vulcan.product_related_ids_for_seeds(str(self.root), ["SCN-001"])), set(original))
 
-    def test_non_product_trace_validation_unchanged(self):
-        for profile in ("audit", "poc"):
-            self.write("session.json", json.dumps({"profile": profile, "current_gate": "gate4"}))
-            self.write("vulcan.config.json", json.dumps({"delivery_profile": profile}))
-            self.assertEqual(vulcan.validate_product_trace(str(self.root), "gate4"), ([], []))
+    def test_audit_does_not_run_product_trace_validation(self):
+        self.write("session.json", json.dumps({"profile": "audit", "current_gate": "gate4"}))
+        self.write("vulcan.config.json", json.dumps({"delivery_profile": "audit"}))
+        self.assertEqual(vulcan.validate_product_trace(str(self.root), "gate4"), ([], []))
+
+    def test_namespaced_verification_ids_keep_plan_result_and_security_counts(self):
+        path = self.root / "docs/product/REGRESSION_AND_RELEASE_REPORT.md"
+        content = path.read_text(encoding="utf-8")
+        content = content.replace("REG-001", "REG-API-001").replace("REG-002", "REG-WEB-002")
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md", content)
+        issues, _, stats = self.evaluate()
+        self.assertEqual(issues, [], issues)
+        self.assertEqual(stats["tests"]["total"], 2)
+        self.assertEqual(stats["tests"]["passed"], 2)
+        self.assertEqual(stats["tests"]["security"]["passed"], 1)
+
+    def test_actual_result_column_and_unknown_narrative_do_not_invent_pass(self):
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                   "# Current Execution Results\n| REG ID | 실제 결과 |\n| --- | --- |\n"
+                   "| REG-API-001 | Pass |\n| REG-API-002 | 단위 80건 통과, 통합 미실행 |\n"
+                   "| SEC-REG-API-001 | environment_blocked |\n")
+        _, _, stats = self.evaluate()
+        self.assertEqual(stats["tests"]["passed"], 1)
+        self.assertEqual(stats["tests"]["pending"], 1)
+        self.assertEqual(stats["tests"]["security"]["pending"], 1)
+        self.assertTrue(any("REG-API-002" in w and "kept pending" in w
+                            for w in stats["product"]["document_diagnostics"]["warnings"]))
+
+    def test_narrative_and_range_tables_report_unparsed_not_silent_zero(self):
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                   "# Report\n[results](../artifacts/04-review/current.md)\n")
+        self.write("docs/artifacts/04-review/current.md",
+                   "# Current Execution Results\n| 대상 | 실제 결과 |\n| --- | --- |\n"
+                   "| Backend | 80 passed, 8 skipped |\n\n"
+                   "| ID | Result |\n| --- | --- |\n| REG-API-001~004 | Pass |\n"
+                   "| REG-API-005, REG-API-006 | Pass |\n")
+        self.write("docs/product/PRODUCT_TRACEABILITY.md",
+                   "# Trace\n| 요구/업무 흐름 | 구현 계약 | 현재 판단 |\n| --- | --- | --- |\n"
+                   "| REQ-001~004 | API-001 | 구현/자체검증 |\n")
+        _, _, stats = self.evaluate()
+        self.assertEqual(stats["tests"]["passed"], 0)
+        self.assertEqual(stats["requirements"]["implemented"], 0)
+        diagnostics = stats["product"]["document_diagnostics"]
+        self.assertTrue(diagnostics["incomplete"])
+        self.assertTrue(any("trace row not counted" in w and "PRODUCT_TRACEABILITY.md:4" in w
+                            for w in diagnostics["warnings"]))
+        self.assertTrue(any("verification table not counted" in w and "04-review/current.md" in w
+                            for w in diagnostics["warnings"]))
+        self.assertTrue(any("ranges and ID lists" in w for w in diagnostics["warnings"]))
+
+    def test_namespaced_history_pass_does_not_override_current_fail(self):
+        content = ("# Report\n## Current Execution Results\n| ID | Result |\n| --- | --- |\n"
+                   "| REG-API-001 | Fail |\n\n## History\n<!-- vulcan:state=history -->\n"
+                   "| ID | Result |\n| --- | --- |\n| REG-API-001 | Pass |\n")
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md", content)
+        _, _, stats = self.evaluate()
+        self.assertEqual(stats["tests"]["failed"], 1)
+        self.assertEqual(stats["tests"]["passed"], 0)
+
+    def test_actual_result_cannot_be_ignored_in_favor_of_pass_status(self):
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                   "# Current Execution Results\n| ID | Status | Actual Result |\n| --- | --- | --- |\n"
+                   "| REG-API-001 | Pass | Fail |\n| REG-API-002 | Pass | 80 passed, 1 failed |\n")
+        issues, warnings, stats = self.evaluate()
+        self.assertTrue(any("conflicting Result/Status" in issue for issue in issues))
+        self.assertEqual(stats["tests"]["passed"], 0)
+        self.assertEqual(stats["tests"]["pending"], 2)
+        self.assertTrue(any("REGRESSION_AND_RELEASE_REPORT.md" in w and "REG-API-002" in w
+                            for w in warnings))
+
+    def test_unparsed_history_and_candidate_reports_do_not_create_current_warnings(self):
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                   "# Report\n## Past\n<!-- vulcan:state=history -->\n"
+                   "| Target | Result |\n| --- | --- |\n| Backend | 80 passed |\n\n"
+                   "## Future\n<!-- vulcan:state=candidate -->\n"
+                   "| ID | Result |\n| --- | --- |\n| REG-API-001~004 | Pass |\n")
+        docs = pd.ProductDocuments(self.root, ["REGRESSION_AND_RELEASE_REPORT.md"])
+        stats = vulcan._product_test_status_counts(self.root, docs)
+        self.assertEqual(stats["total"], 0)
+        self.assertEqual(docs.warnings, [])
+
+    def test_issue_status_tables_are_not_reported_as_unparsed_tests(self):
+        self.write("docs/product/REGRESSION_AND_RELEASE_REPORT.md",
+                   "# Report\n## Remaining Issues\n| ID | Status |\n| --- | --- |\n"
+                   "| ISSUE-001 | Open |\n\n| Item | Status |\n| --- | --- |\n| Release | Pending |\n\n"
+                   "| Item | Result |\n| --- | --- |\n| Known issue | Deferred |\n")
+        docs = pd.ProductDocuments(self.root, ["REGRESSION_AND_RELEASE_REPORT.md"])
+        self.assertEqual(vulcan._product_test_status_counts(self.root, docs)["total"], 0)
+        self.assertEqual(docs.warnings, [])
+
+    def test_navigation_is_diagnostic_only_and_never_supplies_owned_definitions(self):
+        self.write("docs/product/PRODUCT_BRIEF.md",
+                   "# Product\n[requirements](../artifacts/01-requirements/a.md)\n"
+                   "[API](../artifacts/02-design/api/a.md)\n")
+        self.write("docs/artifacts/01-requirements/a.md", "# REQ-001\nA valid requirement.\n")
+        self.write("docs/artifacts/02-design/api/a.md", "# REQ-099\nNot owned by the brief.\n")
+        with mock.patch.object(pd, "MAX_REFERENCES", 1):
+            docs = pd.ProductDocuments(self.root, ["PRODUCT_BRIEF.md"])
+        self.assertEqual(docs.issues, [])
+        self.assertEqual(docs.warnings, [])
+        self.assertEqual(docs.reference_count, 1)
+        self.assertNotIn("REQ-099", docs.text("PRODUCT_BRIEF.md"))
+        self.assertEqual(docs.diagnostics()["navigation_count"], 1)
+        self.assertFalse(docs.diagnostics()["incomplete"])
+        self.write("docs/product/PRODUCT_BRIEF.md",
+                   "# Product\n[missing](../artifacts/02-design/api/missing.md)\n")
+        docs = pd.ProductDocuments(self.root, ["PRODUCT_BRIEF.md"])
+        self.assertTrue(any("reference unavailable" in w for w in docs.warnings))
+
+    def test_repeated_owned_target_counts_once_but_distinct_targets_still_limit(self):
+        self.write("docs/product/PRODUCT_CONTRACTS.md", "# Contracts\n" + "".join(
+            f"\n## Section {i}\n[contract](../artifacts/02-design/api/a.md)\n" for i in range(40)))
+        self.write("docs/product/PRODUCT_ARCHITECTURE.md",
+                   "# Architecture\n[contract](../artifacts/02-design/api/a.md)\n")
+        self.write("docs/artifacts/02-design/api/a.md", "# API-001\nA defined API.\n")
+        with mock.patch.object(pd, "MAX_REFERENCES", 1):
+            docs = pd.ProductDocuments(self.root, ["PRODUCT_CONTRACTS.md", "PRODUCT_ARCHITECTURE.md"])
+        self.assertEqual(docs.issues, [])
+        self.assertEqual(docs.reference_count, 1)
+        self.assertIn("A defined API", docs.text("PRODUCT_ARCHITECTURE.md"))
+        self.write("docs/product/PRODUCT_ARCHITECTURE.md",
+                   "# Architecture\n[other](../artifacts/02-design/api/b.md)\n")
+        self.write("docs/artifacts/02-design/api/b.md", "# API-002\nAnother API.\n")
+        with mock.patch.object(pd, "MAX_REFERENCES", 1):
+            docs = pd.ProductDocuments(self.root, ["PRODUCT_CONTRACTS.md", "PRODUCT_ARCHITECTURE.md"])
+        self.assertEqual(sum("reference limit" in issue for issue in docs.issues), 1)
 
 
 if __name__ == "__main__":

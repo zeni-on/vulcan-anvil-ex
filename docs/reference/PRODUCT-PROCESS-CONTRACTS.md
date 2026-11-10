@@ -5,14 +5,14 @@
 - 구현: [product_process.py](../../vulcan_core/product_process.py), [product_readiness.py](../../vulcan_core/product_readiness.py), [product_session.py](../../vulcan_core/product_session.py), [product_consumers.py](../../vulcan_core/product_consumers.py). [상태 계약](../../scripts/regression/tests/test_product_process.py), [범위별 검사](../../scripts/regression/tests/test_product_readiness.py), [저장·CLI 반복 시험](../../scripts/regression/tests/test_product_session.py), [운영 소비자 시험](../../scripts/regression/tests/test_product_consumers.py).
 
 이 문서는 프레임워크 개발·검토용이다. 프로젝트 에이전트의 시작 입력에 추가하지 않는다.
-신규 Product 초기화만 `product-iterative-v1`로 시작한다. `upgrade`는 기존 모델, 현재 작업·승인·이력과 작성 문서를 보존한다. 표식 없는 Product와 Audit/PoC는 기존 Gate 운영을 유지한다.
+신규 Product 초기화만 `product-iterative-v1`로 시작한다. `upgrade`는 기존 모델, 현재 작업·승인·이력과 작성 문서를 보존한다. 표식 없는 Product와 Audit은 기존 Gate 운영을 유지한다.
 새 Product에서도 상태 저장·검사·브랜치 준비·QA 전달/시험/결과 회수는 명시 작업이다. `completed`는 이번 범위 인수 완료이며, 실제 PR/merge/push/배포는 별도 승인을 확인한 Orchestrator의 Git/호스팅 도구 작업이다. 자동 발행을 활성화의 전제나 완료 의무로 추가하지 않는다.
 
 ## 1. 이번 단계의 경계
 
 - `new_session`, `assess_transition`, `advance`, `open_work`, `describe`는 파일·Git·프로세스를 변경하지 않는다. 상태 변경 함수는 검증 후 복사본만 반환한다.
 - 현재 상태는 `current_gate` 하나다. `gate_status`는 planning/impl/acceptance의 상태이며 현재 구간과 모순되면 진단한다.
-- `process_model`이 없으면 Product/Audit/PoC 모두 기존 경로다. 명시된 미지원 값, 잘못된 profile이나 상태는 거부한다.
+- `process_model`이 없으면 지원 프로파일인 Product와 Audit 모두 기존 경로다. 명시된 미지원 값, 잘못된 profile이나 상태는 거부한다.
 - 표식이 있는 유효한 세션의 `status --check`는 현재 범위의 문서/증적을 읽고 `scoped_check`를 반환한다. 검사 통과는 exit 0, 미완성·누락·불일치는 exit 1이다. 승인 여부는 `transition.allowed/reasons`로 별도 표시하므로 exit 0을 승인으로 해석하지 않는다.
 - 알 수 없거나 잘못된 모델/상태와 새 모델의 `--trace-detail`은 exit 2다. 기존 전체 Gate 추적 검사를 새 상태에 호출하지 않는다.
 - 아직 연결하지 않은 legacy 명령은 표식이 있는 세션에서 exit 2로 중단한다. 새 상태를 옛 Gate로 해석하거나 upgrade로 지우지 않는다. `load_session`/`save_session`에도 방어선을 둔다. 지원하는 조회·진단·미리보기는 4.4절을 따르며, 상태 저장은 자체 검증을 거치는 `session --process-request`, 명령 증적 수집은 허가된 구간의 `execute --verify`로 수행한다.
@@ -138,7 +138,7 @@ python vulcan.py session --process-request - --json
 
 ### 4.4 운영 소비자 연결 (단계 2c)
 
-`process_model`이 있는 세션은 소비자가 지원 모델/형태를 검증한 뒤 읽는다. 표식이 없는 기존 Product/Audit/PoC는 기존 처리 경로이며 미지원·손상 모델을 legacy로 바꿔 읽지 않는다.
+`process_model`이 있는 세션은 소비자가 지원 모델/형태를 검증한 뒤 읽는다. 표식이 없는 기존 Product/Audit은 기존 처리 경로이며 미지원·손상 모델을 legacy로 바꿔 읽지 않는다.
 
 - Dashboard는 3구간과 현재 작업 ref/revision·관련 ID를 읽기 전용으로 표시한다. 기존 7개 Gate를 만들거나 진행 완료를 릴리즈로 해석하지 않는다. 화면은 저장 상태의 표시이며 원본 파일/시험/승인 신원을 독립 인증하는 검사기가 아니다.
 - `status`/`branch-status`는 실제 Git 작업공간과 설정한 `workflow.integration_branch`를 조회한다. session의 과거 `branch_state`를 사실로 사용하지 않는다. 루트가 Git 저장소가 아니면 unmanaged로 표시하며, 상위 저장소를 상속한 하위 폴더나 Git 관측 실패는 확인 불가로 구별한다.

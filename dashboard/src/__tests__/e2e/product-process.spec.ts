@@ -93,15 +93,24 @@ for (const template of ['A', 'B']) {
   })
 }
 
-for (const profile of ['product', 'audit', 'poc']) {
-  test(`unmarked ${profile} retains legacy Dashboard`, async ({ page, request }) => {
+for (const [profile, expectedLabel] of [
+  ['product', 'product'], ['audit', 'audit'],
+  ['poc', 'poc (미지원)'], [undefined, '미기록'],
+] as const) {
+  test(`unmarked ${profile ?? 'missing profile'} retains legacy Dashboard`, async ({ page, request }) => {
     const session = { ...BASE_SESSION, profile }
-    fs.writeFileSync(path.join(root, 'session.json'), JSON.stringify(session))
-    expect((await (await request.get(`/api/projects/${id}/session`)).json()).session).toEqual(session)
+    const serialized = JSON.stringify(session)
+    fs.writeFileSync(path.join(root, 'session.json'), serialized)
+    const response = await request.get(`/api/projects/${id}/session`)
+    expect(response.status()).toBe(200)
+    expect((await response.json()).session).toStrictEqual(JSON.parse(serialized))
     await page.addInitScript(() => localStorage.setItem('vulcan-dashboard-layout', 'A2'))
     await page.goto(`/projects/${id}`)
     await expect(page.getByTestId('gate-status-stepper')).toBeVisible()
+    await expect(page.getByText(`profile: ${expectedLabel}`, { exact: true })).toBeVisible()
+    await expect(page.getByText('Product docs 0/6')).toHaveCount(profile === 'product' ? 1 : 0)
     await expect(page.getByTestId('product-process-panel')).toHaveCount(0)
+    expect(fs.readFileSync(path.join(root, 'session.json'), 'utf8')).toBe(serialized)
   })
 }
 

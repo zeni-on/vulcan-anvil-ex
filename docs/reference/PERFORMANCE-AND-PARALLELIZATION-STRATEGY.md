@@ -154,9 +154,6 @@ QA Test Result의 `결과`, `증적`, `관련 테스트`를 읽어 요구사항�
 - QA Run이 `QA-000`이 기록한 integration workspace를 참조하는지
 - 결과서/추적표/session을 worker가 직접 확정하려는지
 
-PoC profile의 성능 개선은 먼저 Run 입력 계약의 밀도를 줄이는 방식으로 진행한다.
-1차 기준은 `docs/reference/POC-RUN-COMPACT-STRATEGY.md`를 따른다.
-
 ### P1. Codex model/effort routing
 
 별도 벤치마크 프로젝트를 크게 돌리기보다, 실제 Run 실행 기록에 model/effort/source를 남기고 점진적으로 조정한다.
@@ -189,7 +186,7 @@ Dashboard에는 다음을 추가할 수 있다.
 - QA-Fix 왕복 횟수
 - Worker 시간 vs Orchestrator/정합성 시간 추정
 - 가장 오래 걸린 Run과 timeout/watchdog 이벤트
-- `audit`, `product`, `poc` profile별 예상 비용 비교
+- `audit`, `product` profile별 예상 비용 비교
 
 단, Dashboard는 먼저 `perf-report` 같은 CLI 출력이 안정된 뒤 붙이는 것이 좋다.
 

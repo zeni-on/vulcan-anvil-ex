@@ -49,7 +49,7 @@ Dashboard는 주로 다음 파일과 폴더를 읽습니다.
 | `session.json` | 현재 Gate, profile, branch, 진행 상태 |
 | `vulcan.config.json` | workflow, integration branch, runner 정책 |
 | `docs/artifacts/` | 요구사항, 설계, 테스트, QA, 릴리즈 산출물 |
-| `docs/product/` 또는 `docs/poc/` | Product/PoC profile의 핵심 문서 |
+| `docs/product/` | Product profile의 핵심 문서 |
 | `docs/runs/` | Run, Build Wave, QA Run, 위임 기록 |
 | `.vulcan/comments/comments.jsonl` | Dashboard 문서 코멘트 |
 | `.vulcan/delegations/*.json` | subagent/thread/native branch agent 위임 sidecar |
@@ -99,10 +99,10 @@ Run 문서의 `delegation_records`는 Orchestrator가 재검증 후 정리하는
 | `Agy branch` | Antigravity/Agy Workspace branch 또는 native branch agent 기록 |
 | `External CLI` | `agent-run`/`run-exec` 같은 외부 CLI runner 실행 기록 |
 | `Direct edit` | Orchestrator 직접 수정 사유가 기록된 작업 |
-| `위임 경로 없음` | Run 또는 PoC 결과 문서에 실행 경로가 아직 기록되지 않은 상태 |
+| `위임 경로 없음` | Run 또는 결과 요약에 실행 경로가 아직 기록되지 않은 상태 |
 
 위임 기록이 없다고 해서 항상 오류는 아닙니다.
-짧은 PoC 실험이나 사람이 직접 정리한 문서는 기록이 없을 수 있습니다.
+사람이 직접 정리한 문서는 기록이 없을 수 있습니다.
 다만 Product/Audit의 완료된 Build/QA Run에서 실행 경로가 비어 있다면, Orchestrator에게 위임 기록 또는 직접 수정 사유를 정리하도록 요청하는 것이 좋습니다.
 
 권장 sidecar 최소 예시는 다음과 같습니다.

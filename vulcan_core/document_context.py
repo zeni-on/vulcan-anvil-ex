@@ -1,7 +1,9 @@
 """Bounded, read-only Markdown lookup. Results are references, never approvals."""
 
 import hashlib
+from bisect import bisect_right
 from collections import deque
+from html.parser import HTMLParser
 import os
 from pathlib import Path, PureWindowsPath
 import re
@@ -96,6 +98,7 @@ def _sections(text):
         elif match and not (match[1][0] == "`" and "`" in match[2]):
             fence = match[1]
             visible[i] = "\n"
+    visible = _without_comments("".join(visible)).splitlines(keepends=True)
     headings = []
     for i, line in enumerate(visible):
         match = re.match(r"^ {0,3}(#{1,6})(?:\s+(.+?)\s*|\s*)$", line.rstrip("\r\n"))
@@ -224,7 +227,69 @@ def _links(root, path, text, definitions):
     return (result + unresolved)[:MAX_LINKS+1]
 
 
+def _without_comments(text):
+    """Mask real comments, not literal comment openers in inline code spans."""
+    output, kept, cursor = [], 0, 0
+    token_pattern = re.compile(r"<!--|`+")
+    while token := token_pattern.search(text, cursor):
+        if token[0].startswith("`"):
+            back = token.start()
+            while back > 0 and text[back - 1] == "\\":
+                back -= 1
+            escaped = (token.start() - back) % 2
+            closing = None if escaped else re.search(r"(?<!`)" + re.escape(token[0]) + r"(?!`)", text[token.end():])
+            cursor = token.end() + closing.end() if closing else token.end()
+            continue
+        closing = text.find("-->", token.end())
+        cursor = len(text) if closing < 0 else closing + 3
+        comment = text[token.start():cursor]
+        output.append(text[kept:token.start()])
+        output.append(comment if STATE.fullmatch(comment) else re.sub(r"[^\r\n]", " ", comment))
+        kept = cursor
+    output.append(text[kept:])
+    return "".join(output)
+
+
+class _HTMLAnchors(HTMLParser):
+    """Collect actual HTML targets and empty anchor-tag positions, never content."""
+    LITERAL = {"pre", "code", "script", "style", "textarea"}
+
+    def __init__(self, text):
+        super().__init__(convert_charrefs=True)
+        self.targets, self.markers, self.literal = [], [], []
+        self.text = text
+        self.offsets = [0]
+        for line in text.splitlines(keepends=True):
+            self.offsets.append(self.offsets[-1] + len(line))
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.LITERAL:
+            self.literal.append(tag)
+        if self.literal:
+            return
+        ids = [value for key, value in attrs if key == "id"]
+        names = [value for key, value in attrs if tag == "a" and key == "name"]
+        values = list(dict.fromkeys(value for value in ids + names if value))
+        invalid = len(ids) > 1 or len(names) > 1
+        self.targets.extend((value, self.getpos(), invalid) for value in values)
+        if tag == "a" and any(values):
+            self.markers.append((self.getpos(), len(self.get_starttag_text())))
+
+    def handle_endtag(self, tag):
+        if self.literal:
+            if tag in self.literal:
+                self.literal = self.literal[:self.literal.index(tag)]
+            return
+        if tag == "a":
+            line, column = self.getpos()
+            start = self.offsets[line - 1] + column
+            end = self.text.find(">", start)
+            if end >= 0:
+                self.markers.append((self.getpos(), end - start + 1))
+
+
 def _anchor_indices(sections):
+    """Keep heading slugs stable; None denotes a colliding/ambiguous target."""
     anchors = {}
     for i, section in enumerate(sections):
         if not section["level"]:
@@ -235,6 +300,46 @@ def _anchor_indices(sections):
             suffix += 1
             anchor = f"{base}-{suffix}"
         anchors[anchor] = i
+    # Code/comments cannot define HTML targets. Preserve original line offsets
+    # separately so masked examples cannot make a preceding marker jump sections.
+    visible = "".join(section["visible"] for section in sections)
+    if not re.search(r"<[A-Za-z]", visible):
+        return anchors
+    original = "".join(section["excerpt"] for section in sections)
+    visible = re.sub(r"(?m)^(?: {4}| {0,3}\t)[^\r\n]*", lambda m: " " * len(m[0]), visible)
+    visible = re.sub(r"(?<![\\`])(`+)(?!`).*?(?<!`)\1(?!`)",
+                     lambda m: re.sub(r"[^\r\n]", " ", m[0]), visible, flags=re.S)
+    visible = re.sub(r"(\\+)<", lambda m: m[1] + (" " if len(m[1]) % 2 else "<"), visible)
+    parser = _HTMLAnchors(visible)
+    parser.feed(visible)
+    parser.close()
+    offsets = [0]
+    for line in original.splitlines(keepends=True):
+        offsets.append(offsets[-1] + len(line))
+    marker_free = list(original)
+    for (line, column), length in parser.markers:
+        start = offsets[line - 1] + column
+        marker_free[start:start + length] = ["\n" if c == "\n" else " " for c in original[start:start + length]]
+    marker_free = "".join(marker_free)
+    starts = [section["start_line"] for section in sections]
+    for value, (line, _), invalid in parser.targets:
+        index = bisect_right(starts, line) - 1
+        if index + 1 < len(sections):
+            following = sections[index + 1]
+            # An empty <a> marker directly before a heading belongs to that
+            # heading, not to the previous sibling or the document introduction.
+            if not marker_free[offsets[line - 1]:offsets[following["start_line"] - 1]].strip():
+                owner = sections[index]
+                prefix = marker_free[offsets[owner["start_line"]]:offsets[line - 1]]
+                prefix = STATE.sub("", prefix).strip()
+                empty_peer = owner["level"] >= following["level"] and not prefix
+                state_boundary = (owner["state"] in {"candidate", "history"}
+                                  and following["state"] not in {"candidate", "history"})
+                if empty_peer or state_boundary:
+                    invalid = True
+                else:
+                    index += 1
+        anchors[value] = None if invalid or value in anchors else index
     return anchors
 
 
@@ -315,9 +420,10 @@ def _follow_references(root, cache, patterns, explicit, warnings):
                 continue
             anchor = link["anchor"]
             if anchor:
-                start = _anchor_indices(sections).get(anchor)
+                anchors = _anchor_indices(sections)
+                start = anchors.get(anchor)
                 if start is None:
-                    link["status"] = "missing_anchor"
+                    link["status"] = "ambiguous_anchor" if anchor in anchors else "missing_anchor"
                     continue
                 wanted = {j for j, s in enumerate(sections) if j == start or start in s["parents"]}
                 parents = set(sections[start]["parents"])

@@ -5,18 +5,19 @@ Vulcan-Anvil Ex는 사용자가 명령어를 하나씩 넣어 산출물을 수�
 처음 보는 사용자는 이 문서보다 짧은 [Quickstart](QUICKSTART.md)를 먼저 읽어도 됩니다.
 Dashboard 화면에서 무엇을 봐야 하는지는 [Dashboard Guide](DASHBOARD_GUIDE.md)를 참고합니다.
 
+기존 프로젝트에는 `init`을 다시 실행하지 않습니다. Audit과 Product의 업그레이드는 [업그레이드 안내](UPGRADE_AND_DASHBOARD.md)를 따르세요. 대상 디렉터리에서 최신 원본 clone의 `vulcan.py`로 `upgrade`를 실행하고, 이후 로컬 `python vulcan.py version`과 `python vulcan.py status`로 확인합니다. 은퇴한 PoC 프로젝트에서는 실행하지 않습니다.
+
 ## 1. 새 프로젝트 초기화
 
 ```powershell
 python vulcan.py init ../my-project "My Project"
 python vulcan.py init ../my-product "My Product" --profile product
-python vulcan.py init ../my-poc "My PoC" --profile poc
 ```
 
 초기화하면 Core 문서, 템플릿, adapter 문서, 공개 표준 참고자료, `AGENTS.md`, `session.json`, 프로젝트용 `vulcan.py`가 생성됩니다.
 
 `--profile`을 지정하지 않으면 기본값은 `audit`입니다.
-`product`, `poc`는 초기화 시 선택할 수 있으며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
+제품/업무 앱은 `--profile product`로 시작하며, 선택한 Profile과 Overlay 기준은 `session.json`과 `vulcan.config.json`에 기록됩니다.
 Profile은 결과물의 품질 등급이 아니라 문서 깊이, 증적 밀도, 독립검수 빈도, 변경관리 형식의 차이입니다.
 현재 프로젝트의 Gate/Profile/Branch/다음 행동은 다음 명령으로 먼저 확인합니다.
 
@@ -30,18 +31,17 @@ Profile을 고르기 어렵다면 먼저 다음 기준으로 선택합니다. �
 
 | 원하는 것 | 선택 |
 | --- | --- |
-| 빠른 기술/아이디어 검증 | `--profile poc` |
 | 제품/업무 앱 개발과 반복 릴리즈 | `--profile product` |
 | 감리, 고객 검수, 인수인계, 강한 QA 증적 | 기본값 `audit` |
 
 Product profile은 `docs/product/`에 6종 문서를 생성합니다.
 새 `init --profile product`는 `product-iterative-v1`의 `planning` 세션도 생성합니다. 작업 구간은 `planning`, `impl`, `acceptance`이며 `completed`는 이번 범위의 최종 인수 결과입니다. 초기 PRODUCT_BRIEF 내용 해시를 참조하는 범위에는 계약/시험/승인이 없으므로 `status --check`의 구현 진입 차단은 정상입니다. 먼저 총괄과 실제 범위를 합의합니다. 총괄이 기존 `open-work` 요청을 planning 대상으로 미리보고 적용한 뒤 readiness와 별도 advance 승인을 확인합니다. 이미 초기화된 세션에 `start`를 다시 요청하지 않습니다. 사용자가 JSON을 손으로 작성할 필요는 없습니다. 정확한 절차와 실행/발행 경계는 [Core CLI 4.1](core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
-표식 없는 기존 Product와 Audit/PoC는 기존 Gate 흐름을 유지하며 `upgrade`로 자동 이행하지 않습니다. 표식을 수동 추가하지 않습니다.
+표식 없는 기존 Product와 Audit은 기존 Gate 흐름을 유지하며 `upgrade`로 자동 이행하지 않습니다. 표식을 수동 추가하지 않습니다.
 6종은 개요와 상세로 들어가는 진입점입니다. 원장만으로 충분하면 그대로 쓰고, 기능별 요구/AC는 `01-requirements/`, 설계는 `02-design/`, 시험 정의는 `03-test/`, 실행 결과는 `04-review/` 아래 선택 상세로 작성할 수 있습니다. 모두 `docs/artifacts/` 아래이며 원장에서 실제 상대 Markdown 링크로 연결합니다.
 파일마다 내용을 중복 작성하지 않도록 [Product 문서 작성 안내](core/PRODUCT_DOCUMENT_WRITING.md)의 위치·책임·선택 템플릿을 따릅니다. 기존 승인 문서의 이동은 별도 확인/승인을 거치며 `upgrade`가 자동으로 옮기지 않습니다.
 중요한 의사결정이 아직 없다면 `docs/product/ADR_LOG.md`는 `ADR-NONE` 행을 유지합니다. `ADR-001 | TBD` 같은 placeholder ADR을 억지로 만들 필요는 없습니다.
 Product에서는 일반 수정마다 Run/Wave를 만들지 않아도 됩니다. 기존 요구사항·이슈·작업 대화에서 목표, 범위, 관련 계약과 완료 검증을 확인하고 진행합니다. 역할별로 작업한다면 총괄은 기존 개발 담당에게 묶어 전달할 수 있습니다. 장기 위임이나 재현 가능한 작업지시가 필요해 Run을 선택하면 preflight를 통과시킨 뒤 실행합니다. 담당자는 [Product Worker Guide](core/PRODUCT_WORKER_GUIDE.md)를 따르고, 결과는 기존 보고서/PR에 한 번 남깁니다. [Product 실행 기준](core/PRODUCT_PROFILE_BASELINE.md#7-product-실행과-검증-범위)에 따라 현재 계약을 현행화하며, 문서 정리만으로 제품 테스트를 반복하거나 모델을 자동 변경하지 않습니다.
-표식 없는 기존 Product의 Gate 5에서 `release-pr --dry-run`을 실행하면 `docs/product/PRODUCT_TRACEABILITY.md`, `docs/product/REGRESSION_AND_RELEASE_REPORT.md`, backlog, Gate 5 승인서를 release evidence로 봅니다. 새 반복 모델의 dry-run은 현재 범위 인수/증적/브랜치를 확인하며 실제 릴리즈나 PR을 생성하지 않습니다. 실제 발행은 별도 승인 후 명시적인 수동 작업입니다.
+Product 반복 모델의 `release-pr --dry-run`은 현재 범위 인수/증적/브랜치를 확인하며 실제 릴리즈나 PR을 생성하지 않습니다. 실제 발행은 별도 승인 후 명시적인 수동 작업입니다. 표식 없는 기존 프로젝트의 호환 운영은 [CLI Guide 4](core/ORCHESTRATOR_CLI_GUIDE.md#4-gate-라이프사이클)를 참고하세요.
 
 `--remote`는 선택 옵션입니다. 넣지 않으면 로컬 폴더에 프로젝트를 만들고 Git 저장소와 초기 커밋까지 생성합니다.
 
@@ -93,16 +93,6 @@ cd ../my-project
 
 이 요청은 구현을 바로 시작하라는 뜻이 아닙니다. 메인 에이전트가 `AGENTS.md`, `session.json`, `docs/core/`, adapter 문서, 현재 Gate 상태를 먼저 확인하고, 이후 Gate별 진행을 안정적으로 조율하도록 만드는 초기 정렬 단계입니다.
 
-PoC Profile로 시작했다면 다음처럼 목표와 운영 강도를 함께 알려주는 것이 좋습니다.
-
-```text
-이 프로젝트는 PoC profile이야.
-감리 제출 수준 문서가 아니라 목표, 가설, 성공 기준, smoke/demo 검증 결과를 중심으로 진행해줘.
-실패하거나 미실행한 항목은 Pass로 기록하지 말고 PoC 결과나 다음 판단 항목으로 남겨줘.
-짧은 실험은 subagent와 결과 요약 중심으로 진행하고, 외부 worker나 긴 위임이 필요한 경우에만 compact Run을 만들어줘.
-TBD가 필요한 항목은 사유와 후속 판단 시점을 같이 남겨줘.
-```
-
 Product Profile로 시작했다면 다음처럼 알려주는 것이 좋습니다.
 
 ```text
@@ -121,13 +111,6 @@ Audit Profile은 기본값입니다. 감리, 고객 검수, 인수인계가 필�
 이 프로젝트는 Audit profile이야.
 요구사항, 설계, 테스트, QA 증적, 변경관리, 릴리즈 승인까지 추적 가능하게 진행해줘.
 Gate 전환 전에는 status --check 결과와 남은 이슈를 보고해줘.
-```
-
-PoC Run은 기본 필수가 아닙니다. 외부 CLI worker, 독립 검수, 긴 위임, 재현 가능한 실험 기록이 필요하면 다음처럼 compact Run 초안을 생성할 수 있습니다.
-짧은 subagent/thread 실험은 별도 Run 없이 결과 요약에 위임 대상, 작업 범위, 변경 파일, 결과 요약, Orchestrator 재검증 명령만 남길 수 있습니다.
-
-```powershell
-python vulcan.py run-new --gate phase0 --skill orchestrator-plan --title "PoC 가설과 성공 기준 정리" --related-ids POC-001
 ```
 
 그 다음 만들고 싶은 기능이나 제약을 말합니다.
@@ -194,7 +177,7 @@ my-project/
 | `profile-status` | 현재 Delivery Profile과 `profile_rules` 상세 확인 |
 | `branch-status` | 현재 브랜치, 통합 브랜치, QA workspace 상태 상세 확인 |
 | `branch-start impl` | 구현 통합 브랜치(`workflow.integration_branch`) 생성 또는 전환 |
-| `release-pr` | Gate 5에서 통합 브랜치 -> 기준 브랜치 Release PR 생성/갱신 |
+| `release-pr` | Product 반복 모델은 `--dry-run`으로 인수·발행 준비 진단. 기존 Gate 모델은 Gate 5 Release PR 생성/갱신 |
 | `agent-run --mode work` | 선택 사항. Run 문서를 codex-cli, claude-cli, antigravity-cli 같은 외부 CLI worker runner로 실행 |
 | `run-exec` | 선택 사항. 특정 Run을 외부 CLI runner로 실행하고 `_exec` 로그, watchdog/timeout, worktree 증적을 남김 |
 | `handoff` | 다른 실행 환경으로 넘길 검수 Run 생성 |
@@ -214,7 +197,7 @@ Codex runner는 기본적으로 역할별 model/effort 정책을 사용한다.
 자세한 기준은 `docs/core/CODEX_MODEL_POLICY.md`를 따른다.
 Claude CLI를 runner로 쓸 때는 `--runner claude-cli`를 지정한다. Claude CLI는 `claude -p` 기반 비대화형 실행을 사용하며 기본값은 `claude-opus-4-7` + `high` effort다.
 
-새 프로젝트는 `independent_enabled: true`가 기본값이다. 이는 Gate 2/Gate 4 종료 전 교차검증을 기본 권장 절차로 둔다는 뜻이며, `review-run`을 자동 실행한다는 뜻은 아니다.
+새 프로젝트는 `independent_enabled: true`가 기본값이지만 `review-run`을 자동 실행한다는 뜻은 아니다. Product는 위험도·계약 변경·통합 경계에 따라 reviewer를 선택한다. 기존 Gate 모델의 검수 시점과 Audit/사용자의 필수 검수 조건은 유지한다.
 독립 검수와 독립 구현은 장기적으로 `Independent Execution` 공통 모델로 수렴한다. 사용자-facing 용어는 `교차검증`을 우선 사용한다. `review-run`은 그중 읽기 중심 review 실행이고, 향후 `run-exec`는 Build Wave, Evidence Run, PR 교차검증까지 같은 runner 방식으로 실행하는 방향이다.
 `init`이 감지한 외부 CLI 목록은 선택 가능한 실행 경로다. CLI가 여러 개 설치되어 있다는 이유만으로 모두 호출하지 않는다. Product의 기본 검수 후보는 새 문맥의 native reviewer이며, 외부 모델/CLI는 추가 관점이나 별도 실행 증적이 필요할 때 선택한다. Audit/고객/사용자의 필수 검수 요건은 유지한다.
 
@@ -258,7 +241,7 @@ Gate 상태와 최종 추적표는 총괄이 관리하고, 질문과 승인 요�
 
 작업창 이름만으로 역할/권한/모델 설정이나 자동 협업이 생기지는 않습니다. 총괄이 실제 대상 ID와 Local/worktree 경로, 소스 기준을 확인합니다. 역할 작업창의 오래된 대화보다 현재 승인된 원본 문서가 기준이며, 전체 원장을 매번 전달하지 않습니다.
 
-기존 Run은 개별 업무 계약으로 재사용하고, 결과는 `delegation_records`로 연결합니다. PoC의 Run 생략 규칙은 그대로 유지합니다. 새 역할별 산출물 세트나 Gate는 만들지 않고, 단일 active Build Wave와 사용자 승인 경계도 유지합니다. 장기 품질검증 담당과 새 문맥의 독립 리뷰어는 구분합니다.
+기존 Run은 개별 업무 계약으로 재사용하고, 결과는 `delegation_records`로 연결합니다. 새 역할별 산출물 세트나 Gate는 만들지 않고, 단일 active Build Wave와 사용자 승인 경계도 유지합니다. 장기 품질검증 담당과 새 문맥의 독립 리뷰어는 구분합니다.
 
 상세 기준: [공통 협업 규칙](core/COLLABORATION_PROTOCOL.md), [Codex 작업 연결](adapters/codex-gpt/PERSONA_DELEGATION.md). `init`/`upgrade`는 이 지침을 설치하지만 실제 작업창을 만들거나 연결하지는 않습니다. 먼저 읽기 전용 업무 하나로 전달/회수를 확인한 뒤 확대합니다.
 

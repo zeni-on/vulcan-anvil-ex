@@ -12,6 +12,8 @@ dashboard/playwright-report/
 dashboard/projects.json
 docs/ref-docs/
 docs/examples/
+# Local project case study, not part of the distributable framework.
+/docs/reference/PRODUCT-QA-OBSERVATION-AND-HANDOFF-DESIGN.md
 .claude/worktrees/
 .vulcan/worktrees/
 .vulcan/dashboard-e2e-fixture/

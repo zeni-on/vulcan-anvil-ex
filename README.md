@@ -16,18 +16,17 @@ Vulcan 검사를 통과했다는 것은 필요한 기록과 연결이 현재 규
 
 | 상황 | 추천 |
 | --- | --- |
-| 기능/기술 가설을 실험하고 결과를 기록하고 싶다 | `--profile poc` |
 | 제품/업무 앱을 만들고 릴리즈 품질을 유지하고 싶다 | `--profile product` |
 | 감리, 고객 검수, 인수인계, 보안/QA 증적이 필요하다 | 기본값 `--profile audit` |
 
-PoC는 품질이 낮은 모드가 아니라 문서와 증적의 깊이를 줄여 핵심 가설, 반복별 기능 변화, 다음 판단을 남기는 모드입니다. Product는 일반 제품/업무 앱 개발의 중간층이고, Audit은 감리/SI/규제 대응처럼 가장 강한 추적성과 증적이 필요한 경우에 사용합니다.
+Product는 제품·업무 앱의 요구사항과 회귀 품질을 관리하고, Audit은 감리·고객 검수에 필요한 상세 추적성과 증적을 관리합니다.
 
 Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md)를 참고합니다.
 
 처음이라면 다음 순서로 읽는 것이 가장 쉽습니다.
 
 1. [Quickstart](docs/QUICKSTART.md): 처음 프로젝트를 만들고 Orchestrator에게 무엇을 말할지 확인
-2. [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md): PoC/Product/Audit 중 어떤 강도로 시작할지 결정
+2. [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md): Product와 Audit 중 프로젝트에 맞는 기준 선택
 3. [Dashboard Guide](docs/DASHBOARD_GUIDE.md): Gate, 문서, Run, 증적, 코멘트를 화면에서 어떻게 읽는지 확인
 4. [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md): 실제 샘플에서 어느 정도 시간이 걸리고 무엇이 남는지 확인
 
@@ -41,7 +40,7 @@ Profile 선택 기준은 [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD
 - **Adapter**: Codex, Claude, Gemini/Antigravity 같은 런타임 차이를 흡수한다.
 - **Dashboard**: Gate, 문서, Run, 통계, 최근 커밋을 한 화면에서 확인한다.
 
-`0.5.0`의 신규 Product는 **기획·설계 ↔ 구현 ↔ 인수 검증**으로 반복합니다. 업무의 경계·규칙·예시를 먼저 확인하고, 기능별 문서 원본과 실제 테스트 결과를 연결합니다. Run/Wave는 필요할 때만 사용하며 기존 Product/Audit/PoC의 Gate 흐름은 자동 변경하지 않습니다. [릴리즈 노트](docs/releases/v0.5.0.md)에서 적용 범위와 업그레이드 주의사항을 확인할 수 있습니다.
+신규 Product는 **기획·설계 ↔ 구현 ↔ 인수 검증**으로 반복합니다. Audit과 표식 없는 기존 Product는 기존 Gate 흐름을 따릅니다.
 
 ## 왜 필요한가
 
@@ -65,11 +64,6 @@ Vulcan-Anvil Ex는 이 문제를 문서화된 Core 규칙, Adapter, Run 기록, 
 7. Dashboard에서 Gate, 산출물, Run, 테스트/백로그 통계, 최근 커밋을 확인한다.
 
 ## 빠른 시작
-
-```powershell
-python vulcan.py init ../my-poc "My PoC" --profile poc
-cd ../my-poc
-```
 
 일반 제품/업무 앱은 `product`, 감리 대응 프로젝트는 기본값인 `audit`을 사용합니다.
 
@@ -112,7 +106,7 @@ Product의 일반 수정은 기존 요구사항/이슈/작업 요약으로 진�
 이 문서들은 Gate별 제출 문서가 아니라 제품을 계속 개발하고 릴리즈하기 위한 운영 문서입니다.
 6종은 모든 내용을 담는 제한이 아니라 진입점입니다. 요구사항·설계·시험 정의·실행 결과가 커지면 해당 상세 원본을 한 곳에 쓰고 원장에서 링크합니다. [Product 문서 작성 안내](docs/core/PRODUCT_DOCUMENT_WRITING.md)에 위치와 선택형 템플릿을 정리했습니다. `upgrade`가 기존 프로젝트 문서를 자동 이동하거나 재작성하지는 않습니다.
 중요한 아키텍처 의사결정이 아직 없다면 ADR Log는 `ADR-NONE`을 유지합니다.
-Gate 5의 `release-pr --dry-run`도 Product profile에서는 audit 산출물 대신 `docs/product/` 원장과 backlog, Gate 5 승인서를 evidence 기준으로 사용합니다.
+Product 반복 모델의 `release-pr --dry-run`은 현재 범위의 인수 결과·증적·브랜치를 확인합니다. 실제 PR/릴리즈 발행은 별도 승인 후 명시적으로 수행하며, 다섯 단계 절차나 Audit 승인서를 추가로 요구하지 않습니다. 기존 모델의 호환 동작은 [CLI Guide](docs/core/ORCHESTRATOR_CLI_GUIDE.md#4-gate-라이프사이클)를 참고하세요.
 
 ## Codex에서 사용할 때
 
@@ -165,7 +159,7 @@ Dashboard 화면을 어떻게 읽는지는 [Dashboard Guide](docs/DASHBOARD_GUID
 
 새 `init --profile product`는 `product-iterative-v1`의 `planning`에서 시작해 `impl`, `acceptance`로 진행합니다. `completed`는 이번 범위의 최종 인수 결과이며 배포 완료가 아닙니다. 초기 범위는 구현 합의가 아니므로 먼저 목표와 범위를 총괄에게 설명하세요. 총괄이 기존 상태 요청의 미리보기와 적용을 맡으며 사용자가 JSON을 손으로 작성할 필요는 없습니다. 첫 사용 절차는 [Core CLI 4.1](docs/core/ORCHESTRATOR_CLI_GUIDE.md#41-개발용-product-반복-프로세스)을 따릅니다.
 
-아래 Phase 0과 5-Gate 흐름은 표식 없는 기존 Product와 Audit/PoC에 적용합니다. `upgrade`는 자동 이행하지 않으며 `process_model` 표식을 수동 추가하지 않습니다.
+아래 Phase 0과 5-Gate 흐름은 표식 없는 기존 Product와 Audit에 적용합니다. `upgrade`는 자동 이행하지 않으며 `process_model` 표식을 수동 추가하지 않습니다.
 
 | 단계 | 목적 | 주요 산출물 |
 | --- | --- | --- |
@@ -183,9 +177,9 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 
 ## 현재 상태
 
-**Experimental - v0.5.0**
+**Experimental · v0.6.0**
 
-`0.5.0`은 신규 Product의 반복 프로세스, 기능별 문서 원본, 가벼운 native 협업과 실제 제품 CI 검증을 묶은 마이너 릴리즈입니다. 이번 범위 인수와 제품 전체 릴리즈를 구분하며, 기존 프로젝트는 문서·상태·이력을 보존한 채 프레임워크만 upgrade할 수 있습니다.
+[v0.6.0](docs/releases/v0.6.0.md)부터 지원 프로파일은 Audit과 Product입니다. 기존 PoC 프로젝트를 자동 전환하지 않습니다. Product는 시험의 시작 조건과 실행 결과를 함께 기록하고, 기능별 계약에서 관련 구현 위치를 찾을 수 있습니다. 지원 프로젝트를 업그레이드할 때는 대상 디렉터리에서 최신 원본 clone의 CLI를 실행합니다. 경로 확인과 실행 순서는 [업그레이드 안내](docs/UPGRADE_AND_DASHBOARD.md)를 따르세요.
 
 `0.4.8`은 Product profile 안정화 패치입니다. Product Build Wave의 `SCN/API/DATA/UI/REG` 관련 ID를 보존하고, Product Gate 5 release PR body가 `docs/product/` 원장 문서를 evidence로 표시하며, ADR이 없을 때는 `ADR-NONE` empty-state를 사용합니다.
 
@@ -203,12 +197,12 @@ Gate 3 테스트케이스는 실행 계획과 기대 기준을 정의합니다. 
 | --- | --- |
 | [Quickstart](docs/QUICKSTART.md) | 처음 프로젝트를 만들고 Orchestrator/Dashboard를 시작하는 가장 짧은 안내 |
 | [Getting Started](docs/GETTING_STARTED.md) | 초기화, 원격 저장소, 프로젝트 시작, 주요 명령 |
-| [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | PoC, Product, Audit 선택 기준 |
+| [Which Profile Should I Use?](docs/WHICH_PROFILE_SHOULD_I_USE.md) | Product와 Audit 선택 기준 |
 | [Dashboard Guide](docs/DASHBOARD_GUIDE.md) | Dashboard에서 Gate, 문서, Run, 증적, 코멘트를 읽는 방법 |
 | [Examples And Benchmarks](docs/EXAMPLES_AND_BENCHMARKS.md) | 샘플 실행 결과, 산출물, 소요 시간 요약 |
 | [Concepts](docs/CONCEPTS.md) | 이름의 의미, Orchestrator, Gate, Backlog, Build Wave, Adapter |
 | [Product Profile Baseline](docs/core/PRODUCT_PROFILE_BASELINE.md) | 일반 제품/업무 앱 레이어의 보안, 데이터, 릴리즈 기준 |
-| [Profile Gap Check](docs/core/PROFILE_GAP_CHECK.md) | PoC -> Product -> Audit 전환 전 부족 항목 진단 기준 |
+| [Profile Gap Check](docs/core/PROFILE_GAP_CHECK.md) | Product·Audit 기준의 부족 항목을 읽기 전용으로 진단 |
 | [Upgrade And Dashboard](docs/UPGRADE_AND_DASHBOARD.md) | 기존 프로젝트 업그레이드와 Dashboard 운영 |
 | [Roadmap](docs/ROADMAP.md) | 현재 상태, 다음 초점, Delivery Profile 방향 |
 | [Codex/GPT Adapter](docs/adapters/codex-gpt/README.md) | Codex용 AGENTS, repo-local skill, custom agent, runner 연결 기준 |

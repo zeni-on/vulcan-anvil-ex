@@ -6,7 +6,6 @@ title: Product Architecture
 title_ko: 제품 아키텍처
 project: {{PROJECT_NAME}}
 profile: product
-gate_scope: gate2
 status: Draft
 version: v0.1
 owner_role: Product Architect
@@ -50,8 +49,8 @@ flowchart LR
 ### 3.1 Build / Run / Deploy Surface
 
 Product profile에서는 사용자가 제품 후보를 다시 실행할 수 있어야 한다.
-구현 전 Gate 2에서 최소한의 빌드/실행/배포 가정을 정하고,
-구현과 Gate 4에서 실제 명령과 증적으로 갱신한다.
+planning에서 최소한의 빌드/실행/배포 가정을 정하고,
+impl과 acceptance에서 실제 명령과 증적으로 갱신한다.
 
 | Surface ID | 항목 | 기준/명령 | 관련 계약 | 검증 |
 | --- | --- | --- | --- | --- |

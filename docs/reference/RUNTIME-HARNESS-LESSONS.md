@@ -95,7 +95,6 @@ Ex 적용 후보:
 주의:
 
 - sidecar는 사실 기록이다. Gate 승인이나 테스트 Pass 확정이 아니다.
-- Run 문서가 없는 짧은 PoC 작업에서는 필수로 강제하지 않는다.
 
 ### 2.3 Plan Before Work
 
@@ -104,7 +103,7 @@ Ex 적용 후보:
 Ex 적용 방향:
 
 - Audit/Product에서는 기존 Run/Wave 계획을 유지한다.
-- PoC/Product의 작은 작업은 긴 Run 문서보다 체크리스트형 plan을 허용한다.
+- Product의 작은 작업은 긴 Run 문서보다 체크리스트형 plan을 허용한다.
 - plan은 실행하지 않는다. 실행은 `execute` 후보나 Orchestrator 지시로 분리한다.
 
 체크리스트형 plan 최소 구조:
@@ -191,7 +190,6 @@ Ex 적용 방향:
 
 - Build Wave 완료 전 최소 evidence gate를 둔다.
 - Gate 4 QA는 현재처럼 공식 QA 결과서와 로그/스크린샷을 원본으로 둔다.
-- PoC는 smoke/demo evidence로 충분할 수 있다.
 
 Build Wave 최소 gate 후보:
 
@@ -200,12 +198,6 @@ Build Wave 최소 gate 후보:
 3. automated test 또는 build smoke
 4. evidence/log attached
 5. Orchestrator verification
-
-PoC 최소 gate 후보:
-
-1. smoke 실행
-2. demo evidence 또는 실행 로그
-3. 남은 판단/제약 기록
 
 ### 2.7 Parallel Explore Subagents
 

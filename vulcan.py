@@ -36,12 +36,19 @@ import os
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 from datetime import date, datetime, timedelta
+from pathlib import Path
+
+if __name__ == "__main__":
+    # A rejected command must not populate an installed project's __pycache__.
+    sys.dont_write_bytecode = True
+
 from vulcan_core.document_context import lookup_sections
 from vulcan_core.product_documents import ProductDocuments, substantive as product_substantive
 
@@ -50,7 +57,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-VULCAN_VERSION = "0.5.0"
+VULCAN_VERSION = "0.6.0"
 
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,6 +146,10 @@ def _bootstrap_vulcan_core():
 _bootstrap_vulcan_core()
 
 from vulcan_core import product_process, product_readiness, product_session, product_consumers, product_branch, product_qa
+from vulcan_core.profiles import (
+    DEFAULT_DELIVERY_PROFILE, SUPPORTED_DELIVERY_PROFILES, DELIVERY_PROFILE_ALIASES,
+    UnsupportedProfile, load_delivery_profile, normalize_delivery_profile,
+)
 from vulcan_core.doctor import (
     collect_doctor_checks as collect_core_doctor_checks,
     run_doctor,
@@ -185,7 +196,6 @@ PROJECT_DOC_SETS = [
     "docs/seed-docs",
 ]
 PROJECT_DOC_DIRS = [
-    "docs/poc",
     "docs/artifacts/00-discovery",
     "docs/artifacts/01-requirements",
     "docs/artifacts/02-traceability",
@@ -238,11 +248,6 @@ PROJECT_ARTIFACT_TEMPLATES = [
     ("docs/templates/CHANGE_REQUEST_TEMPLATE.md", "docs/artifacts/05-change/DOC-PM-G0-001_Change-Request_v0.1.md"),
     ("docs/templates/RELEASE_APPROVAL_TEMPLATE.md", "docs/artifacts/07-release/DOC-PM-G5-001_Release-Approval_v0.1.md"),
 ]
-POC_ARTIFACT_TEMPLATES = [
-    ("docs/templates/poc/POC_REQUIREMENTS_TEMPLATE.md", "docs/poc/POC_REQUIREMENTS.md"),
-    ("docs/templates/poc/POC_SYSTEM_DESIGN_TEMPLATE.md", "docs/poc/POC_SYSTEM_DESIGN.md"),
-    ("docs/templates/poc/POC_TEST_REPORT_TEMPLATE.md", "docs/poc/POC_TEST_REPORT.md"),
-]
 PRODUCT_ARTIFACT_TEMPLATES = [
     ("docs/templates/product/PRODUCT_BRIEF_TEMPLATE.md", "docs/product/PRODUCT_BRIEF.md"),
     ("docs/templates/product/PRODUCT_ARCHITECTURE_TEMPLATE.md", "docs/product/PRODUCT_ARCHITECTURE.md"),
@@ -259,19 +264,10 @@ PRODUCT_OPTIONAL_DETAIL_TEMPLATES = [
     ("docs/templates/product/PRODUCT_UI_CONTRACT_TEMPLATE.md", "docs/artifacts/02-design/screen/PRODUCT_UI_CONTRACT.md"),
     ("docs/templates/product/PRODUCT_SECURITY_CHECKLIST_TEMPLATE.md", "docs/artifacts/02-design/security/PRODUCT_SECURITY_CHECKLIST.md"),
     ("docs/templates/product/PRODUCT_ENGINEERING_GUIDE_TEMPLATE.md", "docs/artifacts/02-design/development-standard/PRODUCT_ENGINEERING_GUIDE.md"),
+    ("docs/templates/product/PRODUCT_IMPLEMENTATION_MAP_TEMPLATE.md", "docs/artifacts/02-design/program/PRODUCT_IMPLEMENTATION_MAP.md"),
     ("docs/templates/product/PRODUCT_TEST_PLAN_TEMPLATE.md", "docs/artifacts/03-test/PRODUCT_TEST_PLAN.md"),
     ("docs/templates/product/PRODUCT_VERIFICATION_RESULT_TEMPLATE.md", "docs/artifacts/04-review/PRODUCT_VERIFICATION_RESULT.md"),
 ]
-POC_REQUIRED_ARTIFACTS_BY_GATE = {
-    "phase0": ["docs/poc/POC_REQUIREMENTS.md"],
-    "gate1": ["docs/poc/POC_REQUIREMENTS.md"],
-    "gate2": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
-    "gate3": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
-    "impl": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
-    "gate4": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
-    "gate5": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
-    "completed": ["docs/poc/POC_REQUIREMENTS.md", "docs/poc/POC_SYSTEM_DESIGN.md", "docs/poc/POC_TEST_REPORT.md"],
-}
 PRODUCT_REQUIRED_ARTIFACTS_BY_GATE = {
     "phase0": ["docs/product/PRODUCT_BRIEF.md"],
     "gate1": ["docs/product/PRODUCT_BRIEF.md"],
@@ -333,7 +329,6 @@ PROFILE_GAP_RULES = {
                 "docs/product/PRODUCT_BRIEF.md",
                 "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
             ],
-            "partial_any": ["docs/poc/POC_REQUIREMENTS.md"],
             "recommendation": "목표, 사용자, 핵심 시나리오, 비목표, 성공 기준을 Product 관점으로 정리합니다.",
         },
         {
@@ -343,7 +338,6 @@ PROFILE_GAP_RULES = {
                 "docs/product/PRODUCT_ARCHITECTURE.md",
                 "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
             ],
-            "partial_any": ["docs/poc/POC_SYSTEM_DESIGN.md"],
             "recommendation": "주요 컴포넌트, 런타임, 배포/운영 경계, 품질속성을 정리합니다.",
         },
         {
@@ -357,7 +351,6 @@ PROFILE_GAP_RULES = {
             "partial_any": [
                 "docs/product/PRODUCT_ARCHITECTURE.md",
                 "docs/artifacts/02-design/architecture/DOC-ARCH-G2-001_SW-Architecture_v0.1.md",
-                "docs/poc/POC_SYSTEM_DESIGN.md",
             ],
             "recommendation": "기술/구조 선택 이유와 대안을 ADR로 남깁니다.",
         },
@@ -371,7 +364,6 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
             ],
             "partial_any": [
-                "docs/poc/POC_SYSTEM_DESIGN.md",
                 "docs/artifacts/02-design/program/DOC-CORE-G2-002_Program-Design_v0.1.md",
                 "docs/artifacts/02-design/screen/DOC-CORE-G2-003_Screen-Spec_v0.1.md",
             ],
@@ -385,7 +377,6 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
             ],
             "partial_any": [
-                "docs/poc/POC_TEST_REPORT.md",
                 "docs/artifacts/03-test/DOC-QA-G3-001_Test-Cases_v0.1.md",
             ],
             "recommendation": "반복 실행할 회귀 테스트와 릴리즈 판단 근거를 정리합니다.",
@@ -397,7 +388,6 @@ PROFILE_GAP_RULES = {
                 "docs/product/PRODUCT_TRACEABILITY.md",
                 "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             ],
-            "partial_any": ["docs/poc/POC_TEST_REPORT.md"],
             "recommendation": "핵심 시나리오 -> 계약 -> 구현 -> 테스트 -> 릴리즈 근거를 연결합니다.",
         },
     ],
@@ -409,7 +399,7 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/01-requirements/DOC-CORE-G1-001_Requirements-Spec_v0.1.md",
                 "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             ],
-            "partial_any": ["docs/product/PRODUCT_BRIEF.md", "docs/poc/POC_REQUIREMENTS.md"],
+            "partial_any": ["docs/product/PRODUCT_BRIEF.md"],
             "recommendation": "REQ/NREQ/AC와 추적표를 공식 산출물로 분리합니다.",
         },
         {
@@ -423,7 +413,7 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
                 "docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md",
             ],
-            "partial_any": ["docs/product/PRODUCT_ARCHITECTURE.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "partial_any": ["docs/product/PRODUCT_ARCHITECTURE.md", "docs/product/PRODUCT_CONTRACTS.md"],
             "recommendation": "아키텍처, 기능, 프로그램, API, DB, 보안 설계를 Audit 산출물로 확장합니다.",
         },
         {
@@ -440,7 +430,7 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/02-design/data/DOC-DATA-G2-001_Project-Glossary_v0.1.md",
                 "docs/artifacts/02-design/data/DOC-DATA-G2-002_Database-Spec_v0.1.md",
             ],
-            "partial_any": ["docs/core/DATA_STANDARD_RULES.md", "docs/product/PRODUCT_CONTRACTS.md", "docs/poc/POC_SYSTEM_DESIGN.md"],
+            "partial_any": ["docs/core/DATA_STANDARD_RULES.md", "docs/product/PRODUCT_CONTRACTS.md"],
             "recommendation": "단어사전, 데이터 도메인, 공공데이터 공통표준 준용/변형/신규 사유를 정리합니다.",
         },
         {
@@ -451,7 +441,7 @@ PROFILE_GAP_RULES = {
                 "docs/artifacts/04-review/DOC-QA-G4-001_QA-Finding_v0.1.md",
                 "docs/artifacts/04-review/DOC-QA-G4-002_Test-Result_v0.1.md",
             ],
-            "partial_any": ["docs/product/REGRESSION_AND_RELEASE_REPORT.md", "docs/poc/POC_TEST_REPORT.md"],
+            "partial_any": ["docs/product/REGRESSION_AND_RELEASE_REPORT.md"],
             "recommendation": "Gate 3 테스트 계획과 Gate 4 결과/증적/FIND를 분리해 정리합니다.",
         },
         {
@@ -561,11 +551,6 @@ GATE_LABELS = {
 }
 
 GATE_ORDER = ["phase0", "gate1", "gate2", "gate3", "impl", "gate4", "gate5"]
-DEFAULT_DELIVERY_PROFILE = "audit"
-SUPPORTED_DELIVERY_PROFILES = ("audit", "product", "poc")
-DELIVERY_PROFILE_ALIASES = {
-    "solution": "product",
-}
 DELIVERY_PROFILE_RULES = {
     "audit": {
         "gate_approval": "all-gates-explicit",
@@ -580,7 +565,7 @@ DELIVERY_PROFILE_RULES = {
         "release_control": "gate5-release-approval-pr",
     },
     "product": {
-        "gate_approval": "major-gates-and-release",
+        "gate_approval": "scope-acceptance-and-release",
         "required_artifacts": "architecture-api-db-security-release-core",
         "traceability_level": "core-requirement-api-db-security-regression",
         "program_contract_level": "public-api-service-dto",
@@ -590,18 +575,6 @@ DELIVERY_PROFILE_RULES = {
         "independent_review_level": "release-candidate-or-large-change",
         "run_preflight_strictness": "scope-contract-blocking-other-warning",
         "release_control": "release-note-backlog-pr",
-    },
-    "poc": {
-        "gate_approval": "start-checkpoint-finish",
-        "required_artifacts": "poc-requirements-system-design-test-report",
-        "traceability_level": "hypothesis-to-implementation-to-result",
-        "program_contract_level": "main-interface-entrypoint",
-        "security_standard_level": "risk-identification-and-productization-gap",
-        "data_standard_level": "core-fields-and-sensitive-data-identification",
-        "qa_evidence_level": "smoke-demo-log",
-        "independent_review_level": "optional",
-        "run_preflight_strictness": "warning-first",
-        "release_control": "poc-result-summary",
     },
 }
 
@@ -740,7 +713,6 @@ AUDIT_UI_EVIDENCE_POLICY = {
     "official_runner": "@playwright/test",
     "official_runner_command": "npx playwright test",
     "official_runner_required_profiles": ["audit", "product"],
-    "poc_fallback_allowed": True,
     "install_if_missing": [
         "npx playwright --version",
         "npm install -D @playwright/test",
@@ -756,7 +728,7 @@ AUDIT_UI_EVIDENCE_POLICY = {
         "browser manual screenshot without Playwright run",
         "custom Playwright library script without @playwright/test runner in audit/product profile",
     ],
-    "fallback_rule": "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
+    "fallback_rule": "audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다.",
     "minimum_fields": [
         "UI-ID",
         "관련 SCR",
@@ -1452,6 +1424,8 @@ def copy_source_tree(target_dir, rel_dir, variables=None, overwrite=True, source
     copied = 0
     render_exts = {".md", ".json", ".txt", ".yml", ".yaml"}
     for root, dirs, files in os.walk(src_dir):
+        if rel_dir == "docs/templates" and root == src_dir:
+            dirs[:] = [name for name in dirs if name.lower() != "poc"]
         rel_root = os.path.relpath(root, src_dir)
         for f in files:
             src = os.path.join(root, f)
@@ -1512,24 +1486,6 @@ def install_project_artifacts(target_dir, variables, overwrite=False, source_roo
     source_root = source_root or VULCAN_DIR
 
     for src_rel, dst_rel in PROJECT_ARTIFACT_TEMPLATES:
-        src = os.path.join(source_root, src_rel)
-        dst = os.path.join(target_dir, dst_rel)
-        if not os.path.isfile(src):
-            continue
-        if os.path.exists(dst) and not overwrite:
-            continue
-        with open(src, encoding="utf-8") as fp:
-            content = render(fp.read(), variables)
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        with open(dst, "w", encoding="utf-8") as fp:
-            fp.write(content)
-        print(f"  install/update: {dst_rel}")
-
-
-def install_poc_artifacts(target_dir, variables, overwrite=False, source_root=None):
-    """Install PoC profile integrated working documents into docs/poc/."""
-    source_root = source_root or VULCAN_DIR
-    for src_rel, dst_rel in POC_ARTIFACT_TEMPLATES:
         src = os.path.join(source_root, src_rel)
         dst = os.path.join(target_dir, dst_rel)
         if not os.path.isfile(src):
@@ -1799,44 +1755,6 @@ def merge_unique(*item_lists):
     return merged
 
 
-def compact_reference_documents_for_profile(profile, paths, limit=None):
-    normalized_profile = normalize_delivery_profile(profile)
-    unique_paths = merge_unique(paths)
-    if normalized_profile != "poc":
-        return unique_paths
-    unique_paths = [
-        path
-        for path in unique_paths
-        if normalize_repo_path(path).lower() not in POC_REFERENCE_EXCLUDED_DOCS
-    ]
-    limit = POC_REFERENCE_DOC_LIMIT if limit is None else max(0, int(limit))
-    if not unique_paths or limit == 0:
-        return []
-
-    priority_tokens = [
-        "/program/",
-        "/api/",
-        "/data/",
-        "/security/",
-        "/function/",
-        "/screen/",
-        "/03-test/",
-        "/01-requirements/",
-        "/00-discovery/",
-        "docs/core/",
-    ]
-
-    def priority(path):
-        normalized = normalize_repo_path(path)
-        for index, token in enumerate(priority_tokens):
-            if token in normalized:
-                return index
-        return len(priority_tokens)
-
-    ranked = sorted(unique_paths, key=lambda item: (priority(item), unique_paths.index(item)))
-    return ranked[:limit]
-
-
 def is_orchestrator_only_command(command):
     normalized = command.strip().lower()
     return any(
@@ -1888,46 +1806,8 @@ def split_working_and_reference(paths):
     return working, reference
 
 
-def normalize_delivery_profile(profile):
-    normalized = str(profile or DEFAULT_DELIVERY_PROFILE).strip().lower()
-    normalized = DELIVERY_PROFILE_ALIASES.get(normalized, normalized)
-    if normalized not in SUPPORTED_DELIVERY_PROFILES:
-        return DEFAULT_DELIVERY_PROFILE
-    return normalized
-
-
 def delivery_profile_rules(profile):
-    normalized = normalize_delivery_profile(profile)
-    return dict(DELIVERY_PROFILE_RULES.get(normalized, DELIVERY_PROFILE_RULES[DEFAULT_DELIVERY_PROFILE]))
-
-
-def load_delivery_profile(project_dir="."):
-    path = os.path.join(project_dir, "session.json")
-    config_path = os.path.join(project_dir, "vulcan.config.json")
-
-    session = {}
-    if os.path.exists(path):
-        try:
-            with open(path, encoding="utf-8") as f:
-                session = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            session = {}
-
-    config = {}
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, encoding="utf-8") as f:
-                config = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            config = {}
-
-    profile = (
-        session.get("profile")
-        or session.get("delivery_profile")
-        or config.get("delivery_profile")
-        or DEFAULT_DELIVERY_PROFILE
-    )
-    return normalize_delivery_profile(profile)
+    return dict(DELIVERY_PROFILE_RULES[normalize_delivery_profile(profile)])
 
 
 def load_primary_runner(project_dir="."):
@@ -2005,257 +1885,6 @@ def is_gemini_long_context_mode(project_dir="."):
     return False
 
 
-def effective_trace_depth(project_dir=".", trace_depth=None):
-    if trace_depth is not None:
-        return trace_depth
-    profile = load_delivery_profile(project_dir)
-    if profile == "poc":
-        return POC_TRACE_DEPTH_DEFAULT
-    return 2
-
-
-POC_COMMON_READ_FIRST_DOCS = [
-    "AGENTS.md",
-    "session.json",
-    "docs/core/GATE_EXECUTION_CHECKLIST.md",
-    "docs/core/DELIVERY_PROFILES.md",
-]
-
-POC_TRACE_DEPTH_DEFAULT = 1
-POC_REFERENCE_DOC_LIMIT = 5
-POC_REFERENCE_EXCLUDED_DOCS = {
-    "docs/core/agent_run_protocol.md",
-    "docs/core/agent_run_protocol_gemini.md",
-    "docs/core/run_input_contract.md",
-    "docs/core/run_input_contract_gemini.md",
-    "docs/core/run_output_contract.md",
-    "docs/core/run_output_contract_gemini.md",
-}
-
-POC_COMMON_READONLY_DOCS = [
-    "docs/core/",
-    "docs/templates/",
-]
-
-POC_COMMON_EXCLUDED_PATHS = [
-    "docs/ref-docs/",
-    "**/*.db",
-    "**/__pycache__/",
-    "**/.ruff_cache/",
-    "**/node_modules/",
-    "**/.next/",
-]
-
-POC_GATE_WORKING_DOCUMENTS = {
-    "phase0": [
-        "docs/poc/POC_REQUIREMENTS.md",
-    ],
-    "gate1": [
-        "docs/poc/POC_REQUIREMENTS.md",
-    ],
-    "gate2": [
-        "docs/poc/POC_SYSTEM_DESIGN.md",
-    ],
-    "gate3": [
-        "docs/poc/POC_TEST_REPORT.md",
-    ],
-    "impl": [
-        "docs/runs/",
-        "app/",
-        "static/",
-        "tests/",
-        "requirements.txt",
-    ],
-    "gate4": [
-        "docs/poc/POC_TEST_REPORT.md",
-        "docs/poc/evidence/",
-    ],
-    "gate5": [
-        "docs/poc/POC_TEST_REPORT.md",
-        "docs/artifacts/07-release/",
-        "docs/backlog/",
-    ],
-}
-
-POC_GATE_REFERENCES = {
-    "phase0": [
-        "docs/core/ORCHESTRATOR_PROTOCOL.md",
-    ],
-    "gate1": [
-        "docs/core/TRACEABILITY_RULES.md",
-        "docs/poc/POC_REQUIREMENTS.md",
-    ],
-    "gate2": [
-        "docs/poc/POC_REQUIREMENTS.md",
-    ],
-    "gate3": [
-        "docs/poc/POC_REQUIREMENTS.md",
-        "docs/poc/POC_SYSTEM_DESIGN.md",
-    ],
-    "impl": [
-        "docs/poc/POC_REQUIREMENTS.md",
-        "docs/poc/POC_SYSTEM_DESIGN.md",
-        "docs/poc/POC_TEST_REPORT.md",
-    ],
-    "gate4": [
-        "docs/poc/POC_TEST_REPORT.md",
-        "docs/runs/",
-    ],
-    "gate5": [
-        "docs/poc/POC_TEST_REPORT.md",
-        "docs/runs/",
-    ],
-}
-
-POC_GATE_COMPLETION_CRITERIA = {
-    "phase0": [
-        "PoC 목표, 가설, 성공 기준, 비목표가 짧게 정리되어 있다.",
-        "불확실한 정보와 다음 질문이 open_issues에 남아 있다.",
-        "PoC 종료 시 제품화/감리 전환 여부를 판단할 기준이 적혀 있다.",
-    ],
-    "gate1": [
-        "핵심 요구사항 또는 가설이 검증 가능한 문장으로 정리되어 있다.",
-        "각 요구사항은 최소 한 개의 성공 기준 또는 관찰 기준과 연결되어 있다.",
-        "PoC 범위를 넘는 요구는 backlog 또는 open_issues로 분리되어 있다.",
-    ],
-    "gate2": [
-        "핵심 아키텍처, 데이터, API 또는 화면 결정이 구현자가 이해할 수준으로 정리되어 있다.",
-        "실험 코드의 주요 진입점, public interface, smoke 검증 기준이 식별되어 있다.",
-        "제품화 또는 audit 전환 시 보강해야 할 설계 항목이 남아 있다.",
-    ],
-    "gate3": [
-        "PoC 가설을 확인할 smoke, demo, 핵심 회귀 테스트가 정의되어 있다.",
-        "미실행 또는 수동 확인 항목은 Pass로 기록하지 않고 Not Run 또는 open_issues로 남긴다.",
-    ],
-    "impl": [
-        "PoC 목표를 확인하는 최소 코드와 빠른 self-check가 가능하다.",
-        "구현 worker는 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog 정리를 직접 완료 조건으로 삼지 않는다.",
-        "Browser smoke/screenshot, 결과서 정규화, 제품화 전환 후보 정리는 Gate 4/5에서 수행한다.",
-        "실패한 실험은 구현 성공처럼 포장하지 않고 원인과 다음 판단 필요 항목으로 반환한다.",
-    ],
-    "gate4": [
-        "PoC smoke/demo 검증 결과와 로그 또는 캡처 증적이 남아 있다.",
-        "실패, 차단, 미실행 항목은 원인과 다음 판단 기준으로 분류되어 있다.",
-    ],
-    "gate5": [
-        "PoC 결과 요약, 성공/실패 판단, 계속 진행/중단/전환 제안이 기록되어 있다.",
-        "제품화 또는 audit 전환 시 보강해야 할 산출물과 기술부채가 분리되어 있다.",
-    ],
-}
-
-POC_GATE_EXIT_POLICY = {
-    "stop_required": True,
-    "next_gate_requires_user_approval": True,
-    "approval_evidence_required": False,
-    "allowed_next_action": "PoC 결과와 다음 선택지를 짧게 정리하고 사용자 확인을 받는다.",
-    "forbidden_actions": [
-        "PoC smoke 결과를 운영 또는 감리 수준 검증 완료로 표현하지 않는다.",
-        "실제로 실행하지 않은 테스트를 Pass로 기록하지 않는다.",
-        "제품화 또는 audit 전환 보강 항목을 완료된 것으로 처리하지 않는다.",
-    ],
-}
-
-POC_WORKER_EXECUTION_POLICY = {
-    "forbidden_actions": [
-        "Gate 전환을 수행하지 않는다.",
-        "session.json의 current_gate, gate_status, completed를 직접 변경하지 않는다.",
-        "사용자 승인, QA Pass, 릴리즈 승인, merge 가능 여부를 최종 확정하지 않는다.",
-        "scope.writable 밖 파일을 수정하지 않는다.",
-        "PoC 구현 worker라면 README, 최종 테스트 결과서, browser smoke/screenshot, release/backlog 정리를 직접 완료 조건으로 삼지 않는다.",
-    ],
-    "required_outputs": [
-        "수행한 변경과 빠른 self-check 결과를 Run 결과에 남긴다.",
-        "실패 또는 미실행 항목은 원인과 다음 판단 필요 항목으로 반환한다.",
-        "native 위임이면 delegation_records에 시작/종료 시각, duration_seconds, heartbeat/status probe 횟수, self-check와 Orchestrator 재검증 명령을 남긴다.",
-    ],
-}
-
-
-def build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=""):
-    gate_working = POC_GATE_WORKING_DOCUMENTS.get(gate, ["docs/runs/"])
-    gate_reference = compact_reference_documents_for_profile("poc", POC_GATE_REFERENCES.get(gate, []))
-    run_rel_path = run_rel_path.replace("\\", "/")
-    worker_run = skill in ("implementation-scaffold", "build-wave", "qa-execution", "qa-fix-loop")
-    working_documents = merge_unique([run_rel_path], gate_working)
-    source_read_first = filter_adapter_specific_docs(
-        merge_unique(POC_COMMON_READ_FIRST_DOCS, adapter_read_first_docs(adapter), [skill_path] if skill_path else []),
-        adapter,
-    )
-    verification_commands = [
-        f"python vulcan.py run-check {run_rel_path}",
-        "python vulcan.py profile-status",
-    ]
-    if gate in ("gate3", "gate4"):
-        verification_commands.append("python vulcan.py check-trace")
-    output_include = [
-        "changed_files",
-        "related_ids",
-        "verification_results",
-        "evidence",
-        "delegation_records",
-        "open_issues",
-        "next_run_suggestion",
-    ]
-    if gate in ("gate4", "gate5"):
-        output_include.extend(["findings", "change_requests"])
-    return {
-        "profile": "poc",
-        "adapter": adapter or "codex-gpt",
-        "skill": skill,
-        "run_type": RUN_TYPES_BY_GATE.get(gate, "Review"),
-        "worker_run": worker_run,
-        "focused_source": False,
-        "source_documents": {
-            "read_first": source_read_first,
-            "working_documents": working_documents,
-            "reference_on_demand": filter_adapter_specific_docs(merge_unique(gate_reference), adapter),
-            "optional": [],
-        },
-        "scope": {
-            "writable": working_documents,
-            "readonly": POC_COMMON_READONLY_DOCS,
-            "excluded": POC_COMMON_EXCLUDED_PATHS,
-        },
-        "completion_criteria": POC_GATE_COMPLETION_CRITERIA.get(gate, POC_GATE_COMPLETION_CRITERIA["phase0"]),
-        "design_sequence": [],
-        "include_ui_policies": False,
-        "verification": {
-            "commands": verification_commands,
-            "evidence": {
-                "required": gate in ("gate4", "gate5"),
-                "target_documents": merge_unique([run_rel_path], gate_working[:1]),
-            },
-        },
-        "gate_exit_policy": POC_GATE_EXIT_POLICY,
-        "ui_evidence_policy": AUDIT_UI_EVIDENCE_POLICY,
-        "ui_implementation_contract_policy": AUDIT_UI_IMPLEMENTATION_CONTRACT_POLICY,
-        "qa_execution_policy": {},
-        "worker_execution_policy": POC_WORKER_EXECUTION_POLICY,
-        "development_standards_applied": [],
-        "development_standard_checklist": {},
-        "output_requirements": {
-            "format": "RUN_OUTPUT_CONTRACT.md",
-            "include": merge_unique(output_include),
-        },
-        "question_policy": {
-            "ask_when": [
-                "PoC 목표, 가설, 성공 기준이 불명확하다.",
-                "scope.writable 밖의 파일 수정이 필요하다.",
-                "PoC 범위를 넘어 제품화 또는 audit 수준 결정이 필요하다.",
-            ],
-        },
-        "security_policy": {
-            "forbidden_paths": ["docs/ref-docs/"],
-            "allowed_reference_paths": [],
-            "forbidden_actions": [
-                "토큰, 비밀번호, 개인식별정보를 커밋하지 않는다.",
-                "민감문서 내용을 출력에 원문 인용하지 않는다.",
-                "PoC 편의를 이유로 보안 위험을 완료 상태로 숨기지 않는다.",
-            ],
-        },
-    }
-
-
 PRODUCT_WORKER_GUIDE = "docs/core/PRODUCT_WORKER_GUIDE.md"
 PRODUCT_BUILD_SKILLS = {"build-wave", "implementation-scaffold"}
 PRODUCT_ORCHESTRATOR_VERIFICATION = (
@@ -2313,9 +1942,7 @@ def build_product_worker_preset(gate, skill, run_rel_path, adapter=""):
 
 
 def build_run_input_preset(profile, gate, skill, skill_path, run_rel_path, adapter=""):
-    if profile == "poc":
-        return build_poc_run_input_preset(gate, skill, skill_path, run_rel_path, adapter=adapter)
-
+    profile = normalize_delivery_profile(profile)
     if profile == "product" and skill in PRODUCT_BUILD_SKILLS:
         return build_product_worker_preset(gate, skill, run_rel_path, adapter=adapter)
 
@@ -2692,8 +2319,7 @@ ui_evidence_policy:
   official_runner: {format_yaml_scalar(ui_evidence.get("official_runner", "@playwright/test"))}
   official_runner_command: {format_yaml_scalar(ui_evidence.get("official_runner_command", "npx playwright test"))}
   official_runner_required_profiles: {format_yaml_list(ui_evidence.get("official_runner_required_profiles", ["audit", "product"]))}
-  poc_fallback_allowed: {str(ui_evidence.get("poc_fallback_allowed", True)).lower()}
-  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "PoC에서는 커스텀 Playwright script를 smoke/demo 증적으로 허용할 수 있지만, audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
+  fallback_rule: {format_yaml_scalar(ui_evidence.get("fallback_rule", "audit/product의 공식 UI Pass는 @playwright/test 실행 결과를 기준으로 한다."))}
   required_artifacts:
 {format_yaml_sequence(ui_evidence.get("required_artifacts", []), 4)}
   minimum_fields:
@@ -2930,6 +2556,7 @@ def guard_legacy_process(session):
 
 
 def save_session(session, project_dir="."):
+    load_delivery_profile(project_dir)
     guard_legacy_process(session)
     path = os.path.join(project_dir, "session.json")
     if os.path.exists(path):
@@ -3130,8 +2757,6 @@ def compute_stats(project_dir="."):
         requirements, tests, docs 섹션과 updated_at을 포함한 stats dict.
     """
     profile = load_delivery_profile(project_dir)
-    if profile == "poc":
-        return compute_poc_stats(project_dir)
     if profile in {"product", "solution"}:
         return compute_product_stats(project_dir)
 
@@ -3211,10 +2836,6 @@ def compute_stats(project_dir="."):
     }
 
 
-def _ids_from_text(pattern, content):
-    return sorted(set(re.findall(pattern, content or "")))
-
-
 def product_definition_ids(documents, name, pattern):
     defined = {
         r["id"] for r in documents.records(name, pattern, parse_markdown_tables)
@@ -3245,6 +2866,21 @@ def product_requirement_ids(documents):
 
 def parse_product_trace_rows(project_dir=".", documents=None):
     documents = documents or ProductDocuments(project_dir, ["PRODUCT_TRACEABILITY.md"])
+    for document in documents.documents("PRODUCT_TRACEABILITY.md"):
+        for section in document["sections"]:
+            for headers, table in parse_markdown_tables(section["visible"], section["start_line"] - 1):
+                if not any(re.search(r"status|상태|판단|implementation|구현", h, re.I) for h in headers):
+                    continue
+                for record in table:
+                    primary = record.get(headers[0], "").strip().strip("`")
+                    if re.search(r"\b(?:SCN|REQ)-\d{3}", primary) and not re.fullmatch(r"SCN-\d{3}", primary):
+                        if re.match(r"\[.*\]\(", primary):
+                            continue  # A linked index is not a second trace definition.
+                        documents.warnings.append(
+                            f"Product trace row not counted: {document['path']}:{record['__line_num__']} ({primary}). "
+                            "Grouped/range or requirement-only trace needs manual review; no scenario or completion inferred. "
+                            "Counts cover recognized SCN rows only."
+                        )
     rows = []
     for record in documents.records("PRODUCT_TRACEABILITY.md", r"SCN-\d{3}", parse_markdown_tables):
         cells = record["cells"]
@@ -3298,7 +2934,8 @@ def _product_row_is_implemented(row):
 def _product_test_status_counts(project_dir=".", documents=None):
     documents = documents or ProductDocuments(project_dir, ["REGRESSION_AND_RELEASE_REPORT.md"])
     issues, notices, planned, optional, results, explicit_current = product_verification_records(
-        documents.texts("REGRESSION_AND_RELEASE_REPORT.md"))
+        documents.texts("REGRESSION_AND_RELEASE_REPORT.md"),
+        source_labels=[d["path"] for d in documents.documents("REGRESSION_AND_RELEASE_REPORT.md")])
     documents.issues.extend(issues)
     documents.warnings.extend(notices)
 
@@ -3391,148 +3028,6 @@ def compute_product_stats(project_dir="."):
             "requirements": {"total": len(req_ids), "implemented": len(implemented_req_ids), "ids": req_ids, "implemented_ids": implemented_req_ids},
             "document_diagnostics": documents.diagnostics(),
         },
-    }
-
-
-def _poc_test_status_counts(test_content):
-    rank = {"pending": 0, "skipped": 1, "passed": 2, "failed": 3}
-    seen = {}
-    for line in (test_content or "").splitlines():
-        if "|" not in line:
-            continue
-        ids = re.findall(r"\bT-(?:[A-Z]+-)?\d{3}\b", line)
-        if not ids:
-            continue
-        lowered = line.lower()
-        if "fail" in lowered:
-            status = "failed"
-        elif "environment_blocked" in lowered or "environment blocked" in lowered:
-            status = "pending"
-        elif "not run" in lowered or "not_run" in lowered or "skipped" in lowered:
-            status = "skipped"
-        elif "planned" in lowered or "tbd" in lowered:
-            status = "pending"
-        elif "pass" in lowered or "통과" in lowered:
-            status = "passed"
-        else:
-            status = "pending"
-        for test_id in ids:
-            previous = seen.get(test_id)
-            if previous is None or rank[status] > rank[previous]:
-                seen[test_id] = status
-    counts = {"total": len(seen), "passed": 0, "failed": 0, "skipped": 0, "pending": 0}
-    for status in seen.values():
-        counts[status] += 1
-    return counts
-
-
-def _poc_existing_pass_evidence_paths(project_dir, test_content):
-    paths = []
-    for line in (test_content or "").splitlines():
-        if "|" not in line or not re.search(r"\bEV-(?:[A-Z]+-)?\d{3}\b", line):
-            continue
-        lowered = line.lower()
-        if not ("pass" in lowered or "통과" in lowered or "observed" in lowered):
-            continue
-        cells = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
-        if len(cells) < 3:
-            continue
-        candidate = cells[2].strip()
-        if not candidate or re.search(r"(?i)\b(TBD|미정|확정필요|not\s+run|planned)\b", candidate):
-            continue
-        link_match = re.search(r"\]\(([^)]+)\)", candidate)
-        if link_match:
-            candidate = link_match.group(1)
-        candidate = candidate.split("<br>")[0].strip().strip("`")
-        if re.match(r"^[a-zA-Z]+://", candidate):
-            paths.append(candidate)
-            continue
-        abs_path = candidate if os.path.isabs(candidate) else os.path.join(project_dir, candidate)
-        if os.path.exists(abs_path):
-            paths.append(candidate)
-    return paths
-
-
-def compute_poc_stats(project_dir="."):
-    req_content = read_project_text(project_dir, "docs/poc/POC_REQUIREMENTS.md")
-    design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
-    test_content = read_project_text(project_dir, "docs/poc/POC_TEST_REPORT.md")
-
-    hyp_ids = _ids_from_text(r"\bHYP-\d{3}\b", req_content)
-    req_ids = _ids_from_text(r"\bREQ-\d{3}\b", req_content)
-    nreq_ids = _ids_from_text(r"\bNREQ-\d{3}\b", req_content)
-    ac_ids = _ids_from_text(r"\bAC-(?:NREQ-)?\d{3}-\d{2}\b", req_content)
-    test_link_text = test_content or ""
-    has_pass_evidence = bool(_poc_existing_pass_evidence_paths(project_dir, test_content))
-    implemented_req_ids = [
-        req_id
-        for req_id in req_ids
-        if has_pass_evidence and req_id in test_link_text and re.search(r"\bPass\b", test_link_text, re.IGNORECASE)
-    ]
-    api_ids = _ids_from_text(r"\bAPI-\d{3}\b", design_content)
-    data_ids = _ids_from_text(r"\bDATA-\d{3}\b", design_content)
-    scr_ids = _ids_from_text(r"\bSCR-\d{3}\b", design_content)
-    app_ids = _ids_from_text(r"\bAPP-\d{3}\b", design_content)
-    evidence_ids = _ids_from_text(r"\bEV-(?:[A-Z]+-)?\d{3}\b", test_content)
-
-    tests_stats = _poc_test_status_counts(test_content)
-    requirements_stats = {
-        "groups": len(hyp_ids),
-        "total": len(req_ids),
-        "implemented": len(implemented_req_ids),
-        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
-        "ac_defined": len(ac_ids),
-        "ac_missing": 0,
-        "nreq_total": len(nreq_ids),
-    }
-
-    try:
-        docs_stats = count_docs(project_dir)
-    except Exception:
-        docs_stats = {"requirements": 0, "design": 0, "test_plan": 0, "review": 0, "total": 0}
-    try:
-        backlog_stats = compute_backlog_stats(project_dir)
-    except Exception:
-        backlog_stats = {
-            "active": 0, "done": 0, "rejected": 0,
-            "by_level": {"trivial": 0, "small": 0, "major": 0},
-            "by_priority": {"p0": 0, "p1": 0, "p2": 0, "p3": 0},
-        }
-    try:
-        implementation_stats = compute_implementation_progress(project_dir)
-    except Exception:
-        implementation_stats = {
-            "requirements": {"total": 0, "implemented": 0, "pending": 0, "completed_ids": []},
-            "waves": {"total": 0, "completed": 0, "current": "", "items": []},
-        }
-    implementation_stats = dict(implementation_stats)
-    implementation_stats["requirements"] = {
-        "total": len(req_ids),
-        "implemented": len(implemented_req_ids),
-        "pending": max(0, len(req_ids) - len(implemented_req_ids)),
-        "completed_ids": implemented_req_ids,
-    }
-
-    return {
-        "requirements": requirements_stats,
-        "implementation": implementation_stats,
-        "tests": tests_stats,
-        "docs": docs_stats,
-        "backlog": backlog_stats,
-        "poc": {
-            "hypotheses": {"total": len(hyp_ids), "ids": hyp_ids},
-            "requirements": {"total": len(req_ids), "implemented": len(implemented_req_ids), "ids": req_ids, "implemented_ids": implemented_req_ids},
-            "nreq": {"total": len(nreq_ids), "ids": nreq_ids},
-            "design": {
-                "api": {"total": len(api_ids), "ids": api_ids},
-                "data": {"total": len(data_ids), "ids": data_ids},
-                "screen": {"total": len(scr_ids), "ids": scr_ids},
-                "app": {"total": len(app_ids), "ids": app_ids},
-            },
-            "tests": {"total": tests_stats["total"]},
-            "evidence": {"total": len(evidence_ids), "ids": evidence_ids},
-        },
-        "updated_at": date.today().isoformat(),
     }
 
 
@@ -4550,6 +4045,8 @@ def trace_context(project_dir, seed_id, depth=2, direction="downstream", edge_ty
 
 
 def trace_context_run_enrichment(project_dir, trace_seed="", related_ids=None, depth=2, direction="both"):
+    if depth is None:
+        depth = 2
     seeds = split_csv(trace_seed)
     base_ids = split_csv(",".join(related_ids or [])) if isinstance(related_ids, list) else split_csv(related_ids or "")
     if not seeds:
@@ -4955,8 +4452,6 @@ def is_probable_text_file(path):
 
 HARD_TEMPLATE_PLACEHOLDER_RE = re.compile(r"\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}")
 SOFT_TBD_PLACEHOLDER_RE = re.compile(r"\bTBD\b|확정필요", re.IGNORECASE)
-POC_TBD_REASON_RE = re.compile(r"사유|이유|근거|reason|why", re.IGNORECASE)
-POC_TBD_DECISION_RE = re.compile(r"후속|판단|결정|전환|시점|decide_when|next|when", re.IGNORECASE)
 
 
 def unresolved_template_placeholder_issue(rel_path, content, project_dir="."):
@@ -4966,47 +4461,7 @@ def unresolved_template_placeholder_issue(rel_path, content, project_dir="."):
     if not SOFT_TBD_PLACEHOLDER_RE.search(content):
         return None
 
-    if load_delivery_profile(project_dir) == "poc":
-        return None
-
     return f"{rel_path}에 템플릿 플레이스홀더가 남아 있음"
-
-
-def poc_tbd_decision_context_present(content):
-    return bool(POC_TBD_REASON_RE.search(content) and POC_TBD_DECISION_RE.search(content))
-
-
-def collect_poc_tbd_warnings(project_dir="."):
-    if load_delivery_profile(project_dir) != "poc":
-        return []
-
-    warnings = []
-    artifact_dir = os.path.join(project_dir, "docs", "poc")
-    if not os.path.isdir(artifact_dir):
-        return warnings
-
-    for root, _dirs, files in os.walk(artifact_dir):
-        for file_name in files:
-            if not file_name.lower().endswith(".md"):
-                continue
-            path = os.path.join(root, file_name)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    content = f.read()
-            except (OSError, UnicodeDecodeError):
-                continue
-            if not SOFT_TBD_PLACEHOLDER_RE.search(content):
-                continue
-            rel_path = os.path.relpath(path, project_dir)
-            if poc_tbd_decision_context_present(content):
-                warnings.append(f"{rel_path}에 PoC TBD/확정필요가 남아 있음 - 사유와 후속 판단 시점 확인 필요")
-            else:
-                warnings.append(f"{rel_path}에 PoC TBD/확정필요가 있으나 사유 또는 후속 판단 시점이 부족함")
-    return warnings
-
-
-def poc_required_artifacts_for_gate(gate):
-    return POC_REQUIRED_ARTIFACTS_BY_GATE.get(gate, POC_REQUIRED_ARTIFACTS_BY_GATE["phase0"])
 
 
 def product_required_artifacts_for_gate(gate):
@@ -5030,77 +4485,6 @@ def table_value_is_tbd(content, label):
 def mostly_placeholder_row(content, id_pattern):
     pattern = rf"(?m)^\|\s*{id_pattern}\s*\|\s*(?:TBD|미정|확정필요)\b"
     return bool(re.search(pattern, content, re.IGNORECASE))
-
-
-def collect_poc_profile_findings(project_dir=".", gate=None):
-    if load_delivery_profile(project_dir) != "poc":
-        return [], []
-
-    session = load_session(project_dir)
-    gate = gate or session.get("current_gate", "phase0")
-    issues = []
-    warnings = []
-    required = poc_required_artifacts_for_gate(gate)
-
-    for rel_path in required:
-        abs_path = os.path.join(project_dir, rel_path)
-        if not os.path.isfile(abs_path):
-            issues.append(f"PoC 필수 산출물 없음: {rel_path}")
-
-    req_content = read_project_text(project_dir, "docs/poc/POC_REQUIREMENTS.md")
-    if "docs/poc/POC_REQUIREMENTS.md" in required and req_content:
-        if HARD_TEMPLATE_PLACEHOLDER_RE.search(req_content):
-            issues.append("docs/poc/POC_REQUIREMENTS.md에 치환되지 않은 템플릿 값이 남아 있습니다.")
-        if table_value_is_tbd(req_content, "목표"):
-            issues.append("docs/poc/POC_REQUIREMENTS.md의 PoC 목표가 TBD입니다.")
-        if table_value_is_tbd(req_content, "성공 기준"):
-            issues.append("docs/poc/POC_REQUIREMENTS.md의 성공 기준이 TBD입니다.")
-        if not re.search(r"\bHYP-\d{3}\b", req_content):
-            issues.append("docs/poc/POC_REQUIREMENTS.md에 HYP-ID가 없습니다.")
-        if not re.search(r"\bREQ-\d{3}\b", req_content):
-            issues.append("docs/poc/POC_REQUIREMENTS.md에 핵심 REQ-ID가 없습니다.")
-        if mostly_placeholder_row(req_content, r"HYP-\d{3}") or mostly_placeholder_row(req_content, r"REQ-\d{3}"):
-            warnings.append("docs/poc/POC_REQUIREMENTS.md에 placeholder 중심의 HYP/REQ 행이 남아 있습니다.")
-        if gate in ("gate4", "gate5", "completed") and re.search(r"(?im)^\s*status\s*:\s*Draft\s*$", req_content):
-            warnings.append("docs/poc/POC_REQUIREMENTS.md가 PoC 완료 구간에서도 status: Draft입니다. 실제 상태에 맞게 Completed/Accepted 등으로 정리하세요.")
-
-    design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
-    if "docs/poc/POC_SYSTEM_DESIGN.md" in required and design_content:
-        if HARD_TEMPLATE_PLACEHOLDER_RE.search(design_content):
-            issues.append("docs/poc/POC_SYSTEM_DESIGN.md에 치환되지 않은 템플릿 값이 남아 있습니다.")
-        if not re.search(r"\b(?:API|DATA|SCR)-\d{3}\b", design_content):
-            issues.append("docs/poc/POC_SYSTEM_DESIGN.md에 API/DATA/SCR 중 하나 이상의 설계 ID가 없습니다.")
-        if mostly_placeholder_row(design_content, r"(?:API|DATA|SCR)-\d{3}"):
-            warnings.append("docs/poc/POC_SYSTEM_DESIGN.md에 placeholder 중심의 설계 행이 남아 있습니다.")
-        if gate in ("gate4", "gate5", "completed") and re.search(r"(?im)^\s*status\s*:\s*Draft\s*$", design_content):
-            warnings.append("docs/poc/POC_SYSTEM_DESIGN.md가 PoC 완료 구간에서도 status: Draft입니다. 실제 상태에 맞게 Designed/Completed 등으로 정리하세요.")
-
-    test_content = read_project_text(project_dir, "docs/poc/POC_TEST_REPORT.md")
-    if "docs/poc/POC_TEST_REPORT.md" in required and test_content:
-        if HARD_TEMPLATE_PLACEHOLDER_RE.search(test_content):
-            issues.append("docs/poc/POC_TEST_REPORT.md에 치환되지 않은 템플릿 값이 남아 있습니다.")
-        if not re.search(r"\bT-(?:[A-Z]+-)?\d{3}\b", test_content):
-            issues.append("docs/poc/POC_TEST_REPORT.md에 테스트 ID(T-*, 예: T-001/T-API-001/T-UI-001)가 없습니다.")
-        if gate in ("gate4", "gate5", "completed"):
-            if not re.search(r"\bEV-(?:[A-Z]+-)?\d{3}\b", test_content):
-                issues.append("docs/poc/POC_TEST_REPORT.md에 증적 ID(EV-*, 예: EV-001/EV-API-001/EV-UI-001)가 없습니다.")
-            if re.search(r"(?im)^\s*status\s*:\s*Draft\s*$", test_content):
-                warnings.append("docs/poc/POC_TEST_REPORT.md가 Gate 4 이후에도 status: Draft입니다. 실제 실행 결과에 맞게 QA Completed/Completed 등으로 정리하세요.")
-            if table_value_is_tbd(test_content, "최종 판단"):
-                issues.append("docs/poc/POC_TEST_REPORT.md의 최종 판단이 TBD입니다.")
-            if table_value_is_tbd(test_content, "근거"):
-                issues.append("docs/poc/POC_TEST_REPORT.md의 판단 근거가 TBD입니다.")
-            if re.search(r"\|\s*T-(?:[A-Z]+-)?\d{3}\s*\|[^\n]*\|\s*(?:Planned|TBD)\s*\|", test_content, re.IGNORECASE):
-                issues.append("docs/poc/POC_TEST_REPORT.md에 Gate 4 이후에도 Planned/TBD 테스트 결과가 남아 있습니다.")
-        if gate in ("impl", "gate4", "gate5", "completed"):
-            tests_stats = _poc_test_status_counts(test_content)
-            if tests_stats.get("passed", 0) > 0 and not _poc_existing_pass_evidence_paths(project_dir, test_content):
-                issues.append("docs/poc/POC_TEST_REPORT.md에 Pass/Smoke Pass 결과가 있으나 실제 증적 파일을 찾을 수 없습니다.")
-        else:
-            if mostly_placeholder_row(test_content, r"T-\d{3}"):
-                warnings.append("docs/poc/POC_TEST_REPORT.md에 placeholder 중심의 테스트 계획 행이 남아 있습니다.")
-
-    return issues, warnings
 
 
 def collect_product_profile_findings(project_dir=".", gate=None, documents=None):
@@ -5185,16 +4569,18 @@ def collect_product_profile_findings(project_dir=".", gate=None, documents=None)
 
     release_content = documents.text("REGRESSION_AND_RELEASE_REPORT.md")
     if "docs/product/REGRESSION_AND_RELEASE_REPORT.md" in required and release_content:
-        issues.extend(product_verification_result_findings(documents.texts("REGRESSION_AND_RELEASE_REPORT.md"), gate, warnings))
-        if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, r"REG-\d{3}"):
+        issues.extend(product_verification_result_findings(
+            documents.texts("REGRESSION_AND_RELEASE_REPORT.md"), gate, warnings,
+            source_labels=[d["path"] for d in documents.documents("REGRESSION_AND_RELEASE_REPORT.md")]))
+        if gate in ("gate3", "impl", "gate4", "gate5", "completed") and mostly_placeholder_row(release_content, PRODUCT_REG_ID_PATTERN):
             issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Regression Plan이 placeholder입니다.")
         if gate in ("gate3", "impl", "gate4", "gate5", "completed"):
-            if not re.search(r"\bSEC-REG-\d{3}\b", release_content):
+            if not re.search(r"\b" + PRODUCT_SEC_REG_ID_PATTERN + r"(?![\w-])", release_content):
                 issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md에 Product 보안 smoke 항목(SEC-REG)이 없습니다.")
-            elif mostly_placeholder_row(release_content, r"SEC-REG-\d{3}"):
+            elif mostly_placeholder_row(release_content, PRODUCT_SEC_REG_ID_PATTERN):
                 issues.append("docs/product/REGRESSION_AND_RELEASE_REPORT.md의 Security Smoke Plan이 placeholder입니다.")
         if gate in ("gate4", "gate5", "completed") and re.search(
-            r"\|\s*REG-\d{3}\s*\|\s*(?:TBD|Not\s+run\s+yet|Gate\s*4\s*예정|Gate\s*4\s*planned|예정)[^|]*\|\s*(?:Planned|TBD|Not\s+Run)\b",
+            r"\|\s*" + PRODUCT_REG_ID_PATTERN + r"\s*\|\s*(?:TBD|Not\s+run\s+yet|Gate\s*4\s*예정|Gate\s*4\s*planned|예정)[^|]*\|\s*(?:Planned|TBD|Not\s+Run)\b",
             release_content,
             re.IGNORECASE,
         ):
@@ -5213,18 +4599,23 @@ def collect_product_profile_findings(project_dir=".", gate=None, documents=None)
     return list(dict.fromkeys(issues)), list(dict.fromkeys(warnings))
 
 
-def product_verification_records(content):
+PRODUCT_REG_ID_PATTERN = r"REG-(?:[A-Z][A-Z0-9]*-)*\d{3}"
+PRODUCT_SEC_REG_ID_PATTERN = r"SEC-" + PRODUCT_REG_ID_PATTERN
+
+
+def product_verification_records(content, source_labels=None):
     """Check scoped current results; legacy ambiguity is not an invented failure."""
     from vulcan_core.document_context import _sections
 
     issues, notices = [], []
     planned, optional, results = set(), set(), {}
     sections = []
-    for source in content if isinstance(content, list) else [content]:
+    for source_index, source in enumerate(content if isinstance(content, list) else [content]):
         group = _sections(source)
         offset = len(sections)
         for section in group:
             section["parents"] = [i + offset for i in section["parents"]]
+            section["source_label"] = source_labels[source_index] if source_labels else f"source {source_index + 1}"
         sections.extend(group)
     explicit_current = False
     status_pattern = re.compile(
@@ -5269,11 +4660,19 @@ def product_verification_records(content):
             continue
         if section["state"] == "current" and kind != "plan":
             kind = "current"
-        for headers, rows in parse_markdown_tables(section["visible"]):
+        for headers, rows in parse_markdown_tables(section["visible"], section["start_line"] - 1):
             keys = {header.strip().lower(): header for header in headers}
             id_headers = [header for key, header in keys.items() if re.fullmatch(r"(?:(?:sec[ -])?reg[ -]?)?id", key)]
-            result_headers = [keys[key] for key in ("결과", "result", "status", "상태") if key in keys]
+            result_headers = [keys[key] for key in ("결과", "실제 결과", "result", "actual result", "status", "상태") if key in keys]
             if not id_headers:
+                has_result_column = any(key in keys for key in ("결과", "실제 결과", "result", "actual result"))
+                auxiliary = re.search(r"\b(?:issues?|findings?|obligations?)\b|이슈|결함|미완료", section["heading"], re.I)
+                if has_result_column and kind != "plan" and not auxiliary:
+                    notices.append(
+                        f"Product verification table not counted: {section['source_label']} ({section['heading']}). "
+                        "No REG ID/SEC-REG ID column; narrative or aggregate results require manual review. "
+                        "Counts cover recognized IDs only, not all executed tests."
+                    )
                 continue
             is_plan = kind == "plan" or (not result_headers and any(
                 re.search(r"method|target|명령|방법|검증 대상", key, re.I) for key in keys
@@ -5284,8 +4683,13 @@ def product_verification_records(content):
                 explicit_current = True
             for row in rows:
                 ids = {clean_contract_cell(row.get(header, "")).upper() for header in id_headers}
-                ids = {value for value in ids if re.fullmatch(r"(?:SEC-)?REG-\d{3}", value)}
+                ids = {value for value in ids if re.fullmatch(r"(?:SEC-)?" + PRODUCT_REG_ID_PATTERN, value)}
                 if not ids:
+                    if any(re.search(r"\bREG-", row.get(header, ""), re.I) for header in id_headers):
+                        notices.append(
+                            f"Product verification row not counted: {section['source_label']} ({section['heading']}). "
+                            "Use one explicit REG/SEC-REG ID per row (e.g. REG-API-001); ranges and ID lists are not expanded."
+                        )
                     continue
                 requirement = next((row.get(keys[key], "").strip().lower() for key in (
                     "required", "필수", "필수 여부", "scope",
@@ -5303,16 +4707,25 @@ def product_verification_records(content):
                 if len({status for status, _ in known}) > 1:
                     issues.append(f"Product verification {', '.join(sorted(ids))}: conflicting Result/Status columns; manual resolution required.")
                     status, value = None, " / ".join(values)
+                # Legacy Result may be observations beside Status; explicit Actual Result must resolve.
+                elif any(header.strip().lower() in {"actual result", "실제 결과"} and status is None and value
+                         for header, (status, value) in zip(result_headers, observed)):
+                    status, value = None, " / ".join(values)
                 else:
                     status, value = known[0] if known else observed[0]
+                if status is None:
+                    notices.append(
+                        f"Product verification {', '.join(sorted(ids))}: {section['source_label']} ({section['heading']}) "
+                        f"ambiguous result {value!r}; kept pending, not inferred from aggregate counts."
+                    )
                 for result_id in ids:
                     results.setdefault(result_id, []).append((status, kind, value, is_optional))
 
     return issues, notices, planned, optional, results, explicit_current
 
 
-def product_verification_result_findings(content, gate, warnings=None):
-    issues, notices, planned, optional, results, explicit_current = product_verification_records(content)
+def product_verification_result_findings(content, gate, warnings=None, source_labels=None):
+    issues, notices, planned, optional, results, explicit_current = product_verification_records(content, source_labels)
     pending_at_gate3 = set()
     for result_id, records in results.items():
         statuses = {status for status, _, _, _ in records if status}
@@ -5350,27 +4763,6 @@ def product_verification_result_findings(content, gate, warnings=None):
         for notice in notices:
             print(f"  ! {notice}")
     return issues
-
-
-def validate_poc_trace(project_dir=".", gate=None):
-    issues, warnings = collect_poc_profile_findings(project_dir, gate=gate)
-    if load_delivery_profile(project_dir) != "poc":
-        return issues, warnings
-
-    req_content = read_project_text(project_dir, "docs/poc/POC_REQUIREMENTS.md")
-    design_content = read_project_text(project_dir, "docs/poc/POC_SYSTEM_DESIGN.md")
-    test_content = read_project_text(project_dir, "docs/poc/POC_TEST_REPORT.md")
-
-    req_ids = set(re.findall(r"\bREQ-\d{3}\b", req_content))
-    hyp_ids = set(re.findall(r"\bHYP-\d{3}\b", req_content))
-    linked_text = "\n".join([design_content, test_content])
-    for req_id in sorted(req_ids):
-        if linked_text and req_id not in linked_text:
-            warnings.append(f"PoC trace warning: {req_id}가 설계/테스트 문서에 연결되지 않았습니다.")
-    for hyp_id in sorted(hyp_ids):
-        if test_content and hyp_id not in test_content:
-            warnings.append(f"PoC trace warning: {hyp_id}가 테스트 결과서에 연결되지 않았습니다.")
-    return issues, warnings
 
 
 def validate_product_trace(project_dir=".", gate=None):
@@ -5414,7 +4806,6 @@ def is_markdown_separator_row(line):
 
 
 def collect_artifact_completion_findings(project_dir="."):
-    profile = load_delivery_profile(project_dir)
     issues = []
     warnings = []
     artifact_dir = os.path.join(project_dir, "docs", "artifacts")
@@ -5444,10 +4835,7 @@ def collect_artifact_completion_findings(project_dir="."):
 
             placeholder_issue = unresolved_template_placeholder_issue(rel_path, content, project_dir)
             if placeholder_issue:
-                if profile == "poc":
-                    warnings.append(placeholder_issue)
-                else:
-                    issues.append(placeholder_issue)
+                issues.append(placeholder_issue)
 
             if re.search(r"작성자\s*또는\s*에이전트|\{PROJECT_NAME\}|\{AUTHOR\}|\{YYYY-MM-DD\}", content):
                 issues.append(f"{rel_path}에 템플릿 기본 문구 또는 치환되지 않은 값이 남아 있음")
@@ -6777,10 +6165,7 @@ def check_trace(project_dir=".", exit_on_error=True):
     warnings = []
 
     print(f"\n[check-trace] {session.get('project', '프로젝트')} - {GATE_LABELS.get(current_gate, current_gate)}\n")
-    if profile == "poc":
-        print("  Profile: poc (누락/TBD 일부는 가설 검증 경고로 처리)")
-        warnings.extend(collect_poc_tbd_warnings(project_dir))
-    elif profile == "product":
+    if profile == "product":
         print("  Profile: product (docs/product 원장 기준으로 핵심 시나리오와 릴리즈 추적을 확인)")
 
     progression_issues = validate_gate_progression(project_dir, current_gate)
@@ -6789,41 +6174,6 @@ def check_trace(project_dir=".", exit_on_error=True):
         issues.extend(progression_issues)
     else:
         print("  Gate 진행 상태 검사: OK")
-
-    if profile == "poc":
-        print("  PoC profile 검사: 필수 산출물과 최소 trace 연결 확인")
-        poc_issues, poc_warnings = validate_poc_trace(project_dir, gate=current_gate)
-        issues.extend(poc_issues)
-        warnings.extend(poc_warnings)
-        if poc_issues:
-            print(f"  PoC profile 검사: 이슈 {len(poc_issues)}건")
-        elif poc_warnings:
-            print(f"  PoC profile 검사: 경고 {len(poc_warnings)}건")
-        else:
-            print("  PoC profile 검사: OK")
-
-        try:
-            stats = compute_stats(project_dir)
-            session["stats"] = stats
-            save_session(session, project_dir)
-        except Exception as e:
-            print(f"  [경고] stats 계산 실패: {e}")
-
-        print()
-        if warnings:
-            print(f"경고 {len(warnings)}건:\n")
-            for warning in warnings:
-                print(f"  {warning}")
-            print()
-        if issues:
-            print(f"이슈 {len(issues)}건 발견 - Gate 완료 불가:\n")
-            for issue in issues:
-                print(f"  {issue}")
-            if exit_on_error:
-                sys.exit(1)
-        else:
-            print("이슈 0건 - Gate 완료 가능합니다.")
-        return issues, warnings
 
     if profile == "product":
         print("  Product profile 검사: Product 문서 세트와 핵심 trace 연결 확인")
@@ -7118,10 +6468,7 @@ def check_trace(project_dir=".", exit_on_error=True):
                     f"    Path: {trace_file}{line_suffix}\n"
                     f"    Suggested: Test-Plan.md 등의 테스트케이스 계획서 문서에 '{req}'에 대응하는 테스트케이스(TST-ID 등)를 작성하고, 해당 REQ-ID가 기재된 테스트 테이블 행을 추가하십시오."
                 )
-                if profile == "poc":
-                    warnings.append(message.replace("  X ", "  ! ", 1))
-                else:
-                    issues.append(message)
+                issues.append(message)
 
         print("\n  Gate 3 검사 (2): TRACEABILITY.md tst_ids 컬럼 등록 여부")
         for req in sorted(detail_reqs):
@@ -7150,10 +6497,7 @@ def check_trace(project_dir=".", exit_on_error=True):
                     f"    Path: {trace_file}{line_suffix}\n"
                     f"    Suggested: {trace_file} 파일의 '{req}' 행에서 {', '.join(unresolved_columns)} 컬럼에 구체적인 테스트 ID(예: UT-001, IT-001, UI-001) 또는 '해당없음'을 기재하십시오."
                 )
-                if profile == "poc":
-                    warnings.append(message.replace("  X ", "  ! ", 1))
-                else:
-                    issues.append(message)
+                issues.append(message)
                 continue
             tst_ids = info.get("tst_ids", [])
             if tst_ids:
@@ -7175,10 +6519,7 @@ def check_trace(project_dir=".", exit_on_error=True):
                     f"    Path: {trace_file}{line_suffix}\n"
                     f"    Suggested: {trace_file} 파일의 '{req}' 행에 테스트 ID(TST-ID 또는 UT/IT/UI-ID)를 올바르게 명시하십시오."
                 )
-                if profile == "poc":
-                    warnings.append(message.replace("  X ", "  ! ", 1))
-                else:
-                    issues.append(message)
+                issues.append(message)
 
     # ── Impl: 개발표준 확정 + 구현 파일/테스트 연결 확인
     if current_gate == "impl":
@@ -7330,16 +6671,10 @@ def check_trace(project_dir=".", exit_on_error=True):
             ])
             tst_file = os.path.relpath(test_plan_path, project_dir) if test_plan_path else "Test-Plan.md"
             message = "  X QA 결과서(DOC-QA-G4-002)에 실제 테스트 실행 결과가 없습니다."
-            if profile == "poc":
-                warnings.append(message.replace("  X ", "  ! ", 1))
-            else:
-                issues.append(message)
+            issues.append(message)
         if not tst_results:
             message = "Test-Plan.md 또는 QA 결과서에 TST/UT/IT/PT/UI 실행 상태가 없습니다."
-            if profile == "poc":
-                warnings.append(f"  ! {message}")
-            else:
-                issues.append(message)
+            issues.append(message)
         else:
             tst_lines = {item[0]: getattr(item, "line_num", None) for item in tst_results}
             not_executed = [(tid, s) for tid, s in tst_results if s == 'not_executed']
@@ -7375,10 +6710,7 @@ def check_trace(project_dir=".", exit_on_error=True):
                     f"    Path: {tst_file}{line_suffix}\n"
                     f"    Suggested: 테스트가 아직 실행되지 않았습니다. 테스트를 수행하고 결과를 '{tst_file}'에 'Pass'로 업데이트하십시오."
                 )
-                if profile == "poc":
-                    warnings.append(msg.replace("  X ", "  ! ", 1))
-                else:
-                    issues.append(msg)
+                issues.append(msg)
                 print(f"  X {tid} - 미실행")
             for tid, _ in environment_blocked:
                 line_num = tst_lines.get(tid)
@@ -7388,19 +6720,13 @@ def check_trace(project_dir=".", exit_on_error=True):
                     f"    Path: {tst_file}{line_suffix}\n"
                     f"    Suggested: 테스트 실행 환경이 차단(Blocked)되었습니다. 차단 원인을 해결하고 테스트를 완료하여 '{tst_file}'에 결과를 업데이트하십시오."
                 )
-                if profile == "poc":
-                    warnings.append(msg.replace("  X ", "  ! ", 1))
-                else:
-                    issues.append(msg)
+                issues.append(msg)
                 print(f"  X {tid} - environment_blocked")
 
     completion_status_issues = validate_traceability_completion_status(project_dir, session, current_gate)
     if completion_status_issues:
         print("\n  추적표 완료 상태 검사: 위반 감지")
-        if profile == "poc":
-            warnings.extend(issue.replace("  X ", "  ! ", 1) for issue in completion_status_issues)
-        else:
-            issues.extend(completion_status_issues)
+        issues.extend(completion_status_issues)
     elif traceability_completion_required(session, current_gate):
         print("\n  추적표 완료 상태 검사: OK")
 
@@ -7697,9 +7023,7 @@ def cmd_prepare_transition(project_dir="."):
 
     # [4] 산출물 내용 완성도 검사
     print("[4] 산출물 내용 완성도 검사")
-    if profile == "poc":
-        artifact_issues, artifact_warnings = collect_poc_profile_findings(project_dir, gate=current_gate)
-    elif profile == "product":
+    if profile == "product":
         artifact_issues, artifact_warnings = collect_product_profile_findings(project_dir, gate=current_gate)
     else:
         artifact_issues, artifact_warnings = collect_artifact_completion_findings(project_dir)
@@ -7724,20 +7048,7 @@ def cmd_prepare_transition(project_dir="."):
     print("[5] Gate 전환 필수 요구사항 검사")
     transition_issues = []
 
-    if profile == "poc":
-        required_poc_docs = poc_required_artifacts_for_gate(current_gate)
-        missing_poc_docs = [rel_path for rel_path in required_poc_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
-        for rel_path in missing_poc_docs:
-            transition_issues.append(f"PoC 필수 산출물 없음: {rel_path}")
-
-        if current_gate == "impl":
-            wave_records = collect_build_wave_records(project_dir)
-            active_waves = [w for w in wave_records if w.get("status") not in ("Verified", "Completed", "Done")]
-            for w in active_waves:
-                run_file_str = f" ({w['run']})" if w['run'] else ""
-                transition_issues.append(f"진행 중인 Build Wave 존재: 완료되지 않은 Build Wave {w['id']} ({w['status']}){run_file_str}가 있습니다.")
-
-    elif profile == "product":
+    if profile == "product":
         required_product_docs = product_required_artifacts_for_gate(current_gate)
         missing_product_docs = [rel_path for rel_path in required_product_docs if not os.path.isfile(os.path.join(project_dir, rel_path))]
         for rel_path in missing_product_docs:
@@ -7779,7 +7090,7 @@ def cmd_prepare_transition(project_dir="."):
     elif current_gate == "gate4":
         tst_results, _source = parse_effective_test_status(project_dir)
         failed_tests = [tid for tid, s in tst_results if s in ("fail", "not_executed", "environment_blocked")]
-        if failed_tests and profile != "poc":
+        if failed_tests:
             transition_issues.append(f"테스트 미통과: 통과되지 않았거나 미실행된 테스트 {len(failed_tests)}건이 있습니다 (예: {', '.join(failed_tests[:5])}).")
 
     if transition_issues:
@@ -8977,10 +8288,6 @@ def cmd_gate_start(gate, feature=None, project_dir="."):
         return
 
     profile = load_delivery_profile(project_dir)
-    if profile == "poc":
-        print("  PoC profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
-        print("  다음 단계: docs/poc/ 문서를 갱신하고 필요할 때만 compact Run 또는 worker Run을 생성하세요.")
-        return
     if profile == "product":
         print("  Product profile: Gate별 Orchestrator Plan Run 자동 생성을 생략합니다.")
         print("  다음 단계: docs/product/ 문서를 갱신하고 구현/검수 위임이 필요할 때만 Run을 생성하세요.")
@@ -9099,7 +8406,7 @@ def classify_product_target_contracts(ids):
     return {key: merge_unique(values) for key, values in product_groups.items()}
 
 
-def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=None, project_dir="."):
+def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=2, project_dir="."):
     if not re.fullmatch(r"BW-\d{3}", bw_id):
         print(f"오류: BW-ID 형식이 아닙니다: {bw_id}")
         print("  예: BW-001")
@@ -9125,7 +8432,6 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
 
     existing = next((item for item in items if item.get("id") == bw_id), None)
     profile = load_delivery_profile(project_dir)
-    trace_depth = effective_trace_depth(project_dir, trace_depth)
     trace_info = trace_context_run_enrichment(
         os.path.abspath(project_dir),
         trace_seed=trace_seed,
@@ -9181,7 +8487,6 @@ def cmd_wave_start(bw_id, title="", related_ids="", trace_seed="", trace_depth=N
             wave_reference_documents.append("docs/artifacts/02-design/security/DOC-SEC-G2-001_Security-Guide_v0.1.md")
         if trace_info.get("reference_on_demand"):
             wave_reference_documents = merge_unique(trace_info["reference_on_demand"], wave_reference_documents)
-        wave_reference_documents = compact_reference_documents_for_profile(profile, wave_reference_documents)
         orchestrator_reference_documents = [
             "docs/artifacts/02-traceability/DOC-CORE-G4-001_Traceability-Matrix_v0.1.md",
             "docs/core/TRACEABILITY_RULES.md",
@@ -9251,51 +8556,6 @@ open_issues: []
 ### 후속 조치
 
 작성 예정
-"""
-        elif profile == "poc":
-            poc_preset = build_poc_run_input_preset("impl", wave_skill, skill_path, rel_path)
-            poc_preset["source_documents"]["reference_on_demand"] = compact_reference_documents_for_profile(
-                "poc",
-                merge_unique(trace_info.get("reference_on_demand", []), wave_reference_documents, poc_preset["source_documents"].get("reference_on_demand", [])),
-            )
-            poc_preset["scope"]["writable"] = wave_writable
-            input_sections = render_run_input_preset(poc_preset, ids, "build", "impl", trace_info=trace_info)
-            content = f"""# {run_id} Build Wave {bw_id} - {run_title}
-
-```yaml
-run_id: {run_id}
-gate: impl
-persona: build
-adapter: codex-gpt
-skill: {wave_skill}
-skill_path: {skill_path}
-profile: poc
-bw_id: {bw_id}
-run_type: {"ImplementationScaffold" if is_scaffold_wave else "Implementation"}
-status: InProgress
-created_at: {date.today()}
-related_ids: {format_yaml_list(ids)}
-{format_trace_context_metadata(trace_info)}
-verification_results: []
-evidence: []
-delegation_records: []
-traceability_updates: []
-findings: []
-change_requests: []
-open_issues: []
-```
-
-## 1. Wave 목표
-
-{run_title}
-
-## 2. PoC 경량화 기준
-
-- 이 Run은 PoC profile compact Run이다.
-- 참조 문서는 trace-context 직접 연결과 필수 작업 문서 중심으로 제한한다.
-- 자세한 audit 절차 설명은 Run 본문에 반복하지 않고, 필요할 때 Core 문서를 확인한다.
-
-{input_sections}
 """
         else:
             content = f"""# {run_id} Build Wave {bw_id} - {run_title}
@@ -9583,8 +8843,29 @@ def collect_documents(project_dir="."):
     return docs
 
 
-def cmd_export(output="snapshot.json", project_dir="."):
+def cmd_export(output=None, project_dir=".", *, kind="snapshot", input_file=None,
+               format="json", evidence_root=None):
     from datetime import datetime
+    if kind == "qa":
+        from vulcan_core import qa_report
+        try:
+            if not input_file:
+                raise ValueError("QA export requires --input with an existing TC JSON file")
+            source = os.path.join(project_dir, input_file)
+            root = os.path.join(project_dir, evidence_root) if evidence_root else None
+            target = os.path.join(project_dir, output or ("qa-report." + format))
+            report = qa_report.export(source, target, format=format, evidence_root=root)
+        except (OSError, ValueError, RecursionError) as error:
+            print(f"QA export failed: {error}")
+            raise SystemExit(1)
+        print(f"QA read-only report: {target}")
+        print(f"  cases: {report['source_count']} | reported: {report['summary']['reported']}")
+        print("  No tests executed; no source results or acceptance state changed.")
+        return
+    if kind != "snapshot" or input_file or evidence_root or format != "json":
+        print("snapshot export supports JSON only; use --kind qa for QA input/options")
+        raise SystemExit(1)
+    output = output or "snapshot.json"
     session = load_session(project_dir)
     workflow = workflow_policy(project_dir)
 
@@ -9618,8 +8899,87 @@ def cmd_export(output="snapshot.json", project_dir="."):
 
 # ── release ───────────────────────────────────────────────────────────────
 
-# dashboard/ 복사 시 제외할 디렉토리/파일 이름 목록 (REQ-008-03, SEC-002-03)
-_DASHBOARD_EXCLUDES = {"node_modules", ".next", ".env.local"}
+_RELEASE_SKIP_DIRS = {"node_modules", "__pycache__", "__tests__", "test-results", "playwright-report", "coverage", "logs"}
+_DASHBOARD_PUBLIC_FILES = {
+    "package.json", "package-lock.json", "tsconfig.json", "tailwind.config.ts", "next.config.js",
+    "next-env.d.ts", "postcss.config.mjs", "projects.example.json",
+}
+_SCAFFOLD_EXTRAS = {
+    "README.md", "PROJECT_README.md", "ENVIRONMENT.md", "docs/backlog/BACKLOG.md",
+    "docs/TRACEABILITY.md", "docs/01-requirements/REQUIREMENTS.md", "docs/03-test-plan/Test-Plan.md",
+    "docs/00-discovery/CHANGELOG.md", "docs/00-discovery/DISCOVERY-CHECKLIST.md",
+    "docs/00-discovery/glossary/glossary.md", "docs/00-discovery/references/.gitkeep",
+}
+
+
+def _link_or_reparse(path):
+    try:
+        info = path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+
+def _plain_path(root, relative):
+    path = root
+    for part in Path(relative).parts:
+        path = path / part
+        if _link_or_reparse(path):
+            return False
+    return True
+
+
+def _require_artifact_templates(root, mappings):
+    for rel, _ in mappings:
+        if not _plain_path(root, rel) or not (root / rel).is_file():
+            raise SystemExit(f"Missing or linked framework template: {rel}. Use a complete Ex distribution.")
+
+
+def _release_tree_files(root, tree):
+    """Walk only public framework directories; do not follow links or package runtime data."""
+    if not _plain_path(root, tree):
+        raise SystemExit(f"Linked framework source: {tree}")
+    for base, dirs, files in os.walk(root / tree):
+        base = Path(base)
+        dirs[:] = sorted(name for name in dirs if name not in _RELEASE_SKIP_DIRS
+                         and (not name.startswith(".") or base / name == root / "templates/.claude")
+                         and not _link_or_reparse(base / name))
+        for name in sorted(files):
+            path = base / name
+            rel = path.relative_to(root / tree).as_posix()
+            if (_link_or_reparse(path) or not path.is_file() or name.startswith(("~", "#"))
+                    or (name.startswith(".") and name != ".gitkeep")):
+                continue
+            suffix = path.suffix.lower()
+            if tree == "vulcan_core":
+                public = base == root / tree and suffix == ".py"
+            elif tree == "dashboard/src":
+                public = suffix in {".ts", ".tsx", ".js", ".css"}
+            elif tree == "templates":
+                public = rel in FRAMEWORK_FILES or rel in _SCAFFOLD_EXTRAS
+            elif tree in {".codex/agents", ".gemini/agents"}:
+                public = "/" not in rel and suffix == ".toml"
+            elif tree == ".agents":
+                public = rel.startswith("skills/vulcan-") and suffix == ".md"
+            else:
+                public = suffix == ".md" or (tree == "docs/seed-docs" and
+                         rel.startswith("reference-standards/") and suffix in {".pdf", ".xlsx"})
+            if public:
+                yield path.relative_to(root)
+
+
+def _release_files(root):
+    mappings = PROJECT_ARTIFACT_TEMPLATES + PRODUCT_ARTIFACT_TEMPLATES + PRODUCT_OPTIONAL_DETAIL_TEMPLATES
+    _require_artifact_templates(root, mappings)
+    files = {Path(name) for name in ["vulcan.py", "README.md", *PROJECT_ROOT_FILES]}
+    for tree in ["vulcan_core", "templates", "dashboard/src", *PROJECT_DOC_SETS]:
+        if tree == "docs/templates":
+            files.update(Path(rel) for rel, _ in mappings)
+            files.update(Path(tree) / name for name in ("README.md", "CHANGE_REQUEST_DETAIL_TEMPLATE.md"))
+        else:
+            files.update(_release_tree_files(root, tree))
+    files.update(Path("dashboard") / name for name in _DASHBOARD_PUBLIC_FILES)
+    return sorted(files)
 
 
 def _copy_tree_filtered(src_dir, dst_dir, excludes):
@@ -9648,8 +9008,8 @@ def _copy_tree_filtered(src_dir, dst_dir, excludes):
 def cmd_release(target):
     """Vulcan-Dev에서 Vulcan-Anvil 경로로 배포 대상 파일을 복사합니다.
 
-    배포 대상: vulcan.py, vulcan_core/, templates/, dashboard/, README.md
-    배포 제외: docs/, session.json, .claude/, node_modules/, .env.local, .git/
+    배포 대상: CLI, 런타임 모듈, 대시보드 소스, 공개 runner 지침과 원본 템플릿.
+    프로젝트 산출물, 내부 참고자료, 로컬 설정 및 실행 로그는 배포하지 않는다.
 
     Args:
         target: 배포 대상 디렉토리 경로 (절대 또는 상대). (REQ-008-01)
@@ -9657,6 +9017,7 @@ def cmd_release(target):
     import shutil
 
     target_abs = os.path.abspath(target)
+    load_delivery_profile(target_abs)
 
     # 자기 자신 덮어쓰기 방지 (REQ-008-01)
     if os.path.abspath(VULCAN_DIR) == target_abs:
@@ -9672,37 +9033,19 @@ def cmd_release(target):
     print(f"  소스: {VULCAN_DIR}")
     print(f"  대상: {target_abs}\n")
 
-    # vulcan.py 복사
-    src_vulcan = os.path.join(VULCAN_DIR, "vulcan.py")
-    if os.path.isfile(src_vulcan):
-        shutil.copy2(src_vulcan, os.path.join(target_abs, "vulcan.py"))
-        print(f"  생성/업데이트: vulcan.py")
-
-    src_core = os.path.join(VULCAN_DIR, "vulcan_core")
-    if os.path.isdir(src_core):
-        dst_core = os.path.join(target_abs, "vulcan_core")
-        _copy_tree_filtered(src_core, dst_core, excludes={"__pycache__"})
-        print(f"  생성/업데이트: vulcan_core/")
-
-    # templates/ 복사
-    src_templates = os.path.join(VULCAN_DIR, "templates")
-    if os.path.isdir(src_templates):
-        dst_templates = os.path.join(target_abs, "templates")
-        _copy_tree_filtered(src_templates, dst_templates, excludes=set())
-        print(f"  생성/업데이트: templates/")
-
-    # dashboard/ 복사 (node_modules/, .next/, .env.local 제외)
-    src_dashboard = os.path.join(VULCAN_DIR, "dashboard")
-    if os.path.isdir(src_dashboard):
-        dst_dashboard = os.path.join(target_abs, "dashboard")
-        _copy_tree_filtered(src_dashboard, dst_dashboard, excludes=_DASHBOARD_EXCLUDES)
-        print(f"  생성/업데이트: dashboard/")
-
-    # README.md 복사
-    src_readme = os.path.join(VULCAN_DIR, "README.md")
-    if os.path.isfile(src_readme):
-        shutil.copy2(src_readme, os.path.join(target_abs, "README.md"))
-        print(f"  생성/업데이트: README.md")
+    source, dest = Path(VULCAN_DIR).resolve(), Path(target_abs)
+    if _link_or_reparse(dest) or dest.resolve() == source:
+        raise SystemExit("Unsafe release target: use a separate, unlinked directory")
+    files = _release_files(source)
+    for rel in files:
+        dst = dest / rel
+        if (not _plain_path(source, rel) or not (source / rel).is_file()
+                or not _plain_path(dest, rel) or (dst.exists() and (not dst.is_file() or dst.stat().st_nlink != 1))):
+            raise SystemExit(f"Missing or unsafe release file: {rel}")
+    for rel in files:
+        (dest / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source / rel, dest / rel)
+    print(f"  배포 파일: {len(files)}")
 
     print(f"\n완료! {target_abs} 에 배포되었습니다.")
 
@@ -9715,6 +9058,64 @@ DEPRECATED_FILES = [
     "docs/CHANGE_PROCESS.md",
     "commenting-standards.md",
 ]
+
+# SHA-256 of the v0.5.0 source blobs, in LF and checkout CRLF form.
+# Rendered project templates are not identical to these sources and must survive.
+_RETIRED_TEMPLATE_HASHES = {
+    "POC_REQUIREMENTS_TEMPLATE.md": {
+        "d731db973d8387a86c6327d5e9395ae3b425094e162c353445288d1e539c0524",
+        "03ef29fc7367f99a7a72f8f05a2697a5b25fff59efaf3c9c8580293269f26e7e",
+    },
+    "POC_SYSTEM_DESIGN_TEMPLATE.md": {
+        "99fa1b9a78e47769f3df372f23e4241d54d8ca229fa43a98301d1506e92b6ef6",
+        "56dec3fbf7445bc3ef563a6b6a95ea577cfff11a91faf107f4f9ef7c792fb8a2",
+    },
+    "POC_TEST_REPORT_TEMPLATE.md": {
+        "fcb1c9fdb3cf1927b663026986db8880a39670cc76c6e4e7137d2f84c41d6870",
+        "bf9719d7a841bdd2814779826cb8879becf0eb65616aa04c417ae80af8099466",
+    },
+}
+
+
+def _remove_stock_retired_templates(project_dir):
+    root = Path(project_dir).absolute()
+    folder = Path("docs/templates/poc")
+    removed = False
+    for name, hashes in _RETIRED_TEMPLATE_HASHES.items():
+        rel = folder / name
+        target = root / rel
+        try:
+            if not _plain_path(root, rel):
+                continue
+            info = target.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 4096:
+                continue
+            with target.open("rb") as stream:
+                if not os.path.samestat(info, os.fstat(stream.fileno())):
+                    continue
+                if hashlib.sha256(stream.read(4097)).hexdigest() not in hashes:
+                    continue
+            if not _plain_path(root, rel):
+                continue
+            current = target.lstat()
+            if (not os.path.samestat(info, current) or current.st_mtime_ns != info.st_mtime_ns
+                    or current.st_size != info.st_size or current.st_nlink != 1):
+                continue
+            target.unlink()
+            removed = True
+            print(f"  삭제 (unmodified v0.5.0 template): {rel}")
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        except OSError as error:
+            print(f"  보존 (template cleanup skipped): {rel}: {error}")
+    if removed:
+        try:
+            # Never recurse: arbitrary user files and directories belong to the project.
+            if _plain_path(root, folder) and not any((root / folder).iterdir()):
+                (root / folder).rmdir()
+        except OSError as error:
+            print(f"  template directory cleanup skipped: {folder}: {error}")
+
 
 FRAMEWORK_FILES = [
     # CLAUDE.md & settings
@@ -9789,6 +9190,7 @@ def extract_variables(project_dir="."):
 
 
 def cmd_upgrade(project_dir="."):
+    load_delivery_profile(project_dir)
     marked = product_consumers.load(project_dir)
     if marked is None:
         return _upgrade_framework(project_dir)
@@ -9809,6 +9211,9 @@ def cmd_upgrade(project_dir="."):
 def _upgrade_framework(project_dir="."):
     import shutil
 
+    profile = load_delivery_profile(project_dir)
+    if not _plain_path(Path(project_dir).absolute(), "docs/templates"):
+        raise SystemExit("Upgrade stopped: linked docs/templates path; no framework files changed.")
     session = product_consumers.load(project_dir) or load_session(project_dir)
     vulcan_src = session.get("vulcan_src") or VULCAN_DIR
     src_templates = os.path.join(vulcan_src, "templates")
@@ -9879,10 +9284,8 @@ def _upgrade_framework(project_dir="."):
                 print(f"  생성 (Ex 신규): {BACKLOG_PATH}")
 
     install_project_doc_framework(project_dir, variables, overwrite=True, source_root=vulcan_src)
-    profile = load_delivery_profile(project_dir)
-    if profile == "poc":
-        install_poc_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
-    elif profile == "product":
+    _remove_stock_retired_templates(project_dir)
+    if profile == "product":
         install_product_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
     else:
         install_project_artifacts(project_dir, variables, overwrite=False, source_root=vulcan_src)
@@ -9919,7 +9322,7 @@ def cmd_version(project_dir="."):
 
 # ── init ───────────────────────────────────────────────────────────────────
 
-def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_seed="", trace_depth=None, project_dir="."):
+def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_seed="", trace_depth=2, project_dir="."):
     if skill not in RUN_SKILLS:
         print(f"오류: 알 수 없는 skill입니다: {skill}")
         print("사용 가능 skill:")
@@ -9943,7 +9346,6 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
             file_title = f"qa-fix-loop-{title}"
         rel_path = os.path.join(runs_rel_dir(project_dir), f"{run_id}_{slugify(file_title)}_v0.1.md")
         profile = load_delivery_profile(project_dir)
-        trace_depth = effective_trace_depth(project_dir, trace_depth)
         trace_info = trace_context_run_enrichment(
             os.path.abspath(project_dir),
             trace_seed=trace_seed,
@@ -9962,7 +9364,7 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
         if preset:
             skill_path = preset.get("skill_path", skill_path)
             source_docs = preset.setdefault("source_documents", {})
-            if is_gemini_long_context_mode(project_dir) and profile != "poc" and not product_build:
+            if is_gemini_long_context_mode(project_dir) and not product_build:
                 long_context_docs = []
                 for root_dir in ["docs/core", "docs/artifacts"]:
                     abs_root = os.path.join(project_dir, root_dir)
@@ -9975,9 +9377,8 @@ def cmd_run_new(adapter, gate, skill, title, related_ids, persona=None, trace_se
                                     long_context_docs.append(rel_p)
                 source_docs["reference_on_demand"] = merge_unique(long_context_docs, source_docs.get("reference_on_demand", []))
             elif trace_info.get("reference_on_demand") and not product_build:
-                source_docs["reference_on_demand"] = compact_reference_documents_for_profile(
-                    profile,
-                    merge_unique(trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])),
+                source_docs["reference_on_demand"] = merge_unique(
+                    trace_info["reference_on_demand"], source_docs.get("reference_on_demand", [])
                 )
             for source_key in ("read_first", "reference_on_demand", "optional"):
                 source_docs[source_key] = filter_adapter_specific_docs(source_docs.get(source_key, []), adapter)
@@ -14404,13 +13805,9 @@ def direct_edit_scope_contract_changed(scope_text):
 
 
 def effective_run_contract_profile(project_profile, metadata=None, input_contract=None):
-    metadata = metadata or {}
-    input_contract = input_contract or {}
-    return normalize_delivery_profile(
-        metadata.get("profile")
-        or input_contract.get("profile")
-        or project_profile
-    )
+    profiles = [(metadata or {}).get("profile"), (input_contract or {}).get("profile"), project_profile]
+    declared = [normalize_delivery_profile(value) for value in profiles if value]
+    return declared[0] if declared else DEFAULT_DELIVERY_PROFILE
 
 
 def qa_execution_source_mutation_blockers(content):
@@ -14470,10 +13867,7 @@ def check_run_file(path):
             input_value = str(input_contract.get(field, "")).strip()
             if top_value and input_value and top_value != input_value:
                 message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
-                if run_contract_profile == "poc":
-                    warnings.append(message)
-                else:
-                    issues.append(message)
+                issues.append(message)
 
     status = ""
     status_match = re.search(r"^\s*status\s*:\s*(.+)$", content, re.MULTILINE)
@@ -14526,13 +13920,7 @@ def check_run_file(path):
     if status in {"Completed", "Verified", "CompletedWithIssues"}:
         body_without_yaml = run_body_without_yaml(content)
         if re.search(r"(?im)(^|\|)\s*(TBD|확정필요|작성필요)\s*(\||$)", body_without_yaml):
-            if profile == "poc":
-                if poc_tbd_decision_context_present(content):
-                    warnings.append("PoC Completed Run 본문에 TBD/확정필요/작성필요가 남아 있습니다. 사유와 후속 판단 시점 기준으로 확인하세요.")
-                else:
-                    warnings.append("PoC Completed Run 본문에 TBD/확정필요/작성필요가 있으나 사유 또는 후속 판단 시점이 부족합니다.")
-            else:
-                issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
+            issues.append("Completed 상태이지만 본문에 TBD/확정필요/작성필요 placeholder가 남아 있습니다.")
 
         is_impl_run = (
             gate == "impl"
@@ -14638,7 +14026,7 @@ def check_run_file(path):
                 re.IGNORECASE,
             ))
             if has_ui_pass_evidence and looks_like_official_gate4_ui_pass and not has_official_playwright_runner:
-                issues.append("Gate 4 공식 UI Pass는 @playwright/test 러너 실행 결과가 필요합니다. 커스텀 Playwright script는 PoC smoke/demo 또는 보조 증적으로만 기록하세요.")
+                issues.append("Gate 4 공식 UI Pass는 @playwright/test 러너 실행 결과가 필요합니다. 커스텀 Playwright script는 보조 증적으로만 기록하세요.")
             if has_ui_pass_evidence and has_custom_playwright_script and not has_official_playwright_runner:
                 issues.append("커스텀 Playwright script 기반 UI Pass가 공식 러너 증적 없이 기록되었습니다. audit/product에서는 `npx playwright test`와 report/trace/screenshot 증적을 연결하세요.")
 
@@ -14826,10 +14214,7 @@ def run_preflight_file(path):
             input_value = str(input_contract.get(field, "")).strip()
             if top_value and input_value and top_value != input_value:
                 message = f"Run 상단 metadata와 3. Run 입력 계약의 {field} 값이 다릅니다: top={top_value}, input={input_value}"
-                if run_contract_profile == "poc":
-                    warnings.append(message)
-                else:
-                    blockers.append(message)
+                blockers.append(message)
 
     is_impl = (
         gate == "impl"
@@ -14911,7 +14296,7 @@ def run_preflight_file(path):
         all_ids_text = " ".join(related_ids + req_ids)
         has_parent_req = bool(re.search(r"\bREQ-\d{3}\b", all_ids_text))
         has_detail_req = bool(re.search(r"\bREQ-\d{3}-\d{2}\b", all_ids_text))
-        if has_parent_req and not has_detail_req and profile not in ("poc", "product"):
+        if has_parent_req and not has_detail_req and profile != "product":
             warnings.append("target_contracts/related_ids가 parent REQ 중심입니다. 상세 REQ-NNN-NN 단위 매핑을 추가하세요.")
 
         ui_ids = set(re.findall(r"\bUI-\d{3}-\d{2}\b", content))
@@ -15098,6 +14483,7 @@ def run_preflight_or_exit(run_file, context="run-exec"):
 
 
 def create_session_json(target_dir, project_name, profile=DEFAULT_DELIVERY_PROFILE):
+    load_delivery_profile(target_dir)
     profile = normalize_delivery_profile(profile)
     session = {
         "project": project_name,
@@ -15246,6 +14632,7 @@ def default_vulcan_config(available_runners=None, profile=DEFAULT_DELIVERY_PROFI
 
 
 def create_vulcan_config(target_dir, profile=DEFAULT_DELIVERY_PROFILE, primary=None):
+    load_delivery_profile(target_dir)
     rel_path = "vulcan.config.json"
     path = os.path.join(target_dir, rel_path)
     if os.path.exists(path):
@@ -15533,28 +14920,16 @@ def collect_profile_gap(project_dir=".", target_profile="product"):
     target = normalize_delivery_profile(target_profile)
     content_issues = []
     content_warnings = []
-    if target == "poc":
-        items = [{
-            "id": "poc_target",
-            "title": "PoC target",
-            "status": "review",
-            "matched": [],
-            "recommendation": "PoC는 승격 대상이라기보다 경량 실험 profile입니다. 필요하면 새 PoC 목적과 성공 기준을 정리하세요.",
-        }]
-    else:
-        rules = PROFILE_GAP_RULES.get(target)
-        if not rules:
-            rules = []
-        items = []
-        for rule in rules:
-            status, matched = _profile_gap_rule_status(project_abs, rule)
-            items.append({
-                "id": rule.get("id") or "",
-                "title": rule.get("title") or "",
-                "status": status,
-                "matched": matched,
-                "recommendation": rule.get("recommendation") or "",
-            })
+    items = []
+    for rule in PROFILE_GAP_RULES[target]:
+        status, matched = _profile_gap_rule_status(project_abs, rule)
+        items.append({
+            "id": rule.get("id") or "",
+            "title": rule.get("title") or "",
+            "status": status,
+            "matched": matched,
+            "recommendation": rule.get("recommendation") or "",
+        })
 
     if target == "product":
         content_issues, content_warnings = collect_product_profile_findings(project_abs, gate=current_gate)
@@ -15634,6 +15009,7 @@ def cmd_profile_gap(target_profile="product", emit_json=False, project_dir="."):
 
 def collect_status_summary(project_dir="."):
     project_abs = os.path.abspath(project_dir)
+    profile = load_delivery_profile(project_abs)
     session = {}
     session_path = os.path.join(project_abs, "session.json")
     if os.path.exists(session_path):
@@ -15643,11 +15019,10 @@ def collect_status_summary(project_dir="."):
             session = {}
 
     workflow = workflow_policy(project_abs)
-    profile = load_delivery_profile(project_abs) if session else DEFAULT_DELIVERY_PROFILE
     current_gate = session.get("current_gate") or "-"
     gate_status = session.get("gate_status", {}) if isinstance(session.get("gate_status"), dict) else {}
     implementation = session.get("implementation", {}) if isinstance(session.get("implementation"), dict) else {}
-    if profile in ("poc", "product", "solution"):
+    if profile == "product":
         try:
             profile_stats = compute_stats(project_abs)
             computed_implementation = profile_stats.get("implementation")
@@ -15683,13 +15058,12 @@ def collect_status_summary(project_dir="."):
     dashboard_comments = collect_dashboard_comments(project_abs)
     model_fallbacks = collect_model_fallbacks(project_abs)
     profile_gap = None
-    gap_target = "product" if profile == "poc" else profile
-    if session and profile in ("poc", "product", "audit"):
+    if session and profile in SUPPORTED_DELIVERY_PROFILES:
         try:
-            profile_gap = collect_profile_gap(project_abs, target_profile=gap_target)
+            profile_gap = collect_profile_gap(project_abs, target_profile=profile)
         except Exception as exc:
             profile_gap = {
-                "target_profile": gap_target,
+                "target_profile": profile,
                 "summary": {"ok": 0, "partial": 0, "missing": 0, "review": 0, "content_issues": 0, "content_warnings": 0},
                 "read_error": str(exc),
             }
@@ -15717,7 +15091,7 @@ def collect_status_summary(project_dir="."):
         model_fallbacks=model_fallbacks,
         session_exists=bool(session),
         known_gates=GATE_ORDER,
-        gap_target=gap_target,
+        gap_target=profile,
     )
 
 
@@ -15900,9 +15274,9 @@ def _classify_metric_file(rel_path):
     rel = normalize_repo_path(rel_path)
     if rel.startswith("docs/runs/"):
         return "runs"
-    if rel.startswith("docs/poc/evidence/") or rel.startswith("docs/artifacts/04-review/evidence/"):
+    if rel.startswith("docs/artifacts/04-review/evidence/"):
         return "evidence"
-    if rel.startswith(("docs/poc/", "docs/artifacts/", "docs/backlog/", "docs/reference/")) or rel == "README.md":
+    if rel.startswith(("docs/artifacts/", "docs/backlog/", "docs/reference/")) or rel == "README.md":
         return "docs"
     if rel in {"session.json", "vulcan.config.json"}:
         return "metadata"
@@ -16374,12 +15748,12 @@ def cmd_release_pr(base="", head="", title="", dry_run=False, no_push=False, pro
 def init(target_dir, project_name, agent_name, remote_url=None, require_remote=False, profile=None, primary=None):
     import shutil
     import sys
+    load_delivery_profile(target_dir)
     profile_was_explicit = profile is not None
     if not profile_was_explicit and sys.stdin.isatty():
         profile_options = [
             ("audit", "감리/공식 제출 수준 문서와 강한 추적성"),
             ("product", "실사용/릴리즈 가능한 제품 기준"),
-            ("poc", "가설 검증과 빠른 실험 중심"),
         ]
         print("프로젝트 Delivery Profile을 선택해 주세요:")
         for idx, (profile_key, desc) in enumerate(profile_options, 1):
@@ -16388,13 +15762,16 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
         try:
             ans = input(f"선택 (1-{len(profile_options)}, 기본값: 1): ").strip()
             if ans:
-                sel = int(ans)
-                if 1 <= sel <= len(profile_options):
-                    profile = profile_options[sel - 1][0]
-        except (ValueError, IndexError, KeyboardInterrupt, EOFError):
+                if ans in {str(idx) for idx in range(1, len(profile_options) + 1)}:
+                    profile = profile_options[int(ans) - 1][0]
+                else:
+                    profile = normalize_delivery_profile(ans)
+        except (KeyboardInterrupt, EOFError):
             profile = DEFAULT_DELIVERY_PROFILE
     profile = normalize_delivery_profile(profile)
     print(f"\nVulcan-Anvil 초기화")
+    mappings = PRODUCT_ARTIFACT_TEMPLATES if profile == "product" else PROJECT_ARTIFACT_TEMPLATES
+    _require_artifact_templates(Path(VULCAN_DIR), mappings)
     print(f"  프로젝트: {project_name}")
     print(f"  대상 폴더: {target_dir}")
     print(f"  Delivery Profile: {profile}")
@@ -16481,9 +15858,7 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
     # audit and agent coding document framework
     install_project_doc_framework(target_dir, variables, overwrite=True)
-    if profile == "poc":
-        install_poc_artifacts(target_dir, variables, overwrite=False)
-    elif profile == "product":
+    if profile == "product":
         install_product_artifacts(target_dir, variables, overwrite=False)
     else:
         install_project_artifacts(target_dir, variables, overwrite=False)
@@ -16573,6 +15948,13 @@ def init(target_dir, project_name, agent_name, remote_url=None, require_remote=F
 
 # ── main ───────────────────────────────────────────────────────────────────
 
+def cli_profile(value):
+    try:
+        return normalize_delivery_profile(value)
+    except UnsupportedProfile as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Vulcan-Anvil Ex - 5-Gate AI 협업 개발 프레임워크",
@@ -16635,7 +16017,7 @@ def main():
     p_init.add_argument("--agent-name", default="VULCAN", help="메인 에이전트 이름 (기본값: VULCAN)")
     p_init.add_argument("--remote", default="", help="초기화 후 origin으로 등록할 Git remote URL")
     p_init.add_argument("--require-remote", action="store_true", help="remote 등록/초기 push 실패 시 init 실패 처리")
-    p_init.add_argument("--profile", default=None, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit; solution은 product alias)")
+    p_init.add_argument("--profile", default=None, type=cli_profile, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="Delivery Profile (생략 시 대화형 터미널에서 선택, 비대화형 기본값: audit; solution은 product alias)")
     p_init.add_argument("--primary", default=None, help="주 런타임 러너 (예: codex-cli, claude-cli, antigravity-cli, agy)")
 
     p_status = subparsers.add_parser("status", help="현재 Gate/Profile/Branch/Run 상태 요약")
@@ -16654,7 +16036,7 @@ def main():
     subparsers.add_parser("prepare-transition", help="Gate 전환에 필요한 Run 완료 여부, 추적성 정합성 등을 한 번에 검사하고 결과를 요약")
     subparsers.add_parser("profile-status", help="Delivery Profile과 profile_rules 확인")
     p_profile_gap = subparsers.add_parser("profile-gap", help="목표 Delivery Profile 기준 부족 항목 진단")
-    p_profile_gap.add_argument("--to", default="product", choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="목표 Delivery Profile")
+    p_profile_gap.add_argument("--to", default="product", type=cli_profile, choices=list(SUPPORTED_DELIVERY_PROFILES) + list(DELIVERY_PROFILE_ALIASES.keys()), help="목표 Delivery Profile")
     p_profile_gap.add_argument("--json", action="store_true", help="JSON으로 출력")
 
     p_check_contract = subparsers.add_parser("check-contract", help="Program Design 구현 계약과 코드 구조 대조")
@@ -16723,7 +16105,7 @@ def main():
     p_wave_start.add_argument("--title", default="", help="Wave 제목")
     p_wave_start.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
     p_wave_start.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
-    p_wave_start.add_argument("--trace-depth", type=int, default=None, help="trace-context 탐색 깊이 (기본: audit 2, poc 1)")
+    p_wave_start.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이 (기본: 2)")
 
     p_wave_complete = subparsers.add_parser("wave-complete", help="Build Wave 완료/상태 갱신")
     p_wave_complete.add_argument("bw_id", help="Build Wave ID (예: BW-001)")
@@ -16738,7 +16120,7 @@ def main():
     p_run_new.add_argument("--title", required=True, help="Run 제목")
     p_run_new.add_argument("--related-ids", default="", help="관련 ID 콤마 구분")
     p_run_new.add_argument("--trace-seed", default="", help="trace-context로 Run 입력 계약을 보강할 시작 ID 콤마 구분")
-    p_run_new.add_argument("--trace-depth", type=int, default=None, help="trace-context 탐색 깊이 (기본: audit 2, poc 1)")
+    p_run_new.add_argument("--trace-depth", type=int, default=2, help="trace-context 탐색 깊이 (기본: 2)")
 
     p_run_check = subparsers.add_parser("run-check", help="Run 결과 문서 검사")
     p_run_check.add_argument("run_file", help="검사할 Run 문서 경로")
@@ -16862,8 +16244,12 @@ def main():
     bl_rej.add_argument("--id", dest="bl_id", required=True)
     bl_rej.add_argument("--reason", default="")
 
-    p_export = subparsers.add_parser("export", help="snapshot.json 생성")
-    p_export.add_argument("--output", default="snapshot.json", help="출력 파일명")
+    p_export = subparsers.add_parser("export", help="프로젝트 snapshot 또는 읽기 전용 QA 결과 내보내기")
+    p_export.add_argument("--output", help="출력 파일명 (QA는 기존 파일을 덮어쓰지 않음)")
+    p_export.add_argument("--kind", choices=["snapshot", "qa"], default="snapshot")
+    p_export.add_argument("--input", dest="input_file", help="QA: 기존 TC JSON 파일")
+    p_export.add_argument("--format", choices=["json", "html"], default="json")
+    p_export.add_argument("--evidence-root", help="QA: 증적 탐색 허용 루트 (기본: 입력 파일 폴더)")
 
     subparsers.add_parser("upgrade", help="프레임워크 파일 최신화")
     subparsers.add_parser("version", help="현재 프레임워크 버전 확인")
@@ -16872,6 +16258,10 @@ def main():
     p_release.add_argument("--target", required=True, help="배포 대상 경로 (예: ../Vulcan-Anvil)")
 
     args = parser.parse_args()
+
+    # Check before Product requests, locks, Git, runner dispatch or file writes.
+    if args.command:
+        load_delivery_profile(getattr(args, "project_dir", None) or ".")
 
     process_request = args.command == "session" and args.process_request is not None
     if args.command == "session":
@@ -16892,6 +16282,8 @@ def main():
                 if "process_model" in session:
                     session = product_consumers.load(os.path.dirname(session_path))
                 if "process_model" in session and args.command in {"branch-status", "branch-start", "doctor", "release-pr", "upgrade", "profile-status"}:
+                    product_process._validate(session)
+                elif "process_model" in session and args.command == "export" and args.kind == "qa":
                     product_process._validate(session)
                 elif "process_model" in session and args.command == "execute" and args.verify:
                     product_session.require_verification_permission(session)
@@ -17150,7 +16542,8 @@ def main():
         else:
             p_backlog.print_help()
     elif args.command == "export":
-        cmd_export(output=args.output)
+        cmd_export(output=args.output, kind=args.kind, input_file=args.input_file,
+                   format=args.format, evidence_root=args.evidence_root)
     elif args.command == "upgrade":
         cmd_upgrade()
     elif args.command == "version":
@@ -17162,7 +16555,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except UnsupportedProfile as error:
+        print(f"오류: {error}", file=sys.stderr)
+        sys.exit(2)
 
 
 

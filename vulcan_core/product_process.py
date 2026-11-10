@@ -8,6 +8,8 @@ from copy import deepcopy
 import hashlib
 import json
 
+from .profiles import UnsupportedProfile, declared_profile
+
 
 MODEL = "product-iterative-v1"
 STAGES = ("planning", "impl", "acceptance")
@@ -76,6 +78,10 @@ def scope_key(scope):
 
 def process_model(session):
     session = _object(session, "session")
+    try:
+        declared_profile(session)
+    except UnsupportedProfile as error:
+        raise ProcessContractError(str(error)) from error
     if "process_model" not in session:
         return "legacy"
     _require(session["process_model"] == MODEL, "unsupported process_model")

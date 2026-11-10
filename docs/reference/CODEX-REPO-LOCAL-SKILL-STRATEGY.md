@@ -34,7 +34,7 @@ Codex는 `AGENTS.md`를 작업 시작 시 instruction chain에 넣는다.
 
 Repo-local skill은 profile별로 분리하지 않는다.
 
-예를 들어 `vulcan-qa-audit`, `vulcan-qa-poc`처럼 skill을 나누지 않고, `vulcan-qa`가 현재 profile을 확인한 뒤 Core profile 정책을 따른다.
+예를 들어 `vulcan-qa-audit`, `vulcan-qa-product`처럼 skill을 나누지 않고, `vulcan-qa`가 현재 profile을 확인한 뒤 Core profile 정책을 따른다.
 
 ```text
 python vulcan.py profile-status

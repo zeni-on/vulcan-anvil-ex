@@ -30,14 +30,16 @@
 6. `status`에 `dashboard_comments`가 표시되면 먼저 확인하고, 사용자 코멘트/질문/FIND 후보/CR 후보를 현재 작업 판단에 반영한다.
 7. 현재 작업과 맞는 repo-local skill 또는 Core 문서만 추가로 읽는다.
 
-`process_model`이 있는 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 새 `init --profile product`는 planning 세션을 이미 생성한다. 첫 범위 합의는 기존 `open-work` 요청으로 처리하며 `start`나 Phase 0/Gate 1로 재시작하지 않는다. 표식이 없는 기존 Product/Audit/PoC와 upgrade는 자동 이행하지 않으며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
+지원 프로파일은 Audit과 Product다. 기존 프로젝트가 미지원 프로파일이면 쓰기 작업을 멈추고 보고한다. 기본값으로 해석하거나 `upgrade`·프로파일 변경으로 자동 전환하지 않는다.
+
+`process_model`이 있는 Product는 아래의 기존 Gate 명령보다 `docs/core/ORCHESTRATOR_CLI_GUIDE.md` 4.1절을 먼저 따른다. 새 `init --profile product`는 planning 세션을 이미 생성한다. 첫 범위 합의는 기존 `open-work` 요청으로 처리하며 `start`나 Phase 0/Gate 1로 재시작하지 않는다. Audit과 표식 없는 기존 Product는 `upgrade`로 자동 이행하지 않으며, 표식을 직접 추가하거나 미지원 모델을 기존 Gate로 바꿔 해석하지 않는다.
 
 전역 memory, 과거 세션 요약, 다른 샘플 프로젝트 기록은 보조 힌트일 뿐이다. 현재 프로젝트의 사실 근거는 반드시 `session.json`, 현재 산출물, 현재 Run, `docs/core/`, 사용자의 최신 지시에서 확인한다.
 
 ## 3. 핵심 Guardrails
 
-- 현재 `session.json.current_gate`보다 앞선 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.
-- Gate 상태는 문서의 `gate:` 값으로 바뀌지 않는다. 실제 전환과 완료는 `vulcan.py gate-start`, `vulcan.py session`, `vulcan.py sync-session` 계열로 갱신한다.
+- 현재 프로세스와 승인 범위 밖의 산출물, 구현, 테스트, QA 증적, 릴리즈 판단을 사용자 승인 없이 만들지 않는다.
+- 상태는 문서의 `gate:` 값으로 바뀌지 않는다. Product 반복 모델은 CLI Guide 4.1의 `session --process-request`를 사용한다. `gate-start`/기존 `session`/`sync-session`의 Gate 전환은 기존 모델에만 적용한다.
 - `status`가 기본 진입점이다. `prepare-transition`은 상세/호환 진단이 필요할 때, `check-trace`는 추적성 오류를 상세 분석하거나 trace-only 회귀 검증이 필요할 때만 직접 실행한다.
 - `doctor`는 Gate 전환 판정 도구가 아니라 로컬 실행 환경 진단 도구다. `doctor`의 `fail`/`warn`은 제품 결함으로 바로 확정하지 않고, 환경 차단이면 `environment_blocked` 또는 `ISSUE` 후보로 분리한다.
 - Product의 실행자와 Run/Wave 사용은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따른다. 사용자 역할 배정을 존중하며 작은 수정마다 새 worker/Run을 만들지 않는다. 그 외 profile의 구현 위임 기준은 유지한다.
@@ -61,13 +63,13 @@ Vulcan 명령이나 상태 처리가 필요하면 `docs/core/ORCHESTRATOR_CLI_GU
 | 역할별 지속 작업 협업 | `docs/core/COLLABORATION_PROTOCOL.md`, `docs/adapters/codex-gpt/PERSONA_DELEGATION.md` |
 | 요구사항/추적성 | `docs/core/TRACEABILITY_RULES.md`, 요구사항정의서, 추적표 |
 | 누적 문서/검증 소스 기준 | `docs/core/CURRENT_CONTEXT_AND_EVIDENCE.md` |
-| 설계 | `docs/core/ORCHESTRATOR_PROTOCOL.md`, Gate 2 산출물 |
+| 설계 | `docs/core/ORCHESTRATOR_PROTOCOL.md`, 현재 범위의 설계 원본 |
 | Product 보안/데이터 기준 | `docs/core/PRODUCT_PROFILE_BASELINE.md`, `docs/core/SECURITY_BASELINE.md`, `docs/core/DATA_STANDARD_RULES.md` |
 | 기술스택/표준 | `docs/core/TECH_STACK_BASELINES.md`, 개발표준정의서 |
 | 변경/백로그/리팩토링 | `docs/core/CHANGE_CONTROL_PROCESS.md`, `docs/core/REFACTORING_PROCESS.md` |
 | Codex model/effort | `docs/core/CODEX_MODEL_POLICY.md`, `docs/core/INDEPENDENT_EXECUTION_PROCESS.md` |
 
-`profile: product`의 Gate 2 이후 산출물에서는 `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG`를 확인한다. Product 보안은 OWASP ASVS/Top 10/API Top 10/CWE 기준을 기본으로 하며, KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
+Product의 planning에서는 `PRODUCT_ARCHITECTURE.md`의 `Security Design Baseline`, `PRODUCT_CONTRACTS.md`의 `SEC-ID`, `PRODUCT_TRACEABILITY.md`의 `SEC` 연결, `REGRESSION_AND_RELEASE_REPORT.md`의 `SEC-REG` 시험 계획을 확인한다. impl/acceptance에서는 영향받는 보안 계약의 실제 검증 결과를 확인한다. Product 보안은 OWASP ASVS/Top 10/API Top 10/CWE 기준을 기본으로 하며, KISA/SR 또는 고객 기준 매핑은 Audit 전환 또는 명시 요구가 있을 때 보강한다.
 Product 문서 작성은 `docs/core/PRODUCT_DOCUMENT_WRITING.md`를 따른다. `docs/product/`의 6종은 진입점이며, 요구/설계/시험/실행 상세는 필요한 원본 한 곳에 쓰고 상대 Markdown 링크로 연결한다. 기존 승인 문서를 자동 이동하거나 상세 본문을 원장에 재복사하지 않는다.
 Product worker는 `docs/core/PRODUCT_WORKER_GUIDE.md`를 사용한다. 입력 축소와 조건부 재검증은 `PRODUCT_PROFILE_BASELINE.md` 7절을 따르며, worker가 Orchestrator 절차까지 반복 수행하지 않는다.
 
@@ -77,11 +79,11 @@ Repo-local skill은 `.agents/skills/`에 있다. Vulcan 프로세스 운영에�
 
 | 작업 | Skill |
 | --- | --- |
-| Gate/Run/승인/위임 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
-| Gate 2 설계 | `.agents/skills/vulcan-design/SKILL.md` |
-| 구현 Build Wave | `.agents/skills/vulcan-impl-wave/SKILL.md` |
-| Gate 4 QA | `.agents/skills/vulcan-qa/SKILL.md` |
-| Gate 5 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
+| 상태/Run/승인/위임 라우팅 | `.agents/skills/vulcan-orchestrator/SKILL.md` |
+| 설계 | `.agents/skills/vulcan-design/SKILL.md` |
+| 구현 조율 | `.agents/skills/vulcan-impl-wave/SKILL.md` |
+| 인수 검증/QA | `.agents/skills/vulcan-qa/SKILL.md` |
+| 릴리즈 | `.agents/skills/vulcan-release/SKILL.md` |
 
 Codex custom agent 정의는 `.codex/agents/`에 있다. 결과는 후보 의견이며 Orchestrator가 다시 검증한다.
 

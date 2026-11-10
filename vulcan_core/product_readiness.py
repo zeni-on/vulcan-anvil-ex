@@ -10,7 +10,7 @@ import re
 from urllib.parse import unquote, urlsplit
 
 from . import evidence, product_process as process
-from .document_context import MAX_BYTES, MAX_LINKS, SHARED, STATE, _anchor_indices, _document, _links, _reference_definitions, _sections
+from .document_context import MAX_BYTES, MAX_LINKS, SHARED, _anchor_indices, _document, _links, _reference_definitions, _sections
 from .product_documents import active_section
 
 
@@ -56,40 +56,15 @@ def _cell(value):
     return value.strip().strip("`*").strip()
 
 
-def _without_comments(text):
-    """Mask real comments, not literal comment openers in inline code spans."""
-    output, kept, cursor = [], 0, 0
-    token_pattern = re.compile(r"<!--|`+")
-    while token := token_pattern.search(text, cursor):
-        if token[0].startswith("`"):
-            back = token.start()
-            while back > 0 and text[back - 1] == "\\":
-                back -= 1
-            escaped = (token.start() - back) % 2
-            closing = None if escaped else re.search(r"(?<!`)" + re.escape(token[0]) + r"(?!`)", text[token.end():])
-            cursor = token.end() + closing.end() if closing else token.end()
-            continue
-        closing = text.find("-->", token.end())
-        cursor = len(text) if closing < 0 else closing + 3
-        comment = text[token.start():cursor]
-        output.append(text[kept:token.start()])
-        output.append(comment if STATE.fullmatch(comment) else re.sub(r"[^\r\n]", " ", comment))
-        kept = cursor
-    output.append(text[kept:])
-    return "".join(output)
-
-
 def _document_view(root, reference):
     path, anchor, raw = _content(root, reference["ref"], markdown=True)
     if reference["revision"] != "sha256:" + hashlib.sha256(raw).hexdigest():
         raise ValueError("document revision changed; review scope before renewing its reference")
-    # Comments are not current definitions or dependencies; keep line positions
-    # and only the explicitly supported state annotation.
-    visible = "".join(section["visible"] for section in _sections(raw.decode("utf-8-sig")))
-    sections = _sections(_without_comments(visible))
-    start = _anchor_indices(sections).get(anchor) if anchor else None
+    sections = _sections(raw.decode("utf-8-sig"))
+    anchors = _anchor_indices(sections) if anchor else {}
+    start = anchors.get(anchor)
     if anchor and start is None:
-        raise ValueError("Markdown anchor does not exist")
+        raise ValueError("Markdown anchor is ambiguous" if anchor in anchors else "Markdown anchor does not exist")
     selected = set(range(len(sections))) if start is None else {
         i for i, section in enumerate(sections) if i == start or start in section["parents"]
     }

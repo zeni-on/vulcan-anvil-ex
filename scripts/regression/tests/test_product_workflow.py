@@ -433,26 +433,23 @@ class ProductWorkflowTests(unittest.TestCase):
                 self.assertTrue(issues)
                 self.assertTrue(any("recorded Gate completion and approval" in issue for issue in issues))
 
-    def test_audit_poc_discovery_merge_and_future_gate_rules_are_unchanged(self):
-        for profile in ("audit", "poc"):
-            with self.subTest(profile=profile):
-                root = self.project(profile=profile)
-                self.run_file(root, skill="implementation-plan", bw="", body="Deferred BW-051\n| Wave | Status |\n| --- | --- |\n| BW-052 | Planned |\n")
-                self.assertEqual([r["id"] for r in vulcan.collect_build_wave_records(str(root))], ["BW-051", "BW-052"])
-                session = {"implementation": {"waves": {"items": [{"id": "BW-053", "status": "Planned"}]}}}
-                self.assertEqual(len(vulcan.merge_session_wave_records(session, [], profile=profile)), 1)
-                self.run_file(root, name="RUN-002.md", gate="gate4", bw="")
-                self.assertTrue(vulcan.validate_gate_progression(str(root), "impl"))
+    def test_audit_discovery_merge_and_future_gate_rules_are_unchanged(self):
+        root = self.project(profile="audit")
+        self.run_file(root, skill="implementation-plan", bw="", body="Deferred BW-051\n| Wave | Status |\n| --- | --- |\n| BW-052 | Planned |\n")
+        self.assertEqual([r["id"] for r in vulcan.collect_build_wave_records(str(root))], ["BW-051", "BW-052"])
+        session = {"implementation": {"waves": {"items": [{"id": "BW-053", "status": "Planned"}]}}}
+        self.assertEqual(len(vulcan.merge_session_wave_records(session, [], profile="audit")), 1)
+        self.run_file(root, name="RUN-002.md", gate="gate4", bw="")
+        self.assertTrue(vulcan.validate_gate_progression(str(root), "impl"))
 
-    def test_audit_poc_transition_preflight_is_preserved(self):
-        for profile in ("audit", "poc"):
-            root = self.project(profile=profile)
-            path = self.run_file(root)
-            with mock.patch.object(vulcan, "run_preflight_file", return_value=(["sentinel preflight blocker"], [])) as preflight:
-                code, output = self.transition(root)
-            preflight.assert_called_once_with(str(path))
-            self.assertEqual(code, 1)
-            self.assertIn("sentinel preflight blocker", output)
+    def test_audit_transition_preflight_is_preserved(self):
+        root = self.project(profile="audit")
+        path = self.run_file(root)
+        with mock.patch.object(vulcan, "run_preflight_file", return_value=(["sentinel preflight blocker"], [])) as preflight:
+            code, output = self.transition(root)
+        preflight.assert_called_once_with(str(path))
+        self.assertEqual(code, 1)
+        self.assertIn("sentinel preflight blocker", output)
 
     def test_external_execution_and_explicit_preflight_still_block_before_launch(self):
         root = self.project()
@@ -479,7 +476,7 @@ class ProductWorkflowTests(unittest.TestCase):
             "direct_edit_scope:\n  files:\n    - a.py\n    - b.py\n    - c.py\n"
             "  estimated_loc: 500\n  contract_changed: true\n```\n"
         )
-        for profile in ("product", "audit", "poc"):
+        for profile in ("product", "audit"):
             root = self.project(profile=profile)
             path = self.run_file(root, body=body)
             for checker in (vulcan.check_run_file, vulcan.run_preflight_file):

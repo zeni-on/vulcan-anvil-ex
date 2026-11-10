@@ -5,7 +5,7 @@
 
 ## 1. 배경
 
-Product profile은 PoC보다 무겁고 Audit보다 가볍다.
+Product는 제품 계약과 반복 릴리즈를 검증하며 Audit처럼 모든 감리 제출물을 요구하지 않는다.
 따라서 회귀 검증도 Audit fixture를 그대로 통과시키는 방식이 아니라, Product가 의도한 문서 세트와 릴리즈 판단 기준을 별도로 확인해야 한다.
 
 현재 `scripts/regression/run_fixture_smoke.py`는 `scripts/regression/fixtures/simple-todo-product/` fixture를 사용해 Product profile의 핵심 회귀를 확인한다.

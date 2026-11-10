@@ -28,7 +28,7 @@ Ex는 이미 다음 실행 계층을 갖고 있다.
 2. 파일 수정, Gate 전환, session 갱신, 최종 승인 판단은 custom agent에게 맡기지 않는다.
 3. 구현/QA는 profile별 Run/결과 계약 아래 native worker를 우선한다. `agent-run/run-exec`는 선택 사항이다.
 4. custom agent 결과는 후보 의견이며 Orchestrator가 다시 검증한다.
-5. delivery profile(`audit`, `product`, `poc`)은 agent 이름으로 만들지 않는다. agent는 역할 중심으로 정의하고, 현재 profile은 `session.json` 또는 `python vulcan.py profile-status`로 확인한다.
+5. delivery profile(`audit`, `product`)은 agent 이름으로 만들지 않는다. agent는 역할 중심으로 정의하고, 현재 profile은 `session.json` 또는 `python vulcan.py profile-status`로 확인한다.
 6. agent 수는 작게 시작한다. 너무 많은 역할을 만들면 선택 비용과 결과 통합 비용이 커진다.
 
 ## 3. 1차 Agent Set

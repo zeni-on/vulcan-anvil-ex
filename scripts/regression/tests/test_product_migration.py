@@ -20,7 +20,9 @@ class ProductMigrationTests(unittest.TestCase):
         self.fixture = fixtures.ScopedReadinessTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
-        self.root = self.fixture.root
+        # The production transaction passes a resolved root to backup helpers.
+        # Windows runners may expose the temporary directory via an 8.3 alias.
+        self.root = self.fixture.root.resolve(strict=True)
         self.path = self.root / "session.json"
         self.parse = helpers.vulcan.parse_markdown_tables
         self.fixture.write("docs/work.md", "# Current planning\nShared flow, then schedule, then dashboard.\n")
@@ -135,9 +137,9 @@ class ProductMigrationTests(unittest.TestCase):
         for changes in cases:
             with self.subTest(changes=changes):
                 self.path.write_text(json.dumps({**self.legacy, **changes}))
-                before = self.path.read_bytes()
+                before = self.snapshot()
                 self.assertEqual(self.call(self.request())["status"], "invalid")
-                self.assertEqual(self.path.read_bytes(), before)
+                self.assertEqual(self.snapshot(), before)
         self.path.unlink()
         self.assertEqual(self.call(self.request())["status"], "invalid")
         self.assertFalse((self.root / ".vulcan").exists())
