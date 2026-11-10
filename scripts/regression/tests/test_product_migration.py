@@ -20,7 +20,9 @@ class ProductMigrationTests(unittest.TestCase):
         self.fixture = fixtures.ScopedReadinessTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
-        self.root = self.fixture.root
+        # The production transaction passes a resolved root to backup helpers.
+        # Windows runners may expose the temporary directory via an 8.3 alias.
+        self.root = self.fixture.root.resolve(strict=True)
         self.path = self.root / "session.json"
         self.parse = helpers.vulcan.parse_markdown_tables
         self.fixture.write("docs/work.md", "# Current planning\nShared flow, then schedule, then dashboard.\n")
